@@ -1,0 +1,122 @@
+# OSM-Notes-Analytics .gitignore
+# Version: 2025-10-13
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*~
+.DS_Store
+
+# Log files
+*.log
+*.log.*
+logs/
+/tmp/
+
+# ETL temporary directories
+ETL_*/
+/tmp/ETL_*/
+
+# Recovery files
+ETL_recovery.json
+*_recovery.json
+
+# Database dump files
+*.sql.gz
+*.dump
+*.backup
+
+# Test output
+test_output/
+test_output.log
+bats_test_output.log
+coverage/
+*.test.log
+
+# Configuration files with sensitive data (keep templates)
+etc/properties.sh_local
+etc/etl.properties_local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# IDE
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+.project
+.classpath
+.settings/
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Node modules (if any)
+node_modules/
+
+# Data files (large datasets)
+*.csv.large
+*.xml.large
+data/exports/
+data/downloads/
+
+# Documentation builds
+docs/_build/
+docs/.doctrees/
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Profile output
+*.profile
+profile_*.txt
+
+# Lock files
+*.lock
+
+# Cache
+.cache/
+*.cache
+
+# Jupyter Notebooks (if any)
+.ipynb_checkpoints/
+
+# Security reports (may contain sensitive info)
+security_reports/
+
+# Advanced reports (may be large)
+advanced_reports/
+
+# Mock data temporary files
+mock_data/*.tmp
+mock_data/*.temp
+
