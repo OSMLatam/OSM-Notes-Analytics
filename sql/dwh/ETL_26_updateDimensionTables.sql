@@ -60,13 +60,15 @@ SELECT /* Notes-ETL */ clock_timestamp() AS Processing,
  'Updating dimension countries' AS Task;
 
 -- Populates the countries dimension with new countries.
+-- ISO codes are populated from reference table if available, otherwise NULL.
 INSERT INTO dwh.dimension_countries
  (country_id, country_name, country_name_es, country_name_en,
   iso_alpha2, iso_alpha3)
- SELECT /* Notes-ETL */ country_id, country_name, country_name_es,
-  country_name_en, iso_alpha2, iso_alpha3
- FROM countries
- WHERE country_id NOT IN (
+ SELECT /* Notes-ETL */ c.country_id, c.country_name, c.country_name_es,
+  c.country_name_en, iso.iso_alpha2, iso.iso_alpha3
+ FROM countries c
+  LEFT JOIN dwh.iso_country_codes iso ON c.country_id = iso.osm_country_id
+ WHERE c.country_id NOT IN (
   SELECT /* Notes-ETL */ country_id
   FROM dwh.dimension_countries
  )
@@ -96,22 +98,22 @@ TO '/tmp/countries_changed.csv' WITH DELIMITER ',' CSV HEADER
 SELECT /* Notes-ETL */ clock_timestamp() AS Processing,
  'Updating modified country names' AS Task;
 
--- Updates the dimension when username is changed.
-UPDATE /* Notes-ETL */ dwh.dimension_countries
+-- Updates the dimension when country names change or ISO codes are added.
+UPDATE /* Notes-ETL */ dwh.dimension_countries d
  SET country_name = c.country_name,
  country_name_es = c.country_name_es,
  country_name_en = c.country_name_en,
- iso_alpha2 = c.iso_alpha2,
- iso_alpha3 = c.iso_alpha3
+ iso_alpha2 = COALESCE(iso.iso_alpha2, d.iso_alpha2),
+ iso_alpha3 = COALESCE(iso.iso_alpha3, d.iso_alpha3)
  FROM countries AS c
-  JOIN dwh.dimension_countries d
-  ON d.country_id = c.country_id
- WHERE c.country_name IS DISTINCT FROM d.country_name
-  OR c.country_name_es IS DISTINCT FROM d.country_name_es
-  OR c.country_name_en IS DISTINCT FROM d.country_name_en
-  OR c.iso_alpha2 IS DISTINCT FROM d.iso_alpha2
-  OR c.iso_alpha3 IS DISTINCT FROM d.iso_alpha3
+  LEFT JOIN dwh.iso_country_codes iso ON c.country_id = iso.osm_country_id
+ WHERE d.country_id = c.country_id
+  AND (c.country_name IS DISTINCT FROM d.country_name
+   OR c.country_name_es IS DISTINCT FROM d.country_name_es
+   OR c.country_name_en IS DISTINCT FROM d.country_name_en
+   OR (iso.iso_alpha2 IS NOT NULL AND d.iso_alpha2 IS NULL)
+   OR (iso.iso_alpha3 IS NOT NULL AND d.iso_alpha3 IS NULL))
 ;
 
 SELECT /* Notes-ETL */ clock_timestamp() AS Processing,
- 'Dimensions udpated' AS Task;
+ 'Dimensions updated' AS Task;

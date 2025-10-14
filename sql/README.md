@@ -168,6 +168,26 @@ SQL scripts follow a structured naming pattern:
 - Data validation functions
 - Helper utilities
 
+#### ETL_24a_populateISOCodes.sql
+
+**Purpose:** Creates and populates ISO country codes reference table.
+
+**Creates:**
+
+- `dwh.iso_country_codes` table with ~60 major countries
+- Mapping from OSM country relation IDs to ISO 3166-1 codes
+- Alpha-2 codes (e.g., CO, US, DE)
+- Alpha-3 codes (e.g., COL, USA, DEU)
+
+**Maintenance:**
+
+- To add new countries, edit the INSERT statement in this file
+- Countries not in the table will have NULL ISO codes (acceptable)
+- See `sql/dwh/ISO_CODES_README.md` for detailed instructions
+
+**Note:** This is a reference table, not populated from base tables. ISO codes are optional
+enrichment data.
+
 #### ETL_25_populateDimensionTables.sql
 
 **Purpose:** Initial population of dimension tables.
@@ -499,23 +519,23 @@ graph TD
 
 1. **Increase work_mem for loading:**
 
-```sql
-SET work_mem = '256MB';
-```
+   ```sql
+   SET work_mem = '256MB';
+   ```
 
-2. **Disable autovacuum during initial load:**
+1. **Disable autovacuum during initial load:**
 
-```sql
-ALTER TABLE dwh.facts SET (autovacuum_enabled = false);
--- Re-enable after load
-ALTER TABLE dwh.facts SET (autovacuum_enabled = true);
-```
+   ```sql
+   ALTER TABLE dwh.facts SET (autovacuum_enabled = false);
+   -- Re-enable after load
+   ALTER TABLE dwh.facts SET (autovacuum_enabled = true);
+   ```
 
-3. **Run VACUUM ANALYZE after load:**
+1. **Run VACUUM ANALYZE after load:**
 
-```sql
-VACUUM ANALYZE dwh.facts;
-```
+   ```sql
+   VACUUM ANALYZE dwh.facts;
+   ```
 
 ## Testing SQL
 
@@ -614,29 +634,29 @@ SELECT pg_terminate_backend(pid);
 
 1. **Always backup before major changes:**
 
-```bash
-pg_dump -d osm_notes -n dwh > dwh_backup.sql
-```
+   ```bash
+   pg_dump -d osm_notes -n dwh > dwh_backup.sql
+   ```
 
-2. **Test scripts in development database first**
+1. **Test scripts in development database first**
 
-3. **Use transactions for data modifications:**
+1. **Use transactions for data modifications:**
 
-```sql
-BEGIN;
--- Your changes
-ROLLBACK; -- or COMMIT;
-```
+   ```sql
+   BEGIN;
+   -- Your changes
+   ROLLBACK; -- or COMMIT;
+   ```
 
-4. **Monitor long-running queries:**
+1. **Monitor long-running queries:**
 
-```sql
-SELECT pid, now() - pg_stat_activity.query_start AS duration, query
-FROM pg_stat_activity
-WHERE state = 'active' AND now() - pg_stat_activity.query_start > interval '5 minutes';
-```
+   ```sql
+   SELECT pid, now() - pg_stat_activity.query_start AS duration, query
+   FROM pg_stat_activity
+   WHERE state = 'active' AND now() - pg_stat_activity.query_start > interval '5 minutes';
+   ```
 
-5. **Document complex queries with comments**
+1. **Document complex queries with comments**
 
 ## References
 
@@ -650,6 +670,6 @@ WHERE state = 'active' AND now() - pg_stat_activity.query_start > interval '5 mi
 For SQL-related issues:
 
 1. Check PostgreSQL logs
-2. Review query execution plans: `EXPLAIN ANALYZE`
-3. Check for table bloat: `pg_stat_user_tables`
-4. Create an issue with query and error message
+1. Review query execution plans: `EXPLAIN ANALYZE`
+1. Check for table bloat: `pg_stat_user_tables`
+1. Create an issue with query and error message

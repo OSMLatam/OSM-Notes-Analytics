@@ -20,8 +20,8 @@
 # * shfmt -w -i 1 -sr -bn ETL.sh
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2025-08-17
-VERSION="2025-08-17"
+# Version: 2025-10-14
+VERSION="2025-10-14"
 
 #set -xv
 # Fails when a variable is not initialized.
@@ -102,6 +102,8 @@ declare -r POSTGRES_22_CREATE_DWH_TABLES="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_2
 declare -r POSTGRES_23_GET_WORLD_REGIONS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_23_getWorldRegion.sql"
 # Add functions.
 declare -r POSTGRES_24_ADD_FUNCTIONS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_24_addFunctions.sql"
+# Populate ISO country codes.
+declare -r POSTGRES_24A_POPULATE_ISO_CODES="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_24a_populateISOCodes.sql"
 # Populate dimension tables.
 declare -r POSTGRES_25_POPULATE_DIMENSIONS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_25_populateDimensionTables.sql"
 # Update dimension tables.
@@ -410,6 +412,7 @@ function __checkPrereqs {
   "${POSTGRES_22_CREATE_DWH_TABLES}"
   "${POSTGRES_23_GET_WORLD_REGIONS}"
   "${POSTGRES_24_ADD_FUNCTIONS}"
+  "${POSTGRES_24A_POPULATE_ISO_CODES}"
   "${POSTGRES_25_POPULATE_DIMENSIONS}"
   "${POSTGRES_26_UPDATE_DIMENSIONS}"
   "${POSTGRES_31_CREATE_BASE_STAGING_OBJECTS}"
@@ -582,9 +585,13 @@ function __createBaseTables {
   -f "${POSTGRES_22_CREATE_DWH_TABLES}" 2>&1
  __logi "Regions for countries."
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 -f "${POSTGRES_23_GET_WORLD_REGIONS}" 2>&1
- __logi "Adding relation, indexes AND triggers."
+ __logi "Adding functions."
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_24_ADD_FUNCTIONS}" 2>&1
+
+ __logi "Populating ISO country codes reference table."
+ psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+  -f "${POSTGRES_24A_POPULATE_ISO_CODES}" 2>&1
 
  __logi "Initial dimension population."
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
