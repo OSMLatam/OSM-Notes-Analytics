@@ -353,28 +353,28 @@ function main() {
 
  __checkPrereqs
 
-	# Parse mode from CLEANUP_MODE (first argument)
-	local TARGET_DB=""
-	local MODE="all"
-	local SECOND_ARG="${1:-}"
+ # Parse mode from CLEANUP_MODE (first argument)
+ local TARGET_DB=""
+ local MODE="all"
+ local SECOND_ARG="${1:-}"
 
-	if [[ "${CLEANUP_MODE}" == "--dry-run" ]]; then
-		MODE="dry-run"
-		TARGET_DB="${SECOND_ARG:-${DBNAME}}"
-	elif [[ "${CLEANUP_MODE}" == "--dwh-only" ]]; then
-		MODE="dwh"
-		TARGET_DB="${SECOND_ARG:-${DBNAME}}"
-	elif [[ "${CLEANUP_MODE}" == "--temp-only" ]]; then
-		MODE="temp"
-		TARGET_DB="${SECOND_ARG:-${DBNAME}}"
-	elif [[ "${CLEANUP_MODE}" == "--all" ]] || [[ "${CLEANUP_MODE}" == "all" ]]; then
-		MODE="all"
-		TARGET_DB="${SECOND_ARG:-${DBNAME}}"
-	else
-		# Assume it's a database name
-		TARGET_DB="${CLEANUP_MODE}"
-		MODE="all"
-	fi
+ if [[ "${CLEANUP_MODE}" == "--dry-run" ]]; then
+  MODE="dry-run"
+  TARGET_DB="${SECOND_ARG:-${DBNAME}}"
+ elif [[ "${CLEANUP_MODE}" == "--dwh-only" ]]; then
+  MODE="dwh"
+  TARGET_DB="${SECOND_ARG:-${DBNAME}}"
+ elif [[ "${CLEANUP_MODE}" == "--temp-only" ]]; then
+  MODE="temp"
+  TARGET_DB="${SECOND_ARG:-${DBNAME}}"
+ elif [[ "${CLEANUP_MODE}" == "--all" ]] || [[ "${CLEANUP_MODE}" == "all" ]]; then
+  MODE="all"
+  TARGET_DB="${SECOND_ARG:-${DBNAME}}"
+ else
+  # Assume it's a database name
+  TARGET_DB="${CLEANUP_MODE}"
+  MODE="all"
+ fi
 
  __logi "Target database: ${TARGET_DB}"
  __logi "Cleanup mode: ${MODE}"
@@ -423,12 +423,12 @@ chmod go+x "${TMP_DIR}"
 
 __start_logger
 if [[ ! -t 1 ]]; then
-	__set_log_file "${LOG_FILENAME}"
-	main "${2:-}" >> "${LOG_FILENAME}"
-	if [[ "${CLEAN:-true}" == true ]]; then
-		mv "${LOG_FILENAME}" "/tmp/${BASENAME}_$(date +%Y-%m-%d_%H-%M-%S || true).log"
-		rmdir "${TMP_DIR}"
-	fi
+ __set_log_file "${LOG_FILENAME}"
+ main "${2:-}" >> "${LOG_FILENAME}"
+ if [[ "${CLEAN:-true}" == true ]]; then
+  mv "${LOG_FILENAME}" "/tmp/${BASENAME}_$(date +%Y-%m-%d_%H-%M-%S || true).log"
+  rmdir "${TMP_DIR}"
+ fi
 else
-	main "${2:-}"
+ main "${2:-}"
 fi

@@ -542,7 +542,7 @@ psql -d osm_notes -c "CREATE EXTENSION postgis;"
 
 - [Main README](../README.md)
 - [CI/CD Guide](../docs/CI_CD_Guide.md)
-- [Testing Guide](../docs/Testing_Guide.md)
+- [Testing Guide](../tests/README.md)
 - [Contributing Guide](../CONTRIBUTING.md)
 
 ## Support

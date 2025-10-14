@@ -560,7 +560,7 @@ unset ETL_BATCH_SIZE
 
 - [Main README](../README.md)
 - [ETL Enhanced Features](../docs/ETL_Enhanced_Features.md)
-- [Testing Guide](../docs/Testing_Guide.md)
+- [Testing Guide](../tests/README.md)
 
 ## Support
 

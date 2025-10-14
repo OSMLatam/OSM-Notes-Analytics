@@ -291,7 +291,7 @@ When adding new features:
 
 - [BATS Documentation](https://github.com/bats-core/bats-core)
 - [pgTAP Documentation](https://pgtap.org/)
-- [Testing Guide](../docs/Testing_Guide.md)
+- [Testing Guide](../tests/README.md)
 - [CI/CD Guide](../docs/CI_CD_Guide.md)
 
 ## Support
@@ -300,5 +300,5 @@ For test-related issues:
 
 1. Check test output for specific error messages
 2. Review test logs in `/tmp/` directory
-3. Consult [Testing Guide](../docs/Testing_Guide.md)
+3. Consult this Testing Guide
 4. Create an issue with test failure details

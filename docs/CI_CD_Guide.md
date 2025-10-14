@@ -337,8 +337,7 @@ timeout 600 ./tests/run_dwh_tests.sh  # 10 minutes
 - [BATS Testing Framework](https://github.com/bats-core/bats-core)
 - [ShellCheck](https://www.shellcheck.net/)
 - [shfmt](https://github.com/mvdan/sh)
-- [Testing Guide](./Testing_Guide.md)
-- [Testing Workflows Overview](./Testing_Workflows_Overview.md)
+- [Testing Guide](../tests/README.md)
 
 ## 🎯 Best Practices
 

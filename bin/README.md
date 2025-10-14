@@ -492,7 +492,7 @@ psql -d osm_notes -c "SELECT version();"
 - [ETL Enhanced Features](../docs/ETL_Enhanced_Features.md)
 - [DWH Star Schema ERD](../docs/DWH_Star_Schema_ERD.md)
 - [Data Dictionary](../docs/DWH_Star_Schema_Data_Dictionary.md)
-- [Testing Guide](../docs/Testing_Guide.md)
+- [Testing Guide](../tests/README.md)
 
 ## Support
 
