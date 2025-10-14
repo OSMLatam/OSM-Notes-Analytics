@@ -1,4 +1,5 @@
--- Updates the dimensions tables.
+-- Updates dimension tables with new data from base tables.
+-- Handles new users, username changes (SCD2), and new countries.
 --
 -- Author: Andres Gomez (AngocA)
 -- Version: 2025-08-08

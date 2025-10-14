@@ -1,9 +1,10 @@
--- Creates data warehouse relations.
+-- Adds constraints, indexes, and triggers to the fact table.
+-- Includes foreign keys, performance indexes, and resolution metric triggers.
 --
 -- Author: Andres Gomez (AngocA)
 -- Version: 2025-08-08
 
--- Primrary keys
+-- Primary keys
 SELECT /* Notes-ETL */ clock_timestamp() AS Processing,
  'Creating primary keys' AS Task;
 

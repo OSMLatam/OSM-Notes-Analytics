@@ -1,4 +1,5 @@
--- Assign the regions of the world.
+-- Assigns geographic regions to countries.
+-- Maps each country to its corresponding world region and continent.
 --
 -- Author: Andres Gomez (AngocA)
 -- Version: 2023-11-18

@@ -1,4 +1,5 @@
--- Populates datamart for users.
+-- Populates the user datamart with aggregated statistics.
+-- Processes 500 users incrementally to avoid database overload.
 --
 -- Author: Andres Gomez (AngocA)
 -- Version: 2024-01-17
@@ -22,7 +23,7 @@ BEGIN
   INTO max_date
  FROM dwh.max_date_users_processed;
  IF (max_date < CURRENT_DATE) THEN
-  RAISE NOTICE 'Moving activites.';
+  RAISE NOTICE 'Moving activities.';
   -- Updates all users, moving a day.
   UPDATE dwh.datamartUsers
    SET last_year_activity = dwh.move_day(last_year_activity);

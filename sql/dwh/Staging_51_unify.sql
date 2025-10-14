@@ -1,4 +1,5 @@
--- Unifies the facts that were loaded in parallel.
+-- Unifies facts that were loaded in parallel by year.
+-- Computes cross-year metrics and fills recent_opened_dimension_id_date.
 --
 -- Author: Andres Gomez (AngocA)
 -- Version: 2024-01-14

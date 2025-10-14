@@ -1,4 +1,5 @@
--- Populates datamart for countries.
+-- Computes last year activities for datamarts (GitHub-style contribution graph).
+-- Generates a 371-character string representing daily activity levels.
 --
 -- Author: Andres Gomez (AngocA)
 -- Version: 2023-11-20

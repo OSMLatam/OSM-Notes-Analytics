@@ -1,20 +1,5 @@
--- Check DWH tables structure (extended)
--- Version: 2025-08-08
-
-SELECT 'Checking DWH tables' AS step;
-
--- Basic presence checks
-SELECT to_regclass('dwh.facts') AS facts_exists;
-SELECT to_regclass('dwh.dimension_days') AS dim_days_exists;
-SELECT to_regclass('dwh.dimension_time_of_week') AS dim_tow_exists;
-SELECT to_regclass('dwh.dimension_users') AS dim_users_exists;
-SELECT to_regclass('dwh.dimension_countries') AS dim_countries_exists;
-SELECT to_regclass('dwh.dimension_regions') AS dim_regions_exists;
-SELECT to_regclass('dwh.dimension_continents') AS dim_continents_exists;
-SELECT to_regclass('dwh.dimension_timezones') AS dim_timezones_exists;
-SELECT to_regclass('dwh.dimension_seasons') AS dim_seasons_exists;
-SELECT to_regclass('dwh.fact_hashtags') AS fact_hashtags_exists;
--- Check data warehouse tables.
+-- Checks if data warehouse tables exist and are properly initialized.
+-- Validates that initial load has been completed successfully.
 --
 -- Author: Andres Gomez (AngocA)
 -- Version: 2024-01-02
@@ -131,7 +116,7 @@ SELECT to_regclass('dwh.fact_hashtags') AS fact_hashtags_exists;
    AND value = 'true'
    ;
    IF (qty <> 1) THEN
-    RAISE EXCEPTION 'Previous initial load was not complete correctly.';
+    RAISE EXCEPTION 'Previous initial load was not completed correctly.';
    END IF;
   END;
   $$;

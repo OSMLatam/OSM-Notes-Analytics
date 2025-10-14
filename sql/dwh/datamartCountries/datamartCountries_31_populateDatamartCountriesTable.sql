@@ -1,4 +1,5 @@
--- Populates datamart for countries.
+-- Populates the country datamart with aggregated statistics.
+-- Computes metrics for all countries from the facts table.
 --
 -- Author: Andres Gomez (AngocA)
 -- Version: 2024-03-14
@@ -13,7 +14,7 @@ BEGIN
   INTO max_date
  FROM dwh.max_date_countries_processed;
  IF (max_date < CURRENT_DATE) THEN
-  RAISE NOTICE 'Moving activites.';
+  RAISE NOTICE 'Moving activities.';
   -- Updates all countries, moving a day.
   UPDATE dwh.datamartCountries
    SET last_year_activity = dwh.move_day(last_year_activity);

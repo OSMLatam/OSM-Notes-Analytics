@@ -1,4 +1,6 @@
--- Populates the dimensions tables.
+-- Populates dimension tables with initial data.
+-- Inserts regions, continents, applications, timezones, seasons, and other
+-- dimension data that can be populated before processing facts.
 --
 -- Author: Andres Gomez (AngocA)
 -- Version: 2025-08-08

@@ -1,4 +1,6 @@
--- Loads data warehouse data.
+-- Loads new notes incrementally into the data warehouse.
+-- Processes note actions that occurred since the last ETL run.
+-- Calls the staging procedure to insert new facts.
 --
 -- Author: Andres Gomez (AngocA)
 -- Version: 2025-01-11
