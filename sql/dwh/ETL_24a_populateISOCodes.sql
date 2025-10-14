@@ -53,13 +53,13 @@ VALUES
  (120027, 'CO', 'COL', 'Colombia'),
  (286393, 'AR', 'ARG', 'Argentina'),
  (288247, 'PE', 'PER', 'Peru'),
- (108089, 'CL', 'CHL', 'Chile'),
- (287077, 'VE', 'VEN', 'Venezuela'),
- (287082, 'EC', 'ECU', 'Ecuador'),
- (287077, 'BO', 'BOL', 'Bolivia'),
+ (167454, 'CL', 'CHL', 'Chile'),
+ (272644, 'VE', 'VEN', 'Venezuela'),
+ (108089, 'EC', 'ECU', 'Ecuador'),
+ (252645, 'BO', 'BOL', 'Bolivia'),
  (287077, 'PY', 'PRY', 'Paraguay'),
  (287072, 'UY', 'URY', 'Uruguay'),
- (287077, 'GY', 'GUY', 'Guyana'),
+ (287083, 'GY', 'GUY', 'Guyana'),
  (287082, 'SR', 'SUR', 'Suriname'),
 
  -- Europe
@@ -79,37 +79,37 @@ VALUES
  (49898, 'RO', 'ROU', 'Romania'),
  (53293, 'SE', 'SWE', 'Sweden'),
  (1059668, 'NO', 'NOR', 'Norway'),
- (54224, 'DK', 'DNK', 'Denmark'),
+ (50046, 'DK', 'DNK', 'Denmark'),
  (54224, 'FI', 'FIN', 'Finland'),
- (72594, 'GR', 'GRC', 'Greece'),
+ (192307, 'GR', 'GRC', 'Greece'),
  (349035, 'IE', 'IRL', 'Ireland'),
 
  -- Asia
  (382313, 'JP', 'JPN', 'Japan'),
  (270865, 'CN', 'CHN', 'China'),
- (307866, 'IN', 'IND', 'India'),
- (304716, 'ID', 'IDN', 'Indonesia'),
- (2067731, 'KR', 'KOR', 'South Korea'),
- (1542615, 'TH', 'THA', 'Thailand'),
- (443174, 'VN', 'VNM', 'Vietnam'),
- (536780, 'MY', 'MYS', 'Malaysia'),
+ (304716, 'IN', 'IND', 'India'),
+ (21335, 'ID', 'IDN', 'Indonesia'),
+ (307756, 'KR', 'KOR', 'South Korea'),
+ (2067731, 'TH', 'THA', 'Thailand'),
+ (49915, 'VN', 'VNM', 'Vietnam'),
+ (2108121, 'MY', 'MYS', 'Malaysia'),
  (443174, 'PH', 'PHL', 'Philippines'),
  (536780, 'SG', 'SGP', 'Singapore'),
- (304716, 'BD', 'BGD', 'Bangladesh'),
- (304716, 'PK', 'PAK', 'Pakistan'),
+ (184640, 'BD', 'BGD', 'Bangladesh'),
+ (307573, 'PK', 'PAK', 'Pakistan'),
 
  -- Oceania
  (80500, 'AU', 'AUS', 'Australia'),
  (556706, 'NZ', 'NZL', 'New Zealand'),
 
  -- Africa
- (192796, 'ZA', 'ZAF', 'South Africa'),
- (192798, 'EG', 'EGY', 'Egypt'),
+ (87565, 'ZA', 'ZAF', 'South Africa'),
+ (1473947, 'EG', 'EGY', 'Egypt'),
  (192830, 'NG', 'NGA', 'Nigeria'),
  (192798, 'KE', 'KEN', 'Kenya'),
- (192795, 'MA', 'MAR', 'Morocco'),
- (192798, 'TZ', 'TZA', 'Tanzania'),
- (195269, 'ET', 'ETH', 'Ethiopia')
+ (3630439, 'MA', 'MAR', 'Morocco'),
+ (195270, 'TZ', 'TZA', 'Tanzania'),
+ (192800, 'ET', 'ETH', 'Ethiopia')
 
 ON CONFLICT (osm_country_id) DO UPDATE
  SET iso_alpha2 = EXCLUDED.iso_alpha2,

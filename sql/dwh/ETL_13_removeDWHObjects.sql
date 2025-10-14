@@ -1,7 +1,7 @@
 -- Drop data warehouse objects.
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2025-01-08
+-- Version: 2025-10-14
 
 DROP TRIGGER IF EXISTS update_days_to_resolution ON dwh.facts;
 
@@ -52,6 +52,8 @@ DROP TABLE IF EXISTS dwh.dimension_hashtags;
 DROP TABLE IF EXISTS dwh.dimension_timezones;
 
 DROP TABLE IF EXISTS dwh.dimension_seasons;
+
+DROP TABLE IF EXISTS dwh.iso_country_codes;
 
 DROP SCHEMA IF EXISTS dwh;
 
