@@ -1,302 +1,304 @@
-# OSM-Notes-Analytics Tests
+# Tests Directory
 
-Esta carpeta contiene las pruebas para el proyecto OSM-Notes-Analytics.
+This directory contains the comprehensive test suite for the OSM-Notes-Analytics project, including unit tests, integration tests, and quality validation tests.
 
-## Tipos de Pruebas
+## Overview
 
-### 1. Quality Tests (Pruebas de Calidad)
+The test suite is built using:
 
-Estas pruebas **NO requieren base de datos** y verifican la calidad del código:
+- **BATS** (Bash Automated Testing System) for Bash script testing
+- **PostgreSQL pgTAP** for SQL testing (future enhancement)
+- Custom test helpers and utilities
 
-- **Shellcheck**: Análisis estático de scripts bash
-- **Shfmt**: Verificación de formato de código
-- **Trailing whitespace**: Detección de espacios al final de líneas
-- **Shebangs**: Verificación de encabezados correctos
+## Directory Structure
 
-```bash
-# Ejecutar solo pruebas de calidad
-./tests/run_quality_tests.sh
-```
-
-### 2. DWH Tests (Pruebas de Data Warehouse)
-
-Estas pruebas **SÍ requieren base de datos** y verifican:
-
-- Funcionalidad del ETL
-- Creación de tablas dimensionales
-- Procedimientos almacenados
-- Integridad de datos
-
-```bash
-# Ejecutar pruebas de DWH/ETL
-./tests/run_dwh_tests.sh
-```
-
-### 3. All Tests (Todas las Pruebas)
-
-Ejecuta todas las pruebas en secuencia:
-
-```bash
-# Ejecutar todas las pruebas
-./tests/run_all_tests.sh
-```
-
-## Requisitos Previos
-
-### Para Quality Tests (Sin BD)
-
-```bash
-# Instalar shellcheck
-sudo apt-get install shellcheck
-
-# Instalar shfmt
-wget -O shfmt https://github.com/mvdan/sh/releases/download/v3.7.0/shfmt_v3.7.0_linux_amd64
-chmod +x shfmt
-sudo mv shfmt /usr/local/bin/
-```
-
-### Para DWH Tests (Con BD)
-
-```bash
-# Instalar BATS (Bash Automated Testing System)
-sudo apt-get install bats
-
-# O instalación manual:
-git clone https://github.com/bats-core/bats-core.git
-cd bats-core
-sudo ./install.sh /usr/local
-```
-
-**Requisitos de Base de Datos:**
-
-1. **PostgreSQL** 12+ con **PostGIS**
-2. **Base de datos de ingesta**: El sistema de Analytics lee de las tablas base creadas por [OSM-Notes-profile](https://github.com/angoca/OSM-Notes-profile)
-3. **Usuario con permisos** para crear esquemas y tablas
-
-```bash
-# Crear base de datos de prueba
-createdb osm_notes_test
-
-# Instalar extensiones
-psql -d osm_notes_test -c "CREATE EXTENSION IF NOT EXISTS postgis;"
-psql -d osm_notes_test -c "CREATE EXTENSION IF NOT EXISTS btree_gist;"
-```
-
-## Estructura de Tests
-
-```
+```text
 tests/
-├── unit/
-│   ├── bash/              # Tests unitarios de scripts bash
-│   │   ├── ETL_integration.test.bats
+├── unit/                      # Unit tests
+│   ├── bash/                  # Bash script unit tests
 │   │   ├── ETL_enhanced.test.bats
-│   │   ├── datamartUsers_integration.test.bats
-│   │   └── datamartCountries_integration.test.bats
-│   └── sql/               # Tests unitarios de SQL
+│   │   ├── ETL_integration.test.bats
+│   │   ├── datamartCountries_integration.test.bats
+│   │   └── datamartUsers_integration.test.bats
+│   └── sql/                   # SQL unit tests
 │       ├── dwh_cleanup.test.sql
 │       ├── dwh_dimensions_enhanced.test.sql
 │       └── dwh_functions_enhanced.test.sql
-├── integration/           # Tests de integración
+├── integration/               # Integration tests
 │   ├── ETL_enhanced_integration.test.bats
 │   └── datamart_enhanced_integration.test.bats
-├── test_helper.bash       # Funciones de ayuda para tests
-├── properties.sh          # Configuración de tests
-├── run_quality_tests.sh   # Ejecutor de quality tests
-├── run_dwh_tests.sh       # Ejecutor de DWH tests
-├── run_all_tests.sh       # Ejecutor de todos los tests
-└── README.md              # Esta documentación
+├── properties.sh              # Test configuration properties
+├── test_helper.bash           # Common test utilities and helpers
+├── run_all_tests.sh          # Run all test suites
+├── run_dwh_tests.sh          # Run DWH and database tests
+└── run_quality_tests.sh      # Run quality and validation tests
 ```
 
-## Configuración
+## Test Suites
 
-### Variables de Entorno para Tests
+### 1. Quality Tests (No Database Required)
 
-Las pruebas usan el archivo `tests/properties.sh` para configuración:
+Quick validation tests that don't require database connectivity:
 
-```bash
-# Database de prueba (por defecto)
-export TEST_DBNAME="dwh"        # Base de datos por defecto
-export TEST_DBUSER="$(whoami)"  # Usuario actual en host
-export TEST_DBHOST=""           # Conexión local
-export TEST_DBPORT=""           # Puerto por defecto
+- Shell script syntax validation (shellcheck)
+- Code formatting checks (shfmt)
+- File structure validation
+- Configuration file validation
 
-# ETL configuration para tests
-export ETL_BATCH_SIZE="100"           # Lotes pequeños
-export ETL_PARALLEL_ENABLED="false"   # Secuencial en tests
-export ETL_VALIDATE_INTEGRITY="true"  # Siempre validar
-```
-
-### Personalizar Configuración
-
-El valor por defecto es `dwh`. Si necesitas usar otra base de datos:
+**Run:**
 
 ```bash
-# Usar base de datos diferente temporalmente
-TEST_DBNAME="mi_bd_test" ./tests/run_dwh_tests.sh
-
-# O exportar para toda la sesión
-export TEST_DBNAME="mi_bd_test"
-./tests/run_dwh_tests.sh
-
-# Habilitar debug
-export TEST_DEBUG="true"
-./tests/run_dwh_tests.sh
-```
-
-## ¿Necesito Base de Datos?
-
-### ❌ NO necesitas BD para:
-
-- `run_quality_tests.sh` - Pruebas de calidad de código
-- Verificar formato con shellcheck y shfmt
-- Validar sintaxis de scripts
-
-### ✅ SÍ necesitas BD para:
-
-- `run_dwh_tests.sh` - Pruebas de DWH/ETL
-- Tests de integración
-- Tests que verifican SQL y procedimientos
-
-**Importante**: Los tests de DWH requieren que las **tablas base** existan:
-- `notes`
-- `note_comments`
-- `note_comments_text`
-- `users`
-- `countries`
-
-Estas tablas son creadas por el sistema de ingesta ([OSM-Notes-profile](https://github.com/angoca/OSM-Notes-profile)).
-
-## Ejemplos de Uso
-
-### Ejecutar Solo Quality Tests (Sin BD)
-
-```bash
-# Más rápido, no requiere BD
-cd /home/angoca/github/OSM-Notes-Analytics
 ./tests/run_quality_tests.sh
 ```
 
-### Ejecutar Tests de DWH (Con BD)
+**Features:**
+
+- ✅ Fast execution (< 1 minute)
+- ✅ No database dependency
+- ✅ Checks all Bash scripts for syntax errors
+- ✅ Validates SQL file structure
+- ✅ Validates configuration files
+
+### 2. DWH Tests (Database Required)
+
+Tests that validate the Data Warehouse ETL processes and datamarts:
+
+- ETL process testing
+- Datamart population testing
+- SQL function testing
+- Data integrity validation
+
+**Run:**
 
 ```bash
-# Los tests usan la BD 'dwh' por defecto
-# Si aún no existe, créala:
-createdb dwh
-psql -d dwh -c "CREATE EXTENSION IF NOT EXISTS postgis;"
-
-# Ejecutar tests (usa 'dwh' automáticamente)
-cd /home/angoca/github/OSM-Notes-Analytics
 ./tests/run_dwh_tests.sh
 ```
 
-### Ejecutar Test Específico con BATS
+**Prerequisites:**
+
+- PostgreSQL database named `dwh` must exist
+- Database configured in `tests/properties.sh`
+- PostGIS extension installed
+
+**Features:**
+
+- ✅ Tests ETL process execution
+- ✅ Validates dimension table population
+- ✅ Tests datamart creation and updates
+- ✅ Verifies data integrity constraints
+
+### 3. All Tests
+
+Runs both quality and DWH tests sequentially:
+
+**Run:**
 
 ```bash
-# Test individual
-bats tests/unit/bash/ETL_integration.test.bats
-
-# Con verbose para más detalle
-bats -t tests/unit/bash/ETL_integration.test.bats
-```
-
-### Ejecutar Todos los Tests
-
-```bash
-# Ejecuta quality + DWH tests en secuencia
 ./tests/run_all_tests.sh
 ```
 
-## Interpretación de Resultados
+## Test Configuration
 
-### Quality Tests
+### Database Configuration
 
-```
-✅ Shellcheck passed for Analytics scripts
-✅ Format check passed for Analytics scripts
-✅ No trailing whitespace found
-✅ All shebangs are correct
+Edit `tests/properties.sh` to configure test database settings:
+
+```bash
+# Test database name
+DBNAME="dwh"
+
+# Database user
+DB_USER="myuser"
+
+# Other test-specific settings
 ```
 
-### DWH Tests
+### Test Helper Functions
 
+The `test_helper.bash` file provides common utilities:
+
+- Database connection testing
+- Setup and teardown functions
+- Assertion helpers
+- Mock data generation
+
+## Writing Tests
+
+### Bash Script Tests (BATS)
+
+Example test structure:
+
+```bash
+#!/usr/bin/env bats
+
+load test_helper
+
+@test "ETL creates dimension tables" {
+  run psql -d "${DBNAME}" -c "SELECT COUNT(*) FROM dwh.dimension_users"
+  [ "$status" -eq 0 ]
+  [ "$output" -gt 0 ]
+}
 ```
-✅ ETL_integration.test.bats passed
-✅ ETL_enhanced.test.bats passed
-✅ datamartUsers_integration.test.bats passed
+
+### SQL Tests
+
+SQL tests use pgTAP framework (planned):
+
+```sql
+-- Test that dimension_users table exists
+SELECT has_table('dwh', 'dimension_users', 'dimension_users table should exist');
+
+-- Test that required columns exist
+SELECT has_column('dwh', 'dimension_users', 'dimension_user_id');
 ```
+
+## Test Categories
+
+### Unit Tests
+
+Located in `unit/`, these tests verify individual components in isolation:
+
+- **ETL_enhanced.test.bats**: Tests ETL script functions
+- **ETL_integration.test.bats**: Tests ETL integration with database
+- **datamartCountries_integration.test.bats**: Tests country datamart
+- **datamartUsers_integration.test.bats**: Tests user datamart
+- **dwh_*.test.sql**: Tests SQL functions and procedures
+
+### Integration Tests
+
+Located in `integration/`, these tests verify end-to-end workflows:
+
+- **ETL_enhanced_integration.test.bats**: Full ETL workflow testing
+- **datamart_enhanced_integration.test.bats**: Full datamart workflow testing
+
+## Continuous Integration
+
+Tests are automatically run in CI/CD pipelines:
+
+### GitHub Actions Workflows
+
+1. **Quality Checks** (`.github/workflows/quality-checks.yml`)
+   - Runs on every push and pull request
+   - Executes quality tests without database
+
+2. **Tests** (`.github/workflows/tests.yml`)
+   - Runs on push to main branch
+   - Executes full test suite with database
+
+3. **Dependency Check** (`.github/workflows/dependency-check.yml`)
+   - Checks for outdated dependencies
+   - Validates required tools are available
+
+### Git Hooks
+
+Install git hooks for local testing:
+
+```bash
+./scripts/install-hooks.sh
+```
+
+**Pre-commit Hook:**
+
+- Runs shellcheck on modified Bash scripts
+- Validates SQL syntax
+- Fast, focused on changed files
+
+**Pre-push Hook:**
+
+- Runs quality tests
+- Ensures code quality before pushing
+
+## Test Execution Times
+
+Approximate execution times:
+
+- **Quality Tests**: < 1 minute
+- **DWH Tests**: 5-10 minutes (depends on database size)
+- **All Tests**: 6-11 minutes total
 
 ## Troubleshooting
 
-### Error: "BATS not found"
+### Tests Fail with "Database does not exist"
+
+Create the test database:
 
 ```bash
-# Instalar BATS
+createdb dwh
+psql -d dwh -c "CREATE EXTENSION postgis;"
+```
+
+### BATS Not Found
+
+Install BATS:
+
+```bash
+# Ubuntu/Debian
 sudo apt-get install bats
+
+# macOS
+brew install bats-core
 ```
 
-### Error: "Database connection failed"
+### Permission Denied Errors
+
+Ensure scripts are executable:
 
 ```bash
-# Verificar que PostgreSQL está corriendo
-systemctl status postgresql
-
-# Verificar que la BD existe
-psql -l | grep osm_notes_test
-
-# Crear BD si no existe
-createdb osm_notes_test
+chmod +x tests/run_*.sh
+chmod +x scripts/*.sh
+chmod +x bin/dwh/*.sh
 ```
 
-### Error: "shellcheck not found"
+### Database Connection Issues
+
+Verify database configuration:
 
 ```bash
-# Instalar shellcheck
-sudo apt-get install shellcheck
+psql -d dwh -c "SELECT version();"
 ```
 
-### Tests fallan por falta de tablas base
+Check `tests/properties.sh` settings match your database.
 
-Los tests de DWH necesitan las tablas base del sistema de ingesta. Si no existen:
+## Best Practices
 
-1. **Opción 1**: Ejecutar solo Quality Tests (no requieren BD)
-   ```bash
-   ./tests/run_quality_tests.sh
-   ```
+1. **Run quality tests locally** before committing
+2. **Write tests for new features** before implementation
+3. **Keep tests independent** - each test should set up and clean up
+4. **Use descriptive test names** that explain what is being tested
+5. **Mock external dependencies** when possible
+6. **Test error conditions** not just happy paths
 
-2. **Opción 2**: Instalar el sistema de ingesta primero
-   - Clonar [OSM-Notes-profile](https://github.com/angoca/OSM-Notes-profile)
-   - Ejecutar la ingesta para crear tablas base
+## Future Enhancements
 
-3. **Opción 3**: Los tests crean tablas mínimas automáticamente
-   - El `test_helper.bash` crea estructuras básicas para tests
+- [ ] Add pgTAP framework for comprehensive SQL testing
+- [ ] Add performance benchmarking tests
+- [ ] Add data quality tests
+- [ ] Increase test coverage to 80%+
+- [ ] Add mutation testing
+- [ ] Add test reports and coverage metrics
 
-## Integración Continua (CI/CD)
+## Contributing
 
-Los tests se ejecutan automáticamente en GitHub Actions:
+When adding new features:
 
-- **Quality Tests**: En cada push/PR
-- **Integration Tests**: En entornos Docker con BD real
+1. Write tests first (TDD approach)
+2. Ensure all existing tests pass
+3. Add tests to appropriate suite (unit/integration)
+4. Update this README if adding new test categories
+5. Run full test suite before submitting PR
 
-Ver: `.github/workflows/quality-tests.yml`
+## References
 
-## Contribuir
+- [BATS Documentation](https://github.com/bats-core/bats-core)
+- [pgTAP Documentation](https://pgtap.org/)
+- [Testing Guide](../docs/Testing_Guide.md)
+- [CI/CD Guide](../docs/CI_CD_Guide.md)
 
-Al agregar nuevas funcionalidades:
+## Support
 
-1. **Agregar tests unitarios** en `tests/unit/bash/`
-2. **Agregar tests de integración** en `tests/integration/`
-3. **Verificar que pasan** antes de commit:
-   ```bash
-   ./tests/run_all_tests.sh
-   ```
+For test-related issues:
 
-## Recursos Adicionales
-
-- [Testing Guide](../docs/Testing_Guide.md) - Guía completa de testing
-- [Quality Testing](../docs/QUALITY_TESTING.md) - Estrategia de calidad
-- [BATS Documentation](https://bats-core.readthedocs.io/) - Documentación BATS
-
----
-
-**Última actualización**: 2025-10-14
-
+1. Check test output for specific error messages
+2. Review test logs in `/tmp/` directory
+3. Consult [Testing Guide](../docs/Testing_Guide.md)
+4. Create an issue with test failure details

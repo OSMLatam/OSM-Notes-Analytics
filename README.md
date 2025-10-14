@@ -19,7 +19,7 @@ This repository contains the analytics and data warehouse components for the OSM
 - **Country Datamart**: Pre-computed analytics by country
 - **User Datamart**: Pre-computed analytics by user
 - **Profile Generator**: Generate country and user profiles
-- **Advanced Dimensions**: 
+- **Advanced Dimensions**:
   - Timezones for local time analysis
   - Seasons based on date and latitude
   - Continents for geographical grouping
@@ -37,7 +37,7 @@ This repository contains the analytics and data warehouse components for the OSM
 
 This system uses a **shared database** approach with separate schemas:
 
-```
+```text
 Database: osm_notes
 ├── Schema: public          # Base tables (managed by Ingestion repo)
 │   ├── notes
@@ -118,7 +118,7 @@ For automated analytics updates:
 
 ## Directory Structure
 
-```
+```text
 OSM-Notes-Analytics/
 ├── bin/                    # Executable scripts
 │   ├── dwh/               # ETL and datamart scripts
@@ -276,6 +276,7 @@ Available log levels: TRACE, DEBUG, INFO, WARN, ERROR, FATAL
 ### ETL Fails to Start
 
 Check that:
+
 - Database connection is configured correctly
 - Base tables exist (populated by Ingestion system)
 - PostgreSQL is running and accessible
@@ -301,16 +302,19 @@ psql -d osm_notes -f sql/dwh/validate_integrity.sql
 This analytics system depends on the **OSM-Notes-profile** ingestion system:
 
 1. **Ingestion** ([OSM-Notes-profile](https://github.com/angoca/OSM-Notes-profile))
+
    - Downloads notes from OSM Planet and API
    - Populates base tables: `notes`, `note_comments`, `note_comments_text`
    - Manages WMS layer publication
 
 2. **Analytics** (this repository)
+
    - Reads from base tables
    - Transforms data into star schema
    - Generates datamarts and profiles
 
 **Deployment Order:**
+
 1. Deploy and run Ingestion system first
 2. Wait for base tables to be populated
 3. Deploy and run Analytics system
@@ -384,4 +388,3 @@ See [LICENSE](LICENSE) for license information.
 ## Version
 
 Current Version: 2025-10-13
-
