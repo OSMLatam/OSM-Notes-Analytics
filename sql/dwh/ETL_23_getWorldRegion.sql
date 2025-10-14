@@ -342,6 +342,6 @@
   END
  $func$
 ;
-COMMENT ON FUNCTION get_country IS
+COMMENT ON FUNCTION dwh.get_country_region IS
   'Returns the region of a given country.';
 
