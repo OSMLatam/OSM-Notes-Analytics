@@ -89,7 +89,9 @@ source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/errorHandlingFunctions.sh"
 __start_logger
 
 # PostgreSQL SQL script files.
-# Check base tables.
+# Check ingestion base tables.
+declare -r POSTGRES_10_CHECK_BASE_TABLES="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_10_checkBaseTables.sql"
+# Check DWH base tables.
 declare -r POSTGRES_11_CHECK_DWH_BASE_TABLES="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_11_checkDWHTables.sql"
 # Drop datamart objects.
 declare -r POSTGRES_12_DROP_DATAMART_OBJECTS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_12_removeDatamartObjects.sql"
@@ -406,6 +408,7 @@ function __checkPrereqs {
 
  # Create array of SQL files to validate
  local SQL_FILES=(
+  "${POSTGRES_10_CHECK_BASE_TABLES}"
   "${POSTGRES_11_CHECK_DWH_BASE_TABLES}"
   "${POSTGRES_12_DROP_DATAMART_OBJECTS}"
   "${POSTGRES_13_DROP_DWH_OBJECTS}"
@@ -442,6 +445,18 @@ function __checkPrereqs {
    exit "${ERROR_MISSING_LIBRARY}"
   fi
  fi
+
+ ## Validate base ingestion tables exist
+ __logi "Validating base ingestion tables..."
+ if ! psql -d "${DBNAME}" -v ON_ERROR_STOP=1 -f "${POSTGRES_10_CHECK_BASE_TABLES}" > /dev/null 2>&1; then
+  __loge "ERROR: Base ingestion tables validation failed."
+  __loge "Please ensure OSM-Notes-Ingestion system has been run first."
+  __loge "See: https://github.com/OSMLatam/OSM-Notes-Ingestion"
+  # Run again without suppressing output to show the error
+  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 -f "${POSTGRES_10_CHECK_BASE_TABLES}"
+  exit "${ERROR_MISSING_LIBRARY}"
+ fi
+ __logi "Base ingestion tables validation passed."
 
  __logi "=== ETL PREREQUISITES CHECK COMPLETED SUCCESSFULLY ==="
  set -e
