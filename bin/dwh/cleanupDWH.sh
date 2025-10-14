@@ -426,8 +426,12 @@ if [[ ! -t 1 ]]; then
  __set_log_file "${LOG_FILENAME}"
  main "${2:-}" >> "${LOG_FILENAME}"
  if [[ "${CLEAN:-true}" == true ]]; then
-  mv "${LOG_FILENAME}" "/tmp/${BASENAME}_$(date +%Y-%m-%d_%H-%M-%S || true).log"
-  rmdir "${TMP_DIR}"
+  if [[ -f "${LOG_FILENAME}" ]]; then
+   mv "${LOG_FILENAME}" "/tmp/${BASENAME}_$(date +%Y-%m-%d_%H-%M-%S || true).log"
+  fi
+  if [[ -d "${TMP_DIR}" ]]; then
+   rmdir "${TMP_DIR}" 2> /dev/null || true
+  fi
  fi
 else
  main "${2:-}"

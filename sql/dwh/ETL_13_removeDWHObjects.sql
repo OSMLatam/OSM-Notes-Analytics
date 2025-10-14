@@ -13,6 +13,16 @@ DROP FUNCTION IF EXISTS dwh.get_hour_of_week_id;
 
 DROP FUNCTION IF EXISTS dwh.get_date_id;
 
+DROP FUNCTION IF EXISTS dwh.get_application_version_id;
+
+DROP FUNCTION IF EXISTS dwh.get_timezone_id_by_lonlat;
+
+DROP FUNCTION IF EXISTS dwh.get_local_date_id;
+
+DROP FUNCTION IF EXISTS dwh.get_local_hour_of_week_id;
+
+DROP FUNCTION IF EXISTS dwh.get_season_id;
+
 DROP TABLE IF EXISTS dwh.properties;
 
 DROP TABLE IF EXISTS dwh.facts;
@@ -20,6 +30,8 @@ DROP TABLE IF EXISTS dwh.facts;
 DROP TABLE IF EXISTS dwh.fact_hashtags;
 
 DROP TABLE IF EXISTS dwh.dimension_hours_of_week;
+
+DROP TABLE IF EXISTS dwh.dimension_time_of_week;
 
 DROP TABLE IF EXISTS dwh.dimension_days;
 
