@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Creates a datamart for country's data.
+# Creates a datamart for country data with pre-computed analytics.
 #
 # To follow the progress you can execute:
 #   tail -40f $(ls -1rtd /tmp/datamartCountries_* | tail -1)/datamartCountries.log
@@ -105,7 +105,8 @@ source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/errorHandlingFunctions.sh"
 # Shows the help information.
 function __show_help {
  echo "${0} version ${VERSION}"
- echo "This script populates the datamart to visualize country's data."
+ echo "This script populates the country datamart with pre-computed analytics."
+ echo "The datamart aggregates note statistics by country from the fact table."
  echo
  echo "Written by: Andres Gomez (AngocA)"
  echo "OSM-LatAm, OSM-Colombia, MaptimeBogota."

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Creates a datamart for user's data.
+# Creates a datamart for user data with pre-computed analytics.
 #
 # To follow the progress you can execute:
 #   tail -40f $(ls -1rtd /tmp/datamartUsers_* | tail -1)/datamartUsers.log
@@ -108,7 +108,9 @@ source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/errorHandlingFunctions.sh"
 # Shows the help information.
 function __show_help {
  echo "${0} version ${VERSION}"
- echo "This scripts populates the datamart to visualize user's data."
+ echo "This script populates the user datamart with pre-computed analytics."
+ echo "The datamart aggregates note statistics by user from the fact table."
+ echo "Processing is incremental (500 users per run) to avoid database overload."
  echo
  echo "Written by: Andres Gomez (AngocA)"
  echo "OSM-LatAm, OSM-Colombia, MaptimeBogota."

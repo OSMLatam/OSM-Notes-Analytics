@@ -1,18 +1,17 @@
 #!/bin/bash
 
-# This script allows to see a user profile, a country profile or general
-# statistics about notes. It reads all values from the database, from the
-# datamart.
+# This script generates user profiles, country profiles, or general statistics
+# about notes. It reads data from the datamart tables in the data warehouse.
 #
 # There are 3 ways to call this script:
 # * --user <UserName> : Shows the profile for the given user.
 # * --country <CountryName> : Shows the profile for the given country (name in
-#   in English).
+#   English).
 # * --pais <NombrePais> : Shows the profile for the given country (name in
 #   Spanish).
-# If the UserName, CountryName or NombrePais has spaces in the name, it should
-# be invoked between double quotes.
-# * (empty) : It shows general statistics about notes.
+# If the UserName, CountryName, or NombrePais contains spaces, it must be
+# enclosed in double quotes.
+# * (empty) : Shows general statistics about notes.
 #
 # For example:
 # * --user AngocA
@@ -20,11 +19,11 @@
 # * --country "United States of America"
 # * --pais Alemania
 # * --country Germany
-# The name should match the name on the database in English or Spanish,
-# respectively.
+# The country name must match the name stored in the database (in English or
+# Spanish as specified by the option used).
 #
-# This script is only to test data on the data warehouse, and validate the data
-# to show in the web page report.
+# This script queries the data warehouse datamarts and displays pre-computed
+# analytics for testing and validation purposes.
 #
 # This is the list of error codes:
 # 1) Help message.
@@ -127,22 +126,23 @@ source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/errorHandlingFunctions.sh"
 # Shows the help information.
 function __show_help {
  echo "${0} version ${VERSION}"
- echo "This scripts shows the resulting profile for a given user or country,"
- echo "Or general statistics about notes."
+ echo "This script shows the profile for a given user or country,"
+ echo "or general statistics about notes."
  echo
  echo "There are 3 ways to call this script:"
  echo "* --user <UserName> : Shows the profile for the given user."
- echo "* --country <CountryName> : Shows the profile for the given country."
- echo "If the UserName or CountryName has spaces in the name, it should be"
- echo "invoked between double quotes. The name should match the name in"
- echo "Spanish in the database."
- echo "* (empty) : Shows general statistics about notes."
+ echo "* --country <CountryName> : Shows the profile for the given country (English name)."
+ echo "* --pais <NombrePais> : Shows the profile for the given country (Spanish name)."
  echo
- echo "For example:"
+ echo "If the name contains spaces, it must be enclosed in double quotes."
+ echo "The name must match the name stored in the database."
+ echo
+ echo "Examples:"
  echo "* --user AngocA"
  echo "* --country Colombia"
  echo "* --country \"United States of America\""
- echo "The name should match the name on the database."
+ echo "* --pais \"Estados Unidos\""
+ echo "* (empty) : Shows general statistics about notes."
  echo
  echo "Written by: Andres Gomez (AngocA)"
  echo "OSM-LatAm, OSM-Colombia, MaptimeBogota."
@@ -193,7 +193,7 @@ function __checkPrereqs {
  __log_finish
 }
 
-# Retrives the dimension_user_id from a username.
+# Retrieves the dimension_user_id from a username.
 function __getUserId {
  __log_start
  DIMENSION_USER_ID=$(psql -d "${DBNAME}" -Atq -v ON_ERROR_STOP=1 \
@@ -207,7 +207,7 @@ function __getUserId {
  __log_finish
 }
 
-# Retrives the country_id from a country name.
+# Retrieves the country_id from a country name.
 function __getCountryId {
  __log_start
  if [[ "${PROCESS_TYPE}" == "--country" ]]; then
@@ -363,7 +363,7 @@ function __showRankingYearUsers {
  __log_finish
 }
 
-# Shows the historic yearly rankings on which users have been contributed the most.
+# Shows the historic yearly rankings of which users contributed the most.
 function __showRankingYearCountries {
  __log_start
  YEAR="${1}"
@@ -392,7 +392,7 @@ function __showRankingYearCountries {
  __log_finish
 }
 
-# Prints the hour the hour of the week.
+# Prints the hour of the week.
 function __processHourWeek {
  __log_start
  HOUR=${1}
@@ -1615,7 +1615,7 @@ function main() {
  __logw "Ending process."
 }
 
-# Allows to other user read the directory.
+# Allows other users to read the directory.
 chmod go+x "${TMP_DIR}"
 
 # Only execute main if this script is being run directly (not sourced)

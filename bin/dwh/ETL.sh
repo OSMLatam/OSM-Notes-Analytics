@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# ETL process that takes the notes and its comments and populates a table which
-# is easy to read from the OSM Notes profile.
-# The execution of this ETL is independent of the process that retrieves the
-# notes from Planet and API. This allows a longer execution that the periodic
-# poll for new notes.
+# ETL process that transforms notes and comments from base tables into a star
+# schema data warehouse with facts and dimensions.
+# This ETL runs independently from the ingestion process that retrieves notes
+# from Planet and API. This separation allows for longer execution times than
+# the periodic ingestion polls.
 #
 # To follow the progress you can execute:
 #   tail -40f $(ls -1rtd /tmp/ETL_* | tail -1)/ETL.log
@@ -175,8 +175,8 @@ declare CLEAN="${CLEAN:-true}"
 # Shows the help information.
 function __show_help {
  echo "${0} version ${VERSION}"
- echo "This is the ETL process that extracts the values from transactional"
- echo "tables and then inserts them into the facts and dimensions tables."
+ echo "This ETL process transforms data from base tables into a star schema"
+ echo "data warehouse with fact and dimension tables."
  echo
  echo "Usage:"
  echo "  ${0} [OPTIONS]"
@@ -477,7 +477,8 @@ function __waitForJobs {
  __log_finish
 }
 
-# Process facts in parallel.
+# Processes fact table in parallel by year (2013-present).
+# Each year is processed as a separate background job for performance.
 function __initialFacts {
  __log_start
  # First year (less number of notes).
@@ -567,11 +568,12 @@ function __initialFacts {
  __log_finish
 }
 
-# Creates base tables that hold the whole history.
+# Creates DWH tables (dimensions and facts) for initial load.
+# This includes dropping existing objects and rebuilding from scratch.
 function __createBaseTables {
  __log_start
- __logi "=== CREATING BASE TABLES ==="
- __logi "Dropping any ETL object if any exist."
+ __logi "=== CREATING DWH TABLES ==="
+ __logi "Dropping any existing DWH objects."
  psql -d "${DBNAME}" -f "${POSTGRES_12_DROP_DATAMART_OBJECTS}" 2>&1
  psql -d "${DBNAME}" -f "${POSTGRES_13_DROP_DWH_OBJECTS}" 2>&1
 
@@ -605,14 +607,14 @@ function __createBaseTables {
 
  __initialFacts
 
- __logi "=== BASE TABLES CREATED SUCCESSFULLY ==="
+ __logi "=== DWH TABLES CREATED SUCCESSFULLY ==="
  __log_finish
 }
 
-# Checks the base tables if exist.
+# Checks if DWH tables exist. If not, creates them.
 function __checkBaseTables {
  __log_start
- __logi "=== CHECKING BASE TABLES ==="
+ __logi "=== CHECKING DWH TABLES ==="
  set +e
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_11_CHECK_DWH_BASE_TABLES}" 2>&1
@@ -630,11 +632,12 @@ function __checkBaseTables {
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_32_CREATE_STAGING_OBJECTS}" 2>&1
 
- __logi "=== BASE TABLES CHECK COMPLETED ==="
+ __logi "=== DWH TABLES CHECK COMPLETED ==="
  __log_finish
 }
 
-# Processes the notes and comments.
+# Processes notes and comments incrementally.
+# Updates dimensions and loads new facts since last run.
 function __processNotesETL {
  __log_start
  __logi "=== PROCESSING NOTES ETL ==="
