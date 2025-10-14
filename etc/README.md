@@ -41,13 +41,9 @@ DB_USER="myuser"
 EMAILS="username@domain.com"
 ```
 
-Used for:
+**Note:** Email notifications are configured in `etl.properties` (`ETL_NOTIFICATION_ENABLED`, `ETL_NOTIFICATION_EMAIL`). This variable is inherited from the shared configuration but not currently used by Analytics scripts.
 
-- ETL completion notifications
-- Error alerts
-- Progress reports
-
-#### 3. API Configuration
+#### 3. API Configuration (Inherited, Not Used)
 
 ```bash
 # OpenStreetMap API endpoint
@@ -60,31 +56,28 @@ PLANET="https://planet.openstreetmap.org"
 OVERPASS_INTERPRETER="https://overpass-api.de/api/interpreter"
 ```
 
-**Note:** These settings are primarily used by the ingestion system but are included for reference.
+**Note:** These settings are used by the OSM-Notes-Ingestion system (not Analytics). They are inherited from the shared `properties.sh` file but are not used by any Analytics scripts. You can ignore these for Analytics-only deployments.
 
-#### 4. Rate Limiting
+#### 4. Rate Limiting (Inherited, Not Used)
 
 ```bash
 # Seconds to wait between API requests to avoid "Too Many Requests" errors
 SECONDS_TO_WAIT="30"
 ```
 
-Prevents overwhelming external APIs when downloading data.
+**Note:** Used by the Ingestion system, not Analytics. Can be ignored for Analytics-only deployments.
 
 #### 5. Processing Configuration
 
 ```bash
-# Number of notes to process per batch
+# Number of notes to process per batch (inherited from shared config)
 LOOP_SIZE="10000"
 
-# Maximum notes to download from API in a single request
+# Maximum notes to download from API (Ingestion only, not used by Analytics)
 MAX_NOTES="10000"
 ```
 
-**Tuning Guide:**
-
-- **Smaller LOOP_SIZE** (1000-5000): Better for limited memory
-- **Larger LOOP_SIZE** (20000-50000): Better for high-performance systems
+**Note:** `LOOP_SIZE` is inherited but not actively used by Analytics ETL (which uses `ETL_BATCH_SIZE` from `etl.properties`). `MAX_NOTES` is used only by the Ingestion system.
 
 #### 6. Parallel Processing
 
@@ -111,7 +104,7 @@ MIN_NOTES_FOR_PARALLEL="10"
 - **8-16 threads**: For high-performance servers
 - **Increase PARALLEL_PROCESS_DELAY** if experiencing memory pressure
 
-#### 7. XSLT Processing
+#### 7. XSLT Processing (Inherited, Not Used)
 
 ```bash
 # Enable XSLT profiling for performance analysis
@@ -121,7 +114,7 @@ ENABLE_XSLT_PROFILING="false"
 XSLT_MAX_DEPTH="4000"
 ```
 
-Used for processing complex note text and HTML content.
+**Note:** XSLT processing is used by the Ingestion system for XML transformation, not by Analytics. These settings can be ignored for Analytics-only deployments.
 
 #### 8. Cleanup Configuration
 
