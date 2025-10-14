@@ -13,6 +13,7 @@ bin/
 └── dwh/                           # Data Warehouse scripts
     ├── ETL.sh                     # Main ETL orchestration script
     ├── profile.sh                 # Profile generator for users and countries
+    ├── cleanupDWH.sh              # Cleanup DWH objects and temp files
     ├── README.md                  # DWH documentation
     ├── datamartCountries/         # Country datamart scripts
     │   └── datamartCountries.sh
@@ -155,7 +156,65 @@ tail -40f $(ls -1rtd /tmp/ETL_* | tail -1)/ETL.log
 - Populates `dwh.datamartCountries` table
 - One row per country with comprehensive metrics
 
-### 4. datamartUsers.sh - User Datamart
+### 4. cleanupDWH.sh - Cleanup Script
+
+**Location:** `bin/dwh/cleanupDWH.sh`
+
+**Purpose:** Removes all data warehouse objects from the database and cleans up temporary files.
+
+**Usage:**
+
+```bash
+# Full cleanup (DWH objects + temp files)
+./bin/dwh/cleanupDWH.sh
+
+# Cleanup specific database
+./bin/dwh/cleanupDWH.sh osm_notes
+
+# Remove only DWH schema (keep temp files)
+./bin/dwh/cleanupDWH.sh --dwh-only
+
+# Remove only temporary files (keep DWH)
+./bin/dwh/cleanupDWH.sh --temp-only
+
+# Dry run (show what would be done)
+./bin/dwh/cleanupDWH.sh --dry-run
+
+# Show help
+./bin/dwh/cleanupDWH.sh --help
+```
+
+**What it removes:**
+
+DWH Objects (--dwh-only or --all):
+
+- Staging schema and objects
+- Datamart tables (countries and users)
+- DWH schema with all dimensions and facts
+- All functions, procedures, and triggers
+
+Temporary Files (--temp-only or --all):
+
+- `/tmp/ETL_*` directories
+- `/tmp/datamartCountries_*` directories
+- `/tmp/datamartUsers_*` directories
+- `/tmp/profile_*` directories
+
+**Warning:** This permanently deletes all data warehouse data!
+
+**Prerequisites:**
+
+- Database must exist (for DWH cleanup)
+- User must have DROP permissions on dwh schema
+
+**Use cases:**
+
+- Clean restart: Remove all DWH objects before running ETL --create
+- Troubleshooting: Remove corrupted DWH objects
+- Testing: Clean database between test runs
+- Disk cleanup: Remove old temporary files
+
+### 5. datamartUsers.sh - User Datamart
 
 **Location:** `bin/dwh/datamartUsers/datamartUsers.sh`
 

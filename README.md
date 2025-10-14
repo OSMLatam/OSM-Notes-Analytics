@@ -31,7 +31,7 @@ This repository contains the analytics and data warehouse components for the OSM
 - **PostgreSQL** 12 or higher
 - **PostGIS** 3.0 or higher
 - **Bash** 4.0 or higher
-- **OSM Notes Ingestion Database**: This analytics system reads from the base notes tables populated by the [OSM-Notes-profile](https://github.com/angoca/OSM-Notes-profile) ingestion system
+- **OSM Notes Ingestion Database**: This analytics system reads from the base notes tables populated by the [OSM-Notes-Ingestion](https://github.com/angoca/OSM-Notes-Ingestion) ingestion system
 
 ## Database Architecture
 
@@ -327,9 +327,9 @@ psql -d osm_notes -c "SELECT COUNT(*) FROM dwh.facts f
 
 ## Integration with Ingestion System
 
-This analytics system depends on the **OSM-Notes-profile** ingestion system:
+This analytics system depends on the **OSM-Notes-Ingestion** ingestion system:
 
-1. **Ingestion** ([OSM-Notes-profile](https://github.com/angoca/OSM-Notes-profile))
+1. **Ingestion** ([OSM-Notes-Ingestion](https://github.com/angoca/OSM-Notes-Ingestion))
 
    - Downloads notes from OSM Planet and API
    - Populates base tables: `notes`, `note_comments`, `note_comments_text`
@@ -405,7 +405,7 @@ See [LICENSE](LICENSE) for license information.
 
 ## Related Projects
 
-- **[OSM-Notes-profile](https://github.com/angoca/OSM-Notes-profile)**: Ingestion and WMS system
+- **[OSM-Notes-Ingestion](https://github.com/angoca/OSM-Notes-Ingestion)**: Ingestion and WMS system
 - **OpenStreetMap**: [https://www.openstreetmap.org](https://www.openstreetmap.org)
 
 ## Support
