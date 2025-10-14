@@ -190,7 +190,6 @@ Notes:
 | action_dimension_id_season          | SMALLINT  | Season id |
 | dimension_application_version       | INTEGER   | FK to app version |
 
-## Bridge table: dwh.fact_hashtags
 ## Table: dwh.dimension_application_versions
 
 | Column                          | Type        | Null | Default | Key | Description |

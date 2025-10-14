@@ -124,25 +124,54 @@ OSM-Notes-Analytics/
 │   ├── dwh/               # ETL and datamart scripts
 │   │   ├── ETL.sh         # Main ETL process
 │   │   ├── profile.sh     # Profile generator
-│   │   └── datamart*/     # Datamart population scripts
-│   └── *.sh               # Common function libraries
+│   │   ├── README.md      # DWH scripts documentation
+│   │   ├── datamartCountries/
+│   │   │   └── datamartCountries.sh
+│   │   └── datamartUsers/
+│   │       └── datamartUsers.sh
+│   └── README.md          # Scripts documentation
 ├── etc/                    # Configuration files
 │   ├── properties.sh      # Database configuration
-│   └── etl.properties     # ETL configuration
+│   ├── etl.properties     # ETL configuration
+│   └── README.md          # Configuration documentation
 ├── sql/                    # SQL scripts
-│   └── dwh/               # DWH DDL and procedures
-│       ├── ETL_*.sql      # ETL scripts
-│       ├── Staging_*.sql  # Staging procedures
-│       └── datamart*/     # Datamart SQL
+│   ├── dwh/               # DWH DDL and procedures
+│   │   ├── ETL_*.sql      # ETL scripts
+│   │   ├── Staging_*.sql  # Staging procedures
+│   │   ├── datamartCountries/  # Country datamart SQL
+│   │   └── datamartUsers/      # User datamart SQL
+│   └── README.md          # SQL documentation
+├── scripts/                # Utility scripts
+│   ├── install-hooks.sh   # Git hooks installer
+│   ├── setup_analytics.sh # Initial setup script
+│   ├── validate-all.sh    # Validation script
+│   └── README.md          # Scripts documentation
 ├── tests/                  # Test suites
 │   ├── unit/              # Unit tests
-│   └── integration/       # Integration tests
+│   │   ├── bash/          # Bash script tests
+│   │   └── sql/           # SQL tests
+│   ├── integration/       # Integration tests
+│   ├── run_all_tests.sh   # Run all tests
+│   ├── run_dwh_tests.sh   # Run DWH tests
+│   ├── run_quality_tests.sh  # Run quality tests
+│   └── README.md          # Testing documentation
 ├── docs/                   # Documentation
 │   ├── DWH_Star_Schema_ERD.md
 │   ├── DWH_Star_Schema_Data_Dictionary.md
-│   └── ETL_Enhanced_Features.md
+│   ├── ETL_Enhanced_Features.md
+│   ├── CI_CD_Guide.md
+│   ├── Testing_Guide.md
+│   ├── Testing_Suites_Reference.md
+│   ├── Testing_Workflows_Overview.md
+│   └── README.md          # Documentation index
 └── lib/                    # Shared libraries
-    └── bash_logger.sh     # Logging library
+    ├── osm-common/         # Common OSM utilities
+    │   ├── bash_logger.sh
+    │   ├── commonFunctions.sh
+    │   ├── validationFunctions.sh
+    │   ├── errorHandlingFunctions.sh
+    │   └── consolidatedValidationFunctions.sh
+    └── README.md          # Library documentation
 ```
 
 ## ETL Execution Modes
@@ -293,8 +322,10 @@ Check that:
 # Validate data integrity
 ./bin/dwh/ETL.sh --validate
 
-# Check for orphaned facts
-psql -d osm_notes -f sql/dwh/validate_integrity.sql
+# Check for orphaned facts (example query)
+psql -d osm_notes -c "SELECT COUNT(*) FROM dwh.facts f 
+  LEFT JOIN dwh.dimension_countries c ON f.dimension_id_country = c.dimension_country_id 
+  WHERE c.dimension_country_id IS NULL;"
 ```
 
 ## Integration with Ingestion System
@@ -387,4 +418,4 @@ See [LICENSE](LICENSE) for license information.
 
 ## Version
 
-Current Version: 2025-10-13
+Current Version: 2025-10-14

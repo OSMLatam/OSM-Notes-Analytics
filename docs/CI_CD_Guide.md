@@ -36,7 +36,7 @@ Este proyecto utiliza un sistema completo de CI/CD con GitHub Actions, pre-commi
 
 **Status Badge:**
 ```markdown
-![Tests](https://github.com/YOUR_ORG/OSM-Notes-Analytics/workflows/Tests/badge.svg)
+![Tests](https://github.com/OSMLatam/OSM-Notes-Analytics/workflows/Tests/badge.svg)
 ```
 
 ### 2. Quality Checks Workflow (`quality-checks.yml`)
@@ -149,9 +149,9 @@ Agregar al README.md:
 ```markdown
 # OSM-Notes-Analytics
 
-![Tests](https://github.com/YOUR_ORG/OSM-Notes-Analytics/workflows/Tests/badge.svg)
-![Quality Checks](https://github.com/YOUR_ORG/OSM-Notes-Analytics/workflows/Quality%20Checks/badge.svg)
-![Dependency Check](https://github.com/YOUR_ORG/OSM-Notes-Analytics/workflows/Dependency%20Check/badge.svg)
+![Tests](https://github.com/OSMLatam/OSM-Notes-Analytics/workflows/Tests/badge.svg)
+![Quality Checks](https://github.com/OSMLatam/OSM-Notes-Analytics/workflows/Quality%20Checks/badge.svg)
+![Dependency Check](https://github.com/OSMLatam/OSM-Notes-Analytics/workflows/Dependency%20Check/badge.svg)
 
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-12%2B-blue)](https://www.postgresql.org/)
 [![PostGIS](https://img.shields.io/badge/PostGIS-3.0%2B-green)](https://postgis.net/)
@@ -339,4 +339,5 @@ Métricas recomendadas para monitorear:
 
 **Última actualización**: 2025-10-14  
 **Mantenedor**: Andres Gomez (AngocA)
+
 

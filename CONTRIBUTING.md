@@ -1,8 +1,8 @@
-# Contributing to OSM-Notes-profile
+# Contributing to OSM-Notes-Analytics
 
-Thank you for your interest in contributing to the OSM-Notes-profile project!
+Thank you for your interest in contributing to the OSM-Notes-Analytics project!
 This document provides comprehensive guidelines for contributing to this
-OpenStreetMap notes analysis system.
+OpenStreetMap notes analytics and data warehouse system.
 
 ## Table of Contents
 
@@ -141,15 +141,13 @@ sudo apt-get install gdal-bin ogr2ogr
 
 Familiarize yourself with the project structure:
 
-- **`bin/`**: Executable scripts and processing components
-- **`sql/`**: Database scripts and schema definitions
-- **`tests/`**: Comprehensive testing infrastructure
-- **`docs/`**: System documentation
-- **`etc/`**: Configuration files
-- **`xslt/`**: XML transformations
-- **`xsd/`**: XML schema definitions
-- **`overpass/`**: Geographic data queries
-- **`sld/`**: Map styling definitions
+- **`bin/`**: Executable scripts (ETL, datamarts, profile generator)
+- **`sql/`**: Database scripts (star schema, ETL procedures, datamarts)
+- **`tests/`**: Comprehensive testing infrastructure (unit, integration)
+- **`docs/`**: System documentation (ERD, data dictionary, guides)
+- **`etc/`**: Configuration files (database, ETL settings)
+- **`lib/`**: Shared libraries (logging, validation, error handling)
+- **`scripts/`**: Utility scripts (setup, hooks, validation)
 
 ### 3. Development Process
 
@@ -168,44 +166,47 @@ Familiarize yourself with the project structure:
 3. **Test your changes**:
 
    ```bash
-   # Run basic tests
-   ./tests/run_tests_simple.sh
+   # Run quality tests (fast, no database)
+   ./tests/run_quality_tests.sh
    
-   # Run enhanced tests
-   ./tests/run_enhanced_tests.sh
+   # Run DWH tests (requires database)
+   ./tests/run_dwh_tests.sh
    
-   # Run advanced tests
-   ./tests/advanced/run_advanced_tests.sh
+   # Run all tests
+   ./tests/run_all_tests.sh
    ```
 
 ## Testing Requirements
 
 ### Overview
 
-All contributions must include comprehensive testing. The project uses **78 BATS testing suites** covering all system components, including the new DWH enhanced features.
+All contributions must include comprehensive testing. The project uses BATS testing suites and SQL tests covering all system components, including DWH functionality.
 
 ### Test Categories
 
-#### Unit Tests (72 suites)
+#### Unit Tests
 
-- **Bash Scripts**: 68 BATS test suites for shell scripts
-- **SQL Functions**: 4 SQL test suites (including DWH enhanced)
+- **Bash Scripts**: BATS test suites for ETL and datamart scripts
+  - `tests/unit/bash/ETL_enhanced.test.bats`
+  - `tests/unit/bash/ETL_integration.test.bats`
+  - `tests/unit/bash/datamartCountries_integration.test.bats`
+  - `tests/unit/bash/datamartUsers_integration.test.bats`
+- **SQL Tests**: SQL test suites for DWH functions and procedures
+  - `tests/unit/sql/dwh_cleanup.test.sql`
+  - `tests/unit/sql/dwh_dimensions_enhanced.test.sql`
+  - `tests/unit/sql/dwh_functions_enhanced.test.sql`
 
-#### Integration Tests (8 suites)
+#### Integration Tests
 
 - **End-to-End Workflows**: Complete system integration testing
-- **DWH Enhanced**: ETL and datamart enhanced functionality testing
-
-#### Validation Tests
-
-- **Data Validation**: XML/CSV processing, ETL workflows
-- **Error Handling**: Edge cases, error conditions
-- **Performance**: Parallel processing, optimization
+  - `tests/integration/ETL_enhanced_integration.test.bats`
+  - `tests/integration/datamart_enhanced_integration.test.bats`
 
 #### Quality Tests
 
-- **Code Quality**: Linting, formatting, conventions
-- **Security**: Vulnerability scanning, best practices
+- **Code Quality**: Shellcheck linting, shfmt formatting, code conventions
+- **Configuration**: Validation of properties files and SQL syntax
+- **Database**: PostgreSQL and PostGIS extension checks
 
 ### DWH Enhanced Testing Requirements
 
@@ -246,132 +247,170 @@ When contributing to DWH features, you must include tests for:
 #### Complete Test Suite
 
 ```bash
-# Run all tests (recommended)
+# Run all tests (quality + DWH)
 ./tests/run_all_tests.sh
 
-# Run DWH enhanced tests only
-./tests/run_dwh_tests.sh
+# Run quality tests only (fast, no database)
+./tests/run_quality_tests.sh
 
-# Run specific test categories
-./tests/run_tests.sh --type dwh
+# Run DWH tests only (requires database)
+./tests/run_dwh_tests.sh
 ```
 
 #### Individual Test Categories
 
 ```bash
 # Unit tests
-bats tests/unit/bash/*.bats
-bats tests/unit/sql/*.sql
+bats tests/unit/bash/ETL_enhanced.test.bats
+bats tests/unit/bash/datamartCountries_integration.test.bats
+bats tests/unit/bash/datamartUsers_integration.test.bats
 
 # Integration tests
-bats tests/integration/*.bats
+bats tests/integration/ETL_enhanced_integration.test.bats
+bats tests/integration/datamart_enhanced_integration.test.bats
 
-# DWH enhanced tests
-./tests/run_dwh_tests.sh --skip-integration  # SQL only
-./tests/run_dwh_tests.sh --skip-sql          # Integration only
+# SQL tests (requires psql and database 'dwh')
+psql -d dwh -f tests/unit/sql/dwh_cleanup.test.sql
+psql -d dwh -f tests/unit/sql/dwh_dimensions_enhanced.test.sql
+psql -d dwh -f tests/unit/sql/dwh_functions_enhanced.test.sql
 ```
 
 #### Test Validation
 
 ```bash
-# Validate test structure
-./tests/run_dwh_tests.sh --dry-run
+# Validate all code (comprehensive check)
+./scripts/validate-all.sh
 
-# Check test coverage
-./tests/run_tests.sh --type all
+# Install git hooks for automatic validation
+./scripts/install-hooks.sh
 ```
 
 ### Test Documentation
 
 All new tests must be documented in:
 
-- [Testing Suites Reference](./docs/Testing_Suites_Reference.md)
-- [Testing Guide](./docs/Testing_Guide.md)
-- [DWH Testing Documentation](./tests/README.md#dwh-enhanced-testing-features)
+- [Testing Guide](./docs/Testing_Guide.md) - Testing philosophy and best practices
+- [Testing Suites Reference](./docs/Testing_Suites_Reference.md) - Detailed test catalog
+- [Testing Workflows Overview](./docs/Testing_Workflows_Overview.md) - Test execution workflows
+- [Tests README](./tests/README.md) - Test suite documentation and usage
 
 ### CI/CD Integration
 
-Tests are automatically run in GitHub Actions:
+Tests are automatically run in GitHub Actions workflows:
 
-- **Unit Tests**: Basic functionality and code quality
-- **DWH Enhanced Tests**: New dimensions, functions, ETL improvements
-- **Integration Tests**: End-to-end workflow validation
-- **Performance Tests**: System performance validation
-- **Security Tests**: Vulnerability scanning
-- **Advanced Tests**: Coverage, quality, advanced functionality
+- **Quality Checks** (`.github/workflows/quality-checks.yml`):
+  - Shellcheck linting on all Bash scripts
+  - shfmt formatting validation
+  - SQL syntax validation
+  - Configuration file validation
+  - Runs on every push and pull request
+  
+- **Tests** (`.github/workflows/tests.yml`):
+  - Quality tests (no database required)
+  - DWH tests (with PostgreSQL/PostGIS setup)
+  - Integration tests
+  - Runs on push to main branch
+  
+- **Dependency Check** (`.github/workflows/dependency-check.yml`):
+  - Validates required tools are available
+  - Checks for outdated dependencies
+
+- **Git Hooks**:
+  - **Pre-commit**: Fast checks on staged files only
+  - **Pre-push**: Full validation before pushing
 
 ### Test Quality Standards
 
-#### Code Coverage
+#### Test Requirements
 
-- **Minimum 85%** code coverage for new features
-- **100% coverage** for critical functions
-- **Integration testing** for all workflows
+- **Test all new ETL features** (dimensions, functions, procedures)
+- **Test all new datamart features** (aggregations, calculations)
+- **Test error handling** for edge cases and failures
+- **Test data integrity** (referential integrity, constraints)
 
 #### Test Quality
 
-- **Descriptive test names** that explain the scenario
-- **Comprehensive assertions** that validate all aspects
-- **Error case testing** for edge cases and failures
-- **Performance testing** for time-sensitive operations
+- **Descriptive test names** that explain what is being tested
+- **Comprehensive assertions** that validate expected behavior
+- **Independent tests** that don't depend on each other
+- **Clean up after tests** to avoid side effects
 
 #### Documentation
 
-- **Test descriptions** that explain the purpose
-- **Setup instructions** for test environment
-- **Expected results** clearly documented
-- **Troubleshooting guides** for common issues
+- **Test descriptions** in the test file comments
+- **Setup requirements** documented in test README
+- **Expected behavior** explained in assertions
+- **Known issues** documented in test comments
 
 ## File Organization
 
 ### Directory Structure Standards
 
 ```text
-project/
+OSM-Notes-Analytics/
 ├── bin/                    # Executable scripts
-│   ├── process/           # Data processing scripts
-│   ├── dwh/              # Data warehouse scripts
-│   ├── monitor/          # Monitoring scripts
-│   ├── functionsProcess.sh # Shared functions
-│   ├── parallelProcessingFunctions.sh # Consolidated parallel processing functions
-│   └── consolidatedValidationFunctions.sh # Consolidated validation functions
+│   └── dwh/               # Data warehouse scripts
+│       ├── ETL.sh         # Main ETL process
+│       ├── profile.sh     # Profile generator
+│       ├── datamartCountries/  # Country datamart
+│       └── datamartUsers/      # User datamart
 ├── sql/                   # Database scripts
-│   ├── process/          # Processing SQL scripts
-│   ├── dwh/             # Data warehouse SQL
-│   ├── monitor/         # Monitoring SQL
-│   └── functionsProcess/ # Function definitions
+│   └── dwh/              # Data warehouse SQL
+│       ├── ETL_*.sql     # ETL scripts
+│       ├── Staging_*.sql # Staging procedures
+│       ├── datamartCountries/  # Country datamart SQL
+│       └── datamartUsers/      # User datamart SQL
 ├── tests/                # Testing infrastructure
 │   ├── unit/            # Unit tests
+│   │   ├── bash/        # Bash script tests
+│   │   └── sql/         # SQL tests
 │   ├── integration/     # Integration tests
-│   ├── advanced/        # Advanced testing
-│   └── fixtures/        # Test data
+│   ├── run_all_tests.sh       # Run all tests
+│   ├── run_quality_tests.sh   # Quality tests
+│   └── run_dwh_tests.sh       # DWH tests
+├── scripts/              # Utility scripts
+│   ├── install-hooks.sh       # Git hooks
+│   ├── setup_analytics.sh     # Initial setup
+│   └── validate-all.sh        # Validation
 ├── docs/                 # Documentation
+│   ├── DWH_Star_Schema_ERD.md
+│   ├── DWH_Star_Schema_Data_Dictionary.md
+│   ├── ETL_Enhanced_Features.md
+│   ├── CI_CD_Guide.md
+│   └── Testing_*.md
 ├── etc/                  # Configuration
-├── xslt/                 # XML transformations
-├── xsd/                  # XML schemas
-├── overpass/             # Geographic queries
-└── sld/                  # Map styling
+│   ├── properties.sh     # Database config
+│   └── etl.properties    # ETL config
+└── lib/                  # Shared libraries
+    └── osm-common/       # Common utilities
+        ├── bash_logger.sh
+        ├── commonFunctions.sh
+        ├── validationFunctions.sh
+        └── errorHandlingFunctions.sh
 ```
 
 ### File Naming Conventions
 
 #### Script Files
 
-- **Main scripts**: `processAPINotes.sh`, `processPlanetNotes.sh`
-- **Utility scripts**: `updateCountries.sh`, `cleanupAll.sh`
-- **Test scripts**: `test_[component].sh`
+- **Main scripts**: `ETL.sh`, `profile.sh`, `datamartCountries.sh`, `datamartUsers.sh`
+- **Utility scripts**: `install-hooks.sh`, `setup_analytics.sh`, `validate-all.sh`
+- **Test runners**: `run_all_tests.sh`, `run_quality_tests.sh`, `run_dwh_tests.sh`
 
 #### SQL Files
 
-- **Creation scripts**: `[component]_21_create[Object].sql`
-- **Drop scripts**: `[component]_11_drop[Object].sql`
-- **Data scripts**: `[component]_31_load[Data].sql`
+Follow the naming pattern: `<Component>_<Phase><Step>_<Description>.sql`
+
+- **ETL scripts**: `ETL_22_createDWHTables.sql`, `ETL_25_populateDimensionTables.sql`
+- **Staging scripts**: `Staging_31_createBaseStagingObjects.sql`, `Staging_61_loadNotes.sql`
+- **Datamart scripts**: `datamartCountries_31_populateDatamartCountriesTable.sql`
+- **Phase numbers**: 1x=validation, 2x=creation, 3x=population, 4x=constraints, 5x=finalization, 6x=incremental
 
 #### Test Files
 
-- **Unit tests**: `[component].test.bats`
-- **Integration tests**: `[feature]_integration.test.bats`
-- **SQL tests**: `[component].test.sql`
+- **Unit tests**: `ETL_enhanced.test.bats`, `datamartCountries_integration.test.bats`
+- **Integration tests**: `ETL_enhanced_integration.test.bats`, `datamart_enhanced_integration.test.bats`
+- **SQL tests**: `dwh_cleanup.test.sql`, `dwh_dimensions_enhanced.test.sql`
 
 ## Naming Conventions
 
@@ -395,42 +434,53 @@ project/
 - **Functions**: `function_name_with_underscores`
 - **Procedures**: `procedure_name_with_underscores`
 
-## Consolidated Functions
+## Shared Libraries
 
-### Function Consolidation Strategy
+### Library Organization
 
-The project uses a consolidation strategy to eliminate code duplication and improve maintainability:
+The project uses shared libraries in `lib/osm-common/` to eliminate code duplication and improve maintainability:
 
-#### 1. Parallel Processing Functions (`bin/parallelProcessingFunctions.sh`)
+#### 1. Logging (`lib/osm-common/bash_logger.sh`)
 
-- **Purpose**: Centralizes all XML parallel processing functions
-- **Functions**: `__processXmlPartsParallel`, `__splitXmlForParallelSafe`, `__processApiXmlPart`, `__processPlanetXmlPart`
-- **Usage**: All scripts that need parallel processing should source this file
-- **Fallback**: Legacy scripts maintain compatibility through wrapper functions
+- **Purpose**: Centralized logging framework with multiple log levels
+- **Functions**: `__logt`, `__logd`, `__logi`, `__logw`, `__loge`, `__logf`, `__log_start`, `__log_finish`
+- **Usage**: All scripts should source this for consistent logging
+- **Log Levels**: TRACE, DEBUG, INFO, WARN, ERROR, FATAL
 
-#### 2. Validation Functions (`bin/consolidatedValidationFunctions.sh`)
+#### 2. Common Functions (`lib/osm-common/commonFunctions.sh`)
 
-- **Purpose**: Centralizes all validation functions for XML, CSV, coordinates, and databases
-- **Functions**: `__validate_xml_with_enhanced_error_handling`, `__validate_csv_structure`, `__validate_coordinates`
-- **Usage**: All validation operations should use these consolidated functions
-- **Fallback**: Legacy scripts maintain compatibility through wrapper functions
+- **Purpose**: Shared utility functions used across scripts
+- **Functions**: `__checkPrereqsCommands`, `__waitForJobs`, `__start_logger`
+- **Usage**: Source this for common operations like prerequisite checks
 
-#### 3. Implementation Guidelines
+#### 3. Validation Functions (`lib/osm-common/validationFunctions.sh`)
 
-- **New Functions**: Add to appropriate consolidated file rather than duplicating across scripts
-- **Legacy Support**: Always provide fallback mechanisms for backward compatibility
-- **Testing**: Include tests for both consolidated functions and legacy compatibility
+- **Purpose**: Validation functions for files, configuration, and database
+- **Functions**: `__validate_sql_structure`, `__validate_config_file`, `__validate_database_connection`
+- **Usage**: Use these for all validation operations
+
+#### 4. Error Handling (`lib/osm-common/errorHandlingFunctions.sh`)
+
+- **Purpose**: Centralized error handling and traps
+- **Functions**: `__trapOn`, `__handle_error`, `__cleanup`
+- **Usage**: Set up error traps for robust error handling
+
+#### 5. Implementation Guidelines
+
+- **New Functions**: Add to appropriate library file rather than duplicating
+- **Consistent Usage**: All scripts should source and use these libraries
+- **Testing**: Test library functions independently
 
 ## Documentation
 
 ### Required Documentation
 
-1. **Script Headers**: Every script must have a comprehensive header
-2. **Function Documentation**: All functions must be documented
-3. **README Files**: Each directory should have a README.md
-4. **API Documentation**: Document any new APIs or interfaces
-5. **Configuration Documentation**: Document configuration options
-6. **Consolidated Functions**: Document any new consolidated function files
+1. **Script Headers**: Every script must have a comprehensive header (see template above)
+2. **Function Documentation**: All functions must be documented with parameters and return values
+3. **README Files**: Each major directory has a README.md (bin/, etc/, sql/, tests/, docs/, lib/, scripts/)
+4. **SQL Documentation**: Document complex queries, procedures, and functions
+5. **Configuration Documentation**: Document all configuration options in etc/README.md
+6. **Test Documentation**: Document test purpose, setup, and expected results
 
 ### Documentation Standards
 
@@ -597,14 +647,19 @@ test(api): add integration tests for new endpoints
 
 ### Development Environment
 
-For local development, consider using Docker:
+#### Database Setup
+
+For local testing, you need PostgreSQL with PostGIS:
 
 ```bash
-# Run tests in Docker
-./tests/docker/run_integration_tests.sh
+# Create test database
+createdb dwh
+psql -d dwh -c "CREATE EXTENSION postgis;"
+psql -d dwh -c "CREATE EXTENSION btree_gist;"
 
-# Debug in Docker
-./tests/docker/debug_postgres.sh
+# Configure connection in tests/properties.sh
+DBNAME="dwh"
+DB_USER="your_username"
 ```
 
 ### Local Configuration
@@ -615,7 +670,6 @@ To avoid accidentally committing local configuration changes:
 # Tell Git to ignore changes to properties files (local development only)
 git update-index --assume-unchanged etc/properties.sh
 git update-index --assume-unchanged etc/etl.properties
-git update-index --assume-unchanged etc/wms.properties.sh
 
 # Verify that the files are now ignored
 git ls-files -v | grep '^[[:lower:]]'
@@ -623,10 +677,9 @@ git ls-files -v | grep '^[[:lower:]]'
 # To re-enable tracking (if needed)
 git update-index --no-assume-unchanged etc/properties.sh
 git update-index --no-assume-unchanged etc/etl.properties
-git update-index --no-assume-unchanged etc/wms.properties.sh
 ```
 
-This allows you to customize database settings, user names, ETL configurations, or WMS settings without affecting the repository.
+This allows you to customize database settings, user names, and ETL configurations for local development without affecting the repository.
 
 ## Version Control
 
@@ -648,7 +701,7 @@ This allows you to customize database settings, user names, ETL configurations, 
 
 ---
 
-**Thank you for contributing to OSM-Notes-profile!**
+**Thank you for contributing to OSM-Notes-Analytics!**
 
-Your contributions help make OpenStreetMap notes analysis more accessible and
+Your contributions help make OpenStreetMap notes analytics and data warehouse more accessible and
 powerful for the community.
