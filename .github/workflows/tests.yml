@@ -1,0 +1,124 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  quality-tests:
+    name: Quality Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    
+    - name: Install shellcheck
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y shellcheck
+    
+    - name: Install shfmt
+      run: |
+        wget -q -O shfmt https://github.com/mvdan/sh/releases/download/v3.7.0/shfmt_v3.7.0_linux_amd64
+        chmod +x shfmt
+        sudo mv shfmt /usr/local/bin/
+        shfmt -version
+    
+    - name: Run Quality Tests
+      run: |
+        ./tests/run_quality_tests.sh
+    
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: quality-test-results
+        path: /tmp/quality_test_output.txt
+        if-no-files-found: ignore
+
+  unit-tests:
+    name: Unit and Integration Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgis/postgis:15-3.3
+        env:
+          POSTGRES_DB: dwh
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    
+    - name: Install BATS
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y bats
+    
+    - name: Setup test database
+      env:
+        PGHOST: localhost
+        PGPORT: 5432
+        PGUSER: postgres
+        PGPASSWORD: postgres
+        PGDATABASE: dwh
+      run: |
+        psql -c "CREATE EXTENSION IF NOT EXISTS postgis;"
+        psql -c "CREATE EXTENSION IF NOT EXISTS btree_gist;"
+        psql -c "SELECT version();"
+    
+    - name: Run DWH Tests
+      env:
+        TEST_DBNAME: dwh
+        TEST_DBHOST: localhost
+        TEST_DBPORT: 5432
+        TEST_DBUSER: postgres
+        TEST_DBPASSWORD: postgres
+        PGPASSWORD: postgres
+      run: |
+        ./tests/run_dwh_tests.sh
+    
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: dwh-test-results
+        path: /tmp/all_tests_output.txt
+        if-no-files-found: ignore
+
+  all-tests:
+    name: All Tests Summary
+    needs: [quality-tests, unit-tests]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: Check test results
+      run: |
+        if [ "${{ needs.quality-tests.result }}" == "success" ] && [ "${{ needs.unit-tests.result }}" == "success" ]; then
+          echo "✅ All tests passed!"
+          exit 0
+        else
+          echo "❌ Some tests failed"
+          echo "Quality Tests: ${{ needs.quality-tests.result }}"
+          echo "Unit Tests: ${{ needs.unit-tests.result }}"
+          exit 1
+        fi
+

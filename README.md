@@ -1,5 +1,11 @@
 # OSM-Notes-Analytics
 
+![Tests](https://github.com/OSMLatam/OSM-Notes-Analytics/workflows/Tests/badge.svg)
+![Quality Checks](https://github.com/OSMLatam/OSM-Notes-Analytics/workflows/Quality%20Checks/badge.svg)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-12%2B-blue)](https://www.postgresql.org/)
+[![PostGIS](https://img.shields.io/badge/PostGIS-3.0%2B-green)](https://postgis.net/)
+[![Bash](https://img.shields.io/badge/Bash-4.0%2B-orange)](https://www.gnu.org/software/bash/)
+
 Data Warehouse, ETL, and Analytics for OpenStreetMap Notes
 
 ## Overview
@@ -214,16 +220,41 @@ Resumes from the last successful step after a failure.
 
 ## Testing
 
-```bash
-# Run all analytics tests
-./tests/run_analytics_tests.sh
+### Quick Start testing
 
-# Run DWH unit tests
+```bash
+# Quality tests (fast, no database required)
+./tests/run_quality_tests.sh
+
+# DWH tests (requires database 'dwh')
 ./tests/run_dwh_tests.sh
 
-# Run ETL integration tests
-./tests/run_etl_integration_tests.sh
+# All tests
+./tests/run_all_tests.sh
 ```
+
+### CI/CD Integration
+
+This project includes comprehensive CI/CD with:
+
+- ✅ GitHub Actions workflows for automated testing
+- ✅ Pre-commit hooks for code quality
+- ✅ Pre-push hooks for full validation
+- ✅ Automated dependency checking
+
+**Install git hooks:**
+
+```bash
+./scripts/install-hooks.sh
+```
+
+**Full validation:**
+
+```bash
+./scripts/validate-all.sh
+```
+
+See [CI/CD Guide](docs/CI_CD_Guide.md) for complete documentation.
 
 ## Logging
 

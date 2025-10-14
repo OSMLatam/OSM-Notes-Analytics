@@ -1,0 +1,70 @@
+name: Dependency Check
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run monthly on the 1st at 3am UTC
+    - cron: '0 3 1 * *'
+  workflow_dispatch:
+
+jobs:
+  check-dependencies:
+    name: Check Dependencies
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    
+    - name: Check PostgreSQL compatibility
+      run: |
+        echo "## PostgreSQL Compatibility Check" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Checking SQL scripts for PostgreSQL compatibility..." >> $GITHUB_STEP_SUMMARY
+        
+        # Count SQL files
+        SQL_COUNT=$(find sql/dwh -name "*.sql" -type f | wc -l)
+        echo "- Found ${SQL_COUNT} SQL files" >> $GITHUB_STEP_SUMMARY
+        
+        # Check for deprecated syntax (basic check)
+        if grep -r "EXCLUSIVE" sql/dwh/*.sql 2>/dev/null; then
+          echo "⚠️  Warning: Found EXCLUSIVE lock syntax" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "✅ SQL compatibility check complete" >> $GITHUB_STEP_SUMMARY
+    
+    - name: Check Bash version requirements
+      run: |
+        echo "## Bash Version Requirements" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Check for Bash 4.0+ features
+        if grep -r "declare -A" bin/dwh/*.sh 2>/dev/null; then
+          echo "ℹ️  Requires Bash 4.0+ (associative arrays detected)" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if grep -r "readarray\|mapfile" bin/dwh/*.sh 2>/dev/null; then
+          echo "ℹ️  Requires Bash 4.0+ (readarray/mapfile detected)" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "✅ Bash version check complete" >> $GITHUB_STEP_SUMMARY
+    
+    - name: Check external tool dependencies
+      run: |
+        echo "## External Dependencies" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Required tools:" >> $GITHUB_STEP_SUMMARY
+        echo "- PostgreSQL 12+" >> $GITHUB_STEP_SUMMARY
+        echo "- PostGIS 3.0+" >> $GITHUB_STEP_SUMMARY
+        echo "- Bash 4.0+" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Testing tools:" >> $GITHUB_STEP_SUMMARY
+        echo "- BATS (Bash Automated Testing System)" >> $GITHUB_STEP_SUMMARY
+        echo "- shellcheck" >> $GITHUB_STEP_SUMMARY
+        echo "- shfmt" >> $GITHUB_STEP_SUMMARY
+
