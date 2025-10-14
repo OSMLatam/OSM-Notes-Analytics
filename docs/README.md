@@ -221,8 +221,8 @@ For comprehensive testing documentation, see **[tests/README.md](../tests/README
 
 **Essential reading:**
 
-1. [Testing_Guide.md](Testing_Guide.md) - Testing best practices
-2. [CI_CD_Guide.md](CI_CD_Guide.md) - Development workflow
+1. [tests/README.md](../tests/README.md) - Testing guide and test suite documentation
+2. [CI_CD_Guide.md](CI_CD_Guide.md) - Development workflow and CI/CD
 3. [DWH_Star_Schema_Data_Dictionary.md](DWH_Star_Schema_Data_Dictionary.md) - Data reference
 
 ### For Data Analysts
@@ -237,9 +237,9 @@ For comprehensive testing documentation, see **[tests/README.md](../tests/README
 
 **Important guides:**
 
-1. [CI_CD_Guide.md](CI_CD_Guide.md) - Pipeline configuration
+1. [CI_CD_Guide.md](CI_CD_Guide.md) - Pipeline configuration and workflows
 2. [ETL_Enhanced_Features.md](ETL_Enhanced_Features.md) - Performance tuning
-3. [Testing_Workflows_Overview.md](Testing_Workflows_Overview.md) - Test automation
+3. [tests/README.md](../tests/README.md) - Test automation and execution
 
 ## Documentation Standards
 
