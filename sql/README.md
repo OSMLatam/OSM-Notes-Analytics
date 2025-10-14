@@ -1,10 +1,12 @@
 # SQL Directory
 
-This directory contains all SQL scripts for creating, populating, and managing the data warehouse, including the star schema, dimensions, facts, and datamarts.
+This directory contains all SQL scripts for creating, populating, and managing the data warehouse,
+including the star schema, dimensions, facts, and datamarts.
 
 ## Overview
 
-The SQL scripts implement a complete ETL (Extract, Transform, Load) pipeline that transforms raw OSM notes data into a star schema data warehouse with pre-computed datamarts for analytics.
+The SQL scripts implement a complete ETL (Extract, Transform, Load) pipeline that transforms raw OSM
+notes data into a star schema data warehouse with pre-computed datamarts for analytics.
 
 ## Directory Structure
 
@@ -546,9 +548,9 @@ SELECT COUNT(*) FROM dwh.dimension_users;
 SELECT COUNT(*) FROM dwh.facts;
 
 -- Test referential integrity
-SELECT COUNT(*) 
+SELECT COUNT(*)
 FROM dwh.facts f
-LEFT JOIN dwh.dimension_users u 
+LEFT JOIN dwh.dimension_users u
   ON f.action_dimension_id_user = u.dimension_user_id
 WHERE u.dimension_user_id IS NULL;
 -- Should return 0

@@ -5,7 +5,8 @@
 
 ## 🎯 Overview
 
-This project uses a comprehensive CI/CD system with GitHub Actions, pre-commit hooks, and automated validation to ensure code quality.
+This project uses a comprehensive CI/CD system with GitHub Actions, pre-commit hooks, and automated
+validation to ensure code quality.
 
 ## 📊 GitHub Actions Workflows
 
@@ -191,7 +192,7 @@ Add to README.md:
    ```bash
    # Quick tests
    ./tests/run_quality_tests.sh
-   
+
    # Full tests
    ./tests/run_all_tests.sh
    ```
@@ -248,7 +249,7 @@ For jobs that need external database access:
 
 **GitHub → Settings → Secrets → Actions:**
 
-```
+```bash
 DB_HOST=your-db-host.com
 DB_PORT=5432
 DB_USER=analytics_user

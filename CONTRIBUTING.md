@@ -1,8 +1,8 @@
 # Contributing to OSM-Notes-Analytics
 
-Thank you for your interest in contributing to the OSM-Notes-Analytics project!
-This document provides comprehensive guidelines for contributing to this
-OpenStreetMap notes analytics and data warehouse system.
+Thank you for your interest in contributing to the OSM-Notes-Analytics project! This document
+provides comprehensive guidelines for contributing to this OpenStreetMap notes analytics and data
+warehouse system.
 
 ## Table of Contents
 
@@ -168,10 +168,10 @@ Familiarize yourself with the project structure:
    ```bash
    # Run quality tests (fast, no database)
    ./tests/run_quality_tests.sh
-   
+
    # Run DWH tests (requires database)
    ./tests/run_dwh_tests.sh
-   
+
    # Run all tests
    ./tests/run_all_tests.sh
    ```
@@ -180,7 +180,8 @@ Familiarize yourself with the project structure:
 
 ### Overview
 
-All contributions must include comprehensive testing. The project uses BATS testing suites and SQL tests covering all system components, including DWH functionality.
+All contributions must include comprehensive testing. The project uses BATS testing suites and SQL
+tests covering all system components, including DWH functionality.
 
 ### Test Categories
 
@@ -301,13 +302,11 @@ Tests are automatically run in GitHub Actions workflows:
   - SQL syntax validation
   - Configuration file validation
   - Runs on every push and pull request
-  
 - **Tests** (`.github/workflows/tests.yml`):
   - Quality tests (no database required)
   - DWH tests (with PostgreSQL/PostGIS setup)
   - Integration tests
   - Runs on push to main branch
-  
 - **Dependency Check** (`.github/workflows/dependency-check.yml`):
   - Validates required tools are available
   - Checks for outdated dependencies
@@ -401,12 +400,14 @@ Follow the naming pattern: `<Component>_<Phase><Step>_<Description>.sql`
 - **ETL scripts**: `ETL_22_createDWHTables.sql`, `ETL_25_populateDimensionTables.sql`
 - **Staging scripts**: `Staging_31_createBaseStagingObjects.sql`, `Staging_61_loadNotes.sql`
 - **Datamart scripts**: `datamartCountries_31_populateDatamartCountriesTable.sql`
-- **Phase numbers**: 1x=validation, 2x=creation, 3x=population, 4x=constraints, 5x=finalization, 6x=incremental
+- **Phase numbers**: 1x=validation, 2x=creation, 3x=population, 4x=constraints, 5x=finalization,
+  6x=incremental
 
 #### Test Files
 
 - **Unit tests**: `ETL_enhanced.test.bats`, `datamartCountries_integration.test.bats`
-- **Integration tests**: `ETL_enhanced_integration.test.bats`, `datamart_enhanced_integration.test.bats`
+- **Integration tests**: `ETL_enhanced_integration.test.bats`,
+  `datamart_enhanced_integration.test.bats`
 - **SQL tests**: `dwh_cleanup.test.sql`, `dwh_dimensions_enhanced.test.sql`
 
 ## Naming Conventions
@@ -435,12 +436,14 @@ Follow the naming pattern: `<Component>_<Phase><Step>_<Description>.sql`
 
 ### Library Organization
 
-The project uses shared libraries in `lib/osm-common/` to eliminate code duplication and improve maintainability:
+The project uses shared libraries in `lib/osm-common/` to eliminate code duplication and improve
+maintainability:
 
 #### 1. Logging (`lib/osm-common/bash_logger.sh`)
 
 - **Purpose**: Centralized logging framework with multiple log levels
-- **Functions**: `__logt`, `__logd`, `__logi`, `__logw`, `__loge`, `__logf`, `__log_start`, `__log_finish`
+- **Functions**: `__logt`, `__logd`, `__logi`, `__logw`, `__loge`, `__logf`, `__log_start`,
+  `__log_finish`
 - **Usage**: All scripts should source this for consistent logging
 - **Log Levels**: TRACE, DEBUG, INFO, WARN, ERROR, FATAL
 
@@ -453,7 +456,8 @@ The project uses shared libraries in `lib/osm-common/` to eliminate code duplica
 #### 3. Validation Functions (`lib/osm-common/validationFunctions.sh`)
 
 - **Purpose**: Validation functions for files, configuration, and database
-- **Functions**: `__validate_sql_structure`, `__validate_config_file`, `__validate_database_connection`
+- **Functions**: `__validate_sql_structure`, `__validate_config_file`,
+  `__validate_database_connection`
 - **Usage**: Use these for all validation operations
 
 #### 4. Error Handling (`lib/osm-common/errorHandlingFunctions.sh`)
@@ -474,7 +478,8 @@ The project uses shared libraries in `lib/osm-common/` to eliminate code duplica
 
 1. **Script Headers**: Every script must have a comprehensive header (see template above)
 2. **Function Documentation**: All functions must be documented with parameters and return values
-3. **README Files**: Each major directory has a README.md (bin/, etc/, sql/, tests/, docs/, lib/, scripts/)
+3. **README Files**: Each major directory has a README.md (bin/, etc/, sql/, tests/, docs/, lib/,
+   scripts/)
 4. **SQL Documentation**: Document complex queries, procedures, and functions
 5. **Configuration Documentation**: Document all configuration options in etc/README.md
 6. **Test Documentation**: Document test purpose, setup, and expected results
@@ -676,7 +681,8 @@ git update-index --no-assume-unchanged etc/properties.sh
 git update-index --no-assume-unchanged etc/etl.properties
 ```
 
-This allows you to customize database settings, user names, and ETL configurations for local development without affecting the repository.
+This allows you to customize database settings, user names, and ETL configurations for local
+development without affecting the repository.
 
 ## Version Control
 
@@ -684,9 +690,9 @@ This allows you to customize database settings, user names, and ETL configuratio
 
 - **main**: Production-ready code
 - **develop**: Integration branch
-- **feature/***: New features
-- **bugfix/***: Bug fixes
-- **hotfix/***: Critical fixes
+- **feature/\***: New features
+- **bugfix/\***: Bug fixes
+- **hotfix/\***: Critical fixes
 
 ### Release Process
 

@@ -1,6 +1,7 @@
 # Tests Directory
 
-This directory contains the comprehensive test suite for the OSM-Notes-Analytics project, including unit tests, integration tests, and quality validation tests.
+This directory contains the comprehensive test suite for the OSM-Notes-Analytics project, including
+unit tests, integration tests, and quality validation tests.
 
 ## Overview
 
@@ -162,7 +163,7 @@ Located in `unit/`, these tests verify individual components in isolation:
 - **ETL_integration.test.bats**: Tests ETL integration with database
 - **datamartCountries_integration.test.bats**: Tests country datamart
 - **datamartUsers_integration.test.bats**: Tests user datamart
-- **dwh_*.test.sql**: Tests SQL functions and procedures
+- **dwh\_\*.test.sql**: Tests SQL functions and procedures
 
 ### Integration Tests
 

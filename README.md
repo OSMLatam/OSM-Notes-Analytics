@@ -10,7 +10,9 @@ Data Warehouse, ETL, and Analytics for OpenStreetMap Notes
 
 ## Overview
 
-This repository contains the analytics and data warehouse components for the OSM Notes profiling system. It provides ETL (Extract, Transform, Load) processes, a star schema data warehouse, and datamarts for analyzing OSM notes data.
+This repository contains the analytics and data warehouse components for the OSM Notes profiling
+system. It provides ETL (Extract, Transform, Load) processes, a star schema data warehouse, and
+datamarts for analyzing OSM notes data.
 
 ## Features
 
@@ -31,7 +33,8 @@ This repository contains the analytics and data warehouse components for the OSM
 - **PostgreSQL** 12 or higher
 - **PostGIS** 3.0 or higher
 - **Bash** 4.0 or higher
-- **OSM Notes Ingestion Database**: This analytics system reads from the base notes tables populated by the [OSM-Notes-Ingestion](https://github.com/angoca/OSM-Notes-Ingestion) ingestion system
+- **OSM Notes Ingestion Database**: This analytics system reads from the base notes tables populated
+  by the [OSM-Notes-Ingestion](https://github.com/OSMLatam/OSM-Notes-Ingestion) ingestion system
 
 ## Database Architecture
 
@@ -320,8 +323,8 @@ Check that:
 ./bin/dwh/ETL.sh --validate
 
 # Check for orphaned facts (example query)
-psql -d osm_notes -c "SELECT COUNT(*) FROM dwh.facts f 
-  LEFT JOIN dwh.dimension_countries c ON f.dimension_id_country = c.dimension_country_id 
+psql -d osm_notes -c "SELECT COUNT(*) FROM dwh.facts f
+  LEFT JOIN dwh.dimension_countries c ON f.dimension_id_country = c.dimension_country_id
   WHERE c.dimension_country_id IS NULL;"
 ```
 
@@ -329,14 +332,12 @@ psql -d osm_notes -c "SELECT COUNT(*) FROM dwh.facts f
 
 This analytics system depends on the **OSM-Notes-Ingestion** ingestion system:
 
-1. **Ingestion** ([OSM-Notes-Ingestion](https://github.com/angoca/OSM-Notes-Ingestion))
-
+1. **Ingestion** ([OSM-Notes-Ingestion](https://github.com/OSMLatam/OSM-Notes-Ingestion))
    - Downloads notes from OSM Planet and API
    - Populates base tables: `notes`, `note_comments`, `note_comments_text`
    - Manages WMS layer publication
 
 2. **Analytics** (this repository)
-
    - Reads from base tables
    - Transforms data into star schema
    - Generates datamarts and profiles
@@ -405,7 +406,8 @@ See [LICENSE](LICENSE) for license information.
 
 ## Related Projects
 
-- **[OSM-Notes-Ingestion](https://github.com/angoca/OSM-Notes-Ingestion)**: Ingestion and WMS system
+- **[OSM-Notes-Ingestion](https://github.com/OSMLatam/OSM-Notes-Ingestion)**: Ingestion and WMS
+  system
 - **OpenStreetMap**: [https://www.openstreetmap.org](https://www.openstreetmap.org)
 
 ## Support

@@ -1,10 +1,12 @@
 # Bin Directory
 
-This directory contains the executable scripts for the OSM-Notes-Analytics project, primarily focused on ETL (Extract, Transform, Load) processes and datamart generation.
+This directory contains the executable scripts for the OSM-Notes-Analytics project, primarily
+focused on ETL (Extract, Transform, Load) processes and datamart generation.
 
 ## Overview
 
-The `bin/` directory houses the main operational scripts that transform raw OSM notes data into a comprehensive data warehouse with pre-computed analytics datamarts.
+The `bin/` directory houses the main operational scripts that transform raw OSM notes data into a
+comprehensive data warehouse with pre-computed analytics datamarts.
 
 ## Directory Structure
 
@@ -250,7 +252,8 @@ Temporary Files (--temp-only or --all):
 - Populates `dwh.datamartUsers` table
 - One row per active user with comprehensive metrics
 
-**Note:** This script is designed to run incrementally to avoid overwhelming the database. Schedule it to run regularly until all users are processed.
+**Note:** This script is designed to run incrementally to avoid overwhelming the database. Schedule
+it to run regularly until all users are processed.
 
 ## Workflow
 

@@ -1,6 +1,7 @@
 # Scripts Directory
 
-This directory contains utility scripts for project setup, validation, and development workflow automation.
+This directory contains utility scripts for project setup, validation, and development workflow
+automation.
 
 ## Overview
 
@@ -250,29 +251,29 @@ Summary:
 
 1. **Before Committing:**
 
-```bash
-./scripts/validate-all.sh && git commit -m "Feature complete"
-```
+   ```bash
+   ./scripts/validate-all.sh && git commit -m "Feature complete"
+   ```
 
-2. **Before Creating PR:**
+1. **Before Creating PR:**
 
-```bash
-./scripts/validate-all.sh && git push origin feature-branch
-```
+   ```bash
+   ./scripts/validate-all.sh && git push origin feature-branch
+   ```
 
-3. **CI/CD Pipeline:**
+1. **CI/CD Pipeline:**
 
-```bash
-# In .github/workflows/quality-checks.yml
-- name: Validate code
-  run: ./scripts/validate-all.sh
-```
+   ```bash
+   # In .github/workflows/quality-checks.yml
+   - name: Validate code
+     run: ./scripts/validate-all.sh
+   ```
 
-4. **Manual Code Review:**
+1. **Manual Code Review:**
 
-```bash
-./scripts/validate-all.sh > validation-report.txt
-```
+   ```bash
+   ./scripts/validate-all.sh > validation-report.txt
+   ```
 
 **Troubleshooting Failures:**
 
@@ -280,27 +281,27 @@ If validation fails:
 
 1. **View detailed output:**
 
-```bash
-./scripts/validate-all.sh 2>&1 | tee validation.log
-```
+   ```bash
+   ./scripts/validate-all.sh 2>&1 | tee validation.log
+   ```
 
-2. **Fix shellcheck issues:**
+1. **Fix shellcheck issues:**
 
-```bash
-shellcheck -x bin/dwh/*.sh
-```
+   ```bash
+   shellcheck -x bin/dwh/*.sh
+   ```
 
-3. **Fix formatting:**
+1. **Fix formatting:**
 
-```bash
-shfmt -w -i 1 -sr -bn bin/dwh/*.sh
-```
+   ```bash
+   shfmt -w -i 1 -sr -bn bin/dwh/*.sh
+   ```
 
-4. **Re-run validation:**
+1. **Re-run validation:**
 
-```bash
-./scripts/validate-all.sh
-```
+   ```bash
+   ./scripts/validate-all.sh
+   ```
 
 ## Workflow Integration
 
@@ -355,7 +356,7 @@ These scripts are used in GitHub Actions:
 ```yaml
 - name: Setup environment
   run: ./scripts/setup_analytics.sh
-  
+
 - name: Run tests
   run: ./tests/run_all_tests.sh
 ```
@@ -407,53 +408,53 @@ fi
 
 1. **Bash 4.0+**
 
-```bash
-bash --version
-```
+   ```bash
+   bash --version
+   ```
 
-2. **Git**
+1. **Git**
 
-```bash
-git --version
-```
+   ```bash
+   git --version
+   ```
 
-3. **PostgreSQL client**
+1. **PostgreSQL client**
 
-```bash
-psql --version
-```
+   ```bash
+   psql --version
+   ```
 
 ### Optional Development Tools
 
 1. **shellcheck** (shell script linter)
 
-```bash
-# Ubuntu/Debian
-sudo apt-get install shellcheck
+   ```bash
+   # Ubuntu/Debian
+   sudo apt-get install shellcheck
 
-# macOS
-brew install shellcheck
-```
+   # macOS
+   brew install shellcheck
+   ```
 
-2. **shfmt** (shell script formatter)
+1. **shfmt** (shell script formatter)
 
-```bash
-# Ubuntu/Debian
-sudo apt-get install shfmt
+   ```bash
+   # Ubuntu/Debian
+   sudo apt-get install shfmt
 
-# macOS
-brew install shfmt
-```
+   # macOS
+   brew install shfmt
+   ```
 
-3. **BATS** (test framework)
+1. **BATS** (test framework)
 
-```bash
-# Ubuntu/Debian
-sudo apt-get install bats
+   ```bash
+   # Ubuntu/Debian
+   sudo apt-get install bats
 
-# macOS
-brew install bats-core
-```
+   # macOS
+   brew install bats-core
+   ```
 
 ## Best Practices
 

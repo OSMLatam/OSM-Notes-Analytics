@@ -1,10 +1,12 @@
 # Lib Directory
 
-This directory contains shared libraries and common functions used across all scripts in the OSM-Notes-Analytics project.
+This directory contains shared libraries and common functions used across all scripts in the
+OSM-Notes-Analytics project.
 
 ## Overview
 
-The `lib/` directory provides reusable Bash functions and utilities that promote code consistency, reduce duplication, and improve maintainability across the project.
+The `lib/` directory provides reusable Bash functions and utilities that promote code consistency,
+reduce duplication, and improve maintainability across the project.
 
 ## Directory Structure
 
@@ -66,14 +68,14 @@ __set_log_file "/path/to/logfile.log"
 
 **Log Levels:**
 
-| Level | When to Use | Example |
-|-------|-------------|---------|
-| TRACE | Very detailed debugging | Variable values, loop iterations |
-| DEBUG | Detailed debugging | Function calls, intermediate results |
-| INFO  | General information | Progress updates, milestones |
-| WARN  | Warning conditions | Deprecated usage, potential issues |
-| ERROR | Error conditions | Recoverable errors, validation failures |
-| FATAL | Fatal errors | Unrecoverable errors requiring exit |
+| Level | When to Use             | Example                                 |
+| ----- | ----------------------- | --------------------------------------- |
+| TRACE | Very detailed debugging | Variable values, loop iterations        |
+| DEBUG | Detailed debugging      | Function calls, intermediate results    |
+| INFO  | General information     | Progress updates, milestones            |
+| WARN  | Warning conditions      | Deprecated usage, potential issues      |
+| ERROR | Error conditions        | Recoverable errors, validation failures |
+| FATAL | Fatal errors            | Unrecoverable errors requiring exit     |
 
 **Example Output:**
 
@@ -105,7 +107,7 @@ export LOG_FUNCTION_CALLS=true
 
 **Functions:**
 
-#### __checkPrereqsCommands
+#### \_\_checkPrereqsCommands
 
 Checks if required commands are available.
 
@@ -119,7 +121,7 @@ __checkPrereqsCommands
 # - date, awk, sed, grep
 ```
 
-#### __waitForJobs
+#### \_\_waitForJobs
 
 Manages parallel job execution by waiting for jobs to complete.
 
@@ -133,7 +135,7 @@ __waitForJobs
 # - Prevents CPU monopolization
 ```
 
-#### __start_logger
+#### \_\_start_logger
 
 Initializes the logging system.
 
@@ -176,7 +178,7 @@ wait  # Wait for all jobs to complete
 
 **Functions:**
 
-#### __validate_sql_structure
+#### \_\_validate_sql_structure
 
 Validates SQL file structure and syntax.
 
@@ -195,7 +197,7 @@ fi
 # - No obvious syntax errors
 ```
 
-#### __validate_config_file
+#### \_\_validate_config_file
 
 Validates configuration file format and content.
 
@@ -214,7 +216,7 @@ fi
 # - No dangerous commands
 ```
 
-#### __validate_database_connection
+#### \_\_validate_database_connection
 
 Tests database connectivity.
 
@@ -267,7 +269,7 @@ fi
 
 **Functions:**
 
-#### __trapOn
+#### \_\_trapOn
 
 Sets up error traps for catching failures.
 
@@ -282,7 +284,7 @@ __trapOn
 # - TERM (kill signal)
 ```
 
-#### __handle_error
+#### \_\_handle_error
 
 Handles errors consistently.
 
@@ -295,7 +297,7 @@ Handles errors consistently.
 # - Stack trace
 ```
 
-#### __cleanup
+#### \_\_cleanup
 
 Cleanup function called on exit.
 
@@ -327,7 +329,7 @@ __trapOn
 function main() {
   # Do work
   risky_operation
-  
+
   # If this fails, __handle_error is called automatically
 }
 
@@ -409,10 +411,10 @@ __trapOn
 
 function risky_operation() {
   __log_start
-  
+
   # This will be caught if it fails
   some_command_that_might_fail
-  
+
   __log_finish
 }
 
@@ -447,7 +449,7 @@ fi
 # Process items in parallel
 for item in "${items[@]}"; do
   __waitForJobs  # Respect MAX_THREADS
-  
+
   (
     __logi "Processing $item"
     process_item "$item"
@@ -462,13 +464,13 @@ wait
 
 Standard error codes used across the project:
 
-| Code | Meaning | Usage |
-|------|---------|-------|
-| 0 | Success | Normal exit |
-| 1 | Help message | User requested help |
-| 241 | Missing library | Required library/utility not found |
-| 242 | Invalid argument | Script called with invalid parameters |
-| 243 | Logger unavailable | Logging system initialization failed |
+| Code | Meaning            | Usage                                 |
+| ---- | ------------------ | ------------------------------------- |
+| 0    | Success            | Normal exit                           |
+| 1    | Help message       | User requested help                   |
+| 241  | Missing library    | Required library/utility not found    |
+| 242  | Invalid argument   | Script called with invalid parameters |
+| 243  | Logger unavailable | Logging system initialization failed  |
 
 **Usage in scripts:**
 
@@ -509,20 +511,20 @@ fi
 # Returns: 0 on success, 1 on failure
 function __my_function() {
   __log_start
-  
+
   local arg1="${1}"
   local arg2="${2}"
-  
+
   # Validation
   if [[ -z "${arg1}" ]]; then
     __loge "arg1 is required"
     __log_finish
     return 1
   fi
-  
+
   # Function logic
   # ...
-  
+
   __log_finish
   return 0
 }
@@ -587,7 +589,7 @@ __start_logger
 __trapOn
 ```
 
-4. **Use __log_start/__log_finish in functions:**
+4. **Use **log_start/**log_finish in functions:**
 
 ```bash
 function my_function() {

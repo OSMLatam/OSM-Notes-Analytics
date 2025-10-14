@@ -1,10 +1,12 @@
 # Documentation Directory
 
-This directory contains comprehensive documentation for the OSM-Notes-Analytics project, including architecture diagrams, data dictionaries, testing guides, and CI/CD documentation.
+This directory contains comprehensive documentation for the OSM-Notes-Analytics project, including
+architecture diagrams, data dictionaries, testing guides, and CI/CD documentation.
 
 ## Overview
 
-The documentation provides detailed information about the data warehouse design, ETL processes, testing strategies, and development workflows.
+The documentation provides detailed information about the data warehouse design, ETL processes,
+testing strategies, and development workflows.
 
 ## Documentation Index
 
@@ -55,7 +57,6 @@ The documentation provides detailed information about the data warehouse design,
    - `dwh.facts` - All columns with descriptions
 
 2. **Dimension Tables:**
-
    - `dimension_users` - User information
    - `dimension_countries` - Country data
    - `dimension_regions` - Geographic regions
@@ -169,28 +170,24 @@ For comprehensive testing documentation, see **[tests/README.md](../tests/README
 **Contents:**
 
 1. **GitHub Actions Workflows:**
-
    - Quality checks workflow
    - Test execution workflow
    - Dependency checking
    - Security scanning
 
 2. **Git Hooks:**
-
    - Pre-commit validation
    - Pre-push testing
    - Commit message linting
    - Installation and configuration
 
 3. **Quality Gates:**
-
    - Code quality thresholds
    - Test coverage requirements
    - Security vulnerability checks
    - Performance benchmarks
 
 4. **Deployment:**
-
    - Deployment strategies
    - Environment management
    - Rollback procedures

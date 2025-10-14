@@ -1,10 +1,13 @@
 # Etc Directory
 
-This directory contains configuration files that control the behavior of the OSM-Notes-Analytics system.
+This directory contains configuration files that control the behavior of the OSM-Notes-Analytics
+system.
 
 ## Overview
 
-Configuration files in this directory define database connections, processing parameters, and system behavior. These files should be customized for your specific environment before running the ETL and datamart scripts.
+Configuration files in this directory define database connections, processing parameters, and system
+behavior. These files should be customized for your specific environment before running the ETL and
+datamart scripts.
 
 ## Configuration Files
 
@@ -41,7 +44,9 @@ DB_USER="myuser"
 EMAILS="username@domain.com"
 ```
 
-**Note:** Email notifications are configured in `etl.properties` (`ETL_NOTIFICATION_ENABLED`, `ETL_NOTIFICATION_EMAIL`). This variable is inherited from the shared configuration but not currently used by Analytics scripts.
+**Note:** Email notifications are configured in `etl.properties` (`ETL_NOTIFICATION_ENABLED`,
+`ETL_NOTIFICATION_EMAIL`). This variable is inherited from the shared configuration but not
+currently used by Analytics scripts.
 
 #### 3. API Configuration (Inherited, Not Used)
 
@@ -56,7 +61,9 @@ PLANET="https://planet.openstreetmap.org"
 OVERPASS_INTERPRETER="https://overpass-api.de/api/interpreter"
 ```
 
-**Note:** These settings are used by the OSM-Notes-Ingestion system (not Analytics). They are inherited from the shared `properties.sh` file but are not used by any Analytics scripts. You can ignore these for Analytics-only deployments.
+**Note:** These settings are used by the OSM-Notes-Ingestion system (not Analytics). They are
+inherited from the shared `properties.sh` file but are not used by any Analytics scripts. You can
+ignore these for Analytics-only deployments.
 
 #### 4. Rate Limiting (Inherited, Not Used)
 
@@ -65,7 +72,8 @@ OVERPASS_INTERPRETER="https://overpass-api.de/api/interpreter"
 SECONDS_TO_WAIT="30"
 ```
 
-**Note:** Used by the Ingestion system, not Analytics. Can be ignored for Analytics-only deployments.
+**Note:** Used by the Ingestion system, not Analytics. Can be ignored for Analytics-only
+deployments.
 
 #### 5. Processing Configuration
 
@@ -77,7 +85,8 @@ LOOP_SIZE="10000"
 MAX_NOTES="10000"
 ```
 
-**Note:** `LOOP_SIZE` is inherited but not actively used by Analytics ETL (which uses `ETL_BATCH_SIZE` from `etl.properties`). `MAX_NOTES` is used only by the Ingestion system.
+**Note:** `LOOP_SIZE` is inherited but not actively used by Analytics ETL (which uses
+`ETL_BATCH_SIZE` from `etl.properties`). `MAX_NOTES` is used only by the Ingestion system.
 
 #### 6. Parallel Processing
 
@@ -114,7 +123,8 @@ ENABLE_XSLT_PROFILING="false"
 XSLT_MAX_DEPTH="4000"
 ```
 
-**Note:** XSLT processing is used by the Ingestion system for XML transformation, not by Analytics. These settings can be ignored for Analytics-only deployments.
+**Note:** XSLT processing is used by the Ingestion system for XML transformation, not by Analytics.
+These settings can be ignored for Analytics-only deployments.
 
 #### 8. Cleanup Configuration
 
@@ -331,26 +341,26 @@ Matches `XSLT_MAX_DEPTH` in `properties.sh`.
 
 1. **Copy and edit properties.sh:**
 
-```bash
-cd etc/
-nano properties.sh
-```
+   ```bash
+   cd etc/
+   nano properties.sh
+   ```
 
-2. **Set database credentials:**
+1. **Set database credentials:**
 
-```bash
-DBNAME="your_database_name"
-DB_USER="your_username"
-```
+   ```bash
+   DBNAME="your_database_name"
+   DB_USER="your_username"
+   ```
 
-3. **Adjust parallel processing:**
+1. **Adjust parallel processing:**
 
-```bash
-# For 8-core system:
-MAX_THREADS="8"
-```
+   ```bash
+   # For 8-core system:
+   MAX_THREADS="8"
+   ```
 
-4. **Save and test connection:**
+1. **Save and test connection:**
 
 ```bash
 psql -d your_database_name -U your_username -c "SELECT version();"
