@@ -1,40 +1,45 @@
 # CI/CD Guide - OSM-Notes-Analytics
 
 **Version**: 2025-10-14  
-**Status**: Configurado y Activo
+**Status**: Configured and Active
 
 ## 🎯 Overview
 
-Este proyecto utiliza un sistema completo de CI/CD con GitHub Actions, pre-commit hooks, y validación automatizada para garantizar la calidad del código.
+This project uses a comprehensive CI/CD system with GitHub Actions, pre-commit hooks, and automated validation to ensure code quality.
 
-## 📊 Workflows de GitHub Actions
+## 📊 GitHub Actions Workflows
 
 ### 1. Tests Workflow (`tests.yml`)
 
 **Triggers:**
-- Push a `main` o `develop`
-- Pull requests a `main` o `develop`
+
+- Push to `main` or `develop`
+- Pull requests to `main` or `develop`
 - Manual (`workflow_dispatch`)
 
 **Jobs:**
 
 #### Quality Tests
-- Ejecuta shellcheck en todos los scripts
-- Verifica formato con shfmt
-- Valida trailing whitespace y shebangs
-- **Duración**: ~2-3 minutos
+
+- Runs shellcheck on all scripts
+- Verifies formatting with shfmt
+- Validates trailing whitespace and shebangs
+- **Duration**: ~2-3 minutes
 
 #### Unit and Integration Tests
-- Crea base de datos PostgreSQL/PostGIS en container
-- Ejecuta todos los tests BATS
-- Valida integridad de DWH
-- **Duración**: ~5-7 minutos
+
+- Creates PostgreSQL/PostGIS database in container
+- Executes all BATS tests
+- Validates DWH integrity
+- **Duration**: ~5-7 minutes
 
 #### All Tests Summary
-- Combina resultados de todos los jobs
-- Falla si cualquier test falla
+
+- Combines results from all jobs
+- Fails if any test fails
 
 **Status Badge:**
+
 ```markdown
 ![Tests](https://github.com/OSMLatam/OSM-Notes-Analytics/workflows/Tests/badge.svg)
 ```
@@ -42,101 +47,113 @@ Este proyecto utiliza un sistema completo de CI/CD con GitHub Actions, pre-commi
 ### 2. Quality Checks Workflow (`quality-checks.yml`)
 
 **Triggers:**
-- Push a `main` o `develop`
+
+- Push to `main` or `develop`
 - Pull requests
-- Schedule (semanal, lunes 2am UTC)
+- Schedule (weekly, Mondays 2am UTC)
 - Manual
 
 **Jobs:**
-- Shellcheck separado
-- Shfmt separado
-- Code quality checks separado
 
-**Ventaja**: Checks independientes, más fácil identificar problemas
+- Separate shellcheck job
+- Separate shfmt job
+- Separate code quality checks job
+
+**Advantage**: Independent checks make it easier to identify specific issues
 
 ### 3. Dependency Check Workflow (`dependency-check.yml`)
 
 **Triggers:**
-- Push a `main`
-- Pull requests a `main`
-- Schedule (mensual, día 1 a las 3am UTC)
+
+- Push to `main`
+- Pull requests to `main`
+- Schedule (monthly, 1st day at 3am UTC)
 - Manual
 
 **Jobs:**
-- Verifica compatibilidad PostgreSQL
-- Verifica versión de Bash
-- Documenta dependencias externas
+
+- Verifies PostgreSQL compatibility
+- Verifies Bash version
+- Documents external dependencies
 
 ## 🪝 Git Hooks
 
 ### Pre-commit Hook
 
-**Ubicación**: `.git-hooks/pre-commit`
+**Location**: `.git-hooks/pre-commit`
 
-**Verifica antes de cada commit:**
-1. ✅ Shellcheck en archivos staged
-2. ✅ Formato de código (shfmt)
+**Checks before each commit:**
+
+1. ✅ Shellcheck on staged files
+2. ✅ Code formatting (shfmt)
 3. ✅ Trailing whitespace
-4. ✅ Shebangs correctos
+4. ✅ Correct shebangs
 
-**Instalar:**
+**Install:**
+
 ```bash
 ./scripts/install-hooks.sh
 ```
 
-**Bypass (no recomendado):**
+**Bypass (not recommended):**
+
 ```bash
 git commit --no-verify
 ```
 
 ### Pre-push Hook
 
-**Ubicación**: `.git-hooks/pre-push`
+**Location**: `.git-hooks/pre-push`
 
-**Ejecuta antes de cada push:**
-1. ✅ Todos los quality tests
-2. ✅ DWH tests (si la BD está disponible)
-3. ⏱️ Timeout de 5 minutos
+**Executes before each push:**
+
+1. ✅ All quality tests
+2. ✅ DWH tests (if database is available)
+3. ⏱️ 5-minute timeout
 
 **Bypass:**
+
 ```bash
 git push --no-verify
 ```
 
-## 🔧 Scripts de Validación
+## 🔧 Validation Scripts
 
 ### install-hooks.sh
 
-Instala git hooks automáticamente.
+Installs git hooks automatically.
 
 ```bash
 ./scripts/install-hooks.sh
 ```
 
-**Funcionalidad:**
-- Crea symlinks en `.git/hooks/`
-- Configura permisos ejecutables
-- Valida que estás en un repo git
+**Functionality:**
+
+- Creates symlinks in `.git/hooks/`
+- Sets executable permissions
+- Validates you're in a git repository
 
 ### validate-all.sh
 
-Validación completa del proyecto.
+Complete project validation.
 
 ```bash
 ./scripts/validate-all.sh
 ```
 
-**Verifica:**
-- ✅ Dependencias (PostgreSQL, Bash, Git)
-- ✅ Herramientas de testing (BATS, shellcheck, shfmt)
-- ✅ Estructura de archivos
-- ✅ Archivos clave
-- ✅ Conexión a base de datos
-- ✅ Extensiones PostgreSQL
-- ✅ Quality tests
-- ✅ DWH tests (opcional)
+**Verifies:**
 
-**Uso en CI/CD:**
+- ✅ Dependencies (PostgreSQL, Bash, Git)
+- ✅ Testing tools (BATS, shellcheck, shfmt)
+- ✅ File structure
+- ✅ Key files
+- ✅ Database connection
+- ✅ PostgreSQL extensions
+- ✅ Quality tests
+- ✅ DWH tests (optional)
+
+**Usage in CI/CD:**
+
 ```yaml
 - name: Full Validation
   run: ./scripts/validate-all.sh
@@ -144,7 +161,7 @@ Validación completa del proyecto.
 
 ## 📈 Status Badges
 
-Agregar al README.md:
+Add to README.md:
 
 ```markdown
 # OSM-Notes-Analytics
@@ -158,70 +175,76 @@ Agregar al README.md:
 [![Bash](https://img.shields.io/badge/Bash-4.0%2B-orange)](https://www.gnu.org/software/bash/)
 ```
 
-## 🔄 Workflow de Desarrollo
+## 🔄 Development Workflow
 
-### Desarrollo Local
+### Local Development
 
-1. **Hacer cambios:**
+1. **Make changes:**
+
    ```bash
-   # Editar archivos
+   # Edit files
    vim bin/dwh/ETL.sh
    ```
 
-2. **Validar localmente:**
+2. **Validate locally:**
+
    ```bash
-   # Tests rápidos
+   # Quick tests
    ./tests/run_quality_tests.sh
    
-   # Tests completos
+   # Full tests
    ./tests/run_all_tests.sh
    ```
 
 3. **Commit:**
+
    ```bash
    git add .
    git commit -m "feat: add new ETL feature"
-   # Pre-commit hook se ejecuta automáticamente
+   # Pre-commit hook runs automatically
    ```
 
 4. **Push:**
+
    ```bash
    git push origin feature-branch
-   # Pre-push hook se ejecuta automáticamente
+   # Pre-push hook runs automatically
    ```
 
 ### Pull Request
 
-1. **Crear PR** en GitHub
-2. **GitHub Actions** ejecuta automáticamente:
+1. **Create PR** on GitHub
+2. **GitHub Actions** executes automatically:
    - Tests workflow
    - Quality checks workflow
-3. **Revisar resultados** en la página del PR
-4. **Merge** solo si todos los checks pasan
+3. **Review results** on the PR page
+4. **Merge** only if all checks pass
 
 ### Release
 
-1. **Merge a main:**
+1. **Merge to main:**
+
    ```bash
    git checkout main
    git merge develop
    git push origin main
    ```
 
-2. **GitHub Actions ejecuta:**
-   - Todos los workflows
+2. **GitHub Actions executes:**
+   - All workflows
    - Dependency check
-   - Validación completa
+   - Complete validation
 
 3. **Tag release:**
+
    ```bash
    git tag -a v1.0.0 -m "Release v1.0.0"
    git push origin v1.0.0
    ```
 
-## 🛠️ Configuración de Secrets
+## 🛠️ Configuring Secrets
 
-Para jobs que necesiten acceso a BD externa:
+For jobs that need external database access:
 
 **GitHub → Settings → Secrets → Actions:**
 
@@ -233,7 +256,8 @@ DB_PASSWORD=secure_password
 DB_NAME=dwh
 ```
 
-**Uso en workflow:**
+**Usage in workflow:**
+
 ```yaml
 env:
   PGHOST: ${{ secrets.DB_HOST }}
@@ -243,101 +267,177 @@ env:
   PGDATABASE: ${{ secrets.DB_NAME }}
 ```
 
-## 📋 Checklist de CI/CD
+## 📋 CI/CD Checklist
 
-### Setup Inicial
-- [x] Workflows de GitHub Actions creados
-- [x] Git hooks configurados
-- [x] Scripts de validación creados
-- [x] Tests configurados con BD por defecto
-- [ ] Badges agregados al README
-- [ ] Secrets configurados (si es necesario)
+### Initial Setup
 
-### Por Desarrollador
-- [x] Instalar git hooks: `./scripts/install-hooks.sh`
-- [x] Verificar tools: `./scripts/validate-all.sh`
-- [x] Ejecutar tests localmente antes de push
-- [x] Revisar resultados de GitHub Actions en PRs
+- [x] GitHub Actions workflows created
+- [x] Git hooks configured
+- [x] Validation scripts created
+- [x] Tests configured with default database
+- [x] Badges added to README
+- [ ] Secrets configured (if needed for external DB)
 
-### Mantenimiento
-- [ ] Revisar workflows semanalmente
-- [ ] Actualizar dependencias mensualmente
-- [ ] Monitorear tiempos de ejecución
-- [ ] Optimizar tests lentos
+### Per Developer
+
+- [x] Install git hooks: `./scripts/install-hooks.sh`
+- [x] Verify tools: `./scripts/validate-all.sh`
+- [x] Run tests locally before push
+- [x] Review GitHub Actions results in PRs
+
+### Maintenance
+
+- [ ] Review workflows weekly
+- [ ] Update dependencies monthly
+- [ ] Monitor execution times
+- [ ] Optimize slow tests
 
 ## 🔍 Troubleshooting
 
-### Los hooks no se ejecutan
+### Hooks not running
 
 ```bash
-# Re-instalar
+# Re-install
 ./scripts/install-hooks.sh
 
-# Verificar permisos
+# Verify permissions
 ls -la .git/hooks/
 chmod +x .git/hooks/pre-commit
 chmod +x .git/hooks/pre-push
 ```
 
-### GitHub Actions falla pero local pasa
+### GitHub Actions fails but local passes
 
-1. Verificar versiones de herramientas
-2. Revisar diferencias de entorno
-3. Ejecutar en container Docker localmente:
+1. Verify tool versions
+2. Review environment differences
+3. Run in Docker container locally:
+
    ```bash
    docker run -it ubuntu:latest bash
-   # Instalar dependencias y ejecutar tests
+   # Install dependencies and run tests
    ```
 
-### Tests muy lentos
+### Tests too slow
 
-1. Revisar logs de GitHub Actions
-2. Identificar tests lentos
-3. Optimizar o paralelizar
-4. Considerar cache de dependencias
+1. Review GitHub Actions logs
+2. Identify slow tests
+3. Optimize or parallelize
+4. Consider dependency caching
 
 ### Pre-push timeout
 
 ```bash
-# Incrementar timeout en .git-hooks/pre-push
-timeout 600 ./tests/run_dwh_tests.sh  # 10 minutos
+# Increase timeout in .git-hooks/pre-push
+timeout 600 ./tests/run_dwh_tests.sh  # 10 minutes
 ```
 
-## 📚 Referencias
+## 📚 References
 
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
 - [BATS Testing Framework](https://github.com/bats-core/bats-core)
 - [ShellCheck](https://www.shellcheck.net/)
 - [shfmt](https://github.com/mvdan/sh)
+- [Testing Guide](./Testing_Guide.md)
+- [Testing Workflows Overview](./Testing_Workflows_Overview.md)
 
-## 🎯 Mejores Prácticas
+## 🎯 Best Practices
 
 ### Do's ✅
-- ✅ Ejecutar tests localmente antes de push
-- ✅ Mantener tests rápidos (<5 min)
-- ✅ Usar pre-commit hooks para feedback inmediato
-- ✅ Revisar logs de GitHub Actions
-- ✅ Actualizar tests cuando cambies código
+
+- ✅ Run tests locally before push
+- ✅ Keep tests fast (<5 min)
+- ✅ Use pre-commit hooks for immediate feedback
+- ✅ Review GitHub Actions logs
+- ✅ Update tests when you change code
 
 ### Don'ts ❌
-- ❌ Usar `--no-verify` rutinariamente
-- ❌ Ignorar warnings de shellcheck
-- ❌ Hacer commits grandes sin tests
-- ❌ Merge PRs con checks fallidos
-- ❌ Hardcodear secrets en código
 
-## 📊 Métricas
+- ❌ Use `--no-verify` routinely
+- ❌ Ignore shellcheck warnings
+- ❌ Make large commits without tests
+- ❌ Merge PRs with failing checks
+- ❌ Hardcode secrets in code
 
-Métricas recomendadas para monitorear:
+## 📊 Metrics
 
-- **Tiempo de ejecución de tests**: Objetivo < 5 min
-- **Tasa de éxito de PRs**: Objetivo > 95%
-- **Cobertura de tests**: Documentar archivos testeados
-- **Tiempo hasta merge**: Minimizar con CI/CD rápido
+Recommended metrics to monitor:
+
+- **Test execution time**: Target < 5 min
+- **PR success rate**: Target > 95%
+- **Test coverage**: Document tested files
+- **Time to merge**: Minimize with fast CI/CD
+
+## 🚀 Advanced CI/CD Features
+
+### Parallel Job Execution
+
+GitHub Actions runs jobs in parallel when possible:
+
+- Quality checks run independently
+- Tests can run on multiple OS (if configured)
+- Dependency checks run separately
+
+### Caching
+
+Consider adding caching for faster builds:
+
+```yaml
+- name: Cache dependencies
+  uses: actions/cache@v3
+  with:
+    path: ~/.cache
+    key: ${{ runner.os }}-deps-${{ hashFiles('**/requirements.txt') }}
+```
+
+### Matrix Testing
+
+Test across multiple configurations:
+
+```yaml
+strategy:
+  matrix:
+    postgres: [12, 13, 14, 15]
+    postgis: [3.0, 3.1, 3.2]
+```
+
+### Notifications
+
+Configure notifications for failed builds:
+
+- GitHub email notifications (default)
+- Slack integration
+- Custom webhooks
+
+## 🔒 Security
+
+### Best Practices
+
+- ✅ Never commit credentials
+- ✅ Use GitHub Secrets for sensitive data
+- ✅ Rotate secrets regularly
+- ✅ Limit secret access to necessary workflows
+- ✅ Review dependencies for vulnerabilities
+
+### Security Scanning
+
+Consider adding:
+
+```yaml
+- name: Security scan
+  uses: securego/gosec@master
+```
+
+## 📝 Contributing to CI/CD
+
+When improving CI/CD:
+
+1. Test changes in a fork first
+2. Document changes in this guide
+3. Update relevant scripts
+4. Test in multiple scenarios
+5. Create PR with clear description
 
 ---
 
-**Última actualización**: 2025-10-14  
-**Mantenedor**: Andres Gomez (AngocA)
-
-
+**Last Updated**: 2025-10-14  
+**Maintainer**: Andres Gomez (AngocA)

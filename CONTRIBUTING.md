@@ -11,7 +11,7 @@ OpenStreetMap notes analytics and data warehouse system.
 - [Testing Requirements](#testing-requirements)
 - [File Organization](#file-organization)
 - [Naming Conventions](#naming-conventions)
-- [Documentation](#documentation)
+- [Code Documentation](#code-documentation)
 - [Quality Assurance](#quality-assurance)
 - [Pull Request Process](#pull-request-process)
 
@@ -289,10 +289,7 @@ psql -d dwh -f tests/unit/sql/dwh_functions_enhanced.test.sql
 
 All new tests must be documented in:
 
-- [Testing Guide](./docs/Testing_Guide.md) - Testing philosophy and best practices
-- [Testing Suites Reference](./docs/Testing_Suites_Reference.md) - Detailed test catalog
-- [Testing Workflows Overview](./docs/Testing_Workflows_Overview.md) - Test execution workflows
-- [Tests README](./tests/README.md) - Test suite documentation and usage
+- [Tests README](./tests/README.md) - Complete testing guide and test suite documentation
 
 ### CI/CD Integration
 
@@ -471,7 +468,7 @@ The project uses shared libraries in `lib/osm-common/` to eliminate code duplica
 - **Consistent Usage**: All scripts should source and use these libraries
 - **Testing**: Test library functions independently
 
-## Documentation
+## Code Documentation
 
 ### Required Documentation
 

@@ -156,14 +156,11 @@ OSM-Notes-Analytics/
 │   ├── run_quality_tests.sh  # Run quality tests
 │   └── README.md          # Testing documentation
 ├── docs/                   # Documentation
-│   ├── DWH_Star_Schema_ERD.md
-│   ├── DWH_Star_Schema_Data_Dictionary.md
-│   ├── ETL_Enhanced_Features.md
-│   ├── CI_CD_Guide.md
-│   ├── Testing_Guide.md
-│   ├── Testing_Suites_Reference.md
-│   ├── Testing_Workflows_Overview.md
-│   └── README.md          # Documentation index
+│   ├── DWH_Star_Schema_ERD.md           # Star schema diagrams
+│   ├── DWH_Star_Schema_Data_Dictionary.md  # Data dictionary
+│   ├── ETL_Enhanced_Features.md         # ETL features
+│   ├── CI_CD_Guide.md                   # CI/CD workflows
+│   └── README.md                        # Documentation index
 └── lib/                    # Shared libraries
     ├── osm-common/         # Common OSM utilities
     │   ├── bash_logger.sh
@@ -355,7 +352,8 @@ This analytics system depends on the **OSM-Notes-profile** ingestion system:
 - **[DWH Star Schema ERD](docs/DWH_Star_Schema_ERD.md)**: Entity-relationship diagram
 - **[Data Dictionary](docs/DWH_Star_Schema_Data_Dictionary.md)**: Complete schema documentation
 - **[ETL Enhanced Features](docs/ETL_Enhanced_Features.md)**: Advanced ETL capabilities
-- **[Testing Guide](docs/Testing_Guide.md)**: Testing guidelines and workflows
+- **[CI/CD Guide](docs/CI_CD_Guide.md)**: CI/CD workflows and git hooks
+- **[Testing Guide](tests/README.md)**: Complete testing documentation
 
 ## Configuration
 

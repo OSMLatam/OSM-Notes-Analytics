@@ -119,90 +119,39 @@ The documentation provides detailed information about the data warehouse design,
 
 ### Testing Documentation
 
-#### [Testing_Guide.md](Testing_Guide.md)
+For comprehensive testing documentation, see **[tests/README.md](../tests/README.md)**:
 
-**Comprehensive Testing Guide**
+**Complete Testing Guide:**
 
-- Testing philosophy and approach
-- Test organization and structure
-- Writing effective tests
-- Best practices and patterns
+- Test suite descriptions (Quality Tests, DWH Tests, All Tests)
+- How to run tests locally
+- Test configuration and setup
+- Database requirements
+- Troubleshooting common issues
+- Writing new tests
+- CI/CD integration
+- Git hooks for testing
 
-**Contents:**
+**Test Suites:**
 
-- Unit testing strategies
-- Integration testing approaches
-- Test data management
-- Mocking and stubbing
-- Test-driven development (TDD)
-- Code coverage guidelines
-- Performance testing
+- **Quality Tests**: Fast validation without database (shellcheck, shfmt, SQL syntax)
+- **DWH Tests**: Database-dependent tests (ETL, datamarts, SQL functions)
+- **Integration Tests**: End-to-end workflow validation
+
+**Test Files:**
+
+- Unit tests: `tests/unit/bash/*.bats` and `tests/unit/sql/*.sql`
+- Integration tests: `tests/integration/*.bats`
 
 **Audience:** Developers, QA engineers, contributors
 
 **When to read:**
 
+- Setting up test environment
+- Running tests locally
 - Writing new tests
-- Contributing to the project
-- Setting up test environments
 - Debugging test failures
-
----
-
-#### [Testing_Suites_Reference.md](Testing_Suites_Reference.md)
-
-**Detailed Test Suite Reference**
-
-- Complete test suite catalog
-- Test descriptions and purposes
-- Expected behaviors
-- Test data requirements
-
-**Contents:**
-
-- Quality test suite reference
-- DWH test suite reference
-- Integration test reference
-- Test helper utilities
-- Mock data generators
-- Assertion libraries
-
-**Audience:** QA engineers, test automation developers
-
-**When to read:**
-
 - Understanding test coverage
-- Adding new test cases
-- Reviewing test results
-- Planning test automation
-
----
-
-#### [Testing_Workflows_Overview.md](Testing_Workflows_Overview.md)
-
-**Testing Workflows and Execution**
-
-- How to run tests
-- Test execution workflows
-- CI/CD integration
-- Test result interpretation
-
-**Contents:**
-
-- Local testing workflows
-- Continuous integration setup
-- Pre-commit and pre-push testing
-- Automated testing pipelines
-- Test reporting and metrics
-
-**Audience:** Developers, DevOps engineers, CI/CD administrators
-
-**When to read:**
-
-- Setting up local development
-- Configuring CI/CD pipelines
-- Troubleshooting test execution
-- Optimizing test performance
 
 ---
 
