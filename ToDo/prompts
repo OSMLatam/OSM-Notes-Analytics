@@ -1,14 +1,17 @@
 # Prompts
 
 Desarrollar la idea de una nota mecánica/automática o si fue creada por un humano.
-Esto puede ser basado en el comentario (si es igual a otros), la ubicación (si son cercanas o eventualmente muy alejadas), creadas por el mismo usuario, creadas en un corto tiempo.
+Esto puede ser basado en el comentario (si es igual a otros), la ubicación (si
+ son cercanas o eventualmente muy alejadas), creadas por el mismo usuario,
+  creadas en un corto tiempo.
 Que la AI proponga una forma de identificarlas.
 Esto sería otra dimensión para el modelo estrella
 
 Generar un nivel de experiencia del usuario, y de pronto actualizar la dimensión usuarios
 Basado en uno o varios criterios, poder determinar si un usuario teiene experiencia
 
-Llevar la cantidad de comentarios y acciones sobre la nota (a veces es diferenete, ya que cerrar no implica comentario.)
+Llevar la cantidad de comentarios y acciones sobre la nota (a veces es diferenete,
+ ya que cerrar no implica comentario.)
 
 Cantidad de reaperturas y cerraduras de nota lleva
 
@@ -28,7 +31,9 @@ Cantidad de notas con un hashtag específico en la apertura
 
 Cantidad de notas con un hashtag específico en la resolución
 
-Cuando se identifique un cambio, por ejemplo el país de una nota por cuestiones de cambio de país, poner un flag (modified) para que solo se recalcules esas notas.
+Cuando se identifique un cambio, por ejemplo el país de una nota por cuestiones
+ de cambio de país, poner un flag (modified) para que solo se recalcules esas
+  notas.
 
 ==== revisiones iterativas, cada cierto tiempo
 
@@ -51,5 +56,7 @@ Podrías revisar el código, de manera que solo tenga estos puntos de entrada y 
 
 ## cron
 
-* ETL se puede ejecutar cada 15 minutos, pero una ejecución de ETL puede llegar a tomar más de 15 minutos, por lo que se saltaría gracias a que solo se permite una ejecución de este script.
+* ETL se puede ejecutar cada 15 minutos, pero una ejecución de ETL puede llegar
+ a tomar más de 15 minutos, por lo que se saltaría gracias a que solo se
+  permite una ejecución de este script.
 * profile se ejecuta por demanda, cuando se solicita un perfil específico.
