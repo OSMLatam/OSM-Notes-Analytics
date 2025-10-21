@@ -3,7 +3,6 @@
 --
 -- Author: Andres Gomez (AngocA)
 -- Version: 2025-10-21
--- Fixed: Removed redundant UPDATE that caused severe performance issues
 
 SELECT /* Notes-ETL */ clock_timestamp() AS Processing,
  'Updates dimension users (SCD2)' AS Task;

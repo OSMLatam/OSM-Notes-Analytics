@@ -204,7 +204,7 @@ AS $proc$
     AND EXTRACT(YEAR FROM d.date_id) = m_year;
 
    -- history_year_closed
-   SELECT /* Notes-datamartCountries */ COUNT(1)
+   SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.id_note)
     INTO m_history_year_closed
    FROM dwh.facts f
     JOIN dwh.dimension_days d
@@ -230,7 +230,7 @@ AS $proc$
     AND LENGTH(TRIM(nct.body)) > 0;
 
    -- history_year_reopened
-   SELECT /* Notes-datamartCountries */ COUNT(1)
+   SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.id_note)
     INTO m_history_year_reopened
    FROM dwh.facts f
     JOIN dwh.dimension_days d
@@ -694,8 +694,9 @@ AS $proc$
   WHERE f.dimension_id_country = m_dimension_id_country
    AND f.action_comment = 'commented';
 
-  -- history_whole_closed TODO datamart - quitar cuando se cierra multiples veces
-  SELECT /* Notes-datamartCountries */ COUNT(1)
+  -- history_whole_closed - Count unique notes that were closed (not total close actions)
+  -- Changed from COUNT(1) to COUNT(DISTINCT) to avoid counting multiple closes of same note
+  SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.id_note)
    INTO m_history_whole_closed
   FROM dwh.facts f
   WHERE f.dimension_id_country = m_dimension_id_country
@@ -714,8 +715,9 @@ AS $proc$
    AND nct.body IS NOT NULL
    AND LENGTH(TRIM(nct.body)) > 0;
 
-  -- history_whole_reopened TODO datamart - quitar cuando se reabre multiples veces
-  SELECT /* Notes-datamartCountries */ COUNT(1)
+  -- history_whole_reopened - Count unique notes that were reopened (not total reopen actions)
+  -- Changed from COUNT(1) to COUNT(DISTINCT) to avoid counting multiple reopens of same note
+  SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.id_note)
    INTO m_history_whole_reopened
   FROM dwh.facts f
   WHERE f.dimension_id_country = m_dimension_id_country
@@ -742,7 +744,7 @@ AS $proc$
    AND EXTRACT(YEAR FROM d.date_id) = m_current_year;
 
   -- history_year_closed
-  SELECT /* Notes-datamartCountries */ COUNT(1)
+  SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.id_note)
    INTO m_history_year_closed
   FROM dwh.facts f
    JOIN dwh.dimension_days d
@@ -768,7 +770,7 @@ AS $proc$
    AND LENGTH(TRIM(nct.body)) > 0;
 
   -- history_year_reopened
-  SELECT /* Notes-datamartCountries */ COUNT(1)
+  SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.id_note)
    INTO m_history_year_reopened
   FROM dwh.facts f
    JOIN dwh.dimension_days d
@@ -800,7 +802,7 @@ AS $proc$
    AND EXTRACT(YEAR FROM d.date_id) = m_current_year;
 
   -- history_month_closed
-  SELECT /* Notes-datamartCountries */ COUNT(1)
+  SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.id_note)
    INTO m_history_month_closed
   FROM dwh.facts f
    JOIN dwh.dimension_days d
@@ -828,7 +830,7 @@ AS $proc$
    AND LENGTH(TRIM(nct.body)) > 0;
 
   -- history_month_reopened
-  SELECT /* Notes-datamartCountries */ COUNT(1)
+  SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.id_note)
    INTO m_history_month_reopened
   FROM dwh.facts f
    JOIN dwh.dimension_days d
@@ -863,7 +865,7 @@ AS $proc$
    AND EXTRACT(YEAR FROM d.date_id) = m_current_year;
 
   -- history_day_closed
-  SELECT /* Notes-datamartCountries */ COUNT(1)
+  SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.id_note)
    INTO m_history_day_closed
   FROM dwh.facts f
    JOIN dwh.dimension_days d
@@ -893,7 +895,7 @@ AS $proc$
    AND LENGTH(TRIM(nct.body)) > 0;
 
   -- history_day_reopened
-  SELECT /* Notes-datamartCountries */ COUNT(1)
+  SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.id_note)
    INTO m_history_day_reopened
   FROM dwh.facts f
    JOIN dwh.dimension_days d

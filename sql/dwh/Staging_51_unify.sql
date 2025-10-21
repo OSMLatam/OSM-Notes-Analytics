@@ -3,7 +3,6 @@
 --
 -- Author: Andres Gomez (AngocA)
 -- Version: 2025-10-21
--- Fixed: Improved logic to prevent data loss by properly handling NULL values
 
 -- Set the next number to generate to the sequence.
 SELECT /* Notes-staging */
