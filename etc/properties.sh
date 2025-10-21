@@ -106,3 +106,10 @@ fi
 # Controls whether temporary files and directories should be cleaned up after processing
 # Set to false to preserve files for debugging purposes
 declare CLEAN="${CLEAN:-true}"
+
+# JSON Export configuration
+# Output directory for datamart JSON exports (for web viewer)
+# shellcheck disable=SC2034
+if [[ -z "${JSON_OUTPUT_DIR:-}" ]]; then
+ declare -r JSON_OUTPUT_DIR="${JSON_OUTPUT_DIR:-./output/json}"
+fi

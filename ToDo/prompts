@@ -1,62 +1,71 @@
-# Prompts
+# Prompts e Ideas - OSM-Notes-Analytics
 
-Desarrollar la idea de una nota mecánica/automática o si fue creada por un humano.
-Esto puede ser basado en el comentario (si es igual a otros), la ubicación (si
- son cercanas o eventualmente muy alejadas), creadas por el mismo usuario,
-  creadas en un corto tiempo.
-Que la AI proponga una forma de identificarlas.
-Esto sería otra dimensión para el modelo estrella
+Este archivo contiene ideas y prompts para futuras mejoras del proyecto.
+Las tareas definidas y priorizadas se encuentran en: `DWH_Improvements_Plan.md`
 
-Generar un nivel de experiencia del usuario, y de pronto actualizar la dimensión usuarios
-Basado en uno o varios criterios, poder determinar si un usuario teiene experiencia
+---
 
-Llevar la cantidad de comentarios y acciones sobre la nota (a veces es diferenete,
- ya que cerrar no implica comentario.)
+## Ideas para Futuro (No priorizadas)
 
-Cantidad de reaperturas y cerraduras de nota lleva
+### Análisis Geoespacial Avanzado
+- Integrar análisis de clustering de notas por proximidad geográfica
+- Detectar "hotspots" de actividad de notas
+- Análisis de dispersión geográfica por usuario
+- Correlación entre densidad de notas y features del mapa (POIs, vías, etc.)
 
-Cantidad de días que ha estado abierta. ESto permite identificar notas que ha sido reabiertas
+### Machine Learning y Predicción
+- Modelo predictivo de tiempo de resolución de notas
+- Clasificación automática de categorías de notas (NLP)
+- Detección de anomalías en patrones de creación
+- Recomendación de usuarios para resolver notas específicas
 
-Nota cerrada por creador. O por otro usuario.
+### Visualizaciones y Dashboards
+- Dashboard interactivo con métricas en tiempo real
+- Heatmaps de actividad por hora/día/mes
+- Gráficos de tendencias temporales
+- Comparativas entre países/regiones
 
-Cantidad de notas abiertas/cerradas en un mismo país (acumulado)
+### Integración con Otras Fuentes
+- Integración con changeset metadata de OSM
+- Correlación con ediciones del mapa
+- Análisis de impacto de notas en calidad de datos OSM
+- Timeline de eventos importantes (mapathons, disasters, etc.)
 
-Cantidad de notas con un hashtag específico.
+---
 
-Cantidad de notas con un hashtag específico en la apertura
+## Comentarios y Observaciones
 
-Cantidad de notas con un hashtag específico en el comentario
+### Sobre el Modelo Dimensional
+- El diseño actual de modelo estrella es sólido
+- La implementación de SCD2 en usuarios es correcta
+- Considerar agregar SCD2 también en countries (ver TAREA 5 en el plan)
 
-Cantidad de notas con un hashtag específico en la apertura
+### Sobre Performance
+- El particionamiento de la tabla de hechos será crítico (ver TAREA 1)
+- Los índices actuales están bien diseñados, pero se pueden agregar más especializados
+- VACUUM y ANALYZE deben ejecutarse regularmente
 
-Cantidad de notas con un hashtag específico en la resolución
+### Sobre Calidad de Datos
+- Implementar validaciones de integridad referencial más estrictas
+- Agregar checks para detectar datos inconsistentes
+- Mantener logs de auditoría para cambios críticos
 
-Cuando se identifique un cambio, por ejemplo el país de una nota por cuestiones
- de cambio de país, poner un flag (modified) para que solo se recalcules esas
-  notas.
+---
 
-==== revisiones iterativas, cada cierto tiempo
+## Preguntas Abiertas
 
-## Flujos
+1. ¿Deberíamos mantener datos históricos indefinidamente o implementar archivado?
+2. ¿Qué nivel de granularidad necesitamos en los datamarts?
+3. ¿Es necesario un data lake además del data warehouse?
+4. ¿Deberíamos exponer una API REST para consultas al DWH?
 
-Podrías revisar el código, de manera que solo tenga estos puntos de entrada y opciones:
+---
 
-* ETL
-* profile
+## Notas de Reuniones y Discusiones
 
-## Variables de entorno
+<!-- Agregar aquí notas de reuniones, decisiones de diseño, etc. -->
 
-* ETL puede tener como variables de entorno: CLEAN y el nivel de Logs
-* profile puede tener como variables de entorno: CLEAN y el nivel de Logs
+---
 
-## parámetros
-
-* ETL  No tiene, solo hay una forma de invocarlo.
-* profile tiene el tipo de perfil (usuaio, país) y el nombre de este
-
-## cron
-
-* ETL se puede ejecutar cada 15 minutos, pero una ejecución de ETL puede llegar
- a tomar más de 15 minutos, por lo que se saltaría gracias a que solo se
-  permite una ejecución de este script.
-* profile se ejecuta por demanda, cuando se solicita un perfil específico.
+**Última actualización**: 2025-10-21
+**Estado**: Limpiado - Tareas movidas a DWH_Improvements_Plan.md
