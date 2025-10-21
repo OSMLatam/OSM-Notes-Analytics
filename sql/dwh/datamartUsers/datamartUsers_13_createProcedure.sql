@@ -1,7 +1,7 @@
 -- Procedure to insert datamart user.
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2024-01-17
+-- Version: 2025-10-21
 
 /**
  * Inserts a user in the datamart, with the values that do not change.
@@ -196,8 +196,20 @@ AS $proc$
     AND d.year = m_year;
 
    -- history_year_closed_with_comment
-   -- TODO datamart - comment's text
-   m_history_year_closed_with_comment := 0;
+   SELECT /* Notes-datamartUsers */ COUNT(1)
+    INTO m_history_year_closed_with_comment
+   FROM dwh.facts f
+    JOIN dwh.dimension_days d
+    ON f.action_dimension_id_date = d.dimension_day_id
+    JOIN note_comments nc
+    ON (f.id_note = nc.note_id AND nc.event = 'closed')
+    JOIN note_comments_text nct
+    ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
+   WHERE f.action_dimension_id_user = m_dimension_user_id
+    AND f.action_comment = 'closed'
+    AND d.year = m_year
+    AND nct.body IS NOT NULL
+    AND LENGTH(TRIM(nct.body)) > 0;
 
    -- history_year_reopened
    SELECT /* Notes-datamartUsers */ COUNT(1)
@@ -550,9 +562,29 @@ AS $proc$
    LIMIT 50
   ) AS T;
 
-  -- hashtags
-  -- TODO datamart - comment's text
-  m_hashtags := NULL;
+  -- hashtags - aggregates all hashtags used by this user with their frequency
+  SELECT /* Notes-datamartUsers */
+   JSON_AGG(JSON_BUILD_OBJECT('rank', rank, 'hashtag', hashtag,
+   'quantity', quantity))
+   INTO m_hashtags
+  FROM (
+   SELECT /* Notes-datamartUsers */
+    RANK () OVER (ORDER BY quantity DESC) rank, hashtag, quantity
+   FROM (
+    SELECT /* Notes-datamartUsers */ h.description AS hashtag,
+     COUNT(1) AS quantity
+    FROM dwh.facts f
+     JOIN dwh.fact_hashtags fh
+     ON f.fact_id = fh.fact_id
+     JOIN dwh.dimension_hashtags h
+     ON fh.dimension_hashtag_id = h.dimension_hashtag_id
+    WHERE f.action_dimension_id_user = m_dimension_user_id
+     AND h.description IS NOT NULL
+    GROUP BY h.description
+    ORDER BY COUNT(1) DESC
+    LIMIT 50
+   ) AS T
+  ) AS T2;
 
   -- countries_open_notes
   SELECT /* Notes-datamartUsers */
@@ -794,8 +826,17 @@ AS $proc$
    AND f.action_comment = 'closed';
 
   -- history_whole_closed_with_comment
-  -- TODO datamart - comment's text
-  m_history_whole_closed_with_comment := 0;
+  SELECT /* Notes-datamartUsers */ COUNT(1)
+   INTO m_history_whole_closed_with_comment
+  FROM dwh.facts f
+   JOIN note_comments nc
+   ON (f.id_note = nc.note_id AND nc.event = 'closed')
+   JOIN note_comments_text nct
+   ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
+  WHERE f.action_dimension_id_user = m_dimension_user_id
+   AND f.action_comment = 'closed'
+   AND nct.body IS NOT NULL
+   AND LENGTH(TRIM(nct.body)) > 0;
 
   -- history_whole_reopened
   SELECT /* Notes-datamartUsers */ COUNT(1)
@@ -835,8 +876,20 @@ AS $proc$
    AND d.year = m_current_year;
 
   -- history_year_closed_with_comment
-  -- TODO datamart - comment's text
-  m_history_year_closed_with_comment := 0;
+  SELECT /* Notes-datamartUsers */ COUNT(1)
+   INTO m_history_year_closed_with_comment
+  FROM dwh.facts f
+   JOIN dwh.dimension_days d
+   ON (f.action_dimension_id_date = d.dimension_day_id)
+   JOIN note_comments nc
+   ON (f.id_note = nc.note_id AND nc.event = 'closed')
+   JOIN note_comments_text nct
+   ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
+  WHERE f.action_dimension_id_user = m_dimension_user_id
+   AND f.action_comment = 'closed'
+   AND d.year = m_current_year
+   AND nct.body IS NOT NULL
+   AND LENGTH(TRIM(nct.body)) > 0;
 
   -- history_year_reopened
   SELECT /* Notes-datamartUsers */ COUNT(1)
@@ -882,8 +935,21 @@ AS $proc$
    AND d.year = m_current_year;
 
   -- history_month_closed_with_comment
-  -- TODO datamart - comment's text
-  m_history_month_closed_with_comment := 0;
+  SELECT /* Notes-datamartUsers */ COUNT(1)
+   INTO m_history_month_closed_with_comment
+  FROM dwh.facts f
+   JOIN dwh.dimension_days d
+   ON (f.action_dimension_id_date = d.dimension_day_id)
+   JOIN note_comments nc
+   ON (f.id_note = nc.note_id AND nc.event = 'closed')
+   JOIN note_comments_text nct
+   ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
+  WHERE f.action_dimension_id_user = m_dimension_user_id
+   AND f.action_comment = 'closed'
+   AND d.month = m_current_month
+   AND d.year = m_current_year
+   AND nct.body IS NOT NULL
+   AND LENGTH(TRIM(nct.body)) > 0;
 
   -- history_month_reopened
   SELECT /* Notes-datamartUsers */ COUNT(1)
@@ -933,8 +999,22 @@ AS $proc$
    AND d.year = m_current_year;
 
   -- history_day_closed_with_comment
-  -- TODO datamart - comment's text
-  m_history_day_closed_with_comment := 0;
+  SELECT /* Notes-datamartUsers */ COUNT(1)
+   INTO m_history_day_closed_with_comment
+  FROM dwh.facts f
+   JOIN dwh.dimension_days d
+   ON (f.action_dimension_id_date = d.dimension_day_id)
+   JOIN note_comments nc
+   ON (f.id_note = nc.note_id AND nc.event = 'closed')
+   JOIN note_comments_text nct
+   ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
+  WHERE f.action_dimension_id_user = m_dimension_user_id
+   AND f.action_comment = 'closed'
+   AND d.day = m_current_day
+   AND d.month = m_current_month
+   AND d.year = m_current_year
+   AND nct.body IS NOT NULL
+   AND LENGTH(TRIM(nct.body)) > 0;
 
   -- history_day_reopened
   SELECT /* Notes-datamartUsers */ COUNT(1)
