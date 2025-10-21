@@ -8,7 +8,7 @@ COMMENT ON SCHEMA dwh IS
   'Data warehouse objects';
 
 CREATE TABLE IF NOT EXISTS dwh.facts (
- fact_id SERIAL,
+ fact_id BIGSERIAL,
  id_note INTEGER NOT NULL,
  sequence_action INTEGER,
  dimension_id_country INTEGER NOT NULL,
@@ -42,12 +42,17 @@ CREATE TABLE IF NOT EXISTS dwh.facts (
  local_action_dimension_id_hour_of_week SMALLINT,
  -- Season analysis
  action_dimension_id_season SMALLINT
-);
+) PARTITION BY RANGE (action_at);
 -- Note: Any new column should be included in:
 -- staging.process_notes_at_date_${YEAR} (initialFactsLoadCreate)
 -- staging.process_notes_at_date (createStagingObjects)
 -- ETL.sh > __initialFacts
-COMMENT ON TABLE dwh.facts IS 'Facts id, center of the star schema';
+--
+-- IMPORTANT: dwh.facts is PARTITIONED by action_at (year).
+-- Partitions are created by ETL_22a_createFactPartitions.sql
+-- To add a new year partition, simply run that script again.
+COMMENT ON TABLE dwh.facts IS
+  'Facts table (partitioned by action_at year), center of the star schema';
 COMMENT ON COLUMN dwh.facts.fact_id IS 'Surrogated ID';
 COMMENT ON COLUMN dwh.facts.id_note IS 'OSM note id';
 COMMENT ON COLUMN dwh.facts.sequence_action IS 'Creation sequence';

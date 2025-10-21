@@ -20,8 +20,8 @@
 # * shfmt -w -i 1 -sr -bn ETL.sh
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2025-10-14
-VERSION="2025-10-14"
+# Version: 2025-10-21
+VERSION="2025-10-21"
 
 #set -xv
 # Fails when a variable is not initialized.
@@ -100,6 +100,8 @@ declare -r POSTGRES_13_DROP_DWH_OBJECTS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_13
 
 # Create DWH tables.
 declare -r POSTGRES_22_CREATE_DWH_TABLES="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_22_createDWHTables.sql"
+# Create fact partitions.
+declare -r POSTGRES_22A_CREATE_FACT_PARTITIONS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_22a_createFactPartitions.sql"
 # Populates regions per country.
 declare -r POSTGRES_23_GET_WORLD_REGIONS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_23_getWorldRegion.sql"
 # Add functions.
@@ -413,6 +415,7 @@ function __checkPrereqs {
   "${POSTGRES_12_DROP_DATAMART_OBJECTS}"
   "${POSTGRES_13_DROP_DWH_OBJECTS}"
   "${POSTGRES_22_CREATE_DWH_TABLES}"
+  "${POSTGRES_22A_CREATE_FACT_PARTITIONS}"
   "${POSTGRES_23_GET_WORLD_REGIONS}"
   "${POSTGRES_24_ADD_FUNCTIONS}"
   "${POSTGRES_24A_POPULATE_ISO_CODES}"
@@ -598,6 +601,9 @@ function __createBaseTables {
  __logi "Creating tables for star model if they do not exist."
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_22_CREATE_DWH_TABLES}" 2>&1
+ __logi "Creating partitions for facts table."
+ psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+  -f "${POSTGRES_22A_CREATE_FACT_PARTITIONS}" 2>&1
  __logi "Regions for countries."
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 -f "${POSTGRES_23_GET_WORLD_REGIONS}" 2>&1
  __logi "Adding functions."

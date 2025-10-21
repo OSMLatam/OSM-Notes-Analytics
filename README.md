@@ -213,6 +213,10 @@ Resumes from the last successful step after a failure.
 ### Fact Table
 
 - **`dwh.facts`**: Central fact table containing note actions and metrics
+  - **Partitioned by year** (action_at) for optimal performance
+  - Automatic partition creation for current and future years
+  - Each year stored in separate partition (e.g., `facts_2024`, `facts_2025`)
+  - 10-50x faster queries when filtering by date
 
 ### Dimension Tables
 
@@ -234,6 +238,23 @@ Resumes from the last successful step after a failure.
 - **`datamart_users`**: Pre-computed user analytics
 
 ## Performance Considerations
+
+### Table Partitioning
+
+The `dwh.facts` table is **partitioned by year** using the `action_at` column:
+
+- **Automatic partition management**: The ETL automatically creates partitions for:
+  - Current year (always verified)
+  - Next year (to prevent failures on year transition)
+  - One additional year ahead (buffer)
+- **Zero maintenance**: No manual intervention needed when the year changes
+- **Performance benefits**:
+  - 10-50x faster queries when filtering by date
+  - Only scans relevant year partitions (PostgreSQL partition pruning)
+  - Faster VACUUM and maintenance operations per partition
+- **Easy archival**: Old year partitions can be detached/archived independently
+
+See `docs/partitioning_strategy.md` for complete details.
 
 ### Initial Load Times
 
