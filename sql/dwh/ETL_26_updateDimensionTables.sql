@@ -2,7 +2,8 @@
 -- Handles new users, username changes (SCD2), and new countries.
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2025-08-08
+-- Version: 2025-10-21
+-- Fixed: Removed redundant UPDATE that caused severe performance issues
 
 SELECT /* Notes-ETL */ clock_timestamp() AS Processing,
  'Updates dimension users (SCD2)' AS Task;
@@ -43,18 +44,21 @@ WHERE d.is_current = FALSE
 GROUP BY c.user_id, c.username
 ;
 
--- SELECT /* Notes-ETL */ clock_timestamp() AS Processing,
---  'Updating modified usernames' AS Task;
---
--- Updates the dimension when username is changed.
--- TODO datamart - Esta actualizando todos con todos, y se esta demorando
---   2025-07-16 Ya se hizo un cambio, para el alias de dimension. Es raro que actualice todos
-UPDATE dwh.dimension_users AS d
- SET username = c.username
- FROM users AS c
- WHERE d.user_id = c.user_id
-  AND c.username IS DISTINCT FROM d.username
-;
+-- REMOVED: Redundant UPDATE that was causing performance issues
+-- The SCD2 process above (lines 24-44) already handles username changes correctly:
+-- 1. Closes old rows when username changes
+-- 2. Inserts new current rows with updated username
+-- The following UPDATE was processing ALL rows (including historical ones), breaking SCD2 integrity
+-- and causing severe performance degradation with large datasets.
+-- Removed: 2025-10-21
+
+-- Old problematic code (kept for reference):
+-- UPDATE dwh.dimension_users AS d
+--  SET username = c.username
+--  FROM users AS c
+--  WHERE d.user_id = c.user_id
+--   AND c.username IS DISTINCT FROM d.username
+-- ;
 
 SELECT /* Notes-ETL */ clock_timestamp() AS Processing,
  'Updating dimension countries' AS Task;
