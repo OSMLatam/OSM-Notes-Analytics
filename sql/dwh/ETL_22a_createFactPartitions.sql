@@ -51,19 +51,19 @@ BEGIN
 
       -- Highlight current year partition creation
       IF v_year = v_current_year THEN
-        RAISE NOTICE '✓ Created partition for CURRENT YEAR: % [% to %)',
+        RAISE NOTICE 'Created partition for CURRENT YEAR: % [% to %]',
           v_partition_name, v_start_date, v_end_date;
       ELSIF v_year = v_next_year THEN
-        RAISE NOTICE '✓ Created partition for NEXT YEAR: % [% to %)',
+        RAISE NOTICE 'Created partition for NEXT YEAR: % [% to %]',
           v_partition_name, v_start_date, v_end_date;
       ELSE
-        RAISE NOTICE '  Created partition: % [% to %)',
+        RAISE NOTICE 'Created partition: % [% to %]',
           v_partition_name, v_start_date, v_end_date;
       END IF;
     ELSE
-      -- Only log if it's current or next year (avoid spam)
+      -- Only log if it is current or next year (avoid spam)
       IF v_year >= v_current_year THEN
-        RAISE NOTICE '✓ Partition % already exists', v_partition_name;
+        RAISE NOTICE 'Partition % already exists', v_partition_name;
       END IF;
     END IF;
 
@@ -77,13 +77,13 @@ BEGIN
       AND tablename = 'facts_default'
   ) THEN
     CREATE TABLE dwh.facts_default PARTITION OF dwh.facts DEFAULT;
-    RAISE NOTICE '✓ Created DEFAULT partition for future dates';
+    RAISE NOTICE 'Created DEFAULT partition for future dates';
     v_partitions_created := v_partitions_created + 1;
   END IF;
 
   -- Summary
   IF v_partitions_created > 0 THEN
-    RAISE NOTICE '==> Created % new partition(s)', v_partitions_created;
+    RAISE NOTICE 'Created % new partitions', v_partitions_created;
   ELSE
     RAISE NOTICE '==> All required partitions already exist';
   END IF;
