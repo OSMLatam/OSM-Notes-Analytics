@@ -1379,13 +1379,13 @@ Estandarizar puntos de entrada del sistema a solo 2 scripts principales:
 
 - [ ] 15.6. Actualizar documentación
   - README.md
-  - GETTING_STARTED.md
+  - README.md (expanded Quick Start section)
   - bin/dwh/README.md
 
 **Archivos a crear/modificar**:
 - `docs/execution_guide.md`
 - `README.md` (actualizar)
-- `GETTING_STARTED.md` (actualizar)
+- `README.md` (update with expanded Quick Start)
 
 ---
 
@@ -1776,7 +1776,7 @@ ORDER BY tablename, indexname;
 Por cada tarea completada, actualizar:
 - [ ] `bin/dwh/README.md` - Descripción del modelo
 - [ ] `sql/README.md` - Scripts disponibles
-- [ ] `GETTING_STARTED.md` - Si afecta proceso de instalación
+- [ ] `README.md` - If it affects installation process (Quick Start section)
 - [ ] Diagramas ER (si hay cambios en modelo)
 - [ ] Comentarios en código SQL (COMMENT ON)
 

@@ -56,14 +56,25 @@ Database: osm_notes
 
 ## Quick Start
 
-### 1. Clone the Repository
+This guide walks you through the complete process from scratch to having exportable JSON datamarts.
+
+### Process Overview
+
+```
+1. Base Data       → 2. ETL/DWH        → 3. Datamarts      → 4. JSON Export
+   (notes)            (facts, dims)       (aggregations)      (web viewer)
+```
+
+### Step-by-Step Instructions
+
+#### Step 1: Clone the Repository
 
 ```bash
 git clone https://github.com/OSMLatam/OSM-Notes-Analytics.git
 cd OSM-Notes-Analytics
 ```
 
-### 2. Configure Database Connection
+#### Step 2: Configure Database Connection
 
 Edit `etc/properties.sh` with your database credentials:
 
@@ -73,35 +84,128 @@ DBNAME="osm_notes"          # Same database as Ingestion
 DB_USER="myuser"
 ```
 
-### 3. Configure ETL Settings
+#### Step 3: Verify Base Tables
 
-Edit `etc/etl.properties` to customize ETL behavior:
+First, ensure you have the base OSM notes data:
 
 ```bash
-# Performance Configuration
-ETL_BATCH_SIZE=1000
-ETL_PARALLEL_ENABLED=true
-ETL_MAX_PARALLEL_JOBS=4
+psql -d notes -c "SELECT COUNT(*) FROM notes"
+psql -d notes -c "SELECT COUNT(*) FROM note_comments"
+psql -d notes -c "SELECT COUNT(*) FROM note_comments_text"
 ```
 
-### 4. Run the ETL Process
+If these tables are empty or don't exist, you need to load the OSM notes data first using the [OSM-Notes-Ingestion](https://github.com/OSMLatam/OSM-Notes-Ingestion) system.
+
+#### Step 4: Run the ETL Process
+
+The ETL creates the data warehouse (schema `dwh`) with:
+- Fact tables (partitioned by year for optimal performance)
+- Dimension tables (users, countries, dates, etc.)
+- All necessary transformations
 
 ```bash
-# Initial DWH creation
-./bin/dwh/ETL.sh --create
-
-# Incremental updates (run periodically)
-./bin/dwh/ETL.sh --incremental
+cd bin/dwh
+./ETL.sh --create
 ```
 
-### 5. Update Datamarts
+**This process can take several hours depending on data size.**
+
+Expected output:
+- Creates schema `dwh`
+- Creates ~15+ tables
+- Creates automatic partitions for facts table
+- Populates dimension tables
+- Loads facts from note_comments
+
+#### Step 5: Verify DWH Creation
+
+Check that the data warehouse was created:
 
 ```bash
-# Update country datamart
-./bin/dwh/datamartCountries/datamartCountries.sh
+# Check schema exists
+psql -d notes -c "SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'dwh'"
 
-# Update user datamart (runs incrementally)
-./bin/dwh/datamartUsers/datamartUsers.sh
+# Check tables exist
+psql -d notes -c "SELECT tablename FROM pg_tables WHERE schemaname = 'dwh' ORDER BY tablename"
+
+# Check fact counts
+psql -d notes -c "SELECT COUNT(*) FROM dwh.facts"
+psql -d notes -c "SELECT COUNT(*) FROM dwh.dimension_users"
+psql -d notes -c "SELECT COUNT(*) FROM dwh.dimension_countries"
+```
+
+#### Step 6: Create and Populate Datamarts
+
+The datamarts aggregate data for quick access:
+
+**Users Datamart:**
+```bash
+cd bin/dwh/datamartUsers
+./datamartUsers.sh
+```
+
+**Countries Datamart:**
+```bash
+cd bin/dwh/datamartCountries
+./datamartCountries.sh
+```
+
+**Note**: These scripts process data incrementally (500 users/countries at a time), so you may need to run them multiple times until all entities are processed.
+
+#### Step 7: Verify Datamart Creation
+
+```bash
+# Check datamart tables exist
+psql -d notes -c "SELECT tablename FROM pg_tables WHERE schemaname = 'dwh' AND tablename LIKE 'datamart%'"
+
+# Check counts
+psql -d notes -c "SELECT COUNT(*) FROM dwh.datamartusers"
+psql -d notes -c "SELECT COUNT(*) FROM dwh.datamartcountries"
+
+# View sample user
+psql -d notes -c "SELECT user_id, username, history_whole_open, history_whole_closed FROM dwh.datamartusers LIMIT 5"
+
+# View sample country
+psql -d notes -c "SELECT country_id, country_name_en, history_whole_open, history_whole_closed FROM dwh.datamartcountries LIMIT 5"
+```
+
+#### Step 8: Export to JSON (Optional)
+
+Once datamarts are populated, export to JSON for the web viewer:
+
+```bash
+cd bin/dwh
+./exportDatamartsToJSON.sh
+```
+
+This creates JSON files in `./output/json/`:
+- Individual files per user: `users/{user_id}.json`
+- Individual files per country: `countries/{country_id}.json`
+- Index files: `indexes/users.json`, `indexes/countries.json`
+- Metadata: `metadata.json`
+
+See [JSON Export Documentation](bin/dwh/export_json_readme.md) for complete details.
+
+### Incremental Updates
+
+For ongoing updates, run these in sequence:
+
+```bash
+# 1. Update base data (your OSM notes import process)
+
+# 2. Update DWH
+cd bin/dwh
+./ETL.sh --incremental
+
+# 3. Update datamarts
+cd datamartUsers
+./datamartUsers.sh
+cd ../datamartCountries
+./datamartCountries.sh
+
+# 4. Export JSON (optional)
+cd ..
+./exportDatamartsToJSON.sh
 ```
 
 ## Scheduling with Cron
@@ -322,6 +426,57 @@ export LOG_LEVEL=DEBUG
 Available log levels: TRACE, DEBUG, INFO, WARN, ERROR, FATAL
 
 ## Troubleshooting
+
+### Common Issues
+
+#### "Schema 'dwh' does not exist"
+
+**Solution**: Run `./bin/dwh/ETL.sh --create` first to create the data warehouse.
+
+#### "Table 'dwh.datamartusers' does not exist"
+
+**Solution**: Run the datamart scripts:
+- `bin/dwh/datamartUsers/datamartUsers.sh`
+- `bin/dwh/datamartCountries/datamartCountries.sh`
+
+#### ETL takes too long
+
+The ETL processes data by year in parallel. Adjust parallelism in `etc/properties.sh`:
+
+```bash
+MAX_THREADS=8  # Increase for more cores
+```
+
+#### Datamart not fully populated
+
+Datamarts process entities incrementally (500 at a time). Run the script multiple times:
+
+```bash
+# Keep running until it says "0 users processed"
+while true; do
+  ./datamartUsers.sh
+  sleep 5
+done
+```
+
+Or check the `modified` flag:
+
+```sql
+SELECT COUNT(*) FROM dwh.dimension_users WHERE modified = TRUE;
+```
+
+When it returns 0, all users are processed.
+
+#### JSON export is empty
+
+Ensure datamarts have data:
+
+```sql
+SELECT COUNT(*) FROM dwh.datamartusers;
+SELECT COUNT(*) FROM dwh.datamartcountries;
+```
+
+If counts are 0, re-run the datamart population scripts.
 
 ### ETL Fails to Start
 
