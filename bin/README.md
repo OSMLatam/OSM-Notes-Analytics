@@ -162,59 +162,65 @@ tail -40f $(ls -1rtd /tmp/ETL_* | tail -1)/ETL.log
 
 **Location:** `bin/dwh/cleanupDWH.sh`
 
-**Purpose:** Removes all data warehouse objects from the database and cleans up temporary files.
+**Purpose:** Removes data warehouse objects from the database and cleans up temporary files. Uses database configuration from `etc/properties.sh`.
+
+**⚠️ WARNING:** This script can permanently delete data! Always use `--dry-run` first to see what will be removed.
 
 **Usage:**
 
 ```bash
-# Full cleanup (DWH objects + temp files)
-./bin/dwh/cleanupDWH.sh
+# Safe operations (no confirmation required):
+./bin/dwh/cleanupDWH.sh --remove-temp-files    # Remove only temporary files
+./bin/dwh/cleanupDWH.sh --dry-run              # Show what would be done (safe)
 
-# Cleanup specific database
-./bin/dwh/cleanupDWH.sh osm_notes
+# Destructive operations (require confirmation):
+./bin/dwh/cleanupDWH.sh                        # Full cleanup - REMOVES ALL DATA!
+./bin/dwh/cleanupDWH.sh --remove-all-data      # Remove DWH schema and data only
 
-# Remove only DWH schema (keep temp files)
-./bin/dwh/cleanupDWH.sh --dwh-only
-
-# Remove only temporary files (keep DWH)
-./bin/dwh/cleanupDWH.sh --temp-only
-
-# Dry run (show what would be done)
-./bin/dwh/cleanupDWH.sh --dry-run
-
-# Show help
-./bin/dwh/cleanupDWH.sh --help
+# Help:
+./bin/dwh/cleanupDWH.sh --help                # Show detailed help
 ```
 
 **What it removes:**
 
-DWH Objects (--dwh-only or --all):
+**DWH Objects** (`--remove-all-data` or default behavior):
 
-- Staging schema and objects
-- Datamart tables (countries and users)
+- Staging schema and all objects
+- Datamart tables (countries and users)  
 - DWH schema with all dimensions and facts
 - All functions, procedures, and triggers
+- **⚠️ PERMANENT DATA LOSS - requires confirmation**
 
-Temporary Files (--temp-only or --all):
+**Temporary Files** (`--remove-temp-files` or default behavior):
 
 - `/tmp/ETL_*` directories
-- `/tmp/datamartCountries_*` directories
+- `/tmp/datamartCountries_*` directories  
 - `/tmp/datamartUsers_*` directories
 - `/tmp/profile_*` directories
+- `/tmp/cleanupDWH_*` directories
+- **✅ Safe operation - no confirmation required**
 
-**Warning:** This permanently deletes all data warehouse data!
+**When to use:**
+
+- **Development/Testing:** Use `--remove-temp-files` to clean temporary files
+- **Complete Reset:** Use default behavior to remove everything (with confirmation)
+- **DWH Only:** Use `--remove-all-data` to remove only database objects
+- **Safety First:** Always use `--dry-run` to preview operations
 
 **Prerequisites:**
 
-- Database must exist (for DWH cleanup)
-- User must have DROP permissions on dwh schema
+- Database configured in `etc/properties.sh`
+- User must have DROP privileges on target database
+- PostgreSQL client tools installed (`psql`)
+- Script must be run from project root directory
 
 **Use cases:**
 
-- Clean restart: Remove all DWH objects before running ETL --create
-- Troubleshooting: Remove corrupted DWH objects
-- Testing: Clean database between test runs
-- Disk cleanup: Remove old temporary files
+- **Development:** Clean temporary files with `--remove-temp-files`
+- **Testing:** Reset environment with `--dry-run` first, then full cleanup
+- **Troubleshooting:** Remove corrupted DWH objects with `--remove-all-data`
+- **Clean restart:** Remove all objects before running `ETL.sh --create`
+- **Maintenance:** Regular cleanup of temporary files
 
 ### 5. datamartUsers.sh - User Datamart
 

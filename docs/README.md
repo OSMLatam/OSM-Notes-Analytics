@@ -118,6 +118,35 @@ testing strategies, and development workflows.
 
 ---
 
+#### [DWH_Maintenance_Guide.md](DWH_Maintenance_Guide.md)
+
+**Data Warehouse Maintenance and Cleanup Guide**
+
+- Cleanup script usage and safety guidelines
+- Maintenance workflows and best practices
+- Troubleshooting common issues
+- Emergency procedures
+
+**Contents:**
+
+- When and how to use cleanup script
+- Safe vs destructive operations
+- Common maintenance workflows
+- Safety guidelines and best practices
+- Troubleshooting cleanup issues
+- Configuration and prerequisites
+
+**Audience:** Database administrators, DevOps, developers
+
+**When to read:**
+
+- Planning maintenance procedures
+- Troubleshooting data warehouse issues
+- Setting up development environments
+- Understanding cleanup operations
+
+---
+
 ### Testing Documentation
 
 For comprehensive testing documentation, see **[tests/README.md](../tests/README.md)**:
@@ -235,8 +264,9 @@ For comprehensive testing documentation, see **[tests/README.md](../tests/README
 **Important guides:**
 
 1. [CI_CD_Guide.md](CI_CD_Guide.md) - Pipeline configuration and workflows
-2. [ETL_Enhanced_Features.md](ETL_Enhanced_Features.md) - Performance tuning
-3. [tests/README.md](../tests/README.md) - Test automation and execution
+2. [DWH_Maintenance_Guide.md](DWH_Maintenance_Guide.md) - Maintenance and cleanup procedures
+3. [ETL_Enhanced_Features.md](ETL_Enhanced_Features.md) - Performance tuning
+4. [tests/README.md](../tests/README.md) - Test automation and execution
 
 ## Documentation Standards
 

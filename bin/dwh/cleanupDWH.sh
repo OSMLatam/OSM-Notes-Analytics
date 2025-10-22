@@ -1,14 +1,17 @@
 #!/bin/bash
 
 # Cleanup script for OSM-Notes-Analytics DWH components.
-# This script removes all data warehouse objects from the database.
+# This script removes data warehouse objects from the database and temporary files.
+#
+# IMPORTANT: Default behavior removes ALL data warehouse data AND temporary files!
+# Use --dry-run first to see what will be removed.
+# Use --remove-temp-files for safe cleanup of temporary files only.
 #
 # Usage examples:
-# * ./cleanupDWH.sh                    # Full cleanup (default database)
-# * ./cleanupDWH.sh osm_notes          # Full cleanup (specific database)
-# * ./cleanupDWH.sh --dwh-only         # Remove only DWH schema
-# * ./cleanupDWH.sh --temp-only        # Remove only temporary files
-# * ./cleanupDWH.sh --dry-run          # Show what would be done
+# * ./cleanupDWH.sh                    # Full cleanup - REMOVES ALL DATA!
+# * ./cleanupDWH.sh --remove-all-data  # Remove DWH schema and data only
+# * ./cleanupDWH.sh --remove-temp-files # Remove only temporary files (/tmp)
+# * ./cleanupDWH.sh --dry-run          # Show what would be done (safe)
 #
 # This is the list of error codes:
 # 1) Help message.
@@ -57,11 +60,6 @@ TMP_DIR=$(mktemp -d "/tmp/${BASENAME}_XXXXXX")
 readonly TMP_DIR
 chmod 777 "${TMP_DIR}"
 
-# Log file for output.
-declare LOG_FILENAME
-LOG_FILENAME="${TMP_DIR}/${BASENAME}.log"
-readonly LOG_FILENAME
-
 # Cleanup mode
 declare CLEANUP_MODE="${1:-all}"
 
@@ -91,34 +89,57 @@ declare -r SQL_REMOVE_DWH="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_13_removeDWHObje
 # Shows the help information.
 function __show_help {
  echo "${0} version ${VERSION}"
- echo "This script removes all data warehouse components from the database."
+ echo "This script removes data warehouse components from the database and temporary files."
  echo
  echo "Usage:"
- echo "  ${0} [OPTIONS] [database_name]"
+ echo "  ${0} [OPTIONS]"
  echo
  echo "Options:"
- echo "  --all               Remove all DWH components (default)"
- echo "  --dwh-only          Remove only DWH schema and objects"
- echo "  --temp-only         Remove only temporary files"
- echo "  --dry-run           Show what would be done without executing"
+ echo "  --remove-all-data   Remove DWH schema, tables, functions, and data (DESTRUCTIVE)"
+ echo "  --remove-temp-files Remove only temporary files from /tmp (SAFE)"
+ echo "  --dry-run           Show what would be done without executing (SAFE)"
  echo "  --help, -h          Show this help"
  echo
  echo "Examples:"
- echo "  ${0}                      # Full cleanup (default database)"
- echo "  ${0} osm_notes            # Full cleanup (specific database)"
- echo "  ${0} --dwh-only           # Remove DWH schema only"
- echo "  ${0} --temp-only          # Remove temp files only"
- echo "  ${0} --dry-run osm_notes  # Show what would be done"
+ echo "  ${0}                           # Full cleanup - REMOVES ALL DATA!"
+ echo "  ${0} --remove-all-data         # Remove DWH schema and data only"
+ echo "  ${0} --remove-temp-files       # Remove temp files only (safe)"
+ echo "  ${0} --dry-run                 # Show what would be done (safe)"
  echo
  echo "Database configuration from etc/properties.sh:"
  echo "  Database: ${DBNAME:-not set}"
  echo "  User: ${DB_USER:-not set}"
  echo
- echo "WARNING: This will permanently remove all data warehouse data!"
+ echo "WARNING: Default behavior removes ALL data warehouse data AND temporary files!"
+ echo "Use --dry-run first to see what will be removed."
+ echo "Use --remove-temp-files for safe cleanup of temporary files only."
  echo
  echo "Written by: Andres Gomez (AngocA)"
  echo "OSM-LatAm, OSM-Colombia, MaptimeBogota."
  exit "${ERROR_HELP_MESSAGE}"
+}
+
+# Asks for confirmation before destructive operations.
+function __confirm_destructive_operation {
+ __log_start
+ local OPERATION="${1}"
+ local TARGET_DB="${2}"
+
+ echo
+ echo "⚠️  WARNING: This operation will PERMANENTLY REMOVE data!"
+ echo "   Operation: ${OPERATION}"
+ echo "   Database: ${TARGET_DB}"
+ echo "   This action CANNOT be undone!"
+ echo
+ read -p "Are you sure you want to continue? Type 'yes' to confirm: " -r
+ echo
+ if [[ ! "${REPLY}" =~ ^[Yy][Ee][Ss]$ ]]; then
+  __logi "Operation cancelled by user"
+  __log_finish
+  exit 0
+ fi
+ __logi "User confirmed destructive operation"
+ __log_finish
 }
 
 # Checks if database exists.
@@ -245,21 +266,33 @@ function __dry_run {
  echo
 
  if [[ "${MODE}" == "all" ]] || [[ "${MODE}" == "dwh" ]]; then
+  echo "⚠️  DESTRUCTIVE OPERATIONS (requires confirmation):"
   echo "1. Check if database '${TARGET_DB}' exists"
-  echo "2. Remove staging schema (${SQL_REMOVE_STAGING})"
-  echo "3. Remove datamart objects (${SQL_REMOVE_DATAMARTS})"
-  echo "4. Remove DWH schema (${SQL_REMOVE_DWH})"
+  echo "2. Ask for user confirmation before proceeding"
+  echo "3. Remove staging schema (${SQL_REMOVE_STAGING})"
+  echo "4. Remove datamart objects (${SQL_REMOVE_DATAMARTS})"
+  echo "5. Remove DWH schema and ALL DATA (${SQL_REMOVE_DWH})"
+  echo "   - Tables: facts, dimension_*, iso_country_codes"
+  echo "   - Functions: get_*, update_*, refresh_*"
+  echo "   - Triggers: update_days_to_resolution"
+  echo
  fi
 
  if [[ "${MODE}" == "all" ]] || [[ "${MODE}" == "temp" ]]; then
-  echo "5. Remove temporary files:"
+  echo "✅ SAFE OPERATIONS (no confirmation needed):"
+  echo "6. Remove temporary files from /tmp:"
   echo "   - /tmp/ETL_*"
   echo "   - /tmp/datamartCountries_*"
   echo "   - /tmp/datamartUsers_*"
   echo "   - /tmp/profile_*"
   echo "   - /tmp/cleanupDWH_*"
+  echo
  fi
 
+ echo "💡 RECOMMENDATIONS:"
+ echo "   - Use --remove-temp-files for safe cleanup of temporary files only"
+ echo "   - Use --remove-all-data to remove only DWH data (still destructive)"
+ echo "   - Always backup your data before running destructive operations"
  echo
  __logi "=== DRY RUN COMPLETED ==="
  __log_finish
@@ -269,23 +302,6 @@ function __dry_run {
 function __checkPrereqs {
  __log_start
  __logi "=== CHECKING PREREQUISITES ==="
-
- if [[ "${CLEANUP_MODE}" != "" ]] \
-  && [[ "${CLEANUP_MODE}" != "--all" ]] \
-  && [[ "${CLEANUP_MODE}" != "--dwh-only" ]] \
-  && [[ "${CLEANUP_MODE}" != "--temp-only" ]] \
-  && [[ "${CLEANUP_MODE}" != "--dry-run" ]] \
-  && [[ "${CLEANUP_MODE}" != "--help" ]] \
-  && [[ "${CLEANUP_MODE}" != "-h" ]] \
-  && [[ "${CLEANUP_MODE}" != "all" ]]; then
-  # Could be a database name
-  if ! psql -lqt | cut -d \| -f 1 | grep -qw "${CLEANUP_MODE}"; then
-   echo "ERROR: Invalid parameter: ${CLEANUP_MODE}"
-   echo "Valid options: --all, --dwh-only, --temp-only, --dry-run, --help"
-   echo "Or provide a database name"
-   exit "${ERROR_INVALID_ARGUMENT}"
-  fi
- fi
 
  __checkPrereqsCommands
 
@@ -354,26 +370,21 @@ function main() {
  __checkPrereqs
 
  # Parse mode from CLEANUP_MODE (first argument)
- local TARGET_DB=""
+ local TARGET_DB="${DBNAME}"
  local MODE="all"
- local SECOND_ARG="${1:-}"
 
  if [[ "${CLEANUP_MODE}" == "--dry-run" ]]; then
   MODE="dry-run"
-  TARGET_DB="${SECOND_ARG:-${DBNAME}}"
- elif [[ "${CLEANUP_MODE}" == "--dwh-only" ]]; then
+ elif [[ "${CLEANUP_MODE}" == "--remove-all-data" ]]; then
   MODE="dwh"
-  TARGET_DB="${SECOND_ARG:-${DBNAME}}"
- elif [[ "${CLEANUP_MODE}" == "--temp-only" ]]; then
+ elif [[ "${CLEANUP_MODE}" == "--remove-temp-files" ]]; then
   MODE="temp"
-  TARGET_DB="${SECOND_ARG:-${DBNAME}}"
  elif [[ "${CLEANUP_MODE}" == "--all" ]] || [[ "${CLEANUP_MODE}" == "all" ]]; then
   MODE="all"
-  TARGET_DB="${SECOND_ARG:-${DBNAME}}"
- else
-  # Assume it's a database name
-  TARGET_DB="${CLEANUP_MODE}"
-  MODE="all"
+ elif [[ "${CLEANUP_MODE}" != "" ]]; then
+  echo "ERROR: Invalid parameter: ${CLEANUP_MODE}"
+  echo "Valid options: --remove-all-data, --remove-temp-files, --dry-run, --help"
+  exit "${ERROR_INVALID_ARGUMENT}"
  fi
 
  __logi "Target database: ${TARGET_DB}"
@@ -397,7 +408,7 @@ function main() {
  if [[ "${MODE}" == "all" ]] || [[ "${MODE}" == "dwh" ]]; then
   if ! __check_database "${TARGET_DB}"; then
    __loge "ERROR: Database ${TARGET_DB} does not exist. Cannot cleanup DWH objects."
-   __loge "Use --temp-only to clean only temporary files."
+   __loge "Use --remove-temp-files to clean only temporary files."
    exit 1
   fi
  fi
@@ -407,10 +418,12 @@ function main() {
 
  # Execute cleanup based on mode
  if [[ "${MODE}" == "all" ]] || [[ "${MODE}" == "dwh" ]]; then
+  __confirm_destructive_operation "Remove DWH schema and data" "${TARGET_DB}"
   __cleanup_dwh_schema "${TARGET_DB}"
  fi
 
  if [[ "${MODE}" == "all" ]]; then
+  __logi "Proceeding to clean temporary files..."
   __cleanup_temp_files
  fi
 
@@ -421,18 +434,5 @@ function main() {
 # Allows other users to read the directory.
 chmod go+x "${TMP_DIR}"
 
-__start_logger
-if [[ ! -t 1 ]]; then
- __set_log_file "${LOG_FILENAME}"
- main "${2:-}" >> "${LOG_FILENAME}"
- if [[ "${CLEAN:-true}" == true ]]; then
-  if [[ -f "${LOG_FILENAME}" ]]; then
-   mv "${LOG_FILENAME}" "/tmp/${BASENAME}_$(date +%Y-%m-%d_%H-%M-%S || true).log"
-  fi
-  if [[ -d "${TMP_DIR}" ]]; then
-   rmdir "${TMP_DIR}" 2> /dev/null || true
-  fi
- fi
-else
- main "${2:-}"
-fi
+# Execute main function
+main "${1:-}"

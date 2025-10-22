@@ -231,6 +231,7 @@ OSM-Notes-Analytics/
 │   ├── dwh/               # ETL and datamart scripts
 │   │   ├── ETL.sh         # Main ETL process
 │   │   ├── profile.sh     # Profile generator
+│   │   ├── cleanupDWH.sh  # Data warehouse cleanup script
 │   │   ├── README.md      # DWH scripts documentation
 │   │   ├── datamartCountries/
 │   │   │   └── datamartCountries.sh
@@ -424,6 +425,32 @@ export LOG_LEVEL=DEBUG
 ```
 
 Available log levels: TRACE, DEBUG, INFO, WARN, ERROR, FATAL
+
+## Maintenance and Cleanup
+
+### Data Warehouse Cleanup Script
+
+The project includes a cleanup script for maintenance and troubleshooting:
+
+```bash
+# Safe operations (no data loss):
+./bin/dwh/cleanupDWH.sh --remove-temp-files    # Clean temporary files
+./bin/dwh/cleanupDWH.sh --dry-run              # Preview operations
+
+# Destructive operations (require confirmation):
+./bin/dwh/cleanupDWH.sh                        # Full cleanup
+./bin/dwh/cleanupDWH.sh --remove-all-data      # DWH objects only
+```
+
+**When to use:**
+- **Development**: Clean temporary files regularly
+- **Testing**: Reset environment between test runs
+- **Troubleshooting**: Remove corrupted objects
+- **Maintenance**: Free disk space
+
+**⚠️ Warning**: Destructive operations permanently delete data! Always use `--dry-run` first.
+
+For detailed maintenance procedures, see [DWH Maintenance Guide](docs/DWH_Maintenance_Guide.md).
 
 ## Troubleshooting
 
