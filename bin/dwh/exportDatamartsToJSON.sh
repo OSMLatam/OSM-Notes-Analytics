@@ -28,10 +28,13 @@ readonly LOGGER
 
 # Loads properties.
 if [[ -f "../../etc/properties.sh" ]]; then
+ # shellcheck disable=SC1091
  source ../../etc/properties.sh
 elif [[ -f "etc/properties.sh" ]]; then
+ # shellcheck disable=SC1091
  source etc/properties.sh
 elif [[ -f "${PROPERTIES_LOCATION}/properties.sh" ]]; then
+ # shellcheck disable=SC1091
  source "${PROPERTIES_LOCATION}/properties.sh"
 else
  __error "Properties file not found."
@@ -248,13 +251,13 @@ echo "$(date +%Y-%m-%d\ %H:%M:%S) - Creating metadata..."
 cat > "${OUTPUT_DIR}/metadata.json" << EOF
 {
   "export_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "total_users": $(ls -1 "${OUTPUT_DIR}/users" | wc -l),
-  "total_countries": $(ls -1 "${OUTPUT_DIR}/countries" | wc -l),
+  "total_users": $(find "${OUTPUT_DIR}/users" -maxdepth 1 -type f | wc -l),
+  "total_countries": $(find "${OUTPUT_DIR}/countries" -maxdepth 1 -type f | wc -l),
   "version": "2025-10-21"
 }
 EOF
 
 echo "$(date +%Y-%m-%d\ %H:%M:%S) - JSON export completed successfully"
-echo "  Users: $(ls -1 "${OUTPUT_DIR}/users" | wc -l) files"
-echo "  Countries: $(ls -1 "${OUTPUT_DIR}/countries" | wc -l) files"
+echo "  Users: $(find "${OUTPUT_DIR}/users" -maxdepth 1 -type f | wc -l) files"
+echo "  Countries: $(find "${OUTPUT_DIR}/countries" -maxdepth 1 -type f | wc -l) files"
 echo "  Output directory: ${OUTPUT_DIR}"
