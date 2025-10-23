@@ -124,6 +124,8 @@ declare -r POSTGRES_34_CREATE_FACTS_YEAR_LOAD="${SCRIPT_BASE_DIRECTORY}/sql/dwh/
 # Execute initial facts load.
 declare -r POSTGRES_35_EXECUTE_FACTS_YEAR_LOAD="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_35_initialFactsLoadExecute.sql"
 declare -r POSTGRES_35_EXECUTE_FACTS_YEAR_LOAD_SIMPLE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_35_initialFactsLoadExecute_Simple.sql"
+declare -r POSTGRES_35_EXECUTE_FACTS_YEAR_LOAD_PHASE2="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_35_initialFactsLoadExecute_Phase2.sql"
+declare -r POSTGRES_34_INITIAL_FACTS_LOAD_PARALLEL="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_34_initialFactsLoadCreate_Parallel.sql"
 # Drop initial facts load.
 declare -r POSTGRES_36_DROP_FACTS_YEAR_LOAD="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_36_initialFactsLoadDrop.sql"
 # Add constraints, indexes and triggers.
@@ -367,6 +369,89 @@ function __processNotesETL {
  __log_finish
 }
 
+# Creates initial facts for all years using parallel processing.
+function __initialFactsParallel {
+ __log_start
+ __logi "=== CREATING INITIAL FACTS (PARALLEL) ==="
+
+ # Create initial facts base objects.
+ __logi "Creating initial facts base objects."
+ psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+  -f "${POSTGRES_33_CREATE_FACTS_BASE_OBJECTS_SIMPLE}" 2>&1
+
+ # Phase 1: Parallel load by year
+ __logi "Phase 1: Starting parallel load by year..."
+
+ # Adjust MAX_THREADS for parallel processing
+ # Uses n-1 cores, if number of cores is greater than 1.
+ # This prevents monopolization of the CPUs.
+ local adjusted_threads="${MAX_THREADS}"
+ if [[ "${MAX_THREADS}" -gt 6 ]]; then
+  adjusted_threads=$((MAX_THREADS - 2))
+  __logi "Reducing MAX_THREADS from ${MAX_THREADS} to ${adjusted_threads} (leaving 2 cores free)"
+ elif [[ "${MAX_THREADS}" -gt 1 ]]; then
+  adjusted_threads=$((MAX_THREADS - 1))
+  __logi "Reducing MAX_THREADS from ${MAX_THREADS} to ${adjusted_threads} (leaving 1 core free)"
+ fi
+
+ # Get list of years from 2013 to current year
+ # shellcheck disable=SC2155
+ local current_year
+ current_year=$(date +%Y)
+ local year=2013
+ local pids=()
+
+ # Create procedures for each year
+ while [[ $year -le $current_year ]]; do
+  __logi "Creating procedure for year $year..."
+  envsubst < "${POSTGRES_34_INITIAL_FACTS_LOAD_PARALLEL}" \
+   | YEAR=$year envsubst \
+   | psql -d "${DBNAME}" -v ON_ERROR_STOP=1 2>&1
+
+  year=$((year + 1))
+ done
+
+ # Execute parallel load for each year
+ year=2013
+ __logi "Executing parallel load for years 2013-$current_year (max ${adjusted_threads} concurrent)..."
+
+ while [[ $year -le $current_year ]]; do
+  (
+   __logi "Starting year $year load (PID: $$)..."
+   psql -d "${DBNAME}" -c "CALL staging.process_initial_load_by_year_${year}();" 2>&1
+   __logi "Finished year $year load (PID: $$)."
+  ) &
+  pids+=($!)
+  year=$((year + 1))
+
+  # Limit concurrent processes to adjusted_threads
+  if [[ ${#pids[@]} -ge ${adjusted_threads} ]]; then
+   wait "${pids[0]}"
+   pids=("${pids[@]:1}")
+  fi
+ done
+
+ # Wait for all remaining processes
+ __logi "Waiting for all year loads to complete..."
+ for pid in "${pids[@]}"; do
+  wait "$pid"
+ done
+ __logi "Phase 1: All parallel loads completed."
+
+ # Phase 2: Update recent_opened_dimension_id_date for all facts
+ __logi "Phase 2: Updating recent_opened_dimension_id_date for all facts..."
+ psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+  -f "${POSTGRES_35_EXECUTE_FACTS_YEAR_LOAD_PHASE2}" 2>&1
+ __logi "Phase 2: Update completed."
+
+ # Add constraints, indexes and triggers.
+ __logi "Adding constraints, indexes and triggers."
+ psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+  -f "${POSTGRES_41_ADD_CONSTRAINTS_INDEXES_TRIGGERS}" 2>&1
+
+ __log_finish
+}
+
 # Creates initial facts for all years.
 function __initialFacts {
  __log_start
@@ -516,7 +601,7 @@ function main() {
    __checkBaseTables
    set -E
    __createBaseTables
-   __processNotesETL
+   __initialFactsParallel # Use parallel version
    __perform_database_maintenance
    "${DATAMART_COUNTRIES_SCRIPT}"
    "${DATAMART_USERS_SCRIPT}"
