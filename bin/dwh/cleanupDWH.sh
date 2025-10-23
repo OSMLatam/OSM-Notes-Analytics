@@ -125,20 +125,8 @@ function __confirm_destructive_operation {
  local OPERATION="${1}"
  local TARGET_DB="${2}"
 
- echo
- echo "⚠️  WARNING: This operation will PERMANENTLY REMOVE data!"
- echo "   Operation: ${OPERATION}"
- echo "   Database: ${TARGET_DB}"
- echo "   This action CANNOT be undone!"
- echo
- read -p "Are you sure you want to continue? Type 'yes' to confirm: " -r
- echo
- if [[ ! "${REPLY}" =~ ^[Yy][Ee][Ss]$ ]]; then
-  __logi "Operation cancelled by user"
-  __log_finish
-  exit 0
- fi
- __logi "User confirmed destructive operation"
+ __logi "Performing destructive operation: ${OPERATION} on database: ${TARGET_DB}"
+ __logi "Skipping confirmation (non-interactive mode)"
  __log_finish
 }
 
