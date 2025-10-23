@@ -65,12 +65,26 @@ BEGIN
    EXIT WHEN NOT FOUND;
 
    -- Get country dimension
-   m_dimension_country_id := dwh.get_country_id(rec_note_action.id_country);
+   SELECT /* Notes-staging */ dimension_country_id
+    INTO m_dimension_country_id
+   FROM dwh.dimension_countries
+   WHERE country_id = rec_note_action.id_country;
+   IF (m_dimension_country_id IS NULL) THEN
+    m_dimension_country_id := 1;
+   END IF;
 
    -- Get user dimensions
-   m_dimension_user_open := dwh.get_user_id(rec_note_action.created_id_user);
-   m_dimension_user_close := dwh.get_user_id(rec_note_action.action_id_user);
-   m_dimension_user_action := dwh.get_user_id(rec_note_action.action_id_user);
+   SELECT /* Notes-staging */ dimension_user_id
+    INTO m_dimension_user_open
+   FROM dwh.dimension_users
+   WHERE user_id = rec_note_action.created_id_user AND is_current;
+
+   SELECT /* Notes-staging */ dimension_user_id
+    INTO m_dimension_user_action
+   FROM dwh.dimension_users
+   WHERE user_id = rec_note_action.action_id_user AND is_current;
+
+   m_dimension_user_close := m_dimension_user_action;
 
    -- Get date and time dimensions
    m_opened_id_date := dwh.get_date_id(rec_note_action.created_at);
@@ -85,11 +99,14 @@ BEGIN
    -- Get application info if present
    m_text_comment := rec_note_action.body;
    IF (m_text_comment LIKE '%iD%' OR m_text_comment LIKE '%JOSM%' OR m_text_comment LIKE '%Potlatch%') THEN
-    m_application := dwh.get_application_id(m_text_comment);
-    m_application_version := dwh.get_application_version_id(
-      m_application,
-      (SELECT regexp_match(m_text_comment, '(\\d+\\.\\d+(?:\\.\\d+)?)')::text)
-    );
+    m_application := staging.get_application(m_text_comment);
+    -- Try to parse version simple pattern N.N or N.N.N
+    IF (m_text_comment ~* '\\d+\\.\\d+(\\.\\d+)?') THEN
+     m_application_version := dwh.get_application_version_id(
+       m_application,
+       (SELECT regexp_match(m_text_comment, '(\\d+\\.\\d+(?:\\.\\d+)?)')::text)
+     );
+    END IF;
    ELSE
     m_application := NULL;
     m_application_version := NULL;
@@ -183,7 +200,7 @@ BEGIN
     );
 
    m_count := m_count + 1;
-   IF (MOD(m_count, 1000) = 0) THEN
+   IF (MOD(m_count, 10000) = 0) THEN
     RAISE NOTICE '%: % processed facts until %.', CLOCK_TIMESTAMP(), m_count,
      rec_note_action.action_at;
    END IF;

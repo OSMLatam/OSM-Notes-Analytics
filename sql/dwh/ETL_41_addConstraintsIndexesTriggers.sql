@@ -5,12 +5,15 @@
 -- Version: 2025-08-08
 
 -- Primary keys
+-- NOTE: Cannot add PRIMARY KEY to partitioned table without including partition key column
+-- The facts table is partitioned by action_at, so we skip the PRIMARY KEY constraint
+-- and rely on fact_id uniqueness instead
 SELECT /* Notes-ETL */ clock_timestamp() AS Processing,
- 'Creating primary keys' AS Task;
+ 'Skipping primary key (partitioned table)' AS Task;
 
-ALTER TABLE dwh.facts
- ADD CONSTRAINT pk_facts
- PRIMARY KEY (fact_id);
+-- ALTER TABLE dwh.facts
+--  ADD CONSTRAINT pk_facts
+--  PRIMARY KEY (fact_id);
 
 -- Foreign keys.
 SELECT /* Notes-ETL */ clock_timestamp() AS Processing,

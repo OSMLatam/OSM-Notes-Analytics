@@ -272,7 +272,7 @@ function __checkPrereqs {
  __log_finish
 }
 
-# Checks if DWH tables exist. If not, creates them.
+# Checks if DWH tables exist. Returns 0 if they exist, 1 if they don't.
 function __checkBaseTables {
  __log_start
  __logi "=== CHECKING DWH TABLES ==="
@@ -281,10 +281,14 @@ function __checkBaseTables {
   -f "${POSTGRES_11_CHECK_DWH_BASE_TABLES}" 2>&1
  RET=${?}
  set -e
+ __logi "Check result code: ${RET}"
  if [[ "${RET}" -ne 0 ]]; then
-  __createBaseTables
+  __logi "DWH tables are missing - will be created by caller"
+  __log_finish
+  return 1
  fi
 
+ __logi "DWH tables exist, recreating staging objects"
  __logi "Recreating base staging objects."
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_31_CREATE_BASE_STAGING_OBJECTS}" 2>&1
@@ -341,7 +345,8 @@ function __createBaseTables {
  echo "INSERT INTO dwh.properties VALUES ('initial load', 'true')" \
   | psql -d "${DBNAME}" -v ON_ERROR_STOP=1 2>&1
 
- __initialFacts
+ # Note: __initialFacts is called separately by the caller
+ # (either __initialFacts or __initialFactsParallel)
 
  __logi "=== DWH TABLES CREATED SUCCESSFULLY ==="
  __log_finish
@@ -404,8 +409,7 @@ function __initialFactsParallel {
  # Create procedures for each year
  while [[ $year -le $current_year ]]; do
   __logi "Creating procedure for year $year..."
-  envsubst < "${POSTGRES_34_INITIAL_FACTS_LOAD_PARALLEL}" \
-   | YEAR=$year envsubst \
+  YEAR=$year envsubst < "${POSTGRES_34_INITIAL_FACTS_LOAD_PARALLEL}" \
    | psql -d "${DBNAME}" -v ON_ERROR_STOP=1 2>&1
 
   year=$((year + 1))
@@ -484,24 +488,45 @@ function __initialFacts {
 
 # Detects if this is the first execution by checking if DWH facts table is empty.
 function __detectFirstExecution {
- __log_start
- __logi "=== DETECTING EXECUTION MODE ==="
+ # Temporarily disable logging to stdout for this function
+ local temp_log_file
+ temp_log_file=$(mktemp)
 
- # Check if DWH facts table exists and has data
- local facts_count
- facts_count=$(psql -d "${DBNAME}" -Atq -c "SELECT COUNT(*) FROM dwh.facts;" 2> /dev/null || echo "0")
+ {
+  __log_start
+  __logi "=== DETECTING EXECUTION MODE ==="
 
- if [[ "${facts_count}" -eq 0 ]]; then
-  __logi "FIRST EXECUTION DETECTED - No facts found in DWH"
-  __logi "Will perform initial load with complete data warehouse creation"
-  echo "true"
- else
-  __logi "INCREMENTAL EXECUTION DETECTED - Found ${facts_count} facts in DWH"
-  __logi "Will process only new data since last run"
-  echo "false"
- fi
+  # Check if DWH facts table exists and has data
+  local facts_count
+  facts_count=$(psql -d "${DBNAME}" -Atq -c "SELECT COUNT(*) FROM dwh.facts;" 2> /dev/null || echo "0")
+  __logi "Query result for facts count: '${facts_count}'"
 
- __log_finish
+  # Check if initial load flag exists
+  local initial_load_flag
+  initial_load_flag=$(psql -d "${DBNAME}" -Atq -c "SELECT value FROM dwh.properties WHERE key = 'initial load';" 2> /dev/null || echo "")
+  __logi "Query result for initial load flag: '${initial_load_flag}'"
+
+  local result
+  if [[ "${facts_count}" -eq 0 ]]; then
+   __logi "FIRST EXECUTION DETECTED - No facts found in DWH"
+   __logi "Found ${facts_count} facts in DWH, initial load flag: '${initial_load_flag}'"
+   __logi "Will perform initial load with complete data warehouse creation"
+   result="true"
+  else
+   __logi "INCREMENTAL EXECUTION DETECTED - Found ${facts_count} facts in DWH"
+   __logi "Will process only new data since last run"
+   result="false"
+  fi
+
+  __log_finish
+ } >> "${temp_log_file}" 2>&1
+
+ # Output the log file to stdout
+ cat "${temp_log_file}"
+ rm -f "${temp_log_file}"
+
+ # Return the result
+ echo "${result}"
 }
 
 # Performs database maintenance operations.
@@ -576,14 +601,18 @@ function main() {
 
  __checkPrereqs
 
+ __logi "PROCESS_TYPE value: '${PROCESS_TYPE}'"
+
  # Handle create mode (explicit)
  if [[ "${PROCESS_TYPE}" == "--create" ]]; then
   __logi "CREATE MODE - Creating initial data warehouse (explicit)"
   set +E
-  __checkBaseTables
+  if ! __checkBaseTables; then
+   __logi "Tables missing, creating them"
+  fi
   set -E
   __createBaseTables
-  __processNotesETL
+  __initialFactsParallel # Use parallel version
   __perform_database_maintenance
   "${DATAMART_COUNTRIES_SCRIPT}"
   "${DATAMART_USERS_SCRIPT}"
@@ -591,26 +620,37 @@ function main() {
 
  # Handle incremental mode or default mode (with auto-detection)
  if [[ "${PROCESS_TYPE}" == "--incremental" ]] || [[ "${PROCESS_TYPE}" == "" ]]; then
+  __logi "Entering incremental mode with auto-detection"
   # Auto-detect if this is the first execution
   local is_first_execution
-  is_first_execution=$(__detectFirstExecution)
+  is_first_execution=$(__detectFirstExecution | tail -1)
+  __logi "Detection result: '${is_first_execution}'"
 
   if [[ "${is_first_execution}" == "true" ]]; then
    __logi "AUTO-DETECTED FIRST EXECUTION - Performing initial load"
    set +E
-   __checkBaseTables
+   if ! __checkBaseTables; then
+    __logi "Tables missing, creating them"
+    __createBaseTables
+   fi
    set -E
-   __createBaseTables
+   __logi "About to call __initialFactsParallel"
    __initialFactsParallel # Use parallel version
+   __logi "Finished calling __initialFactsParallel"
    __perform_database_maintenance
    "${DATAMART_COUNTRIES_SCRIPT}"
    "${DATAMART_USERS_SCRIPT}"
   else
    __logi "AUTO-DETECTED INCREMENTAL EXECUTION - Processing only new data"
    set +E
-   __checkBaseTables
+   if ! __checkBaseTables; then
+    __logi "Tables missing, creating them"
+    __createBaseTables
+   fi
    set -E
+   __logi "About to call __processNotesETL"
    __processNotesETL
+   __logi "Finished calling __processNotesETL"
    __perform_database_maintenance
    "${DATAMART_COUNTRIES_SCRIPT}"
    "${DATAMART_USERS_SCRIPT}"

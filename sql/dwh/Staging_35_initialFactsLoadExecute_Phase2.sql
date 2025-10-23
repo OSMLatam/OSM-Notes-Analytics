@@ -11,11 +11,6 @@ SELECT /* Notes-staging */ clock_timestamp() AS Processing,
 CREATE INDEX IF NOT EXISTS facts_id_note_fact_id_idx ON dwh.facts (id_note, fact_id);
 CREATE INDEX IF NOT EXISTS facts_id_note_action_fact_id_idx ON dwh.facts (id_note, action_comment, fact_id);
 
-COMMENT ON INDEX facts_id_note_fact_id_idx IS
-  'Optimizes Phase 2 lookup for recent_opened_dimension_id_date';
-COMMENT ON INDEX facts_id_note_action_fact_id_idx IS
-  'Optimizes Phase 2 lookup for recent_opened_dimension_id_date by action type';
-
 -- Update recent_opened_dimension_id_date for all facts
 -- Strategy: Use LATERAL JOIN to find the most recent opening action (opened or reopened)
 -- for each note, then update all facts of that note
@@ -62,3 +57,4 @@ END $$;
 
 SELECT /* Notes-staging */ clock_timestamp() AS Processing,
  'Phase 2 completed: recent_opened_dimension_id_date updated for all facts' AS Task;
+

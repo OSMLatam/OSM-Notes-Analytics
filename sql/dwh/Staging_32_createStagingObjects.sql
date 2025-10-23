@@ -334,7 +334,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
 
    m_count := m_count + 1;
 --RAISE NOTICE 'Flag 27: %', CLOCK_TIMESTAMP();
-   IF (MOD(m_count, 1000) = 0) THEN
+   IF (MOD(m_count, 10000) = 0) THEN
     RAISE NOTICE '%: % processed facts until %.', CLOCK_TIMESTAMP(), m_count,
      max_processed_timestamp;
    END IF;

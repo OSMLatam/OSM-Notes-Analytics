@@ -31,6 +31,10 @@ ALTER TABLE dwh.dimension_applications
  ADD CONSTRAINT pk_applications_dim
  PRIMARY KEY (dimension_application_id);
 
+ALTER TABLE dwh.dimension_application_versions
+ ADD CONSTRAINT pk_application_versions_dim
+ PRIMARY KEY (dimension_application_version_id);
+
 ALTER TABLE dwh.dimension_continents
  ADD CONSTRAINT pk_continents_dim
  PRIMARY KEY (dimension_continent_id);

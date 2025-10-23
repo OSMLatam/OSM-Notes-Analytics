@@ -119,7 +119,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date_${YEAR} (
    -- Exit when no more rows to fetch.
    EXIT WHEN NOT FOUND;
 
---RAISE NOTICE 'note_id %, sequence %', rec_note_action.id_note, 
+--RAISE NOTICE 'note_id %, sequence %', rec_note_action.id_note,
 --    rec_note_action.sequence_action;
 
    -- Gets the country of the comment.
@@ -327,7 +327,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date_${YEAR} (
 
    m_count := m_count + 1;
 --RAISE NOTICE 'Flag 27: %', CLOCK_TIMESTAMP();
-   IF (MOD(m_count, 1000) = 0) THEN
+   IF (MOD(m_count, 10000) = 0) THEN
     RAISE NOTICE '%: % processed facts for % until %.', CLOCK_TIMESTAMP(),
      m_count, ${YEAR}, max_processed_timestamp;
    END IF;
