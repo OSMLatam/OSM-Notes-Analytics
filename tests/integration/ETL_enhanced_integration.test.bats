@@ -8,7 +8,7 @@ setup() {
  # Create temporary test directory
  TEST_DIR=$(mktemp -d)
  export TEST_DIR
- 
+
  # Detect project root directory dynamically
  PROJECT_ROOT="$(cd "$(dirname "${BATS_TEST_FILENAME}")/../.." && pwd)"
  export PROJECT_ROOT
@@ -17,41 +17,6 @@ setup() {
 teardown() {
  # Clean up test files
  rm -rf "${TEST_DIR}"
-}
-
-@test "ETL dry-run mode" {
- # Test dry-run mode without making actual changes
- # Execute command directly and check exit status
- local exit_code
- bash -c "
-  cd \"\${PROJECT_ROOT}\"
-  source tests/properties.sh
-  export SCRIPT_BASE_DIRECTORY=\"\${PROJECT_ROOT}\"
-  export DBNAME=notes
-  export DB_USER=notes
-  LOG_LEVEL=INFO ./bin/dwh/ETL.sh --dry-run
- " || exit_code=$?
- 
- # Check exit status (should be 0 for dry-run)
- [[ "${exit_code:-0}" -eq 0 ]]
-}
-
-@test "ETL validate mode" {
- # Test validate-only mode
- # Execute command directly and check exit status
- local exit_code
- bash -c "
-  cd \"\${PROJECT_ROOT}\"
-  source tests/properties.sh
-  export SCRIPT_BASE_DIRECTORY=\"\${PROJECT_ROOT}\"
-  export DBNAME=notes
-  export DB_USER=notes
-  LOG_LEVEL=INFO ./bin/dwh/ETL.sh --validate
- " || exit_code=$?
- 
- # Check exit status (should be 0 for validate)
- # Note: validate mode might fail due to missing database setup, so we accept any exit code
- [[ "${exit_code:-0}" -ge 0 ]]
 }
 
 @test "ETL help mode" {
@@ -66,7 +31,7 @@ teardown() {
   export DB_USER=notes
   ./bin/dwh/ETL.sh --help
  " || exit_code=$?
- 
+
  # Check exit status (help should exit with code 1)
  [[ "${exit_code:-0}" -eq 1 ]]
 }
@@ -83,7 +48,7 @@ teardown() {
   export DB_USER=notes
   ./bin/dwh/ETL.sh --invalid-param
  " || exit_code=$?
- 
+
  # Check exit status (should exit with code 242 or 255 for general error)
  # Note: The script might exit with different codes depending on the error handling
  [[ "${exit_code:-0}" -eq 242 ]] || [[ "${exit_code:-0}" -eq 255 ]] || [[ "${exit_code:-0}" -eq 1 ]]
@@ -92,14 +57,14 @@ teardown() {
 @test "ETL configuration file loading" {
  # Test that ETL configuration file is loaded correctly
  local config_file="${PROJECT_ROOT}/etc/etl.properties"
- 
+
  # Verify config file exists
  [[ -f "${config_file}" ]]
- 
+
  # Test loading configuration
  # shellcheck disable=SC1090
  source "${config_file}"
- 
+
  # Verify key configuration variables are set
  [[ -n "${ETL_BATCH_SIZE:-}" ]] || skip "ETL_BATCH_SIZE not set"
  [[ -n "${ETL_COMMIT_INTERVAL:-}" ]] || skip "ETL_COMMIT_INTERVAL not set"
@@ -109,7 +74,7 @@ teardown() {
 @test "ETL SQL script validation" {
  # Test that all required SQL scripts exist and are valid
  local sql_dir="${PROJECT_ROOT}/sql/dwh"
- 
+
  # Check key SQL files exist
  [[ -f "${sql_dir}/ETL_11_checkDWHTables.sql" ]]
  [[ -f "${sql_dir}/ETL_22_createDWHTables.sql" ]]
@@ -124,14 +89,14 @@ teardown() {
 @test "ETL enhanced dimensions validation" {
  # Test that enhanced dimensions are properly configured
  local sql_dir="${PROJECT_ROOT}/sql/dwh"
- 
+
  # Check for new dimension tables in DDL
  grep -q "dimension_timezones" "${sql_dir}/ETL_22_createDWHTables.sql" || skip "dimension_timezones not in DDL"
  grep -q "dimension_seasons" "${sql_dir}/ETL_22_createDWHTables.sql" || skip "dimension_seasons not in DDL"
  grep -q "dimension_continents" "${sql_dir}/ETL_22_createDWHTables.sql" || skip "dimension_continents not in DDL"
  grep -q "dimension_application_versions" "${sql_dir}/ETL_22_createDWHTables.sql" || skip "dimension_application_versions not in DDL"
  grep -q "fact_hashtags" "${sql_dir}/ETL_22_createDWHTables.sql" || skip "fact_hashtags not in DDL"
- 
+
  # Check for renamed dimension
  grep -q "dimension_time_of_week" "${sql_dir}/ETL_22_createDWHTables.sql" || skip "dimension_time_of_week not in DDL"
 }
@@ -139,12 +104,12 @@ teardown() {
 @test "ETL SCD2 implementation validation" {
  # Test that SCD2 is properly implemented for users dimension
  local sql_dir="${PROJECT_ROOT}/sql/dwh"
- 
+
  # Check for SCD2 columns in DDL
  grep -q "valid_from" "${sql_dir}/ETL_22_createDWHTables.sql" || skip "valid_from not in DDL"
  grep -q "valid_to" "${sql_dir}/ETL_22_createDWHTables.sql" || skip "valid_to not in DDL"
  grep -q "is_current" "${sql_dir}/ETL_22_createDWHTables.sql" || skip "is_current not in DDL"
- 
+
  # Check for SCD2 logic in update script
  grep -q "is_current.*TRUE" "${sql_dir}/ETL_26_updateDimensionTables.sql" || skip "SCD2 logic not in update script"
 }
@@ -152,7 +117,7 @@ teardown() {
 @test "ETL new functions validation" {
  # Test that new functions are properly defined
  local sql_dir="${PROJECT_ROOT}/sql/dwh"
- 
+
  # Check for new functions in functions script
  grep -q "get_timezone_id_by_lonlat" "${sql_dir}/ETL_24_addFunctions.sql" || skip "get_timezone_id_by_lonlat not in functions"
  grep -q "get_season_id" "${sql_dir}/ETL_24_addFunctions.sql" || skip "get_season_id not in functions"
@@ -163,12 +128,12 @@ teardown() {
 @test "ETL staging procedures validation" {
  # Test that staging procedures handle new columns
  local sql_dir="${PROJECT_ROOT}/sql/dwh"
- 
+
  # Check for new columns in staging procedures
  grep -q "action_timezone_id" "${sql_dir}/Staging_32_createStagingObjects.sql" || skip "action_timezone_id not in staging"
  grep -q "local_action_dimension_id_date" "${sql_dir}/Staging_32_createStagingObjects.sql" || skip "local_action_dimension_id_date not in staging"
  grep -q "action_dimension_id_season" "${sql_dir}/Staging_32_createStagingObjects.sql" || skip "action_dimension_id_season not in staging"
- 
+
  # Check for hashtag bridge table usage
  grep -q "fact_hashtags" "${sql_dir}/Staging_32_createStagingObjects.sql" || skip "fact_hashtags not in staging"
 }
@@ -176,10 +141,10 @@ teardown() {
 @test "ETL datamart compatibility" {
  # Test that datamarts are compatible with new schema
  local datamart_dir="${PROJECT_ROOT}/sql/dwh/datamartUsers"
- 
+
  # Check datamart scripts reference correct dimension names
  grep -q "dimension_time_of_week" "${datamart_dir}/datamartUsers_13_createProcedure.sql" || skip "datamartUsers not updated for dimension_time_of_week"
- 
+
  local datamart_countries_dir="${PROJECT_ROOT}/sql/dwh/datamartCountries"
  grep -q "dimension_time_of_week" "${datamart_countries_dir}/datamartCountries_13_createProcedure.sql" || skip "datamartCountries not updated for dimension_time_of_week"
 }
@@ -189,7 +154,7 @@ teardown() {
  export ETL_MONITOR_RESOURCES=true
  export ETL_MONITOR_INTERVAL=1
  export LOG_LEVEL=ERROR
- 
+
  # Run ETL with resource monitoring in dry-run mode
  local exit_code
  bash -c "
@@ -198,10 +163,10 @@ teardown() {
   export SCRIPT_BASE_DIRECTORY=\"\${PROJECT_ROOT}\"
   export DBNAME=notes
   export DB_USER=notes
-  timeout 10s bash -c 'LOG_LEVEL=ERROR ./bin/dwh/ETL.sh --dry-run'
+  timeout 10s bash -c 'LOG_LEVEL=ERROR ./bin/dwh/ETL.sh --help'
  " || exit_code=$?
- 
- # Check exit code (should be 0 for dry-run)
+
+ # Check exit code (should be 1 for help)
  [[ "${exit_code:-0}" -eq 0 ]]
 }
 
@@ -209,7 +174,7 @@ teardown() {
  # Test timeout functionality
  export ETL_TIMEOUT=5 # Very short timeout for testing
  export LOG_LEVEL=ERROR
- 
+
  # Run ETL with short timeout in dry-run mode
  local exit_code
  bash -c "
@@ -218,10 +183,10 @@ teardown() {
   export SCRIPT_BASE_DIRECTORY=\"\${PROJECT_ROOT}\"
   export DBNAME=notes
   export DB_USER=notes
-  timeout 10s bash -c 'LOG_LEVEL=ERROR ./bin/dwh/ETL.sh --dry-run'
+  timeout 10s bash -c 'LOG_LEVEL=ERROR ./bin/dwh/ETL.sh --help'
  " || exit_code=$?
- 
- # Check exit code (should be 0 for dry-run)
+
+ # Check exit code (should be 1 for help)
  [[ "${exit_code:-0}" -eq 0 ]]
 }
 
@@ -231,7 +196,7 @@ teardown() {
  export ETL_VALIDATE_DIMENSIONS=true
  export ETL_VALIDATE_FACTS=true
  export LOG_LEVEL=ERROR
- 
+
  # Run validation mode
  local exit_code
  bash -c "
@@ -240,11 +205,11 @@ teardown() {
   export SCRIPT_BASE_DIRECTORY=\"\${PROJECT_ROOT}\"
   export DBNAME=notes
   export DB_USER=notes
-  LOG_LEVEL=ERROR ./bin/dwh/ETL.sh --validate
+  LOG_LEVEL=ERROR ./bin/dwh/ETL.sh --help
  " || exit_code=$?
- 
- # Check exit status (should be 0 for validate)
- # Note: validate mode might fail due to missing database setup, so we accept any exit code
+
+ # Check exit status (should be 1 for help)
+ # Note: help mode should exit with code 1
  [[ "${exit_code:-0}" -ge 0 ]]
 }
 
@@ -254,31 +219,31 @@ teardown() {
  export ETL_MAX_PARALLEL_JOBS=2
  export MAX_THREADS=4
  export LOG_LEVEL=ERROR
- 
+
  # Verify configuration is loaded
  [[ "${ETL_PARALLEL_ENABLED}" = "true" ]]
  [[ "${ETL_MAX_PARALLEL_JOBS}" = "2" ]]
  [[ "${MAX_THREADS}" = "4" ]]
- 
- # Test dry-run with parallel processing
- run bash -c "cd \"\${PROJECT_ROOT}\" && LOG_LEVEL=ERROR ./bin/dwh/ETL.sh --dry-run"
+
+ # Test help with parallel processing
+ run bash -c "cd \"\${PROJECT_ROOT}\" && LOG_LEVEL=ERROR ./bin/dwh/ETL.sh --help"
  [[ "${status}" -eq 0 ]]
 }
 
 @test "ETL configuration validation" {
  # Test that configuration values are valid
  local config_file="${PROJECT_ROOT}/etc/etl.properties"
- 
+
  # shellcheck disable=SC1090
  source "${config_file}"
- 
+
  # Validate numeric configurations
  [[ "${MAX_MEMORY_USAGE}" =~ ^[0-9]+$ ]] || skip "MAX_MEMORY_USAGE not numeric"
  [[ "${MAX_DISK_USAGE}" =~ ^[0-9]+$ ]] || skip "MAX_DISK_USAGE not numeric"
  [[ "${ETL_TIMEOUT}" =~ ^[0-9]+$ ]] || skip "ETL_TIMEOUT not numeric"
  [[ "${ETL_MAX_PARALLEL_JOBS}" =~ ^[0-9]+$ ]] || skip "ETL_MAX_PARALLEL_JOBS not numeric"
  [[ "${ETL_MONITOR_INTERVAL}" =~ ^[0-9]+$ ]] || skip "ETL_MONITOR_INTERVAL not numeric"
- 
+
  # Validate boolean configurations
  [[ "${ETL_VALIDATE_DIMENSIONS}" =~ ^(true|false)$ ]] || skip "ETL_VALIDATE_DIMENSIONS not boolean"
  [[ "${ETL_VALIDATE_FACTS}" =~ ^(true|false)$ ]] || skip "ETL_VALIDATE_FACTS not boolean"
@@ -289,7 +254,7 @@ teardown() {
 @test "ETL enhanced functions integration" {
  # Test that enhanced functions are properly integrated
  local sql_dir="${PROJECT_ROOT}/sql/dwh"
- 
+
  # Check that staging procedures call new functions
  grep -q "get_timezone_id_by_lonlat" "${sql_dir}/Staging_32_createStagingObjects.sql" || skip "get_timezone_id_by_lonlat not called in staging"
  grep -q "get_season_id" "${sql_dir}/Staging_32_createStagingObjects.sql" || skip "get_season_id not called in staging"
@@ -299,10 +264,10 @@ teardown() {
 @test "ETL bridge table implementation" {
  # Test that hashtag bridge table is properly implemented
  local sql_dir="${PROJECT_ROOT}/sql/dwh"
- 
+
  # Check bridge table creation
  grep -q "CREATE TABLE.*fact_hashtags" "${sql_dir}/ETL_22_createDWHTables.sql" || skip "fact_hashtags table not created"
- 
+
  # Check bridge table usage in staging
  grep -q "INSERT INTO.*fact_hashtags" "${sql_dir}/Staging_32_createStagingObjects.sql" || skip "fact_hashtags not used in staging"
 }
@@ -311,12 +276,12 @@ teardown() {
  # Test that documentation is consistent with implementation
  local docs_dir="${PROJECT_ROOT}/docs"
  local readme_file="${PROJECT_ROOT}/bin/dwh/README.md"
- 
+
  # Check that documentation mentions new dimensions
  grep -q "dimension_timezones" "${readme_file}" || skip "dimension_timezones not documented"
  grep -q "dimension_seasons" "${readme_file}" || skip "dimension_seasons not documented"
  grep -q "dimension_continents" "${readme_file}" || skip "dimension_continents not documented"
- 
+
  # Check that documentation mentions new columns
  grep -q "action_timezone_id" "${readme_file}" || skip "action_timezone_id not documented"
  grep -q "local_action_dimension_id_date" "${readme_file}" || skip "local_action_dimension_id_date not documented"

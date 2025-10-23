@@ -1,16 +1,16 @@
-# ETL Enhanced Features
+# ETL Features Documentation
 
 ## Overview
 
-The ETL script has been enhanced with several new features to improve reliability, performance, and maintainability. This document describes the new capabilities and how to use them, including the comprehensive DWH enhanced features.
+The ETL script provides essential functionality for transforming data from base tables into a star schema data warehouse. This document describes the available features and how to use them.
 
-## New Features
+## Features
 
-### 1. DWH Enhanced Dimensions and Functions
+### 1. DWH Dimensions and Functions
 
 The ETL now supports enhanced data warehouse capabilities:
 
-#### New Dimensions
+#### Dimensions
 
 - **`dimension_timezones`**: Timezone support for local time calculations
 - **`dimension_seasons`**: Seasonal analysis based on date and latitude
@@ -26,7 +26,7 @@ The ETL now supports enhanced data warehouse capabilities:
 - **`dimension_days`**: Enhanced date attributes (ISO week, quarter, names, flags)
 - **`dimension_applications`**: Enhanced attributes (pattern_type, vendor, category)
 
-#### New Functions
+#### Functions
 
 - **`get_timezone_id_by_lonlat(lon, lat)`**: Timezone calculation from coordinates
 - **`get_season_id(ts, lat)`**: Season calculation from date and latitude
@@ -93,21 +93,9 @@ Creates or updates the entire data warehouse. This is the traditional mode.
 
 Processes only new data since the last run. This is faster for regular updates.
 
-#### `--validate`
-
-Only validates data integrity without making any changes. Useful for checking data quality.
-
-#### `--resume`
-
-Attempts to resume from the last successful step. Useful for recovery after failures.
-
-#### `--dry-run`
-
-Shows what would be executed without making actual changes. Useful for testing.
-
 #### `--help` or `-h`
 
-Shows help information and available options.
+Shows detailed help information.
 
 ### 4. Recovery System
 
@@ -215,14 +203,8 @@ The ETL now includes automatic database maintenance:
 # Incremental update
 ./bin/dwh/ETL.sh --incremental
 
-# Validate only
-./bin/dwh/ETL.sh --validate
-
-# Resume from last step
-./bin/dwh/ETL.sh --resume
-
-# Dry run
-./bin/dwh/ETL.sh --dry-run
+# Show help
+./bin/dwh/ETL.sh --help
 ```
 
 ### Configuration Examples
@@ -231,10 +213,6 @@ The ETL now includes automatic database maintenance:
 # Use custom configuration
 export ETL_BATCH_SIZE=500
 export ETL_TIMEOUT=3600
-./bin/dwh/ETL.sh --create
-
-# Disable recovery
-export ETL_RECOVERY_ENABLED=false
 ./bin/dwh/ETL.sh --create
 
 # Disable resource monitoring
@@ -254,14 +232,9 @@ export MAX_MEMORY_USAGE=80
 export MAX_DISK_USAGE=90
 export ETL_TIMEOUT=7200
 
-# Recovery settings
-export ETL_RECOVERY_ENABLED=true
-export ETL_RECOVERY_FILE="/tmp/ETL_recovery.json"
-
-# Validation settings
-export ETL_VALIDATE_INTEGRITY=true
-export ETL_VALIDATE_DIMENSIONS=true
-export ETL_VALIDATE_FACTS=true
+# Database maintenance
+export ETL_VACUUM_AFTER_LOAD=true
+export ETL_ANALYZE_AFTER_LOAD=true
 
 # Parallel processing
 export ETL_PARALLEL_ENABLED=true
@@ -276,10 +249,10 @@ export ETL_MONITOR_INTERVAL=30
 
 ### Unit Tests
 
-Run unit tests for enhanced ETL features:
+Run unit tests for ETL features:
 
 ```bash
-./tests/unit/bash/ETL_enhanced.test.bats
+./tests/unit/bash/ETL.test.bats
 ```
 
 ### Integration Tests
@@ -287,23 +260,24 @@ Run unit tests for enhanced ETL features:
 Run integration tests:
 
 ```bash
-./tests/integration/ETL_enhanced_integration.test.bats
+./tests/integration/ETL_integration.test.bats
 ```
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Recovery file not found**
-   - Check if `ETL_RECOVERY_ENABLED=true`
-   - Verify file permissions on recovery file location
-
-2. **Resource monitoring warnings**
+1. **Resource monitoring warnings**
    - Check system resources
    - Adjust `MAX_MEMORY_USAGE` and `MAX_DISK_USAGE` values
 
-3. **Timeout issues**
+2. **Timeout issues**
    - Increase `ETL_TIMEOUT` value
+   - Check system performance
+
+3. **Database connection issues**
+   - Verify database configuration in `etc/properties.sh`
+   - Check database connectivity
    - Check for long-running queries
 
 4. **Validation failures**

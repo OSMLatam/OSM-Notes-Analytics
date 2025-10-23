@@ -297,21 +297,6 @@ Creates the complete data warehouse from scratch, including all dimensions and f
 
 Processes only new data since the last ETL run. Use this for scheduled updates.
 
-### Validate Mode (Data Quality Check)
-
-```bash
-./bin/dwh/ETL.sh --validate
-```
-
-Validates data integrity without making changes.
-
-### Resume Mode (Recovery)
-
-```bash
-./bin/dwh/ETL.sh --resume
-```
-
-Resumes from the last successful step after a failure.
 
 ## Data Warehouse Schema
 
@@ -521,14 +506,11 @@ Check that:
 
 ### Data Integrity Issues
 
+Check for orphaned facts (example query):
 ```bash
-# Validate data integrity
-./bin/dwh/ETL.sh --validate
-
-# Check for orphaned facts (example query)
 psql -d osm_notes -c "SELECT COUNT(*) FROM dwh.facts f
-  LEFT JOIN dwh.dimension_countries c ON f.dimension_id_country = c.dimension_country_id
-  WHERE c.dimension_country_id IS NULL;"
+LEFT JOIN dwh.dimension_countries c ON f.dimension_id_country = c.dimension_country_id
+WHERE c.dimension_country_id IS NULL;"
 ```
 
 ## Integration with Ingestion System

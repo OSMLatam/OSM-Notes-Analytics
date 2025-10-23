@@ -49,15 +49,6 @@ bin/
 # Incremental update (for scheduled runs)
 ./bin/dwh/ETL.sh --incremental
 
-# Validate data integrity
-./bin/dwh/ETL.sh --validate
-
-# Resume from last successful step
-./bin/dwh/ETL.sh --resume
-
-# Dry run (show what would be executed)
-./bin/dwh/ETL.sh --dry-run
-
 # Show help
 ./bin/dwh/ETL.sh --help
 ```
@@ -66,9 +57,7 @@ bin/
 
 - **--create**: Full initial load, creates all DWH objects from scratch
 - **--incremental**: Processes only new data since last run (default for cron jobs)
-- **--validate**: Validates data integrity without making changes
-- **--resume**: Resumes from last checkpoint after failure
-- **--dry-run**: Shows execution plan without running
+- **--help**: Shows detailed help information
 
 **Configuration:**
 
@@ -368,20 +357,7 @@ If ETL fails:
 1. Check logs in `/tmp/ETL_*/ETL.log`
 2. Review error messages
 3. Fix underlying issue
-4. Resume: `./bin/dwh/ETL.sh --resume`
-
-### Recovery Files
-
-ETL creates recovery checkpoints in `/tmp/ETL_*/ETL_recovery.json`:
-
-```json
-{
-  "last_step": "process_notes_etl",
-  "status": "completed",
-  "timestamp": "1697234567",
-  "etl_start_time": "1697230000"
-}
-```
+4. Restart: `./bin/dwh/ETL.sh --incremental`
 
 ### Resource Monitoring
 

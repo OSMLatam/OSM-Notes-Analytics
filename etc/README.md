@@ -501,8 +501,8 @@ psql -d "${DBNAME}" -U "${DB_USER}" -c "SELECT version();"
 # Test properties.sh
 bash -c "source etc/properties.sh && echo 'MAX_THREADS: ${MAX_THREADS}'"
 
-# Validate ETL config
-./bin/dwh/ETL.sh --dry-run
+# Test ETL help
+./bin/dwh/ETL.sh --help
 ```
 
 ### Verify Settings
