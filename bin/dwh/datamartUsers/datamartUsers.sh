@@ -253,7 +253,57 @@ function __processNotesUser {
  if [[ "${PROCESS_OLD_USERS}" == "yes" ]]; then
   __processOldUsers
  fi
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 -f "${POSTGRES_32_POPULATE_FILE}" 2>&1
+
+ # Get MAX_THREADS for parallel processing
+ local MAX_THREADS="${MAX_THREADS:-$(nproc)}"
+ local adjusted_threads
+ adjusted_threads=$((MAX_THREADS - 1))
+ if [[ "${adjusted_threads}" -lt 1 ]]; then
+  adjusted_threads=1
+ fi
+ __logi "Using ${adjusted_threads} parallel threads for user processing"
+
+ # Get list of modified users to process
+ local user_ids
+ user_ids=$(psql -d "${DBNAME}" -Atq -c "
+  SELECT DISTINCT f.action_dimension_id_user
+  FROM dwh.facts f
+   JOIN dwh.dimension_users u
+   ON (f.action_dimension_id_user = u.dimension_user_id)
+  WHERE u.modified = TRUE
+  LIMIT 1000
+ ")
+
+ local pids=()
+ local count=0
+
+ # Process users in parallel
+ for user_id in ${user_ids}; do
+  if [[ -n "${user_id}" ]]; then
+   (
+    __logi "Processing user ${user_id} (PID: $$)"
+    psql -d "${DBNAME}" -c "CALL dwh.update_datamart_user(${user_id});" 2>&1
+    psql -d "${DBNAME}" -c "UPDATE dwh.dimension_users SET modified = FALSE WHERE dimension_user_id = ${user_id};" 2>&1
+    __logi "Finished user ${user_id} (PID: $$)"
+   ) &
+   pids+=($!)
+   count=$((count + 1))
+
+   # Limit concurrent processes
+   if [[ ${#pids[@]} -ge ${adjusted_threads} ]]; then
+    wait "${pids[0]}"
+    pids=("${pids[@]:1}")
+   fi
+  fi
+ done
+
+ # Wait for remaining processes
+ __logi "Waiting for all user processing to complete..."
+ for pid in "${pids[@]}"; do
+  wait "${pid}"
+ done
+
+ __logi "Processed ${count} users in parallel"
  __log_finish
 }
 

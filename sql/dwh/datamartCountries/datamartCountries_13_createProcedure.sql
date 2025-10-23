@@ -223,7 +223,7 @@ AS $proc$
     ON (f.id_note = nc.note_id AND nc.event = 'closed')
     JOIN note_comments_text nct
     ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
-   WHERE f.dimension_id_country = m_dimension_id_country
+   WHERE f.dimension_id_country = m_dimension_country_id
     AND f.action_comment = 'closed'
     AND EXTRACT(YEAR FROM d.date_id) = m_year
     AND nct.body IS NOT NULL

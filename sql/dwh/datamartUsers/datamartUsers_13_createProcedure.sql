@@ -766,7 +766,7 @@ AS $proc$
    SELECT /* Notes-datamartUsers */ day_of_week, hour_of_day, COUNT(1)
    FROM dwh.facts f
     JOIN dwh.dimension_time_of_week t
-    ON f.opened_dimension_id_hour_of_week = t.dimension_how_id
+    ON f.opened_dimension_id_hour_of_week = t.dimension_tow_id
    WHERE f.opened_dimension_id_user = m_dimension_user_id
    GROUP BY day_of_week, hour_of_day
    ORDER BY day_of_week, hour_of_day
@@ -780,7 +780,7 @@ AS $proc$
    SELECT /* Notes-datamartUsers */ day_of_week, hour_of_day, COUNT(1)
    FROM dwh.facts f
     JOIN dwh.dimension_time_of_week t
-    ON f.action_dimension_id_hour_of_week = t.dimension_how_id
+    ON f.action_dimension_id_hour_of_week = t.dimension_tow_id
    WHERE f.action_dimension_id_user = m_dimension_user_id
     AND f.action_comment = 'commented'
    GROUP BY day_of_week, hour_of_day
@@ -795,7 +795,7 @@ AS $proc$
    SELECT /* Notes-datamartUsers */ day_of_week, hour_of_day, COUNT(1)
    FROM dwh.facts f
     JOIN dwh.dimension_time_of_week t
-    ON f.closed_dimension_id_hour_of_week = t.dimension_how_id
+    ON f.closed_dimension_id_hour_of_week = t.dimension_tow_id
    WHERE f.closed_dimension_id_user = m_dimension_user_id
    GROUP BY day_of_week, hour_of_day
    ORDER BY day_of_week, hour_of_day

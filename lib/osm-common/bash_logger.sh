@@ -74,6 +74,7 @@ __get_caller_info() {
  while [[ ${caller_index} -lt ${max_index} ]]; do
   if [[ "${BASH_SOURCE[${caller_index}]:-}" != *"bash_logger"* ]]; then
    local script_name="${BASH_SOURCE[${caller_index}]:-}"
+   script_name="${script_name##*/}" # Get only filename
    local function_name="${FUNCNAME[${caller_index}]:-main}"
    local line_number="${BASH_LINENO[$((caller_index - 1))]:-0}"
    echo "${script_name}:${function_name}:${line_number}"
@@ -196,7 +197,7 @@ __generate_call_stack() {
  fi
 
  for ((i = 0; i < __bl_functions_length; i++)); do
-  if (($i != $((__bl_functions_length - 1)))); then
+  if ((i != $((__bl_functions_length - 1)))); then
    if [[ "${BASH_SOURCE[$i]}" != *"bash_logger"* ]]; then
     LOG="   ${BASH_SOURCE[$i]//.\//}:${BASH_LINENO[$i]} ${FUNCNAME[$i]}(..)"
     if [[ -z "${__log_fd}" ]]; then
@@ -236,7 +237,7 @@ __generate_call_stack_error() {
  fi
 
  for ((i = 0; i < __bl_functions_length; i++)); do
-  if (($i != $((__bl_functions_length - 1)))); then
+  if ((i != $((__bl_functions_length - 1)))); then
    if [[ "${BASH_SOURCE[$i]}" != *"bash_logger"* ]]; then
     LOG="   ${BASH_SOURCE[$i]//.\//}:${BASH_LINENO[$i]} ${FUNCNAME[$i]}(..)"
     if [[ -z "${__log_fd}" ]]; then
@@ -276,7 +277,7 @@ __generate_call_stack_fatal() {
  fi
 
  for ((i = 0; i < __bl_functions_length; i++)); do
-  if (($i != $((__bl_functions_length - 1)))); then
+  if ((i != $((__bl_functions_length - 1)))); then
    if [[ "${BASH_SOURCE[$i]}" != *"bash_logger"* ]]; then
     LOG="   ${BASH_SOURCE[$i]//.\//}:${BASH_LINENO[$i]} ${FUNCNAME[$i]}(..)"
     if [[ -z "${__log_fd}" ]]; then
@@ -441,6 +442,11 @@ __log_finish() {
  # Store run time for this function
  __logger_run_times["${function_name}"]="${execution_time}"
 
+ # Format time as hours:minutes:seconds
+ local hours=$((execution_time / 3600))
+ local minutes=$(((execution_time % 3600) / 60))
+ local seconds=$((execution_time % 60))
+
  # Log the finish with special format and timing
  local message="|-- FINISHED ${function_name^^} IN ${script_name^^}"
  local caller_info
@@ -451,7 +457,7 @@ __log_finish() {
  __output_log "$formatted_message"
 
  # Add timing information in the format expected by tests
- local timing_message="|-- Took: 0h:0m:${execution_time}s"
+ local timing_message="|-- Took: ${hours}h:${minutes}m:${seconds}s"
  __output_log "$timing_message"
 
  # Add empty line after finish message as expected by tests
