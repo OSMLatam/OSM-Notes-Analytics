@@ -118,10 +118,12 @@ declare -r POSTGRES_31_CREATE_BASE_STAGING_OBJECTS="${SCRIPT_BASE_DIRECTORY}/sql
 declare -r POSTGRES_32_CREATE_STAGING_OBJECTS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_32_createStagingObjects.sql"
 # Create initial facts base objects.
 declare -r POSTGRES_33_CREATE_FACTS_BASE_OBJECTS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_33_initialFactsBaseObjects.sql"
+declare -r POSTGRES_33_CREATE_FACTS_BASE_OBJECTS_SIMPLE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_33_initialFactsBaseObjects_Simple.sql"
 # Create initial facts load.
 declare -r POSTGRES_34_CREATE_FACTS_YEAR_LOAD="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_34_initialFactsLoadCreate.sql"
 # Execute initial facts load.
 declare -r POSTGRES_35_EXECUTE_FACTS_YEAR_LOAD="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_35_initialFactsLoadExecute.sql"
+declare -r POSTGRES_35_EXECUTE_FACTS_YEAR_LOAD_SIMPLE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_35_initialFactsLoadExecute_Simple.sql"
 # Drop initial facts load.
 declare -r POSTGRES_36_DROP_FACTS_YEAR_LOAD="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_36_initialFactsLoadDrop.sql"
 # Add constraints, indexes and triggers.
@@ -373,27 +375,46 @@ function __initialFacts {
  # Create initial facts base objects.
  __logi "Creating initial facts base objects."
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
-  -f "${POSTGRES_33_CREATE_FACTS_BASE_OBJECTS}" 2>&1
+  -f "${POSTGRES_33_CREATE_FACTS_BASE_OBJECTS_SIMPLE}" 2>&1
 
- # Create initial facts load.
- __logi "Creating initial facts load."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
-  -f "${POSTGRES_34_CREATE_FACTS_YEAR_LOAD}" 2>&1
+ # Skip year-specific load creation for simple initial load
+ # __logi "Creating initial facts load."
+ # psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ #  -f "${POSTGRES_34_CREATE_FACTS_YEAR_LOAD}" 2>&1
 
  # Execute initial facts load.
  __logi "Executing initial facts load."
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
-  -f "${POSTGRES_35_EXECUTE_FACTS_YEAR_LOAD}" 2>&1
+  -f "${POSTGRES_35_EXECUTE_FACTS_YEAR_LOAD_SIMPLE}" 2>&1
 
- # Drop initial facts load.
- __logi "Dropping initial facts load."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
-  -f "${POSTGRES_36_DROP_FACTS_YEAR_LOAD}" 2>&1
+ # Skip the year-specific load creation and drop steps for simple initial load
 
  # Add constraints, indexes and triggers.
  __logi "Adding constraints, indexes and triggers."
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_41_ADD_CONSTRAINTS_INDEXES_TRIGGERS}" 2>&1
+
+ __log_finish
+}
+
+# Detects if this is the first execution by checking if DWH facts table is empty.
+function __detectFirstExecution {
+ __log_start
+ __logi "=== DETECTING EXECUTION MODE ==="
+
+ # Check if DWH facts table exists and has data
+ local facts_count
+ facts_count=$(psql -d "${DBNAME}" -Atq -c "SELECT COUNT(*) FROM dwh.facts;" 2> /dev/null || echo "0")
+
+ if [[ "${facts_count}" -eq 0 ]]; then
+  __logi "FIRST EXECUTION DETECTED - No facts found in DWH"
+  __logi "Will perform initial load with complete data warehouse creation"
+  echo "true"
+ else
+  __logi "INCREMENTAL EXECUTION DETECTED - Found ${facts_count} facts in DWH"
+  __logi "Will process only new data since last run"
+  echo "false"
+ fi
 
  __log_finish
 }
@@ -470,28 +491,45 @@ function main() {
 
  __checkPrereqs
 
- # Handle create mode
+ # Handle create mode (explicit)
  if [[ "${PROCESS_TYPE}" == "--create" ]]; then
-  __logi "CREATE MODE - Creating initial data warehouse"
+  __logi "CREATE MODE - Creating initial data warehouse (explicit)"
   set +E
   __checkBaseTables
   set -E
+  __createBaseTables
   __processNotesETL
   __perform_database_maintenance
   "${DATAMART_COUNTRIES_SCRIPT}"
   "${DATAMART_USERS_SCRIPT}"
  fi
 
- # Handle incremental mode or default mode
+ # Handle incremental mode or default mode (with auto-detection)
  if [[ "${PROCESS_TYPE}" == "--incremental" ]] || [[ "${PROCESS_TYPE}" == "" ]]; then
-  __logi "INCREMENTAL MODE - Processing only new data"
-  set +E
-  __checkBaseTables
-  set -E
-  __processNotesETL
-  __perform_database_maintenance
-  "${DATAMART_COUNTRIES_SCRIPT}"
-  "${DATAMART_USERS_SCRIPT}"
+  # Auto-detect if this is the first execution
+  local is_first_execution
+  is_first_execution=$(__detectFirstExecution)
+
+  if [[ "${is_first_execution}" == "true" ]]; then
+   __logi "AUTO-DETECTED FIRST EXECUTION - Performing initial load"
+   set +E
+   __checkBaseTables
+   set -E
+   __createBaseTables
+   __processNotesETL
+   __perform_database_maintenance
+   "${DATAMART_COUNTRIES_SCRIPT}"
+   "${DATAMART_USERS_SCRIPT}"
+  else
+   __logi "AUTO-DETECTED INCREMENTAL EXECUTION - Processing only new data"
+   set +E
+   __checkBaseTables
+   set -E
+   __processNotesETL
+   __perform_database_maintenance
+   "${DATAMART_COUNTRIES_SCRIPT}"
+   "${DATAMART_USERS_SCRIPT}"
+  fi
  fi
 
  __logw "Ending process."

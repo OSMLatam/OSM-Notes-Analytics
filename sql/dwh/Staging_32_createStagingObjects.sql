@@ -70,7 +70,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
 
     WHERE c.created_at >= ''' || max_processed_timestamp
     || '''  AND DATE(c.created_at) = ''' || DATE(max_processed_timestamp) -- Notes for the same date.
-    || ''' ORDER BY c.note_id, c.id
+    || ''' ORDER BY c.note_id, c.sequence_action
     ');
   ELSE
 --RAISE NOTICE 'Processing greater than';
@@ -90,7 +90,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
 
     WHERE c.created_at > ''' || max_processed_timestamp
     || '''  AND DATE(c.created_at) = ''' || DATE(max_processed_timestamp) -- Notes for the same date.
-    || ''' ORDER BY c.note_id, c.id
+    || ''' ORDER BY c.note_id, c.sequence_action
     ');
   END IF;
   LOOP
@@ -101,7 +101,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
    -- Exit when no more rows to fetch.
    EXIT WHEN NOT FOUND;
 
---RAISE NOTICE 'note_id %, sequence %', rec_note_action.id_note, 
+--RAISE NOTICE 'note_id %, sequence %', rec_note_action.id_note,
 --    rec_note_action.sequence_action;
 
    -- Gets the country of the comment.
@@ -187,7 +187,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
 --RAISE NOTICE 'Flag 11: %', CLOCK_TIMESTAMP();
    IF (m_recent_opened_dimension_id_date IS NULL) THEN
     RAISE NOTICE '% - Error when getting the open date - note_id %, sequence %',
-      CLOCK_TIMESTAMP(), rec_note_action.id_note, 
+      CLOCK_TIMESTAMP(), rec_note_action.id_note,
       rec_note_action.sequence_action;
    END IF;
 --RAISE NOTICE 'Flag 12: %', CLOCK_TIMESTAMP();
@@ -367,9 +367,12 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
    INTO qty_dwh_notes
   FROM dwh.facts;
   IF (qty_dwh_notes = 0) THEN
---RAISE NOTICE '0 facts, processing all history. It could take several hours.';
+   RAISE NOTICE 'INITIAL LOAD DETECTED - Processing all historical data from 2013-04-24';
+   RAISE NOTICE 'This may take several hours for the complete dataset.';
    CALL staging.process_notes_at_date('2013-04-24 00:00:00.000000+00',
      qty_dwh_notes, TRUE);
+   RAISE NOTICE 'INITIAL LOAD COMPLETED - % facts processed', qty_dwh_notes;
+   RETURN; -- Exit procedure after initial load
   END IF;
 --RAISE NOTICE '1Flag 2: %', CLOCK_TIMESTAMP();
 

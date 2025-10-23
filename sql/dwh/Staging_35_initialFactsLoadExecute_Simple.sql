@@ -1,0 +1,214 @@
+-- Simple initial load procedure that processes all historical data.
+--
+-- Author: Andres Gomez (AngocA)
+-- Version: 2025-10-22
+
+SELECT /* Notes-staging */ clock_timestamp() AS Processing,
+ 'Starting initial load of all historical data' AS Task;
+
+-- Create a simple procedure for initial load
+CREATE OR REPLACE PROCEDURE staging.process_initial_load()
+LANGUAGE plpgsql
+AS $proc$
+DECLARE
+  m_dimension_country_id INTEGER;
+  m_dimension_user_open INTEGER;
+  m_dimension_user_close INTEGER;
+  m_dimension_user_action INTEGER;
+  m_opened_id_date INTEGER;
+  m_opened_id_hour_of_week INTEGER;
+  m_closed_id_date INTEGER;
+  m_closed_id_hour_of_week INTEGER;
+  m_action_id_date INTEGER;
+  m_action_id_hour_of_week INTEGER;
+  m_application INTEGER;
+  m_application_version INTEGER;
+  m_recent_opened_dimension_id_date INTEGER;
+  m_hashtag_id_1 INTEGER;
+  m_hashtag_id_2 INTEGER;
+  m_hashtag_id_3 INTEGER;
+  m_hashtag_id_4 INTEGER;
+  m_hashtag_id_5 INTEGER;
+  m_hashtag_number INTEGER;
+  m_text_comment TEXT;
+  m_hashtag_name TEXT;
+  m_timezone_id INTEGER;
+  m_local_action_id_date INTEGER;
+  m_local_action_id_hour_of_week INTEGER;
+  m_season_id SMALLINT;
+  m_latitude DECIMAL;
+  m_longitude DECIMAL;
+  rec_note_action RECORD;
+  notes_cursor REFCURSOR;
+  m_count INTEGER := 0;
+BEGIN
+  RAISE NOTICE 'Starting initial load of all historical data...';
+
+  -- Open cursor for all notes ordered by note_id and sequence_action
+  OPEN notes_cursor FOR
+   SELECT /* Notes-staging */
+    c.note_id id_note, c.sequence_action sequence_action,
+    n.created_at created_at, o.id_user created_id_user, n.id_country id_country,
+    c.sequence_action seq, c.event action_comment, c.id_user action_id_user,
+    c.created_at action_at, t.body
+   FROM note_comments c
+    JOIN notes n
+    ON (c.note_id = n.note_id)
+    JOIN note_comments o
+    ON (n.note_id = o.note_id AND o.event = 'opened')
+    LEFT JOIN note_comments_text t
+    ON (c.note_id = t.note_id AND c.sequence_action = t.sequence_action)
+   ORDER BY c.note_id, c.sequence_action;
+
+  LOOP
+   FETCH notes_cursor INTO rec_note_action;
+   EXIT WHEN NOT FOUND;
+
+   -- Get country dimension
+   m_dimension_country_id := dwh.get_country_id(rec_note_action.id_country);
+
+   -- Get user dimensions
+   m_dimension_user_open := dwh.get_user_id(rec_note_action.created_id_user);
+   m_dimension_user_close := dwh.get_user_id(rec_note_action.action_id_user);
+   m_dimension_user_action := dwh.get_user_id(rec_note_action.action_id_user);
+
+   -- Get date and time dimensions
+   m_opened_id_date := dwh.get_date_id(rec_note_action.created_at);
+   m_opened_id_hour_of_week := dwh.get_hour_of_week_id(rec_note_action.created_at);
+   m_action_id_date := dwh.get_date_id(rec_note_action.action_at);
+   m_action_id_hour_of_week := dwh.get_hour_of_week_id(rec_note_action.action_at);
+
+   -- Initialize closed dimensions
+   m_closed_id_date := NULL;
+   m_closed_id_hour_of_week := NULL;
+
+   -- Get application info if present
+   m_text_comment := rec_note_action.body;
+   IF (m_text_comment LIKE '%iD%' OR m_text_comment LIKE '%JOSM%' OR m_text_comment LIKE '%Potlatch%') THEN
+    m_application := dwh.get_application_id(m_text_comment);
+    m_application_version := dwh.get_application_version_id(
+      m_application,
+      (SELECT regexp_match(m_text_comment, '(\\d+\\.\\d+(?:\\.\\d+)?)')::text)
+    );
+   ELSE
+    m_application := NULL;
+    m_application_version := NULL;
+   END IF;
+
+   -- Get the most recent opening action: creation or reopening.
+   IF (rec_note_action.action_comment = 'opened') THEN
+    m_recent_opened_dimension_id_date := m_opened_id_date;
+   ELSIF (rec_note_action.action_comment = 'reopened') THEN
+    m_recent_opened_dimension_id_date := m_action_id_date;
+   ELSE
+    -- For other actions, find the most recent opening from already processed facts
+    SELECT /* Notes-staging */ recent_opened_dimension_id_date
+     INTO m_recent_opened_dimension_id_date
+    FROM staging.facts_temp f
+    WHERE f.fact_id = (
+     SELECT /* Notes-staging */ max(fact_id)
+     FROM staging.facts_temp f
+     WHERE f.id_note = rec_note_action.id_note
+    );
+   END IF;
+
+   -- Handle case where we can't find opening date (shouldn't happen with proper ordering)
+   IF (m_recent_opened_dimension_id_date IS NULL) THEN
+    RAISE NOTICE 'Warning: Could not find opening date for note_id %, sequence % - using action date',
+      rec_note_action.id_note, rec_note_action.sequence_action;
+    m_recent_opened_dimension_id_date := m_action_id_date;
+   END IF;
+
+   -- Get hashtags
+   m_hashtag_id_1 := NULL;
+   m_hashtag_id_2 := NULL;
+   m_hashtag_id_3 := NULL;
+   m_hashtag_id_4 := NULL;
+   m_hashtag_id_5 := NULL;
+   m_hashtag_number := 0;
+
+   IF (rec_note_action.body LIKE '%#%') THEN
+    m_text_comment := rec_note_action.body;
+    CALL staging.get_hashtag(m_text_comment, m_hashtag_name);
+    m_hashtag_id_1 := staging.get_hashtag_id(m_hashtag_name);
+    m_hashtag_number := 1;
+
+    -- Get additional hashtags
+    WHILE (m_text_comment LIKE '%#%') LOOP
+     CALL staging.get_hashtag(m_text_comment, m_hashtag_name);
+     m_hashtag_number := m_hashtag_number + 1;
+
+     CASE m_hashtag_number
+      WHEN 2 THEN m_hashtag_id_2 := staging.get_hashtag_id(m_hashtag_name);
+      WHEN 3 THEN m_hashtag_id_3 := staging.get_hashtag_id(m_hashtag_name);
+      WHEN 4 THEN m_hashtag_id_4 := staging.get_hashtag_id(m_hashtag_name);
+      WHEN 5 THEN m_hashtag_id_5 := staging.get_hashtag_id(m_hashtag_name);
+     END CASE;
+    END LOOP;
+   END IF;
+
+   -- Get timezone and local time info
+   SELECT n.latitude, n.longitude INTO m_latitude, m_longitude
+   FROM notes n WHERE n.note_id = rec_note_action.id_note;
+   m_timezone_id := dwh.get_timezone_id_by_lonlat(m_longitude, m_latitude);
+   m_local_action_id_date := dwh.get_local_date_id(rec_note_action.action_at, m_timezone_id);
+   m_local_action_id_hour_of_week := dwh.get_local_hour_of_week_id(rec_note_action.action_at, m_timezone_id);
+   m_season_id := dwh.get_season_id(rec_note_action.action_at, m_latitude);
+
+   -- Insert the fact into staging
+   INSERT INTO staging.facts_temp (
+     id_note, dimension_id_country,
+     action_at, action_comment, action_dimension_id_date,
+     action_dimension_id_hour_of_week, action_dimension_id_user,
+     opened_dimension_id_date, opened_dimension_id_hour_of_week,
+     opened_dimension_id_user,
+     closed_dimension_id_date, closed_dimension_id_hour_of_week,
+     closed_dimension_id_user, dimension_application_creation,
+     dimension_application_version,
+     recent_opened_dimension_id_date, hashtag_1, hashtag_2, hashtag_3,
+     hashtag_4, hashtag_5, hashtag_number,
+     action_timezone_id, local_action_dimension_id_date,
+     local_action_dimension_id_hour_of_week, action_dimension_id_season
+    ) VALUES (
+     rec_note_action.id_note, m_dimension_country_id,
+     rec_note_action.action_at, rec_note_action.action_comment,
+     m_action_id_date, m_action_id_hour_of_week, m_dimension_user_action,
+     m_opened_id_date, m_opened_id_hour_of_week, m_dimension_user_open,
+     m_closed_id_date, m_closed_id_hour_of_week, m_dimension_user_close,
+     m_application, m_application_version,
+     m_recent_opened_dimension_id_date, m_hashtag_id_1,
+     m_hashtag_id_2, m_hashtag_id_3, m_hashtag_id_4, m_hashtag_id_5,
+     m_hashtag_number, m_timezone_id, m_local_action_id_date,
+     m_local_action_id_hour_of_week, m_season_id
+    );
+
+   m_count := m_count + 1;
+   IF (MOD(m_count, 1000) = 0) THEN
+    RAISE NOTICE '%: % processed facts until %.', CLOCK_TIMESTAMP(), m_count,
+     rec_note_action.action_at;
+   END IF;
+
+  END LOOP;
+
+  CLOSE notes_cursor;
+
+  -- Copy from staging to production
+  RAISE NOTICE 'Copying % facts from staging to production...', m_count;
+  INSERT INTO dwh.facts SELECT * FROM staging.facts_temp;
+
+  -- Clean up staging table
+  DROP TABLE staging.facts_temp;
+  DROP SEQUENCE staging.facts_temp_seq;
+
+  RAISE NOTICE 'Initial load completed successfully with % facts processed.', m_count;
+END
+$proc$;
+
+-- Execute the initial load
+CALL staging.process_initial_load();
+
+-- Drop the procedure
+DROP PROCEDURE staging.process_initial_load();
+
+SELECT /* Notes-staging */ clock_timestamp() AS Processing,
+ 'Initial load completed' AS Task;
