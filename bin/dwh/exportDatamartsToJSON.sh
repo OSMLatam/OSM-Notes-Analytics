@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 # Exports datamarts to JSON files for web viewer consumption.
 # This allows the web viewer to read precalculated data without direct database access.
