@@ -260,7 +260,7 @@ function __checkPrereqs {
   "${POSTGRES_52_CREATE_NOTE_ACTIVITY_METRICS}"
   "${POSTGRES_53_UNIFY_FACTS}"
   "${POSTGRES_61_LOAD_NOTES_STAGING}"
-)
+ )
 
  # Validate each SQL file
  for SQL_FILE in "${SQL_FILES[@]}"; do
