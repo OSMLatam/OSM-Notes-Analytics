@@ -68,6 +68,7 @@ testing strategies, and development workflows.
    - `dimension_hashtags` - Hashtag catalog
    - `dimension_timezones` - Timezone information
    - `dimension_seasons` - Seasonal classifications
+   - `dimension_automation_level` - Bot/script detection levels
 
 3. **Datamart Tables:**
    - `dwh.datamartCountries` - Country analytics

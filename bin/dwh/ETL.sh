@@ -130,6 +130,8 @@ declare -r POSTGRES_34_INITIAL_FACTS_LOAD_PARALLEL="${SCRIPT_BASE_DIRECTORY}/sql
 declare -r POSTGRES_36_DROP_FACTS_YEAR_LOAD="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_36_initialFactsLoadDrop.sql"
 # Add constraints, indexes and triggers.
 declare -r POSTGRES_41_ADD_CONSTRAINTS_INDEXES_TRIGGERS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_41_addConstraintsIndexesTriggers.sql"
+# Create automation detection system.
+declare -r POSTGRES_50_CREATE_AUTOMATION_DETECTION="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_50_createAutomationDetection.sql"
 # Unify facts.
 declare -r POSTGRES_51_UNIFY_FACTS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_51_unify.sql"
 
@@ -249,6 +251,7 @@ function __checkPrereqs {
   "${POSTGRES_35_EXECUTE_FACTS_YEAR_LOAD}"
   "${POSTGRES_36_DROP_FACTS_YEAR_LOAD}"
   "${POSTGRES_41_ADD_CONSTRAINTS_INDEXES_TRIGGERS}"
+  "${POSTGRES_50_CREATE_AUTOMATION_DETECTION}"
   "${POSTGRES_51_UNIFY_FACTS}"
   "${POSTGRES_61_LOAD_NOTES_STAGING}"
  )
@@ -371,6 +374,11 @@ function __processNotesETL {
  # Unify facts, by computing dates between years.
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 -f "${POSTGRES_51_UNIFY_FACTS}" 2>&1
 
+ # Update automation levels for modified users.
+ __logi "Updating automation levels for modified users."
+ psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+  -c "CALL dwh.update_automation_levels_for_modified_users();" 2>&1
+
  __log_finish
 }
 
@@ -453,6 +461,11 @@ function __initialFactsParallel {
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_41_ADD_CONSTRAINTS_INDEXES_TRIGGERS}" 2>&1
 
+ # Create automation detection system.
+ __logi "Creating automation detection system."
+ psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+  -f "${POSTGRES_50_CREATE_AUTOMATION_DETECTION}" 2>&1
+
  __log_finish
 }
 
@@ -482,6 +495,11 @@ function __initialFacts {
  __logi "Adding constraints, indexes and triggers."
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_41_ADD_CONSTRAINTS_INDEXES_TRIGGERS}" 2>&1
+
+ # Create automation detection system.
+ __logi "Creating automation detection system."
+ psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+  -f "${POSTGRES_50_CREATE_AUTOMATION_DETECTION}" 2>&1
 
  __log_finish
 }

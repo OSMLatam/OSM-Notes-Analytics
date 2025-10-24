@@ -155,6 +155,17 @@ Notes:
 | season_name_en       | VARCHAR(16) | Y    |         |     | Season name (en) |
 | season_name_es       | VARCHAR(16) | Y    |         |     | Season name (es) |
 
+## Table: dwh.dimension_automation_level
+
+| Column                     | Type        | Null | Default | Key | Description |
+|----------------------------|-------------|------|---------|-----|-------------|
+| dimension_automation_id    | SMALLINT    | N    |         | PK  | Automation level id |
+| automation_level           | VARCHAR(30) | N    |         |     | Level name: human/probably_human/uncertain/probably_automated/automated/bulk_import |
+| confidence_score           | DECIMAL(3,2)| N    |         |     | Confidence 0.00-1.00 |
+| description                | TEXT        | Y    |         |     | Human-readable description |
+| detection_criteria         | JSONB       | Y    |         |     | Criteria that triggered classification |
+| created_at                 | TIMESTAMP   | Y    | CURRENT_TIMESTAMP | | Creation timestamp |
+
 ## Table: dwh.dimension_continents
 
 | Column                 | Type         | Null | Default | Key | Description |
@@ -189,6 +200,10 @@ Notes:
 | local_action_dimension_id_hour_of_week | SMALLINT | Local time-of-week id |
 | action_dimension_id_season          | SMALLINT  | Season id |
 | dimension_application_version       | INTEGER   | FK to app version |
+| comment_length                      | INTEGER   | Length of comment text |
+| has_url                             | BOOLEAN   | Comment contains URL |
+| has_mention                         | BOOLEAN   | Comment mentions user |
+| dimension_id_automation             | SMALLINT  | FK to automation level |
 
 ## Table: dwh.dimension_application_versions
 
