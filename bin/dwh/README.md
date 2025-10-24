@@ -201,3 +201,64 @@ queries. See `sql/dwh/datamartCountries` and `sql/dwh/datamartUsers`.
   dimensions, and loads facts incrementally.
 - `bin/dwh/profile.sh`: Generates profiles for a country or a user against
   the datamarts.
+- `bin/dwh/exportDatamartsToJSON.sh`: Exports datamarts to JSON files for
+  web viewer consumption with atomic writes and schema validation.
+
+## JSON Export
+
+The `exportDatamartsToJSON.sh` script exports datamart data to JSON files
+for consumption by the web viewer. It provides:
+
+### Features
+
+- **Atomic writes**: Files generated in temporary directory, validated, then moved atomically
+- **Schema validation**: Each JSON file validated against schemas before export
+- **Fail-safe**: On validation failure, keeps existing files and logs error
+- **No partial updates**: Either all files are valid and moved, or none
+
+### Usage
+
+```bash
+# Basic export
+./bin/dwh/exportDatamartsToJSON.sh
+
+# With custom output directory
+export JSON_OUTPUT_DIR=/var/www/osm-notes-data
+./bin/dwh/exportDatamartsToJSON.sh
+```
+
+### Output Structure
+
+```
+output/json/
+├── users/
+│   ├── 123.json
+│   ├── 456.json
+│   └── ...
+├── countries/
+│   ├── 1.json
+│   ├── 2.json
+│   └── ...
+├── indexes/
+│   ├── users.json
+│   └── countries.json
+└── metadata.json
+```
+
+### Cron Integration
+
+For automated exports:
+
+```bash
+# Export every 15 minutes after datamarts update
+45 2 * * * ~/OSM-Notes-Analytics/bin/dwh/exportDatamartsToJSON.sh
+```
+
+Or use a complete workflow wrapper:
+
+```bash
+# Complete pipeline: ETL → Datamarts → JSON Export
+*/15 * * * * /opt/osm-analytics/update-and-export.sh
+```
+
+See [Atomic Validation Export](docs/ATOMIC_VALIDATION_EXPORT.md) for detailed documentation.

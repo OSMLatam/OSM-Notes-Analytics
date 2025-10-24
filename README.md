@@ -184,7 +184,13 @@ This creates JSON files in `./output/json/`:
 - Index files: `indexes/users.json`, `indexes/countries.json`
 - Metadata: `metadata.json`
 
-See [JSON Export Documentation](bin/dwh/export_json_readme.md) for complete details.
+**Export Features:**
+- **Atomic writes**: Files generated in temporary directory, validated, then moved atomically
+- **Schema validation**: Each JSON file validated against schemas before export
+- **Fail-safe**: On validation failure, keeps existing files and logs error
+- **No partial updates**: Either all files are valid and moved, or none
+
+See [JSON Export Documentation](bin/dwh/export_json_readme.md) and [Atomic Validation Export](docs/ATOMIC_VALIDATION_EXPORT.md) for complete details.
 
 ### Incremental Updates
 
@@ -206,6 +212,9 @@ cd ../datamartCountries
 # 4. Export JSON (optional)
 cd ..
 ./exportDatamartsToJSON.sh
+
+# Note: The export script validates all JSON files before moving them to the final destination.
+# If validation fails, it keeps existing files and exits with an error, ensuring data integrity.
 ```
 
 ## Scheduling with Cron
@@ -221,7 +230,48 @@ For automated analytics updates:
 
 # Update user datamart daily (processes 500 users per run)
 30 2 * * * ~/OSM-Notes-Analytics/bin/dwh/datamartUsers/datamartUsers.sh
+
+# Export to JSON for web viewer (every 15 minutes, after datamarts update)
+# This script validates all JSON files before moving them to final destination
+45 2 * * * ~/OSM-Notes-Analytics/bin/dwh/exportDatamartsToJSON.sh
 ```
+
+### Complete Workflow with JSON Export
+
+For a complete automated pipeline that includes JSON export with validation:
+
+```bash
+# Create wrapper script: /opt/osm-analytics/update-and-export.sh
+#!/bin/bash
+cd /opt/osm-analytics/OSM-Notes-Analytics
+
+# ETL incremental update
+./bin/dwh/ETL.sh --incremental || exit 1
+
+# Update datamarts
+./bin/dwh/datamartUsers/datamartUsers.sh || exit 1
+./bin/dwh/datamartCountries/datamartCountries.sh || exit 1
+
+# Export to JSON with validation
+# The script validates all files and only moves them if validation passes
+./bin/dwh/exportDatamartsToJSON.sh || exit 1
+
+# If we get here, all files are valid and exported
+echo "SUCCESS: All exports validated and moved to destination"
+```
+
+Then schedule this wrapper:
+
+```bash
+# Run complete pipeline every 15 minutes
+*/15 * * * * /opt/osm-analytics/update-and-export.sh >> /var/log/osm-analytics.log 2>&1
+```
+
+**Key features of JSON export:**
+- ✅ Atomic writes: Files are generated in temporary directory first
+- ✅ Schema validation: Each JSON file is validated before final export
+- ✅ Fail-safe: On validation failure, keeps existing files and exits with error
+- ✅ No partial updates: Either all files are valid and moved, or none
 
 ## Directory Structure
 
