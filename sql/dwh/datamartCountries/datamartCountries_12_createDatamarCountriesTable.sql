@@ -61,7 +61,8 @@ CREATE TABLE IF NOT EXISTS dwh.datamartCountries (
  history_2013_closed_with_comment INTEGER,
  history_2013_reopened INTEGER,
  ranking_users_opening_2013 JSON,
- ranking_users_closing_2013 JSON
+ ranking_users_closing_2013 JSON,
+ json_exported BOOLEAN DEFAULT FALSE
 
 );
 COMMENT ON TABLE dwh.datamartCountries IS
@@ -173,6 +174,8 @@ COMMENT ON COLUMN dwh.datamartCountries.ranking_users_opening_2013 IS
   'Ranking of users creating notes on year 2013';
 COMMENT ON COLUMN dwh.datamartCountries.ranking_users_closing_2013 IS
   'Ranking of users closing notes on year 2013';
+COMMENT ON COLUMN dwh.datamartCountries.json_exported IS
+  'Flag indicating if country data has been exported to JSON';
 
 CREATE TABLE IF NOT EXISTS dwh.max_date_countries_processed (
   date date NOT NULL

@@ -60,7 +60,8 @@ CREATE TABLE IF NOT EXISTS dwh.datamartUsers (
  history_2013_closed_with_comment INTEGER,
  history_2013_reopened INTEGER,
  ranking_countries_opening_2013 JSON,
- ranking_countries_closing_2013 JSON
+ ranking_countries_closing_2013 JSON,
+ json_exported BOOLEAN DEFAULT FALSE
 );
 COMMENT ON TABLE dwh.datamartUsers IS
   'Contains all precalculated statistical values for users';
@@ -169,6 +170,8 @@ COMMENT ON COLUMN dwh.datamartUsers.ranking_countries_opening_2013 IS
   'Ranking of countries where creating notes on year 2013';
 COMMENT ON COLUMN dwh.datamartUsers.ranking_countries_closing_2013 IS
   'Ranking of countries where closing notes on year 2013';
+COMMENT ON COLUMN dwh.datamartUsers.json_exported IS
+  'Flag indicating if user data has been exported to JSON';
 
 CREATE TABLE IF NOT EXISTS dwh.badges (
  badge_id SERIAL,
