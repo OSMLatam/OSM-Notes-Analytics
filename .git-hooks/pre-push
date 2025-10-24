@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# Pre-push hook for OSM-Notes-Analytics
-# Runs full test suite before allowing push
+# Pre-push hook for OSM-Notes-Analytics (LIGHT VERSION)
+# Runs quality tests only (fast) - DWH tests should be run manually in CI/CD
 #
 # To install: ln -sf ../../.git-hooks/pre-push .git/hooks/pre-push
 
 set -e
 
-echo "🚀 Running pre-push validation..."
+echo "🚀 Running pre-push validation (light mode)..."
 echo ""
 
 # Colors
@@ -23,7 +23,7 @@ if [ ! -f "tests/run_quality_tests.sh" ]; then
     exit 1
 fi
 
-# Run quality tests
+# Run quality tests only (fast)
 echo -e "${BLUE}🔍 Running quality tests...${NC}"
 if ./tests/run_quality_tests.sh > /tmp/pre-push-quality.log 2>&1; then
     echo -e "${GREEN}✅ Quality tests passed${NC}"
@@ -35,33 +35,11 @@ else
 fi
 
 echo ""
-
-# Optionally run DWH tests if database is available
-if psql -d dwh -c "SELECT 1;" > /dev/null 2>&1; then
-    echo -e "${BLUE}🔍 Running DWH tests...${NC}"
-    if timeout 300 ./tests/run_dwh_tests.sh > /tmp/pre-push-dwh.log 2>&1; then
-        echo -e "${GREEN}✅ DWH tests passed${NC}"
-    else
-        echo -e "${YELLOW}⚠️  DWH tests failed or timed out${NC}"
-        echo "   You can still push, but please check the tests"
-        echo "   See /tmp/pre-push-dwh.log for details"
-        
-        # Ask user if they want to continue
-        read -p "Continue with push? (y/n) " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            exit 1
-        fi
-    fi
-else
-    echo -e "${YELLOW}ℹ️  Database 'dwh' not available, skipping DWH tests${NC}"
-    echo "   Quality tests passed - allowing push"
-fi
-
+echo -e "${YELLOW}ℹ️  Light mode: DWH tests skipped${NC}"
+echo -e "${YELLOW}   Run manually: ./tests/run_dwh_tests.sh${NC}"
 echo ""
 echo -e "${GREEN}✅ Pre-push validation complete!${NC}"
 echo ""
 
 exit 0
-
 
