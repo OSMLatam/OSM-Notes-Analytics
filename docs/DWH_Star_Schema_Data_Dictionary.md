@@ -166,6 +166,18 @@ Notes:
 | detection_criteria         | JSONB       | Y    |         |     | Criteria that triggered classification |
 | created_at                 | TIMESTAMP   | Y    | CURRENT_TIMESTAMP | | Creation timestamp |
 
+## Table: dwh.dimension_experience_levels
+
+| Column                     | Type        | Null | Default | Key | Description |
+|----------------------------|-------------|------|---------|-----|-------------|
+| dimension_experience_id   | SMALLINT    | N    |         | PK  | Experience level id |
+| experience_level          | VARCHAR(30) | N    |         |     | Level name: newcomer/beginner/intermediate/advanced/expert/master/legend |
+| min_notes_opened          | INTEGER     | N    |         |     | Minimum notes opened to qualify |
+| min_notes_closed          | INTEGER     | N    |         |     | Minimum notes closed to qualify |
+| min_days_active          | INTEGER     | N    |         |     | Minimum days active to qualify |
+| level_order               | SMALLINT    | N    |         |     | Sort order (1=newcomer, 7=legend) |
+| description               | TEXT        | Y    |         |     | Human-readable description |
+
 ## Table: dwh.dimension_continents
 
 | Column                 | Type         | Null | Default | Key | Description |
@@ -190,6 +202,18 @@ Notes:
 | valid_from | TIMESTAMP  | Validity start |
 | valid_to   | TIMESTAMP  | Validity end |
 | is_current | BOOLEAN    | Current row flag |
+
+### dwh.dimension_users (Experience columns)
+
+| Column                  | Type        | Description |
+|-------------------------|-------------|-------------|
+| experience_level_id     | SMALLINT    | FK to experience level |
+| total_notes_opened       | INTEGER     | Total notes opened by user |
+| total_notes_closed       | INTEGER     | Total notes closed by user |
+| days_active             | INTEGER     | Days between first and last activity |
+| resolution_ratio        | DECIMAL(4,2)| % of opened notes that were closed |
+| last_activity_date       | DATE        | Date of most recent activity |
+| experience_calculated_at | TIMESTAMP   | When experience level was last calculated |
 
 ### dwh.facts (added columns)
 

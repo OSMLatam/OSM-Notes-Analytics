@@ -69,6 +69,7 @@ testing strategies, and development workflows.
    - `dimension_timezones` - Timezone information
    - `dimension_seasons` - Seasonal classifications
    - `dimension_automation_level` - Bot/script detection levels
+   - `dimension_experience_levels` - User experience classification (newcomer to legend)
 
 3. **Datamart Tables:**
    - `dwh.datamartCountries` - Country analytics

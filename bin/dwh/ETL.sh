@@ -132,8 +132,10 @@ declare -r POSTGRES_36_DROP_FACTS_YEAR_LOAD="${SCRIPT_BASE_DIRECTORY}/sql/dwh/St
 declare -r POSTGRES_41_ADD_CONSTRAINTS_INDEXES_TRIGGERS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_41_addConstraintsIndexesTriggers.sql"
 # Create automation detection system.
 declare -r POSTGRES_50_CREATE_AUTOMATION_DETECTION="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_50_createAutomationDetection.sql"
+# Create experience levels system.
+declare -r POSTGRES_51_CREATE_EXPERIENCE_LEVELS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_51_createExperienceLevels.sql"
 # Unify facts.
-declare -r POSTGRES_51_UNIFY_FACTS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_51_unify.sql"
+declare -r POSTGRES_52_UNIFY_FACTS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_51_unify.sql"
 
 # Load notes staging.
 declare -r POSTGRES_61_LOAD_NOTES_STAGING="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_61_loadNotes.sql"
@@ -252,7 +254,8 @@ function __checkPrereqs {
   "${POSTGRES_36_DROP_FACTS_YEAR_LOAD}"
   "${POSTGRES_41_ADD_CONSTRAINTS_INDEXES_TRIGGERS}"
   "${POSTGRES_50_CREATE_AUTOMATION_DETECTION}"
-  "${POSTGRES_51_UNIFY_FACTS}"
+  "${POSTGRES_51_CREATE_EXPERIENCE_LEVELS}"
+  "${POSTGRES_52_UNIFY_FACTS}"
   "${POSTGRES_61_LOAD_NOTES_STAGING}"
  )
 
@@ -372,12 +375,17 @@ function __processNotesETL {
   -c "CALL staging.process_notes_actions_into_dwh();" 2>&1
 
  # Unify facts, by computing dates between years.
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 -f "${POSTGRES_51_UNIFY_FACTS}" 2>&1
+ psql -d "${DBNAME}" -v ON_ERROR_STOP=1 -f "${POSTGRES_52_UNIFY_FACTS}" 2>&1
 
  # Update automation levels for modified users.
  __logi "Updating automation levels for modified users."
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
   -c "CALL dwh.update_automation_levels_for_modified_users();" 2>&1
+
+ # Update experience levels for modified users.
+ __logi "Updating experience levels for modified users."
+ psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+  -c "CALL dwh.update_experience_levels_for_modified_users();" 2>&1
 
  __log_finish
 }
@@ -466,6 +474,11 @@ function __initialFactsParallel {
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_50_CREATE_AUTOMATION_DETECTION}" 2>&1
 
+ # Create experience levels system.
+ __logi "Creating experience levels system."
+ psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+  -f "${POSTGRES_51_CREATE_EXPERIENCE_LEVELS}" 2>&1
+
  __log_finish
 }
 
@@ -500,6 +513,11 @@ function __initialFacts {
  __logi "Creating automation detection system."
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_50_CREATE_AUTOMATION_DETECTION}" 2>&1
+
+ # Create experience levels system.
+ __logi "Creating experience levels system."
+ psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+  -f "${POSTGRES_51_CREATE_EXPERIENCE_LEVELS}" 2>&1
 
  __log_finish
 }
