@@ -114,17 +114,22 @@ El data warehouse actual está muy bien diseñado con:
   SELECT fact_id, hashtag_5, 5 FROM dwh.facts WHERE hashtag_5 IS NOT NULL;
   ```
 
-- [ ] 2.3. Crear índices en fact_hashtags
+- [x] 2.3. Crear índices en fact_hashtags ✅ COMPLETADO
   ```sql
   CREATE INDEX idx_fact_hashtags_fact ON dwh.fact_hashtags(fact_id);
   CREATE INDEX idx_fact_hashtags_tag ON dwh.fact_hashtags(dimension_hashtag_id);
   CREATE INDEX idx_fact_hashtags_composite 
     ON dwh.fact_hashtags(dimension_hashtag_id, fact_id);
   ```
+  **Integrado en**: `sql/dwh/ETL_41_addConstraintsIndexesTriggers.sql` (líneas 320-337)
+  **Ejecutado automáticamente por**: `bin/dwh/ETL.sh` en las funciones `__processNotes()` y `__initialFacts()`
 
-- [ ] 2.4. Actualizar proceso ETL para usar tabla puente
+- [x] 2.4. Actualizar proceso ETL para usar tabla puente ✅ COMPLETADO
   - Modificar `sql/dwh/Staging_*.sql` para insertar en `fact_hashtags`
   - Actualizar funciones de procesamiento
+  **Archivos modificados**: 
+    - `sql/dwh/Staging_32_createStagingObjects.sql` (líneas 278-297)
+    - `sql/dwh/Staging_34_initialFactsLoadCreate.sql` (líneas 282-301)
 
 - [ ] 2.5. Crear vista para compatibilidad retroactiva
   ```sql

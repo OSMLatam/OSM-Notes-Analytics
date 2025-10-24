@@ -317,3 +317,22 @@ CREATE OR REPLACE TRIGGER update_days_to_resolution
 COMMENT ON TRIGGER update_days_to_resolution ON dwh.facts IS
   'Updates the number of days between creation and resolution dates';
 
+SELECT /* Notes-ETL */ clock_timestamp() AS Processing,
+ 'Creating indexes for fact_hashtags bridge table' AS Task;
+
+-- Indexes for fact_hashtags bridge table (for hashtag analytics)
+CREATE INDEX IF NOT EXISTS idx_fact_hashtags_fact
+  ON dwh.fact_hashtags(fact_id);
+COMMENT ON INDEX dwh.idx_fact_hashtags_fact IS
+  'Improves joins from fact_hashtags to facts table';
+
+CREATE INDEX IF NOT EXISTS idx_fact_hashtags_tag
+  ON dwh.fact_hashtags(dimension_hashtag_id);
+COMMENT ON INDEX dwh.idx_fact_hashtags_tag IS
+  'Improves queries filtering by specific hashtag';
+
+CREATE INDEX IF NOT EXISTS idx_fact_hashtags_composite
+  ON dwh.fact_hashtags(dimension_hashtag_id, fact_id);
+COMMENT ON INDEX dwh.idx_fact_hashtags_composite IS
+  'Composite index for common hashtag + fact join patterns';
+
