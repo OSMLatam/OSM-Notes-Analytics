@@ -47,6 +47,12 @@ close, hide).
 | hashtag_4                            | INTEGER          | Y    |                        | FK  | Hashtag dimension key (fourth) |
 | hashtag_5                            | INTEGER          | Y    |                        | FK  | Hashtag dimension key (fifth) |
 | hashtag_number                       | INTEGER          | Y    |                        |     | Total number of hashtags detected |
+| comment_length                       | INTEGER          | Y    |                        |     | Length of comment text |
+| has_url                              | BOOLEAN          | Y    | FALSE                  |     | True if comment contains URL |
+| has_mention                          | BOOLEAN          | Y    | FALSE                  |     | True if comment mentions another user |
+| total_comments_on_note               | INTEGER          | Y    |                        |     | Total comments count UP TO this action (trigger) |
+| total_reopenings_count               | INTEGER          | Y    |                        |     | Total reopenings count UP TO this action (trigger) |
+| total_actions_on_note                | INTEGER          | Y    |                        |     | Total actions count UP TO this action (trigger) |
 
 Notes:
 
@@ -57,6 +63,8 @@ Notes:
 - `recent_opened_dimension_id_date` is enforced NOT NULL after unify step.
 - Resolution day metrics are maintained by trigger on insert of closing
   actions.
+- `comment_length`, `has_url`, `has_mention` are calculated during ETL from comment text.
+- `total_comments_on_note`, `total_reopenings_count`, `total_actions_on_note` are calculated by trigger BEFORE INSERT for historical accuracy (performance impact: 1 SELECT per row inserted).
 
 ## Table: dwh.dimension_users
 

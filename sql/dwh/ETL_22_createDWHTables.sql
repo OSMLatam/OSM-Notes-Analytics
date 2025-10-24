@@ -40,7 +40,11 @@ CREATE TABLE IF NOT EXISTS dwh.facts (
  -- Comment metrics
  comment_length INTEGER,
  has_url BOOLEAN DEFAULT FALSE,
- has_mention BOOLEAN DEFAULT FALSE
+ has_mention BOOLEAN DEFAULT FALSE,
+ -- Note activity metrics (PERFORMANCE WARNING: Trigger calculates these)
+ total_comments_on_note INTEGER,
+ total_reopenings_count INTEGER,
+ total_actions_on_note INTEGER
 ) PARTITION BY RANGE (action_at);
 -- Note: Any new column should be included in:
 -- staging.process_notes_at_date_${YEAR} (initialFactsLoadCreate)
@@ -106,6 +110,12 @@ COMMENT ON COLUMN dwh.facts.has_url IS
   'True if comment contains URL';
 COMMENT ON COLUMN dwh.facts.has_mention IS
   'True if comment mentions another user';
+COMMENT ON COLUMN dwh.facts.total_comments_on_note IS
+  'Total comments count on this note UP TO this action (calculated by trigger)';
+COMMENT ON COLUMN dwh.facts.total_reopenings_count IS
+  'Total reopenings count on this note UP TO this action (calculated by trigger)';
+COMMENT ON COLUMN dwh.facts.total_actions_on_note IS
+  'Total actions count on this note UP TO this action (calculated by trigger)';
 
 CREATE TABLE IF NOT EXISTS dwh.dimension_users (
  dimension_user_id SERIAL,

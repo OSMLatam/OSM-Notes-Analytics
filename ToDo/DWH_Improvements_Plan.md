@@ -961,161 +961,64 @@ Actualizar `dimension_users` para incluir nivel de experiencia basado en criteri
 
 ---
 
-### TAREA 12: Agregar Métricas de Actividad en Facts
+### TAREA 12: Agregar Métricas de Actividad en Facts ✅ COMPLETADO
 **Impacto**: 📊 MEDIO - Análisis más detallado de comportamiento de notas  
-**Esfuerzo**: Medio (3-4 horas)
+**Esfuerzo**: Medio (3-4 horas)  
+**Estado**: ✅ **COMPLETADO** con **ADVERTENCIAS DE PERFORMANCE**
 
 #### Descripción:
-Agregar métricas adicionales a la tabla de hechos para facilitar análisis:
-- Cantidad de comentarios sobre la nota
-- Cantidad de acciones sobre la nota
-- Cantidad de reaperturas
-- Cantidad de cerraduras
-- Cantidad de días que ha estado abierta (suma de periodos)
-- Flag si fue cerrada por el creador
+Agregar métricas acumuladas históricas a la tabla de hechos:
+- Cantidad de comentarios sobre la nota hasta ese momento
+- Cantidad de acciones sobre la nota hasta ese momento
+- Cantidad de reaperturas hasta ese momento
 
-#### Subtareas:
-- [ ] 12.1. Agregar columnas a dwh.facts
-  ```sql
-  ALTER TABLE dwh.facts ADD COLUMN
-    total_comments_on_note INTEGER,       -- Total comentarios en la nota
-    total_actions_on_note INTEGER,        -- Total acciones (incluyendo cierres sin comentario)
-    total_reopenings_count INTEGER,       -- Veces que ha sido reabierta
-    total_closures_count INTEGER,         -- Veces que ha sido cerrada
-    total_days_open_cumulative INTEGER,   -- Días acumulados en estado abierto
-    closed_by_creator BOOLEAN,            -- Cerrada por quien la abrió
-    is_self_resolved BOOLEAN;             -- Misma persona abrió y cerró
-  ```
+**IMPLEMENTACIÓN**: Trigger BEFORE INSERT que calcula valores históricos acumulados por fila.
 
-- [ ] 12.2. Crear función para calcular métricas de nota
-  ```sql
-  CREATE OR REPLACE FUNCTION dwh.calculate_note_metrics(
-    p_note_id INTEGER
-  ) RETURNS TABLE (
-    comments_count INTEGER,
-    actions_count INTEGER,
-    reopenings INTEGER,
-    closures INTEGER,
-    days_open INTEGER
-  ) AS $$
-  BEGIN
-    RETURN QUERY
-    SELECT 
-      COUNT(*) FILTER (WHERE action_comment = 'commented')::INTEGER,
-      COUNT(*)::INTEGER,
-      COUNT(*) FILTER (WHERE action_comment = 'reopened')::INTEGER,
-      COUNT(*) FILTER (WHERE action_comment = 'closed')::INTEGER,
-      COALESCE(SUM(
-        CASE 
-          WHEN action_comment IN ('opened', 'reopened')
-          THEN (SELECT EXTRACT(DAYS FROM 
-            COALESCE(
-              (SELECT MIN(action_at) 
-               FROM dwh.facts f2 
-               WHERE f2.id_note = p_note_id 
-                 AND f2.action_comment = 'closed'
-                 AND f2.action_at > f1.action_at),
-              NOW()
-            ) - f1.action_at
-          ))
-          ELSE 0
-        END
-      ), 0)::INTEGER as days_open
-    FROM dwh.facts f1
-    WHERE id_note = p_note_id;
-  END;
-  $$ LANGUAGE plpgsql;
-  ```
+#### Implementación:
 
-- [ ] 12.3. Crear trigger para actualizar métricas
-  ```sql
-  CREATE OR REPLACE FUNCTION dwh.update_note_metrics()
-  RETURNS TRIGGER AS $$
-  DECLARE
-    v_metrics RECORD;
-    v_opener_user_id INTEGER;
-  BEGIN
-    -- Obtener métricas actualizadas
-    SELECT * INTO v_metrics 
-    FROM dwh.calculate_note_metrics(NEW.id_note);
-    
-    -- Actualizar todas las filas de esta nota
-    UPDATE dwh.facts SET
-      total_comments_on_note = v_metrics.comments_count,
-      total_actions_on_note = v_metrics.actions_count,
-      total_reopenings_count = v_metrics.reopenings,
-      total_closures_count = v_metrics.closures,
-      total_days_open_cumulative = v_metrics.days_open
-    WHERE id_note = NEW.id_note;
-    
-    -- Si es un cierre, verificar si lo cerró el creador
-    IF NEW.action_comment = 'closed' THEN
-      SELECT opened_dimension_id_user INTO v_opener_user_id
-      FROM dwh.facts
-      WHERE id_note = NEW.id_note
-        AND action_comment = 'opened'
-      LIMIT 1;
-      
-      UPDATE dwh.facts SET
-        closed_by_creator = (NEW.action_dimension_id_user = v_opener_user_id),
-        is_self_resolved = (NEW.action_dimension_id_user = v_opener_user_id)
-      WHERE fact_id = NEW.fact_id;
-    END IF;
-    
-    RETURN NEW;
-  END;
-  $$ LANGUAGE plpgsql;
-  
-  CREATE TRIGGER update_note_metrics_trigger
-  AFTER INSERT ON dwh.facts
-  FOR EACH ROW
-  EXECUTE FUNCTION dwh.update_note_metrics();
-  ```
+**Archivos creados:**
+- `sql/dwh/ETL_22_createDWHTables.sql` - Agregadas columnas a `dwh.facts`
+- `sql/dwh/ETL_52_createNoteActivityMetrics.sql` - Trigger BEFORE INSERT
+- `docs/DWH_Star_Schema_Data_Dictionary.md` - Documentación actualizada
 
-- [ ] 12.4. Backfill para notas existentes
-  ```sql
-  -- Script de actualización masiva (ejecutar en batches)
-  DO $$
-  DECLARE
-    v_note RECORD;
-    v_metrics RECORD;
-  BEGIN
-    FOR v_note IN 
-      SELECT DISTINCT id_note 
-      FROM dwh.facts 
-      ORDER BY id_note
-    LOOP
-      SELECT * INTO v_metrics 
-      FROM dwh.calculate_note_metrics(v_note.id_note);
-      
-      UPDATE dwh.facts SET
-        total_comments_on_note = v_metrics.comments_count,
-        total_actions_on_note = v_metrics.actions_count,
-        total_reopenings_count = v_metrics.reopenings,
-        total_closures_count = v_metrics.closures,
-        total_days_open_cumulative = v_metrics.days_open
-      WHERE id_note = v_note.id_note;
-      
-      -- Commit cada 1000 notas
-      IF MOD(v_note.id_note, 1000) = 0 THEN
-        COMMIT;
-      END IF;
-    END LOOP;
-  END $$;
-  ```
+**Columnas agregadas:**
+```sql
+ALTER TABLE dwh.facts ADD COLUMN
+  total_comments_on_note INTEGER,      -- Comentarios acumulados hasta este momento
+  total_reopenings_count INTEGER,      -- Reaperturas acumuladas hasta este momento
+  total_actions_on_note INTEGER;      -- Acciones acumuladas hasta este momento
+```
 
-- [ ] 12.5. Crear índices
-  ```sql
-  CREATE INDEX idx_facts_note_metrics 
-    ON dwh.facts(total_reopenings_count, total_closures_count);
-  
-  CREATE INDEX idx_facts_self_resolved 
-    ON dwh.facts(closed_by_creator) WHERE closed_by_creator = TRUE;
-  ```
+**Trigger implementado:**
+- Función: `dwh.calculate_note_activity_metrics()`
+- Trigger: `calculate_note_activity_metrics_trigger` (BEFORE INSERT)
+- Calcula valores históricos acumulados por fila (no actualiza filas anteriores)
+- Usa índice existente `resolution_idx ON (id_note, fact_id)` para optimización
 
-**Archivos a crear**:
-- `sql/dwh/improvements/12_add_note_metrics.sql`
-- `sql/dwh/improvements/12_backfill_note_metrics.sql`
+#### ⚠️ ADVERTENCIAS DE PERFORMANCE:
+
+**Impacto en ETL:**
+- **1 SELECT COUNT(*) adicional por cada fila insertada**
+- Query escanea filas anteriores de la misma nota: `WHERE id_note = NEW.id_note AND fact_id < NEW.fact_id`
+- Índice `resolution_idx (id_note, fact_id)` ya existe y se usa para optimizar
+
+**Monitoreo requerido:**
+- [ ] Revisar tiempo de ejecución del ETL después de implementación
+- [ ] Monitorear query plan del trigger con `EXPLAIN ANALYZE`
+- [ ] Considerar alternativas si degradación > 10%:
+  - Calcular en el ETL antes de INSERT (sin trigger)
+  - Usar tabla auxiliar para métricas acumuladas
+  - Calcular solo al consultar (sin almacenar)
+
+**Caso de uso:**
+- Análisis longitudinal: "¿Cuántos comentarios tenía la nota cuando se agregó el comentario X?"
+- Series temporales de actividad: "¿Cuántas reaperturas había antes del cierre?"
+- Métricas históricas precisas por momento de acción
+
+#### Notas técnicas:
+- No hace UPDATE de filas anteriores (solo establece valores en NEW)
+- Cada fila guarda el estado acumulado hasta ESE momento específico
+- Compatible con particionamiento de la tabla (trigger funciona en todos los partitions)
 
 ---
 
