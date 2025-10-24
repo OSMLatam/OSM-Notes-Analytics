@@ -1,7 +1,7 @@
 -- Create data warehouse tables.
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2025-08-08
+-- Version: 2025-10-24
 
 CREATE SCHEMA IF NOT EXISTS dwh;
 COMMENT ON SCHEMA dwh IS
@@ -36,7 +36,11 @@ CREATE TABLE IF NOT EXISTS dwh.facts (
  local_action_dimension_id_date INTEGER,
  local_action_dimension_id_hour_of_week SMALLINT,
  -- Season analysis
- action_dimension_id_season SMALLINT
+ action_dimension_id_season SMALLINT,
+ -- Comment metrics
+ comment_length INTEGER,
+ has_url BOOLEAN DEFAULT FALSE,
+ has_mention BOOLEAN DEFAULT FALSE
 ) PARTITION BY RANGE (action_at);
 -- Note: Any new column should be included in:
 -- staging.process_notes_at_date_${YEAR} (initialFactsLoadCreate)
@@ -96,6 +100,12 @@ COMMENT ON COLUMN dwh.facts.local_action_dimension_id_hour_of_week IS
   'Local hour-of-week id for the action';
 COMMENT ON COLUMN dwh.facts.action_dimension_id_season IS
   'Season id at the action moment (based on country and date)';
+COMMENT ON COLUMN dwh.facts.comment_length IS
+  'Length of the comment text';
+COMMENT ON COLUMN dwh.facts.has_url IS
+  'True if comment contains URL';
+COMMENT ON COLUMN dwh.facts.has_mention IS
+  'True if comment mentions another user';
 
 CREATE TABLE IF NOT EXISTS dwh.dimension_users (
  dimension_user_id SERIAL,

@@ -2,7 +2,7 @@
 -- Includes foreign keys, performance indexes, and resolution metric triggers.
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2025-08-08
+-- Version: 2025-10-24
 
 -- Primary keys
 -- NOTE: Cannot add PRIMARY KEY to partitioned table without including partition key column
@@ -107,6 +107,15 @@ SELECT /* Notes-ETL */ clock_timestamp() AS Processing,
 CREATE INDEX facts_action_date ON dwh.facts (action_at);
 COMMENT ON INDEX dwh.facts_action_date IS
   'Improves queries by action timestamp';
+
+-- Comment metrics indexes
+CREATE INDEX facts_has_url ON dwh.facts (has_url) WHERE has_url = TRUE;
+COMMENT ON INDEX dwh.facts_has_url IS
+  'Improves queries filtering comments with URLs';
+
+CREATE INDEX facts_has_mention ON dwh.facts (has_mention) WHERE has_mention = TRUE;
+COMMENT ON INDEX dwh.facts_has_mention IS
+  'Improves queries filtering comments with mentions';
 
 CREATE INDEX action_idx
  ON dwh.facts (action_dimension_id_user, action_comment, id_note);

@@ -1,7 +1,7 @@
 -- Create procedure for staging tables.
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2025-07-14
+-- Version: 2025-10-24
 
 SELECT /* Notes-staging */ clock_timestamp() AS Processing,
  'Creating staging procedure' AS Task;
@@ -41,6 +41,9 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
    m_fact_id INTEGER;
    m_latitude DECIMAL;
    m_longitude DECIMAL;
+   m_comment_length INTEGER;
+   m_has_url BOOLEAN;
+   m_has_mention BOOLEAN;
   rec_note_action RECORD;
   notes_on_day REFCURSOR;
 
@@ -219,6 +222,11 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
    m_local_action_id_hour_of_week := dwh.get_local_hour_of_week_id(rec_note_action.action_at, m_timezone_id);
    m_season_id := dwh.get_season_id(rec_note_action.action_at, m_latitude);
 
+   -- Calculate comment metrics
+   m_comment_length := LENGTH(rec_note_action.body);
+   m_has_url := rec_note_action.body ~ 'https?://';
+   m_has_mention := rec_note_action.body ~ '@\w+';
+
    -- Insert the fact.
    INSERT INTO dwh.facts (
      id_note, dimension_id_country,
@@ -231,7 +239,8 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
       dimension_application_version,
       recent_opened_dimension_id_date, hashtag_number,
       action_timezone_id, local_action_dimension_id_date,
-      local_action_dimension_id_hour_of_week, action_dimension_id_season
+      local_action_dimension_id_hour_of_week, action_dimension_id_season,
+      comment_length, has_url, has_mention
     ) VALUES (
      rec_note_action.id_note, m_dimension_country_id,
      rec_note_action.action_at, rec_note_action.action_comment,
@@ -241,7 +250,8 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
       m_application, m_application_version,
       m_recent_opened_dimension_id_date, m_hashtag_number,
       m_timezone_id, m_local_action_id_date, m_local_action_id_hour_of_week,
-      m_season_id
+      m_season_id,
+      m_comment_length, m_has_url, m_has_mention
     ) RETURNING fact_id INTO m_fact_id;
 --RAISE NOTICE 'Flag 23: %', CLOCK_TIMESTAMP();
 
