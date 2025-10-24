@@ -127,33 +127,28 @@ El data warehouse actual está muy bien diseñado con:
 - [x] 2.4. Actualizar proceso ETL para usar tabla puente ✅ COMPLETADO
   - Modificar `sql/dwh/Staging_*.sql` para insertar en `fact_hashtags`
   - Actualizar funciones de procesamiento
+  - **✅ ELIMINADA LIMITACIÓN DE 5 HASHTAGS - Ahora acepta ILIMITADOS**
+  - **✅ ELIMINADAS COLUMNAS DE COMPATIBILIDAD - Sin dependencias antiguas**
   **Archivos modificados**: 
-    - `sql/dwh/Staging_32_createStagingObjects.sql` (líneas 278-297)
-    - `sql/dwh/Staging_34_initialFactsLoadCreate.sql` (líneas 282-301)
+    - `sql/dwh/ETL_22_createDWHTables.sql` - Eliminadas columnas hashtag_1 a hashtag_5
+    - `sql/dwh/Staging_32_createStagingObjects.sql` - Procesa TODOS los hashtags usando array
+    - `sql/dwh/Staging_34_initialFactsLoadCreate.sql` - Procesa TODOS los hashtags usando array
+    - `sql/dwh/Staging_34_initialFactsLoadCreate_Parallel.sql` - Procesa TODOS los hashtags usando array
+    - `sql/dwh/Staging_35_initialFactsLoadExecute_Simple.sql` - Procesa TODOS los hashtags usando array
+  **Cambios clave**:
+    - Eliminadas columnas `hashtag_1` a `hashtag_5` de `dwh.facts`
+    - Agregado array `m_all_hashtag_ids` para almacenar hashtags ilimitados
+    - Refactorizado de IFs anidados a WHILE loop único
+    - Todos los hashtags se insertan en tabla puente `fact_hashtags`
+    - Solo se mantiene `hashtag_number` para contar hashtags totales
 
-- [ ] 2.5. Crear vista para compatibilidad retroactiva
-  ```sql
-  CREATE VIEW dwh.facts_with_hashtags AS
-  SELECT f.*, 
-    (SELECT array_agg(dimension_hashtag_id ORDER BY position) 
-     FROM dwh.fact_hashtags 
-     WHERE fact_id = f.fact_id) as hashtags
-  FROM dwh.facts f;
-  ```
+- [x] 2.5. ~~Crear vista para compatibilidad retroactiva~~ ✅ NO NECESARIO
+  - Eliminado - no hay usuarios antiguos que requieran compatibilidad
 
-- [ ] 2.6. Marcar columnas hashtag_* como DEPRECATED en facts
-  ```sql
-  COMMENT ON COLUMN dwh.facts.hashtag_1 IS 
-    'DEPRECATED - Use dwh.fact_hashtags table instead';
-  ```
+- [x] 2.6. ~~Marcar columnas hashtag_* como DEPRECATED~~ ✅ COMPLETADO
+  - Columnas eliminadas completamente (no solo marcadas como deprecated)
 
 - [ ] 2.7. Actualizar datamarts para usar fact_hashtags
-
-- [ ] 2.8. Probar que no se rompen queries existentes
-
-**Archivos a crear**:
-- `sql/dwh/improvements/02_migrate_hashtags_to_bridge.sql`
-- `sql/dwh/improvements/02_create_hashtag_views.sql`
 
 ---
 

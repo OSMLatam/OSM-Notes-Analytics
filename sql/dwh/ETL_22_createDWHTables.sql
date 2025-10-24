@@ -30,11 +30,6 @@ CREATE TABLE IF NOT EXISTS dwh.facts (
  days_to_resolution INTEGER,
  days_to_resolution_active INTEGER,
  days_to_resolution_from_reopen INTEGER,
- hashtag_1 INTEGER,
- hashtag_2 INTEGER,
- hashtag_3 INTEGER,
- hashtag_4 INTEGER,
- hashtag_5 INTEGER,
  hashtag_number INTEGER,
  -- Local time support
  action_timezone_id INTEGER,
@@ -91,18 +86,8 @@ COMMENT ON COLUMN dwh.facts.days_to_resolution_active IS
   'Number of days open - including only reopens';
 COMMENT ON COLUMN dwh.facts.days_to_resolution_from_reopen IS
   'Number of days between last reopening and most recent close';
-COMMENT ON COLUMN dwh.facts.hashtag_1 IS
-  'First hashtag of the comment';
-COMMENT ON COLUMN dwh.facts.hashtag_2 IS
-  'Second hashtag of the comment';
-COMMENT ON COLUMN dwh.facts.hashtag_3 IS
-  'Third hashtag of the comment';
-COMMENT ON COLUMN dwh.facts.hashtag_4 IS
-  'Fourth hashtag of the comment';
-COMMENT ON COLUMN dwh.facts.hashtag_5 IS
-  'Fifth hashtag of the comment';
 COMMENT ON COLUMN dwh.facts.hashtag_number IS
-  'Number of hashtags in the note';
+  'Number of hashtags in the note (use fact_hashtags bridge table for actual hashtags)';
 COMMENT ON COLUMN dwh.facts.action_timezone_id IS
   'Timezone of the action (local)';
 COMMENT ON COLUMN dwh.facts.local_action_dimension_id_date IS

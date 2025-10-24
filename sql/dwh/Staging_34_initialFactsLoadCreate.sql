@@ -34,14 +34,10 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date_${YEAR} (
    m_application INTEGER;
    m_application_version INTEGER;
   m_recent_opened_dimension_id_date INTEGER;
-  m_hashtag_id_1 INTEGER;
-  m_hashtag_id_2 INTEGER;
-  m_hashtag_id_3 INTEGER;
-  m_hashtag_id_4 INTEGER;
-  m_hashtag_id_5 INTEGER;
   m_hashtag_number INTEGER;
   m_text_comment TEXT;
   m_hashtag_name TEXT;
+  m_all_hashtag_ids INTEGER[]; -- Array to store ALL hashtags (unlimited)
    m_timezone_id INTEGER;
    m_local_action_id_date INTEGER;
    m_local_action_id_hour_of_week INTEGER;
@@ -195,48 +191,26 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date_${YEAR} (
    END IF;
 --RAISE NOTICE 'Flag 12: %', CLOCK_TIMESTAMP();
 
-   -- Gets hashtags.
+   -- Gets hashtags (UNLIMITED)
+   m_hashtag_number := 0;
+   m_all_hashtag_ids := ARRAY[]::INTEGER[]; -- Initialize empty array
+
    IF (rec_note_action.body LIKE '%#%') THEN
---RAISE NOTICE 'Flag 13: %', CLOCK_TIMESTAMP();
     m_text_comment := rec_note_action.body;
-    --RAISE NOTICE 'Requesting id for hashtag: %.', m_hashtag_name;
-    CALL staging.get_hashtag(m_text_comment, m_hashtag_name);
---RAISE NOTICE 'Flag 14: %', CLOCK_TIMESTAMP();
-    m_hashtag_id_1 := staging.get_hashtag_id(m_hashtag_name);
---RAISE NOTICE 'Flag 15: %', CLOCK_TIMESTAMP();
-    m_hashtag_number := 1;
-    --RAISE NOTICE 'hashtag: %: %.', m_hashtag_id_1, m_hashtag_name;
-    IF (m_text_comment LIKE '%#%') THEN
---RAISE NOTICE 'Flag 16: %', CLOCK_TIMESTAMP();
+
+    -- Process ALL hashtags using WHILE loop (no limit)
+    WHILE (m_text_comment LIKE '%#%') LOOP
      CALL staging.get_hashtag(m_text_comment, m_hashtag_name);
-     m_hashtag_id_2 := staging.get_hashtag_id(m_hashtag_name);
-     m_hashtag_number := 2;
-     IF (m_text_comment LIKE '%#%') THEN
---RAISE NOTICE 'Flag 17: %', CLOCK_TIMESTAMP();
-      CALL staging.get_hashtag(m_text_comment, m_hashtag_name);
-      m_hashtag_id_3 := staging.get_hashtag_id(m_hashtag_name);
-      m_hashtag_number := 3;
-      IF (m_text_comment LIKE '%#%') THEN
---RAISE NOTICE 'Flag 18: %', CLOCK_TIMESTAMP();
-       CALL staging.get_hashtag(m_text_comment, m_hashtag_name);
-       m_hashtag_id_4 := staging.get_hashtag_id(m_hashtag_name);
-       m_hashtag_number := 4;
-       IF (m_text_comment LIKE '%#%') THEN
---RAISE NOTICE 'Flag 19: %', CLOCK_TIMESTAMP();
-        CALL staging.get_hashtag(m_text_comment, m_hashtag_name);
-        m_hashtag_id_5 := staging.get_hashtag_id(m_hashtag_name);
-        m_hashtag_number := 5;
-        WHILE (m_text_comment LIKE '%#%') LOOP
---RAISE NOTICE 'Flag 20: %', CLOCK_TIMESTAMP();
-         CALL staging.get_hashtag(m_text_comment, m_hashtag_name);
-         -- If there are new hashtags, it does not insert them in the dimension.
-         m_hashtag_number := m_hashtag_number + 1;
-        END LOOP;
---RAISE NOTICE 'Flag 21: %', CLOCK_TIMESTAMP();
-       END IF;
-      END IF;
-     END IF;
-    END IF;
+     m_hashtag_number := m_hashtag_number + 1;
+
+     -- Get hashtag ID and store in array
+     DECLARE
+      hashtag_id INTEGER;
+     BEGIN
+      hashtag_id := staging.get_hashtag_id(m_hashtag_name);
+      m_all_hashtag_ids := array_append(m_all_hashtag_ids, hashtag_id);
+     END;
+    END LOOP;
    END IF;
 --RAISE NOTICE 'Flag 22: %', CLOCK_TIMESTAMP();
 
@@ -259,8 +233,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date_${YEAR} (
      closed_dimension_id_date, closed_dimension_id_hour_of_week,
      closed_dimension_id_user, dimension_application_creation,
      dimension_application_version,
-     recent_opened_dimension_id_date, hashtag_1, hashtag_2, hashtag_3,
-     hashtag_4, hashtag_5, hashtag_number,
+     recent_opened_dimension_id_date, hashtag_number,
      action_timezone_id, local_action_dimension_id_date,
      local_action_dimension_id_hour_of_week, action_dimension_id_season
    ) VALUES (
@@ -270,34 +243,18 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date_${YEAR} (
      m_opened_id_date, m_opened_id_hour_of_week, m_dimension_user_open,
      m_closed_id_date, m_closed_id_hour_of_week, m_dimension_user_close,
      m_application, m_application_version,
-     m_recent_opened_dimension_id_date, m_hashtag_id_1,
-     m_hashtag_id_2, m_hashtag_id_3, m_hashtag_id_4, m_hashtag_id_5,
-     m_hashtag_number,
+     m_recent_opened_dimension_id_date, m_hashtag_number,
      m_timezone_id, m_local_action_id_date, m_local_action_id_hour_of_week,
      m_season_id
    ) RETURNING fact_id INTO m_fact_id;
 --RAISE NOTICE 'Flag 23: %', CLOCK_TIMESTAMP();
 
-   -- Populate bridge table for hashtags
-   IF (m_hashtag_id_1 IS NOT NULL) THEN
-     INSERT INTO dwh.fact_hashtags (fact_id, dimension_hashtag_id, position)
-     VALUES (m_fact_id, m_hashtag_id_1, 1);
-   END IF;
-   IF (m_hashtag_id_2 IS NOT NULL) THEN
-     INSERT INTO dwh.fact_hashtags (fact_id, dimension_hashtag_id, position)
-     VALUES (m_fact_id, m_hashtag_id_2, 2);
-   END IF;
-   IF (m_hashtag_id_3 IS NOT NULL) THEN
-     INSERT INTO dwh.fact_hashtags (fact_id, dimension_hashtag_id, position)
-     VALUES (m_fact_id, m_hashtag_id_3, 3);
-   END IF;
-   IF (m_hashtag_id_4 IS NOT NULL) THEN
-     INSERT INTO dwh.fact_hashtags (fact_id, dimension_hashtag_id, position)
-     VALUES (m_fact_id, m_hashtag_id_4, 4);
-   END IF;
-   IF (m_hashtag_id_5 IS NOT NULL) THEN
-     INSERT INTO dwh.fact_hashtags (fact_id, dimension_hashtag_id, position)
-     VALUES (m_fact_id, m_hashtag_id_5, 5);
+   -- Populate bridge table for hashtags (ALL hashtags - unlimited)
+   IF array_length(m_all_hashtag_ids, 1) > 0 THEN
+     FOR i IN 1..array_length(m_all_hashtag_ids, 1) LOOP
+       INSERT INTO dwh.fact_hashtags (fact_id, dimension_hashtag_id, position)
+       VALUES (m_fact_id, m_all_hashtag_ids[i], i);
+     END LOOP;
    END IF;
 
    -- Resets the variables.
@@ -317,12 +274,8 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date_${YEAR} (
 
    m_text_comment := null;
    m_hashtag_name := null;
-   m_hashtag_id_1 := null;
-   m_hashtag_id_2 := null;
-   m_hashtag_id_3 := null;
-   m_hashtag_id_4 := null;
-   m_hashtag_id_5 := null;
    m_hashtag_number := 0;
+   m_all_hashtag_ids := ARRAY[]::INTEGER[]; -- Reset array
 --RAISE NOTICE 'Flag 26: %', CLOCK_TIMESTAMP();
 
    m_count := m_count + 1;

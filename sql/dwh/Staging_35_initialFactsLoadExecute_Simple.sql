@@ -24,14 +24,10 @@ DECLARE
   m_application INTEGER;
   m_application_version INTEGER;
   m_recent_opened_dimension_id_date INTEGER;
-  m_hashtag_id_1 INTEGER;
-  m_hashtag_id_2 INTEGER;
-  m_hashtag_id_3 INTEGER;
-  m_hashtag_id_4 INTEGER;
-  m_hashtag_id_5 INTEGER;
   m_hashtag_number INTEGER;
   m_text_comment TEXT;
   m_hashtag_name TEXT;
+  m_all_hashtag_ids INTEGER[]; -- Array to store ALL hashtags (unlimited)
   m_timezone_id INTEGER;
   m_local_action_id_date INTEGER;
   m_local_action_id_hour_of_week INTEGER;
@@ -136,31 +132,25 @@ BEGIN
     m_recent_opened_dimension_id_date := m_action_id_date;
    END IF;
 
-   -- Get hashtags
-   m_hashtag_id_1 := NULL;
-   m_hashtag_id_2 := NULL;
-   m_hashtag_id_3 := NULL;
-   m_hashtag_id_4 := NULL;
-   m_hashtag_id_5 := NULL;
+   -- Get hashtags (UNLIMITED)
    m_hashtag_number := 0;
+   m_all_hashtag_ids := ARRAY[]::INTEGER[]; -- Initialize empty array
 
    IF (rec_note_action.body LIKE '%#%') THEN
     m_text_comment := rec_note_action.body;
-    CALL staging.get_hashtag(m_text_comment, m_hashtag_name);
-    m_hashtag_id_1 := staging.get_hashtag_id(m_hashtag_name);
-    m_hashtag_number := 1;
 
-    -- Get additional hashtags
+    -- Process ALL hashtags using WHILE loop (no limit)
     WHILE (m_text_comment LIKE '%#%') LOOP
      CALL staging.get_hashtag(m_text_comment, m_hashtag_name);
      m_hashtag_number := m_hashtag_number + 1;
 
-     CASE m_hashtag_number
-      WHEN 2 THEN m_hashtag_id_2 := staging.get_hashtag_id(m_hashtag_name);
-      WHEN 3 THEN m_hashtag_id_3 := staging.get_hashtag_id(m_hashtag_name);
-      WHEN 4 THEN m_hashtag_id_4 := staging.get_hashtag_id(m_hashtag_name);
-      WHEN 5 THEN m_hashtag_id_5 := staging.get_hashtag_id(m_hashtag_name);
-     END CASE;
+     -- Get hashtag ID and store in array
+     DECLARE
+      hashtag_id INTEGER;
+     BEGIN
+      hashtag_id := staging.get_hashtag_id(m_hashtag_name);
+      m_all_hashtag_ids := array_append(m_all_hashtag_ids, hashtag_id);
+     END;
     END LOOP;
    END IF;
 
@@ -182,8 +172,7 @@ BEGIN
      closed_dimension_id_date, closed_dimension_id_hour_of_week,
      closed_dimension_id_user, dimension_application_creation,
      dimension_application_version,
-     recent_opened_dimension_id_date, hashtag_1, hashtag_2, hashtag_3,
-     hashtag_4, hashtag_5, hashtag_number,
+     recent_opened_dimension_id_date, hashtag_number,
      action_timezone_id, local_action_dimension_id_date,
      local_action_dimension_id_hour_of_week, action_dimension_id_season
     ) VALUES (
@@ -193,9 +182,8 @@ BEGIN
      m_opened_id_date, m_opened_id_hour_of_week, m_dimension_user_open,
      m_closed_id_date, m_closed_id_hour_of_week, m_dimension_user_close,
      m_application, m_application_version,
-     m_recent_opened_dimension_id_date, m_hashtag_id_1,
-     m_hashtag_id_2, m_hashtag_id_3, m_hashtag_id_4, m_hashtag_id_5,
-     m_hashtag_number, m_timezone_id, m_local_action_id_date,
+     m_recent_opened_dimension_id_date, m_hashtag_number,
+     m_timezone_id, m_local_action_id_date,
      m_local_action_id_hour_of_week, m_season_id
     );
 
