@@ -11,32 +11,32 @@ jobs:
   quality-tests:
     name: Quality Tests
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         submodules: recursive
-    
+
     - name: Install shellcheck
       run: |
         sudo apt-get update
         sudo apt-get install -y shellcheck
-    
+
     - name: Install shfmt
       run: |
         wget -q -O shfmt https://github.com/mvdan/sh/releases/download/v3.7.0/shfmt_v3.7.0_linux_amd64
         chmod +x shfmt
         sudo mv shfmt /usr/local/bin/
         shfmt -version
-    
+
     - name: Run Quality Tests
       run: |
         ./tests/run_quality_tests.sh
-    
+
     - name: Upload test results
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: quality-test-results
         path: /tmp/quality_test_output.txt
@@ -45,7 +45,7 @@ jobs:
   unit-tests:
     name: Unit and Integration Tests
     runs-on: ubuntu-latest
-    
+
     services:
       postgres:
         image: postgis/postgis:15-3.3
@@ -60,18 +60,18 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         submodules: recursive
-    
+
     - name: Install BATS
       run: |
         sudo apt-get update
         sudo apt-get install -y bats
-    
+
     - name: Setup test database
       env:
         PGHOST: localhost
@@ -83,7 +83,7 @@ jobs:
         psql -c "CREATE EXTENSION IF NOT EXISTS postgis;"
         psql -c "CREATE EXTENSION IF NOT EXISTS btree_gist;"
         psql -c "SELECT version();"
-    
+
     - name: Run DWH Tests
       env:
         TEST_DBNAME: dwh
@@ -94,10 +94,10 @@ jobs:
         PGPASSWORD: postgres
       run: |
         ./tests/run_dwh_tests.sh
-    
+
     - name: Upload test results
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: dwh-test-results
         path: /tmp/all_tests_output.txt
@@ -108,7 +108,7 @@ jobs:
     needs: [quality-tests, unit-tests]
     runs-on: ubuntu-latest
     if: always()
-    
+
     steps:
     - name: Check test results
       run: |
