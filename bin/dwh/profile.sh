@@ -77,6 +77,12 @@ else
  source "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh"
 fi
 
+# Load local properties if they exist (overrides global settings)
+if [[ -f "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh.local" ]]; then
+ # shellcheck disable=SC1091
+ source "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh.local"
+fi
+
 declare BASENAME
 BASENAME=$(basename -s .sh "${0}")
 readonly BASENAME

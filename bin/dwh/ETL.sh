@@ -46,6 +46,12 @@ readonly SCRIPT_BASE_DIRECTORY
 # shellcheck disable=SC1091
 source "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh"
 
+# Load local properties if they exist (overrides global settings)
+if [[ -f "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh.local" ]]; then
+ # shellcheck disable=SC1091
+ source "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh.local"
+fi
+
 declare BASENAME
 BASENAME=$(basename -s .sh "${0}")
 readonly BASENAME
@@ -167,6 +173,14 @@ if [[ -f "${ETL_CONFIG_FILE}" ]]; then
  __logi "Loaded ETL configuration from ${ETL_CONFIG_FILE}"
 else
  __logw "ETL configuration file not found, using defaults"
+fi
+
+# Load local ETL configuration if available (overrides global settings)
+declare -r ETL_CONFIG_FILE_LOCAL="${SCRIPT_BASE_DIRECTORY}/etc/etl.properties.local"
+if [[ -f "${ETL_CONFIG_FILE_LOCAL}" ]]; then
+ # shellcheck disable=SC1090
+ source "${ETL_CONFIG_FILE_LOCAL}"
+ __logi "Loaded local ETL configuration from ${ETL_CONFIG_FILE_LOCAL}"
 fi
 
 # Set default values for ETL configuration if not defined.

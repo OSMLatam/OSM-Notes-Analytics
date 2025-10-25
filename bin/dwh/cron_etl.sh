@@ -33,6 +33,11 @@ log_message "Starting ETL incremental execution"
 if [[ -f "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh" ]]; then
  # shellcheck disable=SC1091
  source "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh"
+ # Load local properties if they exist (overrides global settings)
+ if [[ -f "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh.local" ]]; then
+  # shellcheck disable=SC1091
+  source "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh.local"
+ fi
 fi
 
 # Set minimal environment variables for cron

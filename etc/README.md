@@ -11,6 +11,40 @@ datamart scripts.
 
 ## Configuration Files
 
+### Local Configuration (Recommended)
+
+**For personal or environment-specific settings, use local configuration files:**
+
+```bash
+# Option 1: Use the setup script (recommended)
+./scripts/setup-local-config.sh
+
+# Option 2: Manual setup
+cp etc/properties.sh.example etc/properties.sh.local
+cp etc/etl.properties.example etc/etl.properties.local
+
+# Edit with your specific settings
+nano etc/properties.sh.local
+nano etc/etl.properties.local
+```
+
+**Local files are automatically ignored by Git** (see `.gitignore`):
+
+- `etc/properties.sh.local`
+- `etc/etl.properties.local`
+- `etc/*.local`
+- `etc/*_local`
+
+**Priority order:**
+
+1. Environment variables (highest)
+2. Local configuration files (`*.local`) - **loaded automatically**
+3. Default configuration files
+4. Script defaults (lowest)
+
+**Automatic loading:** All scripts automatically load local configuration files if they exist. 
+No manual intervention needed after `git pull`.
+
 ### properties.sh
 
 **Purpose:** Main configuration file for database connection and general processing parameters.

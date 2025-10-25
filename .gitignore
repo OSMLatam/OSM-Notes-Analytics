@@ -35,8 +35,12 @@ coverage/
 *.test.log
 
 # Configuration files with sensitive data (keep templates)
+etc/properties.sh.local
 etc/properties.sh_local
+etc/etl.properties.local
 etc/etl.properties_local
+etc/*.local
+etc/*_local
 
 # Python
 __pycache__/

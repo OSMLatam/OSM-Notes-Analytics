@@ -14,6 +14,11 @@ SCRIPT_BASE_DIRECTORY="$(cd "${SCRIPT_DIR}/../.." &> /dev/null && pwd)"
 if [[ -f "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh" ]]; then
  # shellcheck disable=SC1091
  source "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh"
+ # Load local properties if they exist (overrides global settings)
+ if [[ -f "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh.local" ]]; then
+  # shellcheck disable=SC1091
+  source "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh.local"
+ fi
 fi
 
 # Colors for output

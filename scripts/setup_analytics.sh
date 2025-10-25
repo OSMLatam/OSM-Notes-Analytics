@@ -198,4 +198,3 @@ echo "For more information, see: docs/MIGRATION_GUIDE.md"
 echo ""
 echo -e "${GREEN}Setup verification complete!${NC}"
 echo ""
-
