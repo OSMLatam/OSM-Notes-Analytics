@@ -1,0 +1,90 @@
+# OSM Notes Analytics - Cron Configuration Example
+#
+# This file contains example cron jobs for automating ETL execution
+# and maintenance tasks.
+#
+# Installation:
+#   1. Copy this file: cp etc/cron.example /tmp/osm-notes-cron
+#   2. Edit paths in the file to match your system
+#   3. Install: crontab /tmp/osm-notes-cron
+#   4. Verify: crontab -l
+#
+# Author: Andres Gomez (AngocA)
+# Version: 2025-01-24
+
+# Set environment variables
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin
+HOME=/home/your-username
+
+# Load environment (adjust path as needed)
+# You may need to source your shell configuration
+# . ~/.bashrc
+
+# ==========================================
+# ETL AUTOMATION
+# ==========================================
+
+# Run incremental ETL every 15 minutes
+# This processes only new notes/comments since last run
+*/15 * * * * /path/to/OSM-Notes-Analytics/bin/dwh/cron_etl.sh
+
+# Alternative: Run ETL every hour (if 15 min is too frequent)
+# 0 * * * * /path/to/OSM-Notes-Analytics/bin/dwh/cron_etl.sh
+
+# ==========================================
+# MAINTENANCE TASKS
+# ==========================================
+
+# Weekly: VACUUM ANALYZE (Sundays at 3 AM)
+# Optimizes database performance
+0 3 * * 0 psql -U postgres -d osm_notes -c "VACUUM ANALYZE dwh.facts"
+
+# Weekly: Clean old log files (Sundays at 3:30 AM)
+# Removes logs older than 7 days to prevent disk fill
+30 3 * * 0 find /tmp/ETL_* -type d -mtime +7 -exec rm -rf {} \; 2>/dev/null || true
+
+# Daily: Check for old logs (daily at 4 AM)
+# Reports if log directory is getting large
+0 4 * * * du -sh /tmp/ETL_* 2>/dev/null | sort -h | tail -5
+
+# ==========================================
+# BACKUP TASKS (Optional)
+# ==========================================
+
+# Daily: Backup DWH schema (1 AM)
+# Creates a backup of the entire dwh schema
+# 0 1 * * * pg_dump -U postgres -d osm_notes -n dwh > /backups/dwh_$(date +\%Y\%m\%d).sql
+
+# Daily: Rotate old backups (2 AM)
+# Keeps only last 30 days of backups
+# 0 2 * * * find /backups/dwh_*.sql -mtime +30 -delete
+
+# ==========================================
+# MONITORING TASKS (Optional)
+# ==========================================
+
+# Daily: Run ETL monitor and send report (6 AM)
+# 0 6 * * * /path/to/OSM-Notes-Analytics/bin/dwh/monitor_etl.sh > /tmp/etl_daily_report.txt
+
+# Weekly: Generate weekly summary (Mondays at 8 AM)
+# 0 8 * * 1 psql -U postgres -d osm_notes -c "SELECT COUNT(*) as total_facts FROM dwh.facts" >> /tmp/weekly_summary.txt
+
+# ==========================================
+# NOTES
+# ==========================================
+#
+# 1. Lock Files: ETL.sh automatically creates lock files to prevent concurrent execution
+#    If a job takes >15 minutes, the next one will skip automatically
+#
+# 2. Log Files: All ETL logs are stored in /tmp/ETL_XXXXXX/ directories
+#    Keep an eye on disk space and clean up regularly
+#
+# 3. Email Alerts: Configure mail in cron_etl.sh to receive failure notifications
+#
+# 4. Database Performance: Monitor query times and adjust VACUUM frequency if needed
+#
+# 5. Testing: Test cron jobs manually before enabling:
+#    */15 * * * * echo "Test at $(date)" >> /tmp/cron_test.log
+#
+# ==========================================
