@@ -14,23 +14,23 @@ jobs:
   shellcheck:
     name: Shellcheck
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         submodules: recursive
-    
+
     - name: Install shellcheck
       run: |
         sudo apt-get update
         sudo apt-get install -y shellcheck
-    
+
     - name: Run shellcheck on Analytics scripts
       run: |
         echo "Running shellcheck on Analytics-specific scripts..."
         find bin/dwh -name "*.sh" -type f -exec shellcheck -x -o all {} \;
-    
+
     - name: Run shellcheck on Common submodule (integration check)
       continue-on-error: true
       run: |
@@ -44,25 +44,25 @@ jobs:
   shfmt:
     name: Code Formatting
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         submodules: recursive
-    
+
     - name: Install shfmt
       run: |
         wget -q -O shfmt https://github.com/mvdan/sh/releases/download/v3.7.0/shfmt_v3.7.0_linux_amd64
         chmod +x shfmt
         sudo mv shfmt /usr/local/bin/
         shfmt -version
-    
+
     - name: Check Analytics code formatting
       run: |
         echo "Checking Analytics code formatting (shfmt -i 1 -sr -bn)..."
         find bin/dwh -name "*.sh" -type f -exec shfmt -d -i 1 -sr -bn {} \;
-    
+
     - name: Check Common code formatting (integration check)
       continue-on-error: true
       run: |
@@ -75,17 +75,17 @@ jobs:
   code-quality:
     name: Code Quality Checks
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         submodules: recursive
-    
+
     - name: Check for common issues
       run: |
         echo "Checking for common code quality issues..."
-        
+
         # Check for trailing whitespace
         echo "Checking trailing whitespace..."
         if find bin/dwh -name "*.sh" -type f -exec grep -l " $" {} \; 2>/dev/null; then
@@ -94,10 +94,12 @@ jobs:
         else
           echo "✓ No trailing whitespace found"
         fi
-        
+
         # Check for proper shebang
         echo "Checking shebangs..."
-        INVALID_SHEBANGS=$(find bin/dwh -name "*.sh" -type f -exec head -1 {} \; | grep -v "#!/bin/bash" | wc -l || echo "0")
+        set +e
+        INVALID_SHEBANGS=$(find bin/dwh -name "*.sh" -type f -exec head -1 {} \; | grep -v '#!/bin/bash' | wc -l)
+        set -e
         INVALID_SHEBANGS=$(echo "$INVALID_SHEBANGS" | tr -d ' \n')
         if [[ "${INVALID_SHEBANGS}" -gt 0 ]]; then
           echo "⚠️  Found ${INVALID_SHEBANGS} script(s) without proper shebang"
@@ -105,12 +107,12 @@ jobs:
         else
           echo "✓ All shebangs correct"
         fi
-        
+
         # Check for TODO/FIXME comments
         echo "Checking for TODO/FIXME comments..."
         TODO_COUNT=$(find bin/dwh -name "*.sh" -type f -exec grep -c "TODO\|FIXME" {} \; 2>/dev/null | awk '{s+=$1} END {print s+0}' || echo "0")
         echo "Found ${TODO_COUNT} TODO/FIXME comments"
-    
+
     - name: Generate quality report
       if: always()
       run: |
