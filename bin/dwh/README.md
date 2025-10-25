@@ -203,11 +203,14 @@ queries. See `sql/dwh/datamartCountries` and `sql/dwh/datamartUsers`.
   the datamarts.
 - `bin/dwh/exportDatamartsToJSON.sh`: Exports datamarts to JSON files for
   web viewer consumption with atomic writes and schema validation.
+- `bin/dwh/exportAndPushToGitHub.sh`: Exports JSON files and automatically
+  deploys them to GitHub Pages data repository.
 
 ## JSON Export
 
 The `exportDatamartsToJSON.sh` script exports datamart data to JSON files
-for consumption by the web viewer. It provides:
+for consumption by the web viewer. For automated deployment to GitHub Pages,
+use `exportAndPushToGitHub.sh` instead. It provides:
 
 ### Features
 
@@ -247,12 +250,16 @@ output/json/
 
 ### Cron Integration
 
-For automated exports:
+For automated exports with GitHub Pages deployment:
 
 ```bash
-# Export every 15 minutes after datamarts update
-45 2 * * * ~/OSM-Notes-Analytics/bin/dwh/exportDatamartsToJSON.sh
+# Export and push to GitHub Pages every 15 minutes after datamarts update
+45 2 * * * ~/OSM-Notes-Analytics/bin/dwh/exportAndPushToGitHub.sh
 ```
+
+**Note:** This replaces `exportDatamartsToJSON.sh` in cron jobs for production
+environments using GitHub Pages. The `exportAndPushToGitHub.sh` script handles
+both export and deployment automatically.
 
 Or use a complete workflow wrapper:
 

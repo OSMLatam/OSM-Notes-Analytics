@@ -242,9 +242,9 @@ For automated analytics updates:
 # Update user datamart daily (processes 500 users per run)
 30 2 * * * ~/OSM-Notes-Analytics/bin/dwh/datamartUsers/datamartUsers.sh
 
-# Export to JSON for web viewer (every 15 minutes, after datamarts update)
-# This script validates all JSON files before moving them to final destination
-45 2 * * * ~/OSM-Notes-Analytics/bin/dwh/exportDatamartsToJSON.sh
+# Export to JSON and push to GitHub Pages (every 15 minutes, after datamarts update)
+# This script exports JSON files and automatically deploys them to GitHub Pages
+45 2 * * * ~/OSM-Notes-Analytics/bin/dwh/exportAndPushToGitHub.sh
 ```
 
 ### Complete Workflow with JSON Export
@@ -263,9 +263,9 @@ cd /opt/osm-analytics/OSM-Notes-Analytics
 ./bin/dwh/datamartUsers/datamartUsers.sh || exit 1
 ./bin/dwh/datamartCountries/datamartCountries.sh || exit 1
 
-# Export to JSON with validation
-# The script validates all files and only moves them if validation passes
-./bin/dwh/exportDatamartsToJSON.sh || exit 1
+# Export to JSON and push to GitHub Pages
+# The script exports JSON files and automatically deploys them to GitHub Pages
+./bin/dwh/exportAndPushToGitHub.sh || exit 1
 
 # If we get here, all files are valid and exported
 echo "SUCCESS: All exports validated and moved to destination"

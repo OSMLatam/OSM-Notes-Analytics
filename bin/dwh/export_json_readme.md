@@ -38,6 +38,24 @@ cd bin/dwh
 ./exportDatamartsToJSON.sh
 ```
 
+### Export and Push to GitHub Pages
+
+Automatically export and deploy to GitHub Pages:
+
+```bash
+./bin/dwh/exportAndPushToGitHub.sh
+```
+
+This script:
+1. Runs `exportDatamartsToJSON.sh` to generate JSON files
+2. Copies files to the `OSM-Notes-Data` repository
+3. Commits and pushes to GitHub
+4. Makes data available via GitHub Pages
+
+**Requirements:**
+- `OSM-Notes-Data` repository cloned to `~/github/OSM-Notes-Data`
+- Git credentials configured for push access
+
 ### Custom Output Directory
 
 Set the `JSON_OUTPUT_DIR` environment variable:
@@ -265,6 +283,22 @@ Add JSON export to your ETL pipeline:
 ./bin/dwh/datamartCountries/datamartCountries.sh
 ./bin/dwh/exportDatamartsToJSON.sh
 ```
+
+## Automation
+
+### Automated GitHub Pages Deployment
+
+The `exportAndPushToGitHub.sh` script automates the entire workflow:
+
+```bash
+# Manual execution
+./bin/dwh/exportAndPushToGitHub.sh
+
+# Or add to cron for automatic updates
+0 * * * * cd /path/to/OSM-Notes-Analytics && ./bin/dwh/exportAndPushToGitHub.sh >> /tmp/github-push.log 2>&1
+```
+
+This ensures your GitHub Pages data repository is always up-to-date with the latest Analytics data.
 
 ## Future Enhancements
 

@@ -210,6 +210,25 @@ Datamarts are **automatically updated** during ETL execution. No manual interven
 ls output/*.json
 ```
 
+### Push to GitHub Pages
+
+Automatically export JSON files and push them to the GitHub Pages data repository:
+
+```bash
+# Export and push to GitHub Pages
+./bin/dwh/exportAndPushToGitHub.sh
+```
+
+This script will:
+1. Export all datamarts to JSON using `exportDatamartsToJSON.sh`
+2. Copy files to the GitHub Pages data repository
+3. Commit and push changes to GitHub
+4. Data becomes available at the GitHub Pages URL
+
+**Prerequisites:**
+- The `OSM-Notes-Data` repository must be cloned to `~/github/OSM-Notes-Data`
+- Git credentials must be configured for the push operation
+
 ### Cleanup DWH
 
 **⚠️ WARNING**: This removes all DWH objects!
