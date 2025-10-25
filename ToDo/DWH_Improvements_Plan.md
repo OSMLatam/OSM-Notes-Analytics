@@ -1353,9 +1353,11 @@ Documentar y proporcionar configuración estándar para ejecución automática d
 
 ---
 
-### TAREA 17: Crear dimension_geographic_density
+### TAREA 17: Crear dimension_geographic_density ❌ NO NECESARIA
 **Impacto**: 📊 BAJO - Análisis poblacional avanzado  
-**Esfuerzo**: Alto (8-12 horas) - Requiere datos externos
+**Esfuerzo**: Alto (8-12 horas) - Requiere datos externos  
+**Estado**: ❌ **NO NECESARIA** - Alta complejidad, bajo impacto, no hay necesidad inmediata
+**Razón**: Agregar densidad poblacional requeriría integrar datos externos complejos (WorldPop, Natural Earth), mantener actualizaciones periódicas, y el beneficio es bajo ya que el análisis por país/región ya proporciona suficiente granularidad geográfica. La complejidad no justifica el beneficio para el caso de uso actual.
 
 #### Subtareas:
 - [ ] 10.1. Investigar fuentes de datos de densidad poblacional
@@ -1400,9 +1402,11 @@ Documentar y proporcionar configuración estándar para ejecución automática d
 
 ---
 
-### TAREA 11: Crear dimension_response_buckets
+### TAREA 11: Crear dimension_response_buckets ❌ NO NECESARIA
 **Impacto**: 📊 BAJO - Facilita análisis de SLA  
-**Esfuerzo**: Bajo (1-2 horas)
+**Esfuerzo**: Bajo (1-2 horas)  
+**Estado**: ❌ **NO NECESARIA** - Sobrecarga el modelo sin necesidad clara
+**Razón**: El campo `days_to_resolution` ya existe y permite análisis detallado de tiempos. Los buckets pueden calcularse en queries cuando se necesiten usando CASE/WHEN sin necesidad de una dimensión adicional. Agregar una dimensión completa solo para categorías de tiempo sería sobrecargar el modelo sin beneficio claro.
 
 #### Subtareas:
 - [ ] 11.1. Crear tabla dimension_response_buckets
@@ -1463,9 +1467,11 @@ Documentar y proporcionar configuración estándar para ejecución automática d
 
 ---
 
-### TAREA 12: Sistema de Auditoría Completa
+### TAREA 12: Sistema de Auditoría Completa ❌ NO NECESARIA
 **Impacto**: 📊 BAJO - Trazabilidad detallada  
-**Esfuerzo**: Alto (6-8 horas)
+**Esfuerzo**: Alto (6-8 horas)  
+**Estado**: ❌ **NO NECESARIA** - Alta complejidad, bajo valor para el caso de uso
+**Razón**: El sistema DWH se alimenta de datos de solo lectura desde OSM. No hay operaciones manuales de UPDATE/DELETE que requieran auditoría. El sistema de logging existente en los scripts bash ya proporciona suficiente trazabilidad para operaciones ETL. Un sistema completo de auditoría con triggers sería sobrecarga innecesaria.
 
 #### Subtareas:
 - [ ] 12.1. Crear tabla de auditoría
