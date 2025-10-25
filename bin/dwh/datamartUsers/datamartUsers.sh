@@ -374,7 +374,13 @@ function main() {
  # If no parameters provided, show help and return error
  if [[ -z "${PROCESS_TYPE}" ]]; then
   __loge "No process type specified."
-  __show_help
+  echo "${0} version ${VERSION}"
+  echo "This script requires a process type parameter."
+  echo ""
+  echo "Usage:"
+  echo "  ${0} [OPTIONS]"
+  echo ""
+  echo "Run with --help for more information."
   return 1
  fi
 
