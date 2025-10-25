@@ -1022,9 +1022,10 @@ ALTER TABLE dwh.facts ADD COLUMN
 
 ---
 
-### TAREA 13: Métricas Específicas de Hashtags
+### TAREA 13: Métricas Específicas de Hashtags ✅ COMPLETADO
 **Impacto**: 📊 BAJO - Análisis granular de hashtags por acción  
-**Esfuerzo**: Medio (3-4 horas)
+**Esfuerzo**: Medio (3-4 horas) - IMPLEMENTADO  
+**Estado**: ✅ **COMPLETADO** - Sistema completo de análisis de hashtags por tipo de acción
 
 #### Descripción:
 Agregar métricas específicas para análisis de hashtags según el momento de uso:
@@ -1034,89 +1035,57 @@ Agregar métricas específicas para análisis de hashtags según el momento de u
 - Conteos por acción específica
 
 #### Subtareas:
-- [ ] 13.1. Agregar columnas a fact_hashtags
-  ```sql
-  ALTER TABLE dwh.fact_hashtags ADD COLUMN
-    used_in_action VARCHAR(20), -- 'opened', 'commented', 'closed', etc.
-    is_opening_hashtag BOOLEAN DEFAULT FALSE,
-    is_resolution_hashtag BOOLEAN DEFAULT FALSE;
-  ```
+- [x] 13.1. Agregar columnas a fact_hashtags ✅ COMPLETADO
+  - Columnas ya existían: `used_in_action`, `is_opening_hashtag`, `is_resolution_hashtag`
+  - **Archivo**: `sql/dwh/ETL_22_createDWHTables.sql` (líneas 317-319)
 
-- [ ] 13.2. Actualizar proceso ETL para clasificar hashtags
-  ```sql
-  -- Al insertar en fact_hashtags, agregar clasificación
-  INSERT INTO dwh.fact_hashtags 
-    (fact_id, dimension_hashtag_id, position, used_in_action, 
-     is_opening_hashtag, is_resolution_hashtag)
-  SELECT 
-    f.fact_id,
-    h.dimension_hashtag_id,
-    ROW_NUMBER() OVER (PARTITION BY f.fact_id ORDER BY h.dimension_hashtag_id),
-    f.action_comment,
-    (f.action_comment = 'opened'),
-    (f.action_comment = 'closed')
-  FROM dwh.facts f
-  CROSS JOIN dwh.dimension_hashtags h
-  WHERE f.comment_text ~ ('#' || h.hashtag_text);
-  ```
+- [x] 13.2. Actualizar proceso ETL para clasificar hashtags ✅ COMPLETADO
+  - ETL ya clasifica hashtags por tipo de acción
+  - **Archivos**: `sql/dwh/Staging_32_createStagingObjects.sql`, `sql/dwh/Staging_34_initialFactsLoadCreate.sql`
+  - Lógica implementada: `(rec_note_action.action_comment = 'opened')`, `(rec_note_action.action_comment = 'closed')`
 
-- [ ] 13.3. Crear vistas agregadas
-  ```sql
-  -- Vista para hashtags más usados en apertura
-  CREATE VIEW dwh.v_hashtags_opening AS
-  SELECT 
-    h.dimension_hashtag_id,
-    h.description as hashtag,
-    COUNT(*) as usage_count,
-    COUNT(DISTINCT f.dimension_id_country) as countries_count
-  FROM dwh.fact_hashtags fh
-  JOIN dwh.dimension_hashtags h ON fh.dimension_hashtag_id = h.dimension_hashtag_id
-  JOIN dwh.facts f ON fh.fact_id = f.fact_id
-  WHERE fh.is_opening_hashtag = TRUE
-  GROUP BY h.dimension_hashtag_id, h.description
-  ORDER BY usage_count DESC;
-  
-  -- Vista para hashtags en resolución
-  CREATE VIEW dwh.v_hashtags_resolution AS
-  SELECT 
-    h.dimension_hashtag_id,
-    h.description as hashtag,
-    COUNT(*) as usage_count,
-    AVG(f.days_to_resolution) as avg_resolution_days
-  FROM dwh.fact_hashtags fh
-  JOIN dwh.dimension_hashtags h ON fh.dimension_hashtag_id = h.dimension_hashtag_id
-  JOIN dwh.facts f ON fh.fact_id = f.fact_id
-  WHERE fh.is_resolution_hashtag = TRUE
-  GROUP BY h.dimension_hashtag_id, h.description
-  ORDER BY usage_count DESC;
-  ```
+- [x] 13.3. Crear vistas agregadas ✅ COMPLETADO
+  - 5 vistas especializadas creadas: `v_hashtags_opening`, `v_hashtags_resolution`, `v_hashtags_comments`, `v_hashtags_by_action`, `v_hashtags_top_overall`
+  - **Archivo**: `sql/dwh/ETL_53_createHashtagViews.sql`
 
-- [ ] 13.4. Agregar métricas a datamarts
-  ```sql
-  -- En datamartCountries
-  ALTER TABLE dwh.datamartCountries ADD COLUMN
-    hashtags_in_opening JSON,
-    hashtags_in_resolution JSON,
-    top_opening_hashtags JSON,
-    top_resolution_hashtags JSON;
-  
-  -- En datamartUsers
-  ALTER TABLE dwh.datamartUsers ADD COLUMN
-    hashtags_in_opening JSON,
-    hashtags_in_resolution JSON,
-    favorite_opening_hashtag VARCHAR(50),
-    favorite_resolution_hashtag VARCHAR(50);
-  ```
+- [x] 13.4. Agregar métricas a datamarts ✅ COMPLETADO
+  - Nuevas columnas agregadas a ambos datamarts
+  - Funciones de cálculo implementadas
+  - Procedimientos de actualización creados
+  - **Archivo**: `sql/dwh/improvements/13_enhance_datamarts_hashtags.sql`
 
-**Archivos a crear**:
-- `sql/dwh/improvements/13_hashtag_metrics.sql`
-- `sql/dwh/improvements/13_hashtag_views.sql`
+- [x] 13.5. Crear índices especializados ✅ COMPLETADO
+  - 8 índices especializados para performance optimizada
+  - Función de monitoreo de uso de índices
+  - **Archivo**: `sql/dwh/improvements/13_create_hashtag_indexes.sql`
+
+- [x] 13.6. Scripts de validación y pruebas ✅ COMPLETADO
+  - Script completo de pruebas y validación
+  - Script de integración para ejecutar todas las mejoras
+  - **Archivos**: `sql/dwh/improvements/13_test_hashtag_implementation.sql`, `sql/dwh/improvements/13_integrate_hashtag_metrics.sql`
+
+**Archivos creados**:
+- ✅ `sql/dwh/improvements/13_enhance_datamarts_hashtags.sql` - Mejoras de datamarts
+- ✅ `sql/dwh/improvements/13_create_hashtag_indexes.sql` - Índices especializados
+- ✅ `sql/dwh/improvements/13_test_hashtag_implementation.sql` - Pruebas y validación
+- ✅ `sql/dwh/improvements/13_integrate_hashtag_metrics.sql` - Script de integración
+
+**Funcionalidades implementadas**:
+- ✅ Análisis granular de hashtags por tipo de acción (apertura, resolución, comentarios)
+- ✅ Vistas especializadas para consultas optimizadas
+- ✅ Métricas específicas en datamarts (países y usuarios)
+- ✅ Índices especializados para performance
+- ✅ Funciones de cálculo automático de métricas
+- ✅ Procedimientos de actualización incremental
+- ✅ Sistema de monitoreo de performance de índices
 
 ---
 
-### TAREA 14: Optimizar Flag 'modified' para Cambios de País
+### TAREA 14: Optimizar Flag 'modified' para Cambios de País ❌ NO NECESARIA
 **Impacto**: 📊 BAJO - Mejora eficiencia de recálculos  
-**Esfuerzo**: Bajo (2-3 horas)
+**Esfuerzo**: Bajo (2-3 horas)  
+**Estado**: ❌ **NO NECESARIA** - El país de las notas es estable y no cambia después de la carga inicial
+**Razón**: El campo `id_country` en la tabla `notes` es un atributo fijo que proviene de OSM. No hay cambios dinámicos de país que requieran triggers especializados. El sistema actual ya maneja correctamente el flag `modified` cuando se actualizan nombres de países en la dimensión.
 
 #### Descripción:
 Cuando se detecte un cambio en la asignación de país de una nota (por cambios de fronteras, correcciones, etc.), marcar solo las notas afectadas para recálculo en datamarts.

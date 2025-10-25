@@ -138,6 +138,10 @@ declare -r POSTGRES_51_CREATE_EXPERIENCE_LEVELS="${SCRIPT_BASE_DIRECTORY}/sql/dw
 declare -r POSTGRES_52_CREATE_NOTE_ACTIVITY_METRICS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_52_createNoteActivityMetrics.sql"
 # Create hashtag analysis views.
 declare -r POSTGRES_53_CREATE_HASHTAG_VIEWS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_53_createHashtagViews.sql"
+# Enhance datamarts with hashtag metrics.
+declare -r POSTGRES_53A_ENHANCE_DATAMARTS_HASHTAGS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/improvements/13_enhance_datamarts_hashtags.sql"
+# Create specialized hashtag indexes.
+declare -r POSTGRES_53B_CREATE_HASHTAG_INDEXES="${SCRIPT_BASE_DIRECTORY}/sql/dwh/improvements/13_create_hashtag_indexes.sql"
 # Unify facts.
 declare -r POSTGRES_54_UNIFY_FACTS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_51_unify.sql"
 
@@ -261,6 +265,8 @@ function __checkPrereqs {
   "${POSTGRES_51_CREATE_EXPERIENCE_LEVELS}"
   "${POSTGRES_52_CREATE_NOTE_ACTIVITY_METRICS}"
   "${POSTGRES_53_CREATE_HASHTAG_VIEWS}"
+  "${POSTGRES_53A_ENHANCE_DATAMARTS_HASHTAGS}"
+  "${POSTGRES_53B_CREATE_HASHTAG_INDEXES}"
   "${POSTGRES_54_UNIFY_FACTS}"
   "${POSTGRES_61_LOAD_NOTES_STAGING}"
  )
@@ -385,6 +391,16 @@ function __processNotesETL {
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_53_CREATE_HASHTAG_VIEWS}" 2>&1
 
+ # Enhance datamarts with hashtag metrics.
+ __logi "Enhancing datamarts with hashtag metrics."
+ psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+  -f "${POSTGRES_53A_ENHANCE_DATAMARTS_HASHTAGS}" 2>&1
+
+ # Create specialized hashtag indexes.
+ __logi "Creating specialized hashtag indexes."
+ psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+  -f "${POSTGRES_53B_CREATE_HASHTAG_INDEXES}" 2>&1
+
  # Process notes actions into DWH.
  __logi "Processing notes actions into DWH."
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
@@ -505,6 +521,16 @@ function __initialFactsParallel {
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_53_CREATE_HASHTAG_VIEWS}" 2>&1
 
+ # Enhance datamarts with hashtag metrics.
+ __logi "Enhancing datamarts with hashtag metrics."
+ psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+  -f "${POSTGRES_53A_ENHANCE_DATAMARTS_HASHTAGS}" 2>&1
+
+ # Create specialized hashtag indexes.
+ __logi "Creating specialized hashtag indexes."
+ psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+  -f "${POSTGRES_53B_CREATE_HASHTAG_INDEXES}" 2>&1
+
  __log_finish
 }
 
@@ -554,6 +580,16 @@ function __initialFacts {
  __logi "Creating hashtag analysis views."
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_53_CREATE_HASHTAG_VIEWS}" 2>&1
+
+ # Enhance datamarts with hashtag metrics.
+ __logi "Enhancing datamarts with hashtag metrics."
+ psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+  -f "${POSTGRES_53A_ENHANCE_DATAMARTS_HASHTAGS}" 2>&1
+
+ # Create specialized hashtag indexes.
+ __logi "Creating specialized hashtag indexes."
+ psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+  -f "${POSTGRES_53B_CREATE_HASHTAG_INDEXES}" 2>&1
 
  __log_finish
 }
