@@ -216,7 +216,7 @@ function __show_help {
  echo
  echo "Written by: Andres Gomez (AngocA)"
  echo "OSM-LatAm, OSM-Colombia, MaptimeBogota."
- exit "${ERROR_HELP_MESSAGE}"
+ exit 0
 }
 
 # Checks prerequisites to run the script.

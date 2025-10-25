@@ -32,8 +32,8 @@ teardown() {
   ./bin/dwh/ETL.sh --help
  " || exit_code=$?
 
- # Check exit status (help should exit with code 1)
- [[ "${exit_code:-0}" -eq 1 ]]
+# Check exit status (help should exit with code 0)
+[[ "${exit_code:-0}" -eq 0 ]]
 }
 
 @test "ETL invalid parameter handling" {
@@ -166,8 +166,8 @@ teardown() {
   timeout 10s bash -c 'LOG_LEVEL=ERROR ./bin/dwh/ETL.sh --help'
  " || exit_code=$?
 
- # Check exit code (should be 1 for help)
- [[ "${exit_code:-0}" -eq 0 ]]
+# Check exit code (should be 0 for help)
+[[ "${exit_code:-0}" -eq 0 ]]
 }
 
 @test "ETL timeout handling" {
@@ -186,8 +186,8 @@ teardown() {
   timeout 10s bash -c 'LOG_LEVEL=ERROR ./bin/dwh/ETL.sh --help'
  " || exit_code=$?
 
- # Check exit code (should be 1 for help)
- [[ "${exit_code:-0}" -eq 0 ]]
+# Check exit code (should be 0 for help)
+[[ "${exit_code:-0}" -eq 0 ]]
 }
 
 @test "ETL data integrity validation" {
@@ -208,9 +208,9 @@ teardown() {
   LOG_LEVEL=ERROR ./bin/dwh/ETL.sh --help
  " || exit_code=$?
 
- # Check exit status (should be 1 for help)
- # Note: help mode should exit with code 1
- [[ "${exit_code:-0}" -ge 0 ]]
+# Check exit status (should be 0 for help)
+# Note: help mode should exit with code 0
+[[ "${exit_code:-0}" -ge 0 ]]
 }
 
 @test "ETL parallel processing configuration" {

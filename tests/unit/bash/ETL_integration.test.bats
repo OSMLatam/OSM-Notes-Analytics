@@ -27,7 +27,7 @@ load "../../test_helper.bash"
 @test "ETL.sh should work in dry-run mode" {
  # Test that the script can run without actually running ETL
  run timeout 30s bash "${SCRIPT_BASE_DIRECTORY}/bin/dwh/ETL.sh" --help
- [[ "${status}" -eq 1 ]] # Help should exit with code 1
+ [[ "${status}" -eq 0 ]] # Help should exit with code 0
  [[ "${output}" == *"help"* ]] || [[ "${output}" == *"usage"* ]] || echo "Script should show help information"
 }
 

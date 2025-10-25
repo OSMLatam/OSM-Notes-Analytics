@@ -261,6 +261,14 @@ function main() {
   || [[ "${PROCESS_TYPE}" == "--help" ]]; then
   __show_help
  fi
+
+ # If no parameters provided, show help and return error
+ if [[ -z "${PROCESS_TYPE}" ]]; then
+  __loge "No process type specified."
+  __show_help
+  return 1
+ fi
+
  __checkPrereqs
 
  __logw "Starting process."
@@ -293,12 +301,16 @@ if [[ "${SKIP_MAIN:-}" != "true" ]]; then
  if [[ ! -t 1 ]]; then
   __set_log_file "${LOG_FILENAME}"
   main >> "${LOG_FILENAME}"
+  EXIT_CODE=$?
   if [[ -n "${CLEAN}" ]] && [[ "${CLEAN}" = true ]]; then
    mv "${LOG_FILENAME}" "/tmp/${BASENAME}_$(date +%Y-%m-%d_%H-%M-%S \
     || true).log"
    rmdir "${TMP_DIR}"
   fi
+  exit ${EXIT_CODE}
  else
   main
+  EXIT_CODE=$?
+  exit ${EXIT_CODE}
  fi
 fi
