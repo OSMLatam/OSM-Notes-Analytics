@@ -186,6 +186,7 @@ declare -r ETL_PARALLEL_ENABLED="${ETL_PARALLEL_ENABLED:-true}"
 declare -r ETL_MAX_PARALLEL_JOBS="${ETL_MAX_PARALLEL_JOBS:-4}"
 declare -r ETL_MONITOR_RESOURCES="${ETL_MONITOR_RESOURCES:-true}"
 declare -r ETL_MONITOR_INTERVAL="${ETL_MONITOR_INTERVAL:-30}"
+declare -r ETL_TEST_MODE="${ETL_TEST_MODE:-false}"
 
 # Set default value for CLEAN if not defined
 declare CLEAN="${CLEAN:-true}"
@@ -207,12 +208,14 @@ function __show_help {
  echo "Environment variables:"
  echo "  ETL_BATCH_SIZE       Records per batch (default: 1000)"
  echo "  ETL_COMMIT_INTERVAL  Commit every N records (default: 100)"
+ echo "  ETL_TEST_MODE        Test mode: process only 2013-2014 (default: false)"
  echo "  CLEAN                Clean temporary files (default: true)"
  echo "  LOG_LEVEL            Logging level (default: ERROR)"
  echo
  echo "Examples:"
- echo "  ${0} --create       # First time setup"
- echo "  ${0} --incremental  # Regular updates (use in crontab)"
+ echo "  ${0} --create                    # First time setup (all years)"
+ echo "  ${0} --incremental               # Regular updates (use in crontab)"
+ echo "  ETL_TEST_MODE=true ${0} --create # Test mode (2013-2014 only)"
  echo
  echo "Written by: Andres Gomez (AngocA)"
  echo "OSM-LatAm, OSM-Colombia, MaptimeBogota."
@@ -451,7 +454,21 @@ function __initialFactsParallel {
  # shellcheck disable=SC2155
  local current_year
  current_year=$(date +%Y)
- local year=2013
+ local start_year=2013
+
+ # In test mode, process only 2013 and 2014 for faster testing
+ # This maintains data integrity by processing complete years
+ if [[ "${ETL_TEST_MODE}" == "true" ]]; then
+  start_year=2013
+  local test_end_year=2014
+  current_year="${test_end_year}"
+  __logi "TEST MODE: Processing years 2013-2014 (small subset for testing)"
+  __logi "NOTE: Use incremental mode afterward to process remaining years"
+ else
+  __logi "PRODUCTION MODE: Processing all years from 2013 to ${current_year}"
+ fi
+
+ local year="${start_year}"
  local pids=()
 
  # Create procedures for each year
@@ -464,8 +481,8 @@ function __initialFactsParallel {
  done
 
  # Execute parallel load for each year
- year=2013
- __logi "Executing parallel load for years 2013-$current_year (max ${adjusted_threads} concurrent)..."
+ year="${start_year}"
+ __logi "Executing parallel load for years ${start_year}-${current_year} (max ${adjusted_threads} concurrent)..."
 
  while [[ $year -le $current_year ]]; do
   (
