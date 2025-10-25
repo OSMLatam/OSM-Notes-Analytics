@@ -262,8 +262,15 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date_${YEAR} (
    -- Populate bridge table for hashtags (ALL hashtags - unlimited)
    IF array_length(m_all_hashtag_ids, 1) > 0 THEN
      FOR i IN 1..array_length(m_all_hashtag_ids, 1) LOOP
-       INSERT INTO dwh.fact_hashtags (fact_id, dimension_hashtag_id, position)
-       VALUES (m_fact_id, m_all_hashtag_ids[i], i);
+       INSERT INTO dwh.fact_hashtags (
+         fact_id, dimension_hashtag_id, position,
+         used_in_action, is_opening_hashtag, is_resolution_hashtag
+       ) VALUES (
+         m_fact_id, m_all_hashtag_ids[i], i,
+         rec_note_action.action_comment,
+         (rec_note_action.action_comment = 'opened'),
+         (rec_note_action.action_comment = 'closed')
+       );
      END LOOP;
    END IF;
 

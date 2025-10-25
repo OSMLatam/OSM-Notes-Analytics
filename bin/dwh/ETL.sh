@@ -136,8 +136,10 @@ declare -r POSTGRES_50_CREATE_AUTOMATION_DETECTION="${SCRIPT_BASE_DIRECTORY}/sql
 declare -r POSTGRES_51_CREATE_EXPERIENCE_LEVELS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_51_createExperienceLevels.sql"
 # Create note activity metrics trigger.
 declare -r POSTGRES_52_CREATE_NOTE_ACTIVITY_METRICS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_52_createNoteActivityMetrics.sql"
+# Create hashtag analysis views.
+declare -r POSTGRES_53_CREATE_HASHTAG_VIEWS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_53_createHashtagViews.sql"
 # Unify facts.
-declare -r POSTGRES_53_UNIFY_FACTS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_51_unify.sql"
+declare -r POSTGRES_54_UNIFY_FACTS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_51_unify.sql"
 
 # Load notes staging.
 declare -r POSTGRES_61_LOAD_NOTES_STAGING="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_61_loadNotes.sql"
@@ -258,7 +260,8 @@ function __checkPrereqs {
   "${POSTGRES_50_CREATE_AUTOMATION_DETECTION}"
   "${POSTGRES_51_CREATE_EXPERIENCE_LEVELS}"
   "${POSTGRES_52_CREATE_NOTE_ACTIVITY_METRICS}"
-  "${POSTGRES_53_UNIFY_FACTS}"
+  "${POSTGRES_53_CREATE_HASHTAG_VIEWS}"
+  "${POSTGRES_54_UNIFY_FACTS}"
   "${POSTGRES_61_LOAD_NOTES_STAGING}"
  )
 
@@ -377,13 +380,18 @@ function __processNotesETL {
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_52_CREATE_NOTE_ACTIVITY_METRICS}" 2>&1
 
+ # Create hashtag analysis views.
+ __logi "Creating hashtag analysis views."
+ psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+  -f "${POSTGRES_53_CREATE_HASHTAG_VIEWS}" 2>&1
+
  # Process notes actions into DWH.
  __logi "Processing notes actions into DWH."
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
   -c "CALL staging.process_notes_actions_into_dwh();" 2>&1
 
  # Unify facts, by computing dates between years.
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 -f "${POSTGRES_53_UNIFY_FACTS}" 2>&1
+ psql -d "${DBNAME}" -v ON_ERROR_STOP=1 -f "${POSTGRES_54_UNIFY_FACTS}" 2>&1
 
  # Update automation levels for modified users.
  __logi "Updating automation levels for modified users."
@@ -492,6 +500,11 @@ function __initialFactsParallel {
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_52_CREATE_NOTE_ACTIVITY_METRICS}" 2>&1
 
+ # Create hashtag analysis views.
+ __logi "Creating hashtag analysis views."
+ psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+  -f "${POSTGRES_53_CREATE_HASHTAG_VIEWS}" 2>&1
+
  __log_finish
 }
 
@@ -536,6 +549,11 @@ function __initialFacts {
  __logi "Creating note activity metrics trigger."
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_52_CREATE_NOTE_ACTIVITY_METRICS}" 2>&1
+
+ # Create hashtag analysis views.
+ __logi "Creating hashtag analysis views."
+ psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+  -f "${POSTGRES_53_CREATE_HASHTAG_VIEWS}" 2>&1
 
  __log_finish
 }

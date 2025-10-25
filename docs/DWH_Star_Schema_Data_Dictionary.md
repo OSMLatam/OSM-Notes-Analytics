@@ -54,6 +54,19 @@ close, hide).
 | total_reopenings_count               | INTEGER          | Y    |                        |     | Total reopenings count UP TO this action (trigger) |
 | total_actions_on_note                | INTEGER          | Y    |                        |     | Total actions count UP TO this action (trigger) |
 
+## Table: dwh.fact_hashtags
+
+Bridge table linking facts to hashtags with action classification.
+
+| Column                    | Type             | Null | Default | Key | Description |
+|---------------------------|------------------|------|---------|-----|-------------|
+| fact_id                   | INTEGER          | N    |         | FK  | Reference to facts table |
+| dimension_hashtag_id      | INTEGER          | N    |         | FK  | Reference to hashtag dimension |
+| position                  | SMALLINT         | Y    |         |     | Position of hashtag in comment |
+| used_in_action            | note_event_enum  | Y    |         |     | Action type where hashtag was used |
+| is_opening_hashtag        | BOOLEAN          | Y    | FALSE   |     | True if used in note opening |
+| is_resolution_hashtag      | BOOLEAN          | Y    | FALSE   |     | True if used in note resolution |
+
 Notes:
 
 - FKs: country → `dwh.dimension_countries.dimension_country_id`,
@@ -65,6 +78,23 @@ Notes:
   actions.
 - `comment_length`, `has_url`, `has_mention` are calculated during ETL from comment text.
 - `total_comments_on_note`, `total_reopenings_count`, `total_actions_on_note` are calculated by trigger BEFORE INSERT for historical accuracy (performance impact: 1 SELECT per row inserted).
+
+## Hashtag Analysis Views
+
+### dwh.v_hashtags_opening
+Most used hashtags in note opening actions with usage statistics.
+
+### dwh.v_hashtags_resolution  
+Most used hashtags in note resolution/closure actions with resolution metrics.
+
+### dwh.v_hashtags_comments
+Most used hashtags in comment actions with engagement metrics.
+
+### dwh.v_hashtags_by_action
+Hashtag usage breakdown by action type (opened/commented/closed/etc).
+
+### dwh.v_hashtags_top_overall
+Top hashtags overall with breakdown by action type and geographic/user distribution.
 
 ## Table: dwh.dimension_users
 

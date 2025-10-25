@@ -312,9 +312,16 @@ COMMENT ON COLUMN dwh.dimension_seasons.season_name_es IS 'Season (es)';
 CREATE TABLE IF NOT EXISTS dwh.fact_hashtags (
  fact_id INTEGER NOT NULL,
  dimension_hashtag_id INTEGER NOT NULL,
- position SMALLINT
+ position SMALLINT,
+ -- Hashtag action classification
+ used_in_action note_event_enum,
+ is_opening_hashtag BOOLEAN DEFAULT FALSE,
+ is_resolution_hashtag BOOLEAN DEFAULT FALSE
 );
 COMMENT ON TABLE dwh.fact_hashtags IS 'Bridge table facts <-> hashtags';
+COMMENT ON COLUMN dwh.fact_hashtags.used_in_action IS 'Action type where hashtag was used (opened/commented/closed/etc)';
+COMMENT ON COLUMN dwh.fact_hashtags.is_opening_hashtag IS 'True if hashtag was used in note opening';
+COMMENT ON COLUMN dwh.fact_hashtags.is_resolution_hashtag IS 'True if hashtag was used in note resolution/closure';
 
 CREATE TABLE IF NOT EXISTS dwh.properties (
  key VARCHAR(16),
