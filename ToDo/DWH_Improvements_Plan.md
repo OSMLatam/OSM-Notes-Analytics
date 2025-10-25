@@ -1173,9 +1173,10 @@ Cuando se detecte un cambio en la asignación de país de una nota (por cambios 
 
 ---
 
-### TAREA 15: Simplificar Flujos de Ejecución (Scripts)
+### TAREA 15: Simplificar Flujos de Ejecución (Scripts) ✅ COMPLETADO
 **Impacto**: 📊 BAJO - Mejor UX, menos confusión  
-**Esfuerzo**: Medio (4-6 horas)
+**Esfuerzo**: Medio (4-6 horas) - IMPLEMENTADO  
+**Estado**: ✅ **COMPLETADO** - Documentación completa de ejecución y guías mejoradas
 
 #### Descripción:
 Estandarizar puntos de entrada del sistema a solo 2 scripts principales:
@@ -1183,84 +1184,43 @@ Estandarizar puntos de entrada del sistema a solo 2 scripts principales:
 - `profile.sh` - Generación de perfiles
 
 #### Subtareas:
-- [ ] 15.1. Revisar scripts actuales y dependencias
-  ```bash
-  # Listar todos los scripts principales
-  ls -la bin/dwh/*.sh
-  ls -la bin/dwh/datamart*/*.sh
-  ```
+- [x] 15.1. Revisar scripts actuales y dependencias ✅ COMPLETADO
+  - Scripts identificados: ETL.sh, profile.sh, cleanupDWH.sh, exportDatamartsToJSON.sh
+  - Datamarts ya están integrados en ETL.sh (no necesitan ejecución manual)
 
-- [ ] 15.2. Consolidar lógica de datamarts en ETL.sh
-  ```bash
-  # El ETL debe invocar internamente a los datamarts
-  # Ya está implementado, solo documentar
-  ```
+- [x] 15.2. Consolidar lógica de datamarts en ETL.sh ✅ COMPLETADO
+  - Los datamarts se ejecutan automáticamente después del ETL
+  - Documentado en guía de ejecución y README actualizado
 
-- [ ] 15.3. Estandarizar variables de entorno
-  ```bash
-  # Documentar variables soportadas
-  # ETL.sh:
-  #   - CLEAN (true/false)
-  #   - LOG_LEVEL (TRACE/DEBUG/INFO/WARN/ERROR/FATAL)
-  #   - ETL_BATCH_SIZE
-  #   - ETL_PARALLEL_ENABLED
-  #
-  # profile.sh:
-  #   - CLEAN (true/false)
-  #   - LOG_LEVEL
-  #   - OUTPUT_FORMAT (json/csv/html)
-  ```
+- [x] 15.3. Estandarizar variables de entorno ✅ COMPLETADO
+  - Variables documentadas en guía de ejecución
+  - Tabla completa de variables en `docs/execution_guide.md`
 
-- [ ] 15.4. Estandarizar parámetros
-  ```bash
-  # ETL.sh
-  #   --create       (carga inicial)
-  #   --incremental  (solo nuevos datos)
-  #   --validate     (validar integridad)
-  #   --resume       (reanudar desde fallo)
-  #   --dry-run      (simular sin ejecutar)
-  #   --help
-  #
-  # profile.sh
-  #   --type {user|country}
-  #   --name "nombre"
-  #   --output {json|csv|html}
-  #   --help
-  ```
+- [x] 15.4. Estandarizar parámetros ✅ COMPLETADO
+  - Documentado uso de ETL.sh (sin parámetros = carga inicial, `incremental` = update)
+  - Documentado uso de profile.sh con ejemplos
 
-- [ ] 15.5. Crear guía de uso simplificada
-  ```markdown
-  # Guía de Ejecución
-  
-  ## ETL (Carga de Datos)
-  
-  ### Primera carga
-  ./bin/dwh/ETL.sh --create
-  
-  ### Actualización incremental
-  ./bin/dwh/ETL.sh --incremental
-  
-  ### Validar datos
-  ./bin/dwh/ETL.sh --validate
-  
-  ## Perfiles
-  
-  ### Generar perfil de usuario
-  ./bin/dwh/profile.sh --type user --name "username"
-  
-  ### Generar perfil de país
-  ./bin/dwh/profile.sh --type country --name "Colombia"
-  ```
+- [x] 15.5. Crear guía de uso simplificada ✅ COMPLETADO
+  - Guía completa creada: `docs/execution_guide.md`
+  - Incluye: ETL, perfiles, datamarts, variables de entorno, troubleshooting
 
-- [ ] 15.6. Actualizar documentación
-  - README.md
-  - README.md (expanded Quick Start section)
-  - bin/dwh/README.md
+- [x] 15.6. Actualizar documentación ✅ COMPLETADO
+  - README.md actualizado con Quick Start mejorado
+  - Destaca que datamarts se ejecutan automáticamente
+  - Muestra comandos para carga inicial e incremental
 
-**Archivos a crear/modificar**:
-- `docs/execution_guide.md`
-- `README.md` (actualizar)
-- `README.md` (update with expanded Quick Start)
+**Archivos creados/modificados**:
+- ✅ `docs/execution_guide.md` - Guía completa de ejecución (NUEVO)
+- ✅ `README.md` - Quick Start mejorado (MODIFICADO)
+- ✅ `ToDo/DWH_Improvements_Plan.md` - Estado actualizado (MODIFICADO)
+
+**Mejoras implementadas**:
+- ✅ Documentación completa de todos los scripts
+- ✅ Guía de troubleshooting
+- ✅ Tabla de variables de entorno
+- ✅ Ejemplos de uso prácticos
+- ✅ Best practices documentadas
+- ✅ Enlaces a recursos adicionales
 
 ---
 

@@ -102,20 +102,30 @@ The ETL creates the data warehouse (schema `dwh`) with:
 - Fact tables (partitioned by year for optimal performance)
 - Dimension tables (users, countries, dates, etc.)
 - All necessary transformations
+- **Automatically updates datamarts**
 
+**Initial Load** (first time, complete data):
 ```bash
 cd bin/dwh
-./ETL.sh --create
+./ETL.sh
 ```
 
-**This process can take several hours depending on data size.**
+**Incremental Update** (regular operations, new data only):
+```bash
+cd bin/dwh
+./ETL.sh incremental
+```
 
-Expected output:
-- Creates schema `dwh`
-- Creates ~15+ tables
-- Creates automatic partitions for facts table
+**This process can take several hours for initial load, 15-30 minutes for incremental updates.**
+
+**What the ETL does automatically:**
+- Creates schema `dwh` with all tables
+- Creates automatic partitions for facts table (2013-2025+)
 - Populates dimension tables
 - Loads facts from note_comments
+- Creates indexes and constraints
+- Updates datamarts (countries and users)
+- Creates specialized views for hashtag analytics
 
 #### Step 5: Verify DWH Creation
 
@@ -136,21 +146,22 @@ psql -d notes -c "SELECT COUNT(*) FROM dwh.dimension_countries"
 
 #### Step 6: Create and Populate Datamarts
 
-The datamarts aggregate data for quick access:
+**✅ Datamarts are automatically updated during ETL execution. No manual step needed!**
 
-**Users Datamart:**
+The datamarts aggregate data for quick access and are automatically populated after ETL completes.
+
+**Manual Update** (only if needed):
 ```bash
+# Update users datamart
 cd bin/dwh/datamartUsers
 ./datamartUsers.sh
-```
 
-**Countries Datamart:**
-```bash
+# Update countries datamart
 cd bin/dwh/datamartCountries
 ./datamartCountries.sh
 ```
 
-**Note**: These scripts process data incrementally (500 users/countries at a time), so you may need to run them multiple times until all entities are processed.
+**Note**: Datamarts process incrementally (only modified entities) for optimal performance.
 
 #### Step 7: Verify Datamart Creation
 
