@@ -313,10 +313,10 @@ if [[ "${SKIP_MAIN:-}" != "true" ]]; then
     || true).log"
    rmdir "${TMP_DIR}"
   fi
-  exit ${EXIT_CODE}
+  exit "${EXIT_CODE}"
  else
   main
   EXIT_CODE=$?
-  exit ${EXIT_CODE}
+  exit "${EXIT_CODE}"
  fi
 fi
