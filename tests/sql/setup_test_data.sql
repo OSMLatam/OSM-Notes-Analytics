@@ -114,7 +114,10 @@ BEGIN
       days_to_resolution INTEGER,
       total_actions_on_note INTEGER DEFAULT 1,
       total_comments_on_note INTEGER DEFAULT 0,
-      total_reopenings_count INTEGER DEFAULT 0
+      total_reopenings_count INTEGER DEFAULT 0,
+      comment_length INTEGER,
+      has_url BOOLEAN,
+      has_mention BOOLEAN
     )';
 
     -- Insert minimal test data
@@ -124,23 +127,27 @@ BEGIN
       action_dimension_id_date,
       opened_dimension_id_date, opened_dimension_id_user,
       closed_dimension_id_date, closed_dimension_id_user,
-      dimension_application_creation, days_to_resolution
+      dimension_application_creation, days_to_resolution,
+      comment_length, has_url, has_mention
     ) VALUES
       -- Country 1: 3 opened, 2 closed (1 resolved in 5 days, 1 in 10 days), 1 still open
-      (1001, '2023-01-01 10:00:00', 'opened', 1, 1, 1, 1, 1, NULL, NULL, 1, NULL),
-      (1001, '2023-01-06 14:00:00', 'closed', 1, 2, 2, 1, 1, 2, 2, NULL, 5),
-      (1002, '2023-01-02 11:00:00', 'opened', 1, 1, 2, 2, 1, NULL, NULL, 2, NULL),
-      (1002, '2023-01-12 15:00:00', 'closed', 1, 2, 3, 2, 1, 3, 2, NULL, 10),
-      (1003, '2023-01-03 12:00:00', 'opened', 1, 1, 3, 3, 1, NULL, NULL, 3, NULL),
+      -- Comments: avg length 20, 1 with URL, 1 with mention
+      (1001, '2023-01-01 10:00:00', 'opened', 1, 1, 1, 1, 1, NULL, NULL, 1, NULL, 15, FALSE, FALSE),
+      (1001, '2023-01-06 14:00:00', 'closed', 1, 2, 2, 1, 1, 2, 2, NULL, 5, 25, TRUE, TRUE),
+      (1002, '2023-01-02 11:00:00', 'opened', 1, 1, 2, 2, 1, NULL, NULL, 2, NULL, 10, FALSE, FALSE),
+      (1002, '2023-01-12 15:00:00', 'closed', 1, 2, 3, 2, 1, 3, 2, NULL, 10, 30, FALSE, FALSE),
+      (1003, '2023-01-03 12:00:00', 'opened', 1, 1, 3, 3, 1, NULL, NULL, 3, NULL, 20, FALSE, FALSE),
 
       -- Country 2: 2 opened, 2 closed (100% resolution)
-      (2001, '2024-01-01 10:00:00', 'opened', 2, 2, 3, 3, 2, NULL, NULL, 4, NULL),
-      (2001, '2024-01-05 14:00:00', 'closed', 2, 2, 4, 3, 2, 4, 2, NULL, 4),
-      (2002, '2024-01-02 11:00:00', 'opened', 2, 3, 4, 4, 3, NULL, NULL, 5, NULL),
-      (2002, '2024-01-06 15:00:00', 'closed', 2, 2, 5, 4, 3, 5, 2, NULL, 4),
+      -- Comments: avg length 40, 2 with URL, 1 with mention
+      (2001, '2024-01-01 10:00:00', 'opened', 2, 2, 3, 3, 2, NULL, NULL, 4, NULL, 30, TRUE, FALSE),
+      (2001, '2024-01-05 14:00:00', 'closed', 2, 2, 4, 3, 2, 4, 2, NULL, 4, 50, TRUE, TRUE),
+      (2002, '2024-01-02 11:00:00', 'opened', 2, 3, 4, 4, 3, NULL, NULL, 5, NULL, 35, FALSE, FALSE),
+      (2002, '2024-01-06 15:00:00', 'closed', 2, 2, 5, 4, 3, 5, 2, NULL, 4, 45, FALSE, FALSE),
 
       -- Country 3: 1 opened, not closed (0% resolution)
-      (3001, '2024-06-15 10:00:00', 'opened', 3, 3, 4, 4, 3, NULL, NULL, 6, NULL);
+      -- Comments: avg length 15, no URLs, no mentions
+      (3001, '2024-06-15 10:00:00', 'opened', 3, 3, 4, 4, 3, NULL, NULL, 6, NULL, 15, FALSE, FALSE);
   END IF;
 END $$;
 

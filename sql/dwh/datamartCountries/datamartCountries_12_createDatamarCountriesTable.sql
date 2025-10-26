@@ -71,7 +71,13 @@ CREATE TABLE IF NOT EXISTS dwh.datamartCountries (
  applications_used JSON,
  most_used_application_id INTEGER,
  mobile_apps_count INTEGER,
- desktop_apps_count INTEGER
+ desktop_apps_count INTEGER,
+ vg_comment_length DECIMAL(10,2),
+ comments_with_url_count INTEGER,
+ comments_with_url_pct DECIMAL(5,2),
+ comments_with_mention_count INTEGER,
+ comments_with_mention_pct DECIMAL(5,2),
+ avg_comments_per_note DECIMAL(10,2)
 );
 COMMENT ON TABLE dwh.datamartCountries IS
   'Contains all precalculated statistical values for countries';
@@ -202,6 +208,18 @@ COMMENT ON COLUMN dwh.datamartCountries.mobile_apps_count IS
   'Number of mobile applications used';
 COMMENT ON COLUMN dwh.datamartCountries.desktop_apps_count IS
   'Number of desktop/web applications used';
+COMMENT ON COLUMN dwh.datamartCountries.avg_comment_length IS
+  'Average length of comments in characters';
+COMMENT ON COLUMN dwh.datamartCountries.comments_with_url_count IS
+  'Number of comments containing URLs';
+COMMENT ON COLUMN dwh.datamartCountries.comments_with_url_pct IS
+  'Percentage of comments containing URLs';
+COMMENT ON COLUMN dwh.datamartCountries.comments_with_mention_count IS
+  'Number of comments containing mentions';
+COMMENT ON COLUMN dwh.datamartCountries.comments_with_mention_pct IS
+  'Percentage of comments containing mentions';
+COMMENT ON COLUMN dwh.datamartCountries.avg_comments_per_note IS
+  'Average number of comments per note';
 
 CREATE TABLE IF NOT EXISTS dwh.max_date_countries_processed (
   date date NOT NULL

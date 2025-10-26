@@ -373,7 +373,14 @@ AS $proc$
   m_most_used_application_id INTEGER;
   m_mobile_apps_count INTEGER;
   m_desktop_apps_count INTEGER;
- BEGIN
+
+  m_avg_comment_length DECIMAL(10,2);
+  m_comments_with_url_count INTEGER;
+  m_comments_with_url_pct DECIMAL(5,2);
+  m_comments_with_mention_count INTEGER;
+  m_comments_with_mention_pct DECIMAL(5,2);
+  m_avg_comments_per_note DECIMAL(10,2);
+  BEGIN
   SELECT /* Notes-datamartCountries */ COUNT(1)
    INTO qty
    FROM dwh.datamartCountries
@@ -1017,6 +1024,54 @@ AS $proc$
    AND (a.platform = 'web'
     OR a.platform IN ('desktop', 'windows', 'linux', 'macos'));
 
+  -- Average comment length
+  SELECT /* Notes-datamartCountries */ COALESCE(AVG(comment_length), 0)
+  INTO m_avg_comment_length
+  FROM dwh.facts
+  WHERE dimension_id_country = m_dimension_id_country
+   AND comment_length IS NOT NULL
+   AND action_comment = 'commented';
+
+  -- Comments with URL count and percentage
+  SELECT
+   COUNT(*) FILTER (WHERE has_url = TRUE) as url_count,
+   COUNT(*) as total_comments,
+   CASE
+    WHEN COUNT(*) > 0
+    THEN (COUNT(*) FILTER (WHERE has_url = TRUE)::DECIMAL / COUNT(*) * 100)
+    ELSE 0
+   END as url_pct
+  INTO m_comments_with_url_count, qty, m_comments_with_url_pct
+  FROM dwh.facts
+  WHERE dimension_id_country = m_dimension_id_country
+   AND action_comment = 'commented';
+
+  -- Comments with mention count and percentage
+  SELECT
+   COUNT(*) FILTER (WHERE has_mention = TRUE) as mention_count,
+   COUNT(*) as total_comments,
+   CASE
+    WHEN COUNT(*) > 0
+    THEN (COUNT(*) FILTER (WHERE has_mention = TRUE)::DECIMAL / COUNT(*) * 100)
+    ELSE 0
+   END as mention_pct
+  INTO m_comments_with_mention_count, qty, m_comments_with_mention_pct
+  FROM dwh.facts
+  WHERE dimension_id_country = m_dimension_id_country
+   AND action_comment = 'commented';
+
+  -- Average comments per note
+  SELECT /* Notes-datamartCountries */
+   CASE
+    WHEN COUNT(DISTINCT opened_dimension_id_user) > 0
+    THEN COUNT(*)::DECIMAL / COUNT(DISTINCT id_note)
+    ELSE 0
+   END
+  INTO m_avg_comments_per_note
+  FROM dwh.facts
+  WHERE dimension_id_country = m_dimension_id_country
+   AND action_comment = 'commented';
+
   -- Updates country with new values.
   UPDATE dwh.datamartCountries
   SET
@@ -1064,7 +1119,13 @@ AS $proc$
    applications_used = m_applications_used,
    most_used_application_id = m_most_used_application_id,
    mobile_apps_count = m_mobile_apps_count,
-   desktop_apps_count = m_desktop_apps_count
+   desktop_apps_count = m_desktop_apps_count,
+   avg_comment_length = m_avg_comment_length,
+   comments_with_url_count = m_comments_with_url_count,
+   comments_with_url_pct = m_comments_with_url_pct,
+   comments_with_mention_count = m_comments_with_mention_count,
+   comments_with_mention_pct = m_comments_with_mention_pct,
+   avg_comments_per_note = m_avg_comments_per_note
   WHERE dimension_country_id = m_dimension_id_country;
 
   m_year := 2013;

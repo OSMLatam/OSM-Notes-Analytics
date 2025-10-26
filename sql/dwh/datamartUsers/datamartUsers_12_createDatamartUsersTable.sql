@@ -70,7 +70,13 @@ CREATE TABLE IF NOT EXISTS dwh.datamartUsers (
  applications_used JSON,
  most_used_application_id INTEGER,
  mobile_apps_count INTEGER,
- desktop_apps_count INTEGER
+ desktop_apps_count INTEGER,
+ avg_comment_length DECIMAL(10,2),
+ comments_with_url_count INTEGER,
+ comments_with_url_pct DECIMAL(5,2),
+ comments_with_mention_count INTEGER,
+ comments_with_mention_pct DECIMAL(5,2),
+ avg_comments_per_note DECIMAL(10,2)
 );
 COMMENT ON TABLE dwh.datamartUsers IS
   'Contains all precalculated statistical values for users';
@@ -199,6 +205,18 @@ COMMENT ON COLUMN dwh.datamartUsers.mobile_apps_count IS
   'Number of mobile applications used by this user';
 COMMENT ON COLUMN dwh.datamartUsers.desktop_apps_count IS
   'Number of desktop/web applications used by this user';
+COMMENT ON COLUMN dwh.datamartUsers.avg_comment_length IS
+  'Average length of comments in characters by this user';
+COMMENT ON COLUMN dwh.datamartUsers.comments_with_url_count IS
+  'Number of comments containing URLs by this user';
+COMMENT ON COLUMN dwh.datamartUsers.comments_with_url_pct IS
+  'Percentage of comments containing URLs by this user';
+COMMENT ON COLUMN dwh.datamartUsers.comments_with_mention_count IS
+  'Number of comments containing mentions by this user';
+COMMENT ON COLUMN dwh.datamartUsers.comments_with_mention_pct IS
+  'Percentage of comments containing mentions by this user';
+COMMENT ON COLUMN dwh.datamartUsers.avg_comments_per_note IS
+  'Average number of comments per note by this user';
 
 CREATE TABLE IF NOT EXISTS dwh.badges (
  badge_id SERIAL,
