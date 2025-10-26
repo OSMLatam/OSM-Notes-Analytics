@@ -1,7 +1,7 @@
 -- Creates datamart for countries.
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2023-12-01
+-- Version: 2025-10-26
 
 CREATE TABLE IF NOT EXISTS dwh.datamartCountries (
  -- Static values (country name could change)
@@ -62,7 +62,12 @@ CREATE TABLE IF NOT EXISTS dwh.datamartCountries (
  history_2013_reopened INTEGER,
  ranking_users_opening_2013 JSON,
  ranking_users_closing_2013 JSON,
- json_exported BOOLEAN DEFAULT FALSE
+ json_exported BOOLEAN DEFAULT FALSE,
+ avg_days_to_resolution DECIMAL(10,2),
+ median_days_to_resolution DECIMAL(10,2),
+ notes_resolved_count INTEGER,
+ notes_still_open_count INTEGER,
+ resolution_rate DECIMAL(5,2)
 
 );
 COMMENT ON TABLE dwh.datamartCountries IS
@@ -176,6 +181,16 @@ COMMENT ON COLUMN dwh.datamartCountries.ranking_users_closing_2013 IS
   'Ranking of users closing notes on year 2013';
 COMMENT ON COLUMN dwh.datamartCountries.json_exported IS
   'Flag indicating if country data has been exported to JSON';
+COMMENT ON COLUMN dwh.datamartCountries.avg_days_to_resolution IS
+  'Average days to resolve notes (from open to most recent close)';
+COMMENT ON COLUMN dwh.datamartCountries.median_days_to_resolution IS
+  'Median days to resolve notes (from open to most recent close)';
+COMMENT ON COLUMN dwh.datamartCountries.notes_resolved_count IS
+  'Number of notes that have been closed';
+COMMENT ON COLUMN dwh.datamartCountries.notes_still_open_count IS
+  'Number of notes opened but never closed';
+COMMENT ON COLUMN dwh.datamartCountries.resolution_rate IS
+  'Percentage of notes resolved (closed/total opened)';
 
 CREATE TABLE IF NOT EXISTS dwh.max_date_countries_processed (
   date date NOT NULL

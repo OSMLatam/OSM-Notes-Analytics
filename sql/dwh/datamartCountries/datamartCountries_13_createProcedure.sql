@@ -362,6 +362,12 @@ AS $proc$
   m_current_year SMALLINT;
   m_current_month SMALLINT;
   m_current_day SMALLINT;
+
+  m_avg_days_to_resolution DECIMAL(10,2);
+  m_median_days_to_resolution DECIMAL(10,2);
+  m_notes_resolved_count INTEGER;
+  m_notes_still_open_count INTEGER;
+  m_resolution_rate DECIMAL(5,2);
  BEGIN
   SELECT /* Notes-datamartCountries */ COUNT(1)
    INTO qty
@@ -906,6 +912,50 @@ AS $proc$
    AND EXTRACT(MONTH FROM d.date_id) = m_current_month
    AND EXTRACT(YEAR FROM d.date_id) = m_current_year;
 
+  -- Average resolution time
+  SELECT COALESCE(AVG(days_to_resolution), 0)
+   INTO m_avg_days_to_resolution
+  FROM dwh.facts
+  WHERE dimension_id_country = m_dimension_id_country
+    AND days_to_resolution IS NOT NULL
+    AND action_comment = 'closed';
+
+  -- Median resolution time
+  SELECT COALESCE(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY days_to_resolution), 0)
+   INTO m_median_days_to_resolution
+  FROM dwh.facts
+  WHERE dimension_id_country = m_dimension_id_country
+    AND days_to_resolution IS NOT NULL
+    AND action_comment = 'closed';
+
+  -- Count resolved notes
+  SELECT COUNT(DISTINCT f1.id_note)
+   INTO m_notes_resolved_count
+  FROM dwh.facts f1
+  WHERE f1.dimension_id_country = m_dimension_id_country
+    AND f1.action_comment = 'closed';
+
+  -- Count notes still open
+  SELECT COUNT(DISTINCT f2.id_note)
+   INTO m_notes_still_open_count
+  FROM dwh.facts f2
+  WHERE f2.dimension_id_country = m_dimension_id_country
+    AND f2.action_comment = 'opened'
+    AND NOT EXISTS (
+      SELECT 1
+      FROM dwh.facts f3
+      WHERE f3.id_note = f2.id_note
+        AND f3.action_comment = 'closed'
+        AND f3.dimension_id_country = f2.dimension_id_country
+    );
+
+  -- Calculate resolution rate
+  IF (m_notes_resolved_count + m_notes_still_open_count) > 0 THEN
+    m_resolution_rate := (m_notes_resolved_count::DECIMAL / (m_notes_resolved_count + m_notes_still_open_count)) * 100;
+  ELSE
+    m_resolution_rate := 0;
+  END IF;
+
   -- Updates country with new values.
   UPDATE dwh.datamartCountries
   SET
@@ -944,7 +994,12 @@ AS $proc$
    history_day_commented = m_history_day_commented,
    history_day_closed = m_history_day_closed,
    history_day_closed_with_comment = m_history_day_closed_with_comment,
-   history_day_reopened =m_history_day_reopened
+   history_day_reopened = m_history_day_reopened,
+   avg_days_to_resolution = m_avg_days_to_resolution,
+   median_days_to_resolution = m_median_days_to_resolution,
+   notes_resolved_count = m_notes_resolved_count,
+   notes_still_open_count = m_notes_still_open_count,
+   resolution_rate = m_resolution_rate
   WHERE dimension_country_id = m_dimension_id_country;
 
   m_year := 2013;
