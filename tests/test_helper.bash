@@ -4,6 +4,18 @@
 # Author: Andres Gomez (AngocA)
 # Version: 2025-10-14
 
+# Function to setup test data
+setup_test_database() {
+  local dbname="${DBNAME:-dwh}"
+  echo "Setting up test database: ${dbname}" >&2
+
+  # Run setup SQL if it exists
+  if [[ -f "${TEST_BASE_DIR}/tests/sql/setup_test_data.sql" ]]; then
+    echo "Loading test data from setup_test_data.sql" >&2
+    psql -d "${dbname}" -f "${TEST_BASE_DIR}/tests/sql/setup_test_data.sql" > /dev/null 2>&1 || true
+  fi
+}
+
 # Test database configuration
 # Use the values already set by run_tests.sh, don't override them
 # Only set defaults if not already set
@@ -151,7 +163,7 @@ mock_psql() {
  else
   # Running on host - simulate psql
   echo "Mock psql called with: $*"
-  
+
   # Check if this is a connection test with invalid parameters
   if [[ "$*" == *"-h localhost"* ]] && [[ "$*" == *"-p 5434"* ]]; then
    # Simulate connection failure for invalid port
@@ -159,7 +171,7 @@ mock_psql() {
    echo "Is the server running on that host and accepting TCP/IP connections?" >&2
    return 2
   fi
-  
+
   # Check if this is a connection test with invalid database/user
   if [[ "$*" == *"test_db"* ]] || [[ "$*" == *"test_user"* ]]; then
    # Simulate connection failure for invalid database/user
@@ -167,7 +179,7 @@ mock_psql() {
    echo "Is the server running on that host and accepting TCP/IP connections?" >&2
    return 2
   fi
-  
+
   # For other cases, simulate success
   return 0
  fi
@@ -178,11 +190,11 @@ create_test_database() {
  echo "DEBUG: Function called"
  local dbname="${1:-${TEST_DBNAME}}"
  echo "DEBUG: dbname = ${dbname}"
- 
+
  # Check if PostgreSQL is available
  if psql -d postgres -c "SELECT 1;" >/dev/null 2>&1; then
   echo "DEBUG: PostgreSQL available, using real database"
-  
+
   # Try to connect to the specified database first
   if psql -d "${dbname}" -c "SELECT 1;" >/dev/null 2>&1; then
    echo "Test database ${dbname} already exists and is accessible"
@@ -191,7 +203,7 @@ create_test_database() {
    createdb "${dbname}" 2>/dev/null || true
    echo "Test database ${dbname} created successfully"
   fi
-   
+
   # Create DWH schema
   echo "Creating DWH schema..."
   psql -d "${dbname}" << 'EOF'
@@ -281,7 +293,7 @@ INSERT INTO countries (country_id, name) VALUES
   (5, 'Australia')
 ON CONFLICT (country_id) DO NOTHING;
 EOF
-   
+
   return 0
  else
   echo "DEBUG: PostgreSQL not available, using simulated database"
@@ -359,7 +371,7 @@ count_rows() {
  # Try to connect to real database first (both Docker and host)
  local result
  result=$(psql -U "${TEST_DBUSER:-$(whoami)}" -d "${dbname}" -t -c "SELECT COUNT(*) FROM ${table_name};" 2> /dev/null)
- 
+
  if [[ -n "${result}" ]] && [[ "${result}" =~ ^[0-9]+$ ]]; then
   # Successfully connected to real database
   echo "${result// /}"

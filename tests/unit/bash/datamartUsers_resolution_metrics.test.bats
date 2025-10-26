@@ -6,7 +6,7 @@ bats_require_minimum_version 1.5.0
 # Integration tests for resolution metrics in datamartUsers
 # Tests that resolution metrics are calculated correctly for users
 
-load test_helper
+load ../../../tests/test_helper
 
 setup() {
   SCRIPT_BASE_DIRECTORY="$(cd "$(dirname "${BATS_TEST_FILENAME}")/../../.." && pwd)"
@@ -17,6 +17,11 @@ setup() {
   source "${SCRIPT_BASE_DIRECTORY}/tests/properties.sh"
 
   export TEST_USER_ID=99999
+
+  # Setup test database if needed
+  if [[ -z "${SKIP_TEST_SETUP:-}" ]]; then
+    setup_test_database
+  fi
 }
 
 # Test that resolution metrics columns exist in datamartUsers

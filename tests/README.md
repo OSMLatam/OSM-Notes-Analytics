@@ -20,7 +20,10 @@ tests/
 │   │   ├── ETL_enhanced.test.bats
 │   │   ├── ETL_integration.test.bats
 │   │   ├── datamartCountries_integration.test.bats
-│   │   └── datamartUsers_integration.test.bats
+│   │   ├── datamartUsers_integration.test.bats
+│   │   ├── datamart_resolution_metrics.test.bats
+│   │   ├── datamartUsers_resolution_metrics.test.bats
+│   │   └── datamart_application_statistics.test.bats
 │   └── sql/                   # SQL unit tests
 │       ├── dwh_cleanup.test.sql
 │       ├── dwh_dimensions_enhanced.test.sql
@@ -28,6 +31,8 @@ tests/
 ├── integration/               # Integration tests
 │   ├── ETL_enhanced_integration.test.bats
 │   └── datamart_enhanced_integration.test.bats
+├── sql/                       # Test data setup
+│   └── setup_test_data.sql    # SQL for test database setup
 ├── properties.sh              # Test configuration properties
 ├── test_helper.bash           # Common test utilities and helpers
 ├── run_all_tests.sh          # Run all test suites
