@@ -67,8 +67,11 @@ CREATE TABLE IF NOT EXISTS dwh.datamartCountries (
  median_days_to_resolution DECIMAL(10,2),
  notes_resolved_count INTEGER,
  notes_still_open_count INTEGER,
- resolution_rate DECIMAL(5,2)
-
+ resolution_rate DECIMAL(5,2),
+ applications_used JSON,
+ most_used_application_id INTEGER,
+ mobile_apps_count INTEGER,
+ desktop_apps_count INTEGER
 );
 COMMENT ON TABLE dwh.datamartCountries IS
   'Contains all precalculated statistical values for countries';
@@ -191,6 +194,14 @@ COMMENT ON COLUMN dwh.datamartCountries.notes_still_open_count IS
   'Number of notes opened but never closed';
 COMMENT ON COLUMN dwh.datamartCountries.resolution_rate IS
   'Percentage of notes resolved (closed/total opened)';
+COMMENT ON COLUMN dwh.datamartCountries.applications_used IS
+  'JSON array of applications used to create notes in this country';
+COMMENT ON COLUMN dwh.datamartCountries.most_used_application_id IS
+  'ID of the most used application for creating notes';
+COMMENT ON COLUMN dwh.datamartCountries.mobile_apps_count IS
+  'Number of mobile applications used';
+COMMENT ON COLUMN dwh.datamartCountries.desktop_apps_count IS
+  'Number of desktop/web applications used';
 
 CREATE TABLE IF NOT EXISTS dwh.max_date_countries_processed (
   date date NOT NULL

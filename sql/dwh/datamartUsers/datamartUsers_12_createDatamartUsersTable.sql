@@ -58,15 +58,19 @@ CREATE TABLE IF NOT EXISTS dwh.datamartUsers (
  history_2013_commented INTEGER,
  history_2013_closed INTEGER,
  history_2013_closed_with_comment INTEGER,
-  history_2013_reopened INTEGER,
-  ranking_countries_opening_2013 JSON,
-  ranking_countries_closing_2013 JSON,
-  json_exported BOOLEAN DEFAULT FALSE,
-  avg_days_to_resolution DECIMAL(10,2),
-  median_days_to_resolution DECIMAL(10,2),
-  notes_resolved_count INTEGER,
-  notes_still_open_count INTEGER,
-  resolution_rate DECIMAL(5,2)
+ history_2013_reopened INTEGER,
+ ranking_countries_opening_2013 JSON,
+ ranking_countries_closing_2013 JSON,
+ json_exported BOOLEAN DEFAULT FALSE,
+ avg_days_to_resolution DECIMAL(10,2),
+ median_days_to_resolution DECIMAL(10,2),
+ notes_resolved_count INTEGER,
+ notes_still_open_count INTEGER,
+ resolution_rate DECIMAL(5,2),
+ applications_used JSON,
+ most_used_application_id INTEGER,
+ mobile_apps_count INTEGER,
+ desktop_apps_count INTEGER
 );
 COMMENT ON TABLE dwh.datamartUsers IS
   'Contains all precalculated statistical values for users';
@@ -187,6 +191,14 @@ COMMENT ON COLUMN dwh.datamartUsers.notes_still_open_count IS
   'Number of notes opened by this user but never closed';
 COMMENT ON COLUMN dwh.datamartUsers.resolution_rate IS
   'Percentage of notes resolved by this user (closed/total opened)';
+COMMENT ON COLUMN dwh.datamartUsers.applications_used IS
+  'JSON array of applications used by this user to create notes';
+COMMENT ON COLUMN dwh.datamartUsers.most_used_application_id IS
+  'ID of the most used application by this user';
+COMMENT ON COLUMN dwh.datamartUsers.mobile_apps_count IS
+  'Number of mobile applications used by this user';
+COMMENT ON COLUMN dwh.datamartUsers.desktop_apps_count IS
+  'Number of desktop/web applications used by this user';
 
 CREATE TABLE IF NOT EXISTS dwh.badges (
  badge_id SERIAL,

@@ -478,6 +478,11 @@ AS $proc$
   m_notes_resolved_count INTEGER;
   m_notes_still_open_count INTEGER;
   m_resolution_rate DECIMAL(5,2);
+
+  m_applications_used JSON;
+  m_most_used_application_id INTEGER;
+  m_mobile_apps_count INTEGER;
+  m_desktop_apps_count INTEGER;
   BEGIN
   --m_start_time := CLOCK_TIMESTAMP();
   SELECT /* Notes-datamartUsers */ COUNT(1)
@@ -1078,6 +1083,62 @@ AS $proc$
     m_resolution_rate := 0;
   END IF;
 
+  -- Applications used (JSON array with app_id, app_name, count)
+  SELECT /* Notes-datamartUsers */ json_agg(
+   json_build_object(
+    'app_id', app_id,
+    'app_name', app_name,
+    'count', app_count
+   ) ORDER BY app_count DESC
+  )
+  INTO m_applications_used
+  FROM (
+   SELECT
+    f.dimension_application_creation as app_id,
+    a.application_name as app_name,
+    COUNT(*) as app_count
+   FROM dwh.facts f
+    JOIN dwh.dimension_applications a
+    ON a.dimension_application_id = f.dimension_application_creation
+   WHERE f.opened_dimension_id_user = m_dimension_user_id
+    AND f.dimension_application_creation IS NOT NULL
+   GROUP BY f.dimension_application_creation, a.application_name
+   ORDER BY app_count DESC
+  ) AS app_stats;
+
+  -- Most used application
+  SELECT /* Notes-datamartUsers */ dimension_application_creation
+  INTO m_most_used_application_id
+  FROM dwh.facts
+  WHERE opened_dimension_id_user = m_dimension_user_id
+   AND dimension_application_creation IS NOT NULL
+  GROUP BY dimension_application_creation
+  ORDER BY COUNT(*) DESC
+  LIMIT 1;
+
+  -- Mobile apps count (android, ios, and other mobile platforms)
+  SELECT /* Notes-datamartUsers */ COUNT(DISTINCT f.dimension_application_creation)
+  INTO m_mobile_apps_count
+  FROM dwh.facts f
+   JOIN dwh.dimension_applications a
+   ON a.dimension_application_id = f.dimension_application_creation
+  WHERE f.opened_dimension_id_user = m_dimension_user_id
+   AND f.dimension_application_creation IS NOT NULL
+   AND (a.platform IN ('android', 'ios')
+    OR a.platform LIKE 'mobile%'
+    OR a.category = 'mobile');
+
+  -- Desktop apps count (web and desktop platforms)
+  SELECT /* Notes-datamartUsers */ COUNT(DISTINCT f.dimension_application_creation)
+  INTO m_desktop_apps_count
+  FROM dwh.facts f
+   JOIN dwh.dimension_applications a
+   ON a.dimension_application_id = f.dimension_application_creation
+  WHERE f.opened_dimension_id_user = m_dimension_user_id
+   AND f.dimension_application_creation IS NOT NULL
+   AND (a.platform = 'web'
+    OR a.platform IN ('desktop', 'windows', 'linux', 'macos'));
+
   -- Updates user with new values.
   UPDATE dwh.datamartUsers
   SET id_contributor_type = m_id_contributor_type,
@@ -1121,7 +1182,11 @@ AS $proc$
    median_days_to_resolution = m_median_days_to_resolution,
    notes_resolved_count = m_notes_resolved_count,
    notes_still_open_count = m_notes_still_open_count,
-   resolution_rate = m_resolution_rate
+   resolution_rate = m_resolution_rate,
+   applications_used = m_applications_used,
+   most_used_application_id = m_most_used_application_id,
+   mobile_apps_count = m_mobile_apps_count,
+   desktop_apps_count = m_desktop_apps_count
   WHERE dimension_user_id = m_dimension_user_id;
 
   m_year := 2013;
