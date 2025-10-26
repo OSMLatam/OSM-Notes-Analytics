@@ -1,7 +1,7 @@
 -- Creates datamart for users.
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2023-12-01
+-- Version: 2025-10-26
 
 CREATE TABLE IF NOT EXISTS dwh.datamartUsers (
  -- Static values (username could change)
@@ -58,10 +58,15 @@ CREATE TABLE IF NOT EXISTS dwh.datamartUsers (
  history_2013_commented INTEGER,
  history_2013_closed INTEGER,
  history_2013_closed_with_comment INTEGER,
- history_2013_reopened INTEGER,
- ranking_countries_opening_2013 JSON,
- ranking_countries_closing_2013 JSON,
- json_exported BOOLEAN DEFAULT FALSE
+  history_2013_reopened INTEGER,
+  ranking_countries_opening_2013 JSON,
+  ranking_countries_closing_2013 JSON,
+  json_exported BOOLEAN DEFAULT FALSE,
+  avg_days_to_resolution DECIMAL(10,2),
+  median_days_to_resolution DECIMAL(10,2),
+  notes_resolved_count INTEGER,
+  notes_still_open_count INTEGER,
+  resolution_rate DECIMAL(5,2)
 );
 COMMENT ON TABLE dwh.datamartUsers IS
   'Contains all precalculated statistical values for users';
@@ -172,6 +177,16 @@ COMMENT ON COLUMN dwh.datamartUsers.ranking_countries_closing_2013 IS
   'Ranking of countries where closing notes on year 2013';
 COMMENT ON COLUMN dwh.datamartUsers.json_exported IS
   'Flag indicating if user data has been exported to JSON';
+COMMENT ON COLUMN dwh.datamartUsers.avg_days_to_resolution IS
+  'Average days to resolve notes (from open to most recent close) by this user';
+COMMENT ON COLUMN dwh.datamartUsers.median_days_to_resolution IS
+  'Median days to resolve notes (from open to most recent close) by this user';
+COMMENT ON COLUMN dwh.datamartUsers.notes_resolved_count IS
+  'Number of notes that have been closed by this user';
+COMMENT ON COLUMN dwh.datamartUsers.notes_still_open_count IS
+  'Number of notes opened by this user but never closed';
+COMMENT ON COLUMN dwh.datamartUsers.resolution_rate IS
+  'Percentage of notes resolved by this user (closed/total opened)';
 
 CREATE TABLE IF NOT EXISTS dwh.badges (
  badge_id SERIAL,
