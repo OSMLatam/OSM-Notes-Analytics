@@ -126,3 +126,6 @@ mock_data/*.temp
 
 node_modules/
 package-lock.json
+
+# JSON export version tracking
+.json_export_version

@@ -82,6 +82,85 @@ function __validate_json_with_schema() {
  fi
 }
 
+# Calculate datamart schema hash for change detection
+function __calculate_schema_hash() {
+ if ! command -v psql > /dev/null 2>&1; then
+  echo ""
+  return 1
+ fi
+
+ # Get column definitions from datamart tables
+ local SCHEMA_HASH
+ SCHEMA_HASH=$(
+  psql -d "${DBNAME}" -Atq << 'EOF' | sha256sum | cut -d' ' -f1
+SELECT
+  COALESCE(string_agg(column_name || ':' || data_type || ':' || ordinal_position, '|' ORDER BY table_name, ordinal_position), '')
+FROM (
+  SELECT
+    'datamartusers' as table_name,
+    column_name,
+    data_type,
+    ordinal_position
+  FROM information_schema.columns
+  WHERE table_schema = 'dwh' AND table_name = 'datamartusers'
+  UNION ALL
+  SELECT
+    'datamartcountries' as table_name,
+    column_name,
+    data_type,
+    ordinal_position
+  FROM information_schema.columns
+  WHERE table_schema = 'dwh' AND table_name = 'datamartcountries'
+) t
+EOF
+ )
+ echo "${SCHEMA_HASH}"
+}
+
+# Get current version from version tracking file
+function __get_current_version() {
+ local VERSION_FILE="${SCRIPT_BASE_DIRECTORY}/.json_export_version"
+
+ if [[ -f "${VERSION_FILE}" ]]; then
+  cat "${VERSION_FILE}"
+ else
+  echo "1.0.0"
+ fi
+}
+
+# Increment version (MAJOR.MINOR.PATCH)
+function __increment_version() {
+ local CURRENT_VERSION="${1:-1.0.0}"
+ local VERSION_TYPE="${2:-patch}" # major, minor, or patch
+ local MAJOR MINOR PATCH
+
+ IFS='.' read -r MAJOR MINOR PATCH <<< "${CURRENT_VERSION}"
+
+ case "${VERSION_TYPE}" in
+ major)
+  MAJOR=$((MAJOR + 1))
+  MINOR=0
+  PATCH=0
+  ;;
+ minor)
+  MINOR=$((MINOR + 1))
+  PATCH=0
+  ;;
+ patch | *)
+  PATCH=$((PATCH + 1))
+  ;;
+ esac
+
+ echo "${MAJOR}.${MINOR}.${PATCH}"
+}
+
+# Save version to file
+function __save_version() {
+ local VERSION="${1}"
+ local VERSION_FILE="${SCRIPT_BASE_DIRECTORY}/.json_export_version"
+ echo "${VERSION}" > "${VERSION_FILE}"
+}
+
 # Cleanup function for temporary directory
 function __cleanup_temp() {
  if [[ -d "${ATOMIC_TEMP_DIR}" ]]; then
@@ -260,16 +339,30 @@ if ! __validate_json_with_schema \
  VALIDATION_ERROR_COUNT=$((VALIDATION_ERROR_COUNT + 1))
 fi
 
-# Create metadata file
-echo "$(date +%Y-%m-%d\ %H:%M:%S) - Creating metadata..."
+# Create metadata file with versioning
+echo "$(date +%Y-%m-%d\ %H:%M:%S) - Creating metadata with versioning..."
+
+# Get current version and calculate schema hash
+CURRENT_VERSION=$(__get_current_version)
+SCHEMA_VERSION="1.0.0"
+DATA_SCHEMA_HASH=$(__calculate_schema_hash)
+EXPORT_TIMESTAMP=$(date +%s)
+
 cat > "${ATOMIC_TEMP_DIR}/metadata.json" << EOF
 {
   "export_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "export_timestamp": ${EXPORT_TIMESTAMP},
   "total_users": $(find "${ATOMIC_TEMP_DIR}/users" -maxdepth 1 -type f | wc -l),
   "total_countries": $(find "${ATOMIC_TEMP_DIR}/countries" -maxdepth 1 -type f | wc -l),
-  "version": "2025-01-15"
+  "version": "${CURRENT_VERSION}",
+  "schema_version": "${SCHEMA_VERSION}",
+  "api_compat_min": "1.0.0",
+  "data_schema_hash": "${DATA_SCHEMA_HASH}"
 }
 EOF
+
+echo "  Export version: ${CURRENT_VERSION}"
+echo "  Schema hash: ${DATA_SCHEMA_HASH}"
 
 # Validate metadata
 if ! __validate_json_with_schema \
