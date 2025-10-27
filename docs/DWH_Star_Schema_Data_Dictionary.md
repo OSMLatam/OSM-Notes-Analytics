@@ -41,11 +41,6 @@ close, hide).
 | days_to_resolution                   | INTEGER          | Y    |                        |     | Days from first open to most recent close |
 | days_to_resolution_active            | INTEGER          | Y    |                        |     | Total days in open status across reopens |
 | days_to_resolution_from_reopen       | INTEGER          | Y    |                        |     | Days from last reopen to most recent close |
-| hashtag_1                            | INTEGER          | Y    |                        | FK  | Hashtag dimension key (first) |
-| hashtag_2                            | INTEGER          | Y    |                        | FK  | Hashtag dimension key (second) |
-| hashtag_3                            | INTEGER          | Y    |                        | FK  | Hashtag dimension key (third) |
-| hashtag_4                            | INTEGER          | Y    |                        | FK  | Hashtag dimension key (fourth) |
-| hashtag_5                            | INTEGER          | Y    |                        | FK  | Hashtag dimension key (fifth) |
 | hashtag_number                       | INTEGER          | Y    |                        |     | Total number of hashtags detected |
 | comment_length                       | INTEGER          | Y    |                        |     | Length of comment text |
 | has_url                              | BOOLEAN          | Y    | FALSE                  |     | True if comment contains URL |
@@ -71,8 +66,8 @@ Notes:
 
 - FKs: country → `dwh.dimension_countries.dimension_country_id`,
   date/hour/user → corresponding dimensions, application →
-  `dwh.dimension_applications.dimension_application_id`, hashtags →
-  `dwh.dimension_hashtags.dimension_hashtag_id`.
+  `dwh.dimension_applications.dimension_application_id`.
+- Hashtags are stored in bridge table `dwh.fact_hashtags` (see below).
 - `recent_opened_dimension_id_date` is enforced NOT NULL after unify step.
 - Resolution day metrics are maintained by trigger on insert of closing
   actions.

@@ -18,8 +18,9 @@ datamarts for analyzing OSM notes data.
 
 - **Star Schema Data Warehouse**: Comprehensive dimensional model for notes analysis
 - **Enhanced ETL Process**: Robust ETL with recovery, validation, and monitoring
-- **Country Datamart**: Pre-computed analytics by country
-- **User Datamart**: Pre-computed analytics by user
+- **Partitioned Facts Table**: Automatic partitioning by year (2013-2025+)
+- **Country Datamart**: Pre-computed analytics by country (70+ metrics)
+- **User Datamart**: Pre-computed analytics by user (70+ metrics)
 - **Profile Generator**: Generate country and user profiles
 - **Advanced Dimensions**:
   - Timezones for local time analysis
@@ -27,6 +28,15 @@ datamarts for analyzing OSM notes data.
   - Continents for geographical grouping
   - Application versions tracking
   - SCD2 for username changes
+  - Automation level detection
+  - User experience levels
+  - Hashtags (unlimited via bridge table)
+- **Enhanced Metrics** (October 2025):
+  - Resolution metrics: avg/median days to resolution, resolution rate
+  - Application statistics: mobile/desktop apps count, most used app
+  - Content quality: comment length, URL/mention detection, engagement metrics
+  - Community health: active notes, backlog, age distribution, recent activity
+- **Comprehensive Testing**: 168+ automated tests (90%+ function coverage)
 
 ## Prerequisites
 
@@ -126,6 +136,9 @@ cd bin/dwh
 - Creates indexes and constraints
 - Updates datamarts (countries and users)
 - Creates specialized views for hashtag analytics
+- Calculates automation levels for users
+- Updates experience levels for users
+- Creates note activity metrics (comment counts, reopenings)
 
 #### Step 5: Verify DWH Creation
 
@@ -385,8 +398,22 @@ Processes only new data since the last ETL run. Use this for scheduled updates.
 
 ### Datamart Tables
 
-- **`datamart_countries`**: Pre-computed country analytics
-- **`datamart_users`**: Pre-computed user analytics
+- **`datamart_countries`**: Pre-computed country analytics (70+ metrics)
+  - Historical metrics: notes opened/closed by country
+  - Resolution metrics: avg/median days to resolution, resolution rate
+  - Application statistics: mobile/desktop app usage, most used app
+  - Content quality: comment length, URLs, mentions, engagement
+  - Community health: active notes, backlog size, age distribution
+  - Hashtag analysis: top hashtags, usage patterns
+  
+- **`datamart_users`**: Pre-computed user analytics (70+ metrics)
+  - Historical metrics: notes opened/closed by user
+  - Resolution metrics: avg/median days to resolution, resolution rate
+  - Application statistics: mobile/desktop app usage
+  - Content quality: comment length, URLs, mentions, engagement
+  - Community health: active notes, recent activity
+  - Automation level: human/automated detection
+  - Experience level: beginner to legendary contributor
 
 ## Performance Considerations
 
@@ -650,10 +677,75 @@ See [LICENSE](LICENSE) for license information.
 - **Jose Luis Ceron Sarria**: Architecture design and infrastructure
 - **OSM Community**: For the valuable notes data
 
-## Related Projects
+## Project Ecosystem
 
-- **[OSM-Notes-Ingestion](https://github.com/OSMLatam/OSM-Notes-Ingestion)**: Ingestion and WMS
-  system
+This analytics project is part of a larger ecosystem for OSM Notes analysis:
+
+### Repository Structure
+
+```
+OSMLatam/
+├── OSM-Notes-Ingestion/     # Data ingestion from OSM API/Planet
+├── OSM-Notes-Analytics/     # Data Warehouse & ETL (this repository)
+├── OSM-Notes-Viewer/        # Web frontend visualization
+└── osm-common/              # Shared Bash libraries
+```
+
+### How Projects Work Together
+
+```
+┌─────────────────────────────────────┐
+│  OSM-Notes-Ingestion                 │
+│  - Downloads OSM notes                │
+│  - Populates base tables              │
+│  - Publishes WMS layer                │
+└──────────────┬────────────────────────┘
+               │ feeds data
+               ▼
+┌─────────────────────────────────────┐
+│  OSM-Notes-Analytics                │
+│  - ETL process (this repo)           │
+│  - Star schema data warehouse        │
+│  - Datamarts for analytics           │
+│  - Export to JSON                    │
+└──────────────┬────────────────────────┘
+               │ exports JSON data
+               ▼
+┌─────────────────────────────────────┐
+│  OSM-Notes-Viewer                    │
+│  - Web dashboard                     │
+│  - Interactive visualizations        │
+│  - User & country profiles           │
+└──────────────────────────────────────┘
+
+       ┌─────────────────────┐
+       │  osm-common/        │
+       │  - Shared libraries │
+       │  - bash_logger.sh   │
+       │  - validation.sh    │
+       └─────────────────────┘
+         ↑ used by all
+```
+
+### Related Projects
+
+- **[OSM-Notes-Ingestion](https://github.com/OSMLatam/OSM-Notes-Ingestion)**: 
+  - Downloads notes from OSM Planet and API
+  - Populates base tables: `notes`, `note_comments`, `users`, `countries`
+  - Publishes WMS layer for mapping applications
+  - **Deploy this FIRST** - analytics needs base data
+
+- **OSM-Notes-Viewer** (not yet publicly available):
+  - Web frontend for visualizing analytics
+  - Interactive dashboards
+  - User and country profiles
+  - Reads JSON exports from this analytics system
+
+- **osm-common** (shared):
+  - Common Bash libraries
+  - Used by all three repositories
+  - Logging, validation, error handling
+
 - **OpenStreetMap**: [https://www.openstreetmap.org](https://www.openstreetmap.org)
 
 ## Support
@@ -662,6 +754,31 @@ See [LICENSE](LICENSE) for license information.
 - Check the documentation in the `docs/` directory
 - Review logs for error messages
 
+## Recent Enhancements (October 2025)
+
+The following major enhancements have been implemented:
+
+### Datamart Enhancements
+- **21 new metrics** added to both `datamartCountries` and `datamartUsers`
+- **Resolution tracking**: Days to resolution, resolution rates
+- **Application analytics**: Mobile vs desktop usage, most popular apps
+- **Content quality**: Comment analysis, URL/mention detection
+- **Community health**: Active notes, backlog, temporal patterns
+- **88+ new automated tests** added to validate all new metrics
+
+### Enhanced Dimensions
+- **Automation detection**: Identifies bot/automated notes vs human
+- **Experience levels**: Classifies users from newcomer to legendary
+- **Note activity metrics**: Tracks accumulated comments and reopenings
+- **Hashtag bridge table**: Supports unlimited hashtags per note
+
+### Performance
+- **Partitioned facts table**: 10-50x faster date-based queries
+- **Specialized indexes**: Optimized for common query patterns
+- **Automated maintenance**: VACUUM and ANALYZE on partitions
+
+See `docs/DASHBOARD_ANALYSIS.md` for complete details on available metrics.
+
 ## Version
 
-Current Version: 2025-10-14
+Current Version: 2025-10-26
