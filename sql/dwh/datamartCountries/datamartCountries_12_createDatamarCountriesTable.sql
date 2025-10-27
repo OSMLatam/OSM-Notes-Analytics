@@ -72,12 +72,17 @@ CREATE TABLE IF NOT EXISTS dwh.datamartCountries (
  most_used_application_id INTEGER,
  mobile_apps_count INTEGER,
  desktop_apps_count INTEGER,
- vg_comment_length DECIMAL(10,2),
+ avg_comment_length DECIMAL(10,2),
  comments_with_url_count INTEGER,
  comments_with_url_pct DECIMAL(5,2),
  comments_with_mention_count INTEGER,
  comments_with_mention_pct DECIMAL(5,2),
- avg_comments_per_note DECIMAL(10,2)
+ avg_comments_per_note DECIMAL(10,2),
+ active_notes_count INTEGER,
+ notes_backlog_size INTEGER,
+ notes_age_distribution JSON,
+ notes_created_last_30_days INTEGER,
+ notes_resolved_last_30_days INTEGER
 );
 COMMENT ON TABLE dwh.datamartCountries IS
   'Contains all precalculated statistical values for countries';
@@ -220,6 +225,16 @@ COMMENT ON COLUMN dwh.datamartCountries.comments_with_mention_pct IS
   'Percentage of comments containing mentions';
 COMMENT ON COLUMN dwh.datamartCountries.avg_comments_per_note IS
   'Average number of comments per note';
+COMMENT ON COLUMN dwh.datamartCountries.active_notes_count IS
+  'Number of notes currently open in this country';
+COMMENT ON COLUMN dwh.datamartCountries.notes_backlog_size IS
+  'Number of notes opened but not yet resolved';
+COMMENT ON COLUMN dwh.datamartCountries.notes_age_distribution IS
+  'JSON distribution of note ages (0-7 days, 8-30 days, 31-90 days, 90+ days)';
+COMMENT ON COLUMN dwh.datamartCountries.notes_created_last_30_days IS
+  'Number of notes created in the last 30 days';
+COMMENT ON COLUMN dwh.datamartCountries.notes_resolved_last_30_days IS
+  'Number of notes resolved in the last 30 days';
 
 CREATE TABLE IF NOT EXISTS dwh.max_date_countries_processed (
   date date NOT NULL

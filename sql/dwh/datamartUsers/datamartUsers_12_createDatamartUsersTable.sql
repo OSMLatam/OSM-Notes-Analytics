@@ -76,7 +76,12 @@ CREATE TABLE IF NOT EXISTS dwh.datamartUsers (
  comments_with_url_pct DECIMAL(5,2),
  comments_with_mention_count INTEGER,
  comments_with_mention_pct DECIMAL(5,2),
- avg_comments_per_note DECIMAL(10,2)
+ avg_comments_per_note DECIMAL(10,2),
+ active_notes_count INTEGER,
+ notes_backlog_size INTEGER,
+ notes_age_distribution JSON,
+ notes_created_last_30_days INTEGER,
+ notes_resolved_last_30_days INTEGER
 );
 COMMENT ON TABLE dwh.datamartUsers IS
   'Contains all precalculated statistical values for users';
@@ -217,6 +222,16 @@ COMMENT ON COLUMN dwh.datamartUsers.comments_with_mention_pct IS
   'Percentage of comments containing mentions by this user';
 COMMENT ON COLUMN dwh.datamartUsers.avg_comments_per_note IS
   'Average number of comments per note by this user';
+COMMENT ON COLUMN dwh.datamartUsers.active_notes_count IS
+  'Number of notes currently open by this user';
+COMMENT ON COLUMN dwh.datamartUsers.notes_backlog_size IS
+  'Number of notes opened by this user but not yet resolved';
+COMMENT ON COLUMN dwh.datamartUsers.notes_age_distribution IS
+  'JSON distribution of note ages by this user (0-7 days, 8-30 days, 31-90 days, 90+ days)';
+COMMENT ON COLUMN dwh.datamartUsers.notes_created_last_30_days IS
+  'Number of notes created by this user in the last 30 days';
+COMMENT ON COLUMN dwh.datamartUsers.notes_resolved_last_30_days IS
+  'Number of notes resolved by this user in the last 30 days';
 
 CREATE TABLE IF NOT EXISTS dwh.badges (
  badge_id SERIAL,

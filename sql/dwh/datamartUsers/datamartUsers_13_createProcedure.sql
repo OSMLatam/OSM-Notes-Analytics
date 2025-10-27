@@ -490,6 +490,11 @@ AS $proc$
   m_comments_with_mention_count INTEGER;
   m_comments_with_mention_pct DECIMAL(5,2);
   m_avg_comments_per_note DECIMAL(10,2);
+  m_active_notes_count INTEGER;
+  m_notes_backlog_size INTEGER;
+  m_notes_age_distribution JSON;
+  m_notes_created_last_30_days INTEGER;
+  m_notes_resolved_last_30_days INTEGER;
   BEGIN
   --m_start_time := CLOCK_TIMESTAMP();
   SELECT /* Notes-datamartUsers */ COUNT(1)
@@ -1194,6 +1199,76 @@ AS $proc$
   WHERE dimension_id_user = m_dimension_user_id
    AND action_comment = 'commented';
 
+  -- Phase 4: Community Health Metrics
+  -- Active notes count (currently open notes by this user)
+  SELECT /* Notes-datamartUsers */ COUNT(DISTINCT id_note)
+  INTO m_active_notes_count
+  FROM dwh.facts f
+  WHERE f.opened_dimension_id_user = m_dimension_user_id
+    AND f.action_comment = 'opened'
+    AND NOT EXISTS (
+      SELECT 1
+      FROM dwh.facts f2
+      WHERE f2.id_note = f.id_note
+        AND f2.action_comment = 'closed'
+    );
+
+  -- Notes backlog size (same as active notes)
+  m_notes_backlog_size := m_active_notes_count;
+
+  -- Notes age distribution
+  SELECT /* Notes-datamartUsers */ json_agg(
+    json_build_object(
+      'age_range', age_range,
+      'count', COUNT(*)
+    ) ORDER BY age_range
+  )
+  INTO m_notes_age_distribution
+  FROM (
+    SELECT
+      CASE
+        WHEN CURRENT_DATE - dd.date_id <= 7 THEN '0-7 days'
+        WHEN CURRENT_DATE - dd.date_id <= 30 THEN '8-30 days'
+        WHEN CURRENT_DATE - dd.date_id <= 90 THEN '31-90 days'
+        ELSE '90+ days'
+      END as age_range
+    FROM dwh.facts f
+    JOIN dwh.dimension_days dd ON f.opened_dimension_id_date = dd.dimension_day_id
+    WHERE f.opened_dimension_id_user = m_dimension_user_id
+      AND f.action_comment = 'opened'
+      AND NOT EXISTS (
+        SELECT 1
+        FROM dwh.facts f2
+        WHERE f2.id_note = f.id_note
+          AND f2.action_comment = 'closed'
+      )
+  ) subq
+  GROUP BY age_range;
+
+  -- Notes created last 30 days
+  SELECT /* Notes-datamartUsers */ COUNT(DISTINCT id_note)
+  INTO m_notes_created_last_30_days
+  FROM dwh.facts f
+  WHERE f.opened_dimension_id_user = m_dimension_user_id
+    AND f.action_comment = 'opened'
+    AND f.opened_dimension_id_date IN (
+      SELECT dimension_day_id
+      FROM dwh.dimension_days
+      WHERE date_id >= CURRENT_DATE - INTERVAL '30 days'
+    );
+
+  -- Notes resolved last 30 days
+  SELECT /* Notes-datamartUsers */ COUNT(DISTINCT id_note)
+  INTO m_notes_resolved_last_30_days
+  FROM dwh.facts f
+  WHERE f.closed_dimension_id_user = m_dimension_user_id
+    AND f.action_comment = 'closed'
+    AND f.closed_dimension_id_date IN (
+      SELECT dimension_day_id
+      FROM dwh.dimension_days
+      WHERE date_id >= CURRENT_DATE - INTERVAL '30 days'
+    );
+
   -- Updates user with new values.
   UPDATE dwh.datamartUsers
   SET id_contributor_type = m_id_contributor_type,
@@ -1247,7 +1322,12 @@ AS $proc$
    comments_with_url_pct = m_comments_with_url_pct,
    comments_with_mention_count = m_comments_with_mention_count,
    comments_with_mention_pct = m_comments_with_mention_pct,
-   avg_comments_per_note = m_avg_comments_per_note
+   avg_comments_per_note = m_avg_comments_per_note,
+   active_notes_count = m_active_notes_count,
+   notes_backlog_size = m_notes_backlog_size,
+   notes_age_distribution = m_notes_age_distribution,
+   notes_created_last_30_days = m_notes_created_last_30_days,
+   notes_resolved_last_30_days = m_notes_resolved_last_30_days
   WHERE dimension_user_id = m_dimension_user_id;
 
   m_year := 2013;
