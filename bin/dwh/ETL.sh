@@ -20,8 +20,8 @@
 # * shfmt -w -i 1 -sr -bn ETL.sh
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2025-10-22
-VERSION="2025-10-22"
+# Version: 2025-10-27
+VERSION="2025-10-27"
 
 #set -xv
 # Fails when a variable is not initialized.
@@ -157,6 +157,7 @@ declare -r POSTGRES_61_LOAD_NOTES_STAGING="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Stag
 # Datamart script files.
 declare -r DATAMART_COUNTRIES_SCRIPT="${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartCountries/datamartCountries.sh"
 declare -r DATAMART_USERS_SCRIPT="${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartUsers/datamartUsers.sh"
+declare -r DATAMART_GLOBAL_SCRIPT="${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartGlobal/datamartGlobal.sh"
 
 ###########
 # FUNCTIONS
@@ -755,6 +756,7 @@ function main() {
   __perform_database_maintenance
   "${DATAMART_COUNTRIES_SCRIPT}"
   "${DATAMART_USERS_SCRIPT}"
+  "${DATAMART_GLOBAL_SCRIPT}"
  fi
 
  # Handle incremental mode or default mode (with auto-detection)
@@ -779,6 +781,7 @@ function main() {
    __perform_database_maintenance
    "${DATAMART_COUNTRIES_SCRIPT}"
    "${DATAMART_USERS_SCRIPT}"
+   "${DATAMART_GLOBAL_SCRIPT}"
   else
    __logi "AUTO-DETECTED INCREMENTAL EXECUTION - Processing only new data"
    set +E
@@ -793,6 +796,7 @@ function main() {
    __perform_database_maintenance
    "${DATAMART_COUNTRIES_SCRIPT}"
    "${DATAMART_USERS_SCRIPT}"
+   "${DATAMART_GLOBAL_SCRIPT}"
   fi
  fi
 

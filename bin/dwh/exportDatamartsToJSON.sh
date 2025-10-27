@@ -225,11 +225,12 @@ if ! psql -d "${DBNAME}" -Atq -c "SELECT 1 FROM information_schema.schemata WHER
  exit 1
 fi
 
-# Check if datamartUsers table exists
+# Check if datamart tables exist
 if ! psql -d "${DBNAME}" -Atq -c "SELECT 1 FROM information_schema.tables WHERE table_schema = 'dwh' AND table_name = 'datamartusers'" | grep -q 1; then
- __loge "Table 'dwh.datamartUsers' does not exist. Please run the datamart population scripts first:
+ __loge "Datamart tables do not exist. Please run the datamart population scripts first:
 	- bin/dwh/datamartUsers/datamartUsers.sh
-	- bin/dwh/datamartCountries/datamartCountries.sh"
+	- bin/dwh/datamartCountries/datamartCountries.sh
+	- bin/dwh/datamartGlobal/datamartGlobal.sh"
  exit 1
 fi
 
@@ -448,86 +449,49 @@ if ! __validate_json_with_schema \
  VALIDATION_ERROR_COUNT=$((VALIDATION_ERROR_COUNT + 1))
 fi
 
-# Create global statistics file
-echo "$(date +%Y-%m-%d\ %H:%M:%S) - Creating global statistics..."
+# Export global statistics
+echo "$(date +%Y-%m-%d\ %H:%M:%S) - Exporting global datamart..."
+psql -d "${DBNAME}" -Atq -c "
+  SELECT row_to_json(t)
+  FROM dwh.datamartglobal t
+  WHERE dimension_global_id = 1
+" > "${ATOMIC_TEMP_DIR}/global_stats.json"
+
+# Also create a simplified version for quick loading
 psql -d "${DBNAME}" -Atq -c "
   SELECT row_to_json(t)
   FROM (
     SELECT
-      -- Meta information
-      CURRENT_TIMESTAMP as export_date,
-      (SELECT MIN(date_id) FROM dwh.dimension_days) as data_from,
-      CURRENT_DATE as data_to,
-
-      -- Total counts (from facts table)
-      (SELECT COUNT(DISTINCT id_note) FROM dwh.facts WHERE action_comment = 'opened') as notes_opened_total,
-      (SELECT COUNT(DISTINCT id_note) FROM dwh.facts WHERE action_comment = 'closed') as notes_closed_total,
-      (SELECT COUNT(*) FROM dwh.facts WHERE action_comment = 'commented') as notes_commented_total,
-      (SELECT COUNT(*) FROM dwh.facts WHERE action_comment = 'reopened') as notes_reopened_total,
-
-      -- Unique counts
-      (SELECT COUNT(DISTINCT opened_dimension_id_user) FROM dwh.facts WHERE opened_dimension_id_user IS NOT NULL) as unique_users_created,
-      (SELECT COUNT(DISTINCT action_dimension_id_user) FROM dwh.facts) as unique_users_active,
-      (SELECT COUNT(DISTINCT dimension_id_country) FROM dwh.facts) as unique_countries,
-
-      -- Current status (open notes)
-      (SELECT COUNT(DISTINCT id_note) FROM dwh.facts f1
-       WHERE action_comment = 'opened'
-       AND NOT EXISTS (
-         SELECT 1 FROM dwh.facts f2
-         WHERE f2.id_note = f1.id_note
-         AND f2.action_comment = 'closed'
-       )
-      ) as notes_currently_open,
-
-      -- First note (simplified - using fact_id as proxy)
-      (SELECT json_build_object(
-        'note_id', id_note,
-        'date', action_at,
-        'country_id', dimension_id_country
-      ) FROM dwh.facts
-       WHERE fact_id = (SELECT MIN(fact_id) FROM dwh.facts WHERE action_comment = 'opened')
-       ORDER BY fact_id LIMIT 1
-      ) as first_note,
-
-      -- Latest note (simplified)
-      (SELECT json_build_object(
-        'note_id', id_note,
-        'date', action_at,
-        'country_id', dimension_id_country
-      ) FROM dwh.facts
-       WHERE fact_id = (SELECT MAX(fact_id) FROM dwh.facts WHERE action_comment = 'opened')
-       ORDER BY fact_id DESC LIMIT 1
-      ) as latest_note,
-
-      -- Resolution metrics (aggregated from datamarts)
-      (SELECT AVG(avg_days_to_resolution) FROM dwh.datamartusers
-       WHERE avg_days_to_resolution IS NOT NULL) as avg_days_to_resolution_global,
-      (SELECT AVG(resolution_rate) FROM dwh.datamartusers
-       WHERE resolution_rate IS NOT NULL) as avg_resolution_rate_global,
-
-      -- Recent activity (last 30 days from datamarts)
-      (SELECT SUM(history_day_open) FROM dwh.datamartusers) as notes_opened_last_30_days_users,
-      (SELECT SUM(history_day_closed) FROM dwh.datamartusers) as notes_closed_last_30_days_users,
-
-      (SELECT SUM(history_day_open) FROM dwh.datamartcountries) as notes_opened_last_30_days_countries,
-      (SELECT SUM(history_day_closed) FROM dwh.datamartcountries) as notes_closed_last_30_days_countries,
-
-      -- Year activity (current year from datamarts)
-      (SELECT SUM(history_year_open) FROM dwh.datamartusers) as notes_opened_this_year_users,
-      (SELECT SUM(history_year_closed) FROM dwh.datamartusers) as notes_closed_this_year_users,
-
-      (SELECT SUM(history_year_open) FROM dwh.datamartcountries) as notes_opened_this_year_countries,
-      (SELECT SUM(history_year_closed) FROM dwh.datamartcountries) as notes_closed_this_year_countries
+      currently_open_count,
+      currently_closed_count,
+      history_whole_open,
+      history_whole_closed,
+      history_whole_reopened,
+      history_year_open,
+      history_year_closed,
+      history_year_reopened,
+      avg_days_to_resolution,
+      median_days_to_resolution,
+      avg_days_to_resolution_current_year,
+      median_days_to_resolution_current_year,
+      resolution_rate,
+      notes_created_last_30_days,
+      notes_resolved_last_30_days,
+      notes_backlog_size,
+      active_users_count
+    FROM dwh.datamartglobal
+    WHERE dimension_global_id = 1
   ) t
-" > "${ATOMIC_TEMP_DIR}/global_stats.json"
+" > "${ATOMIC_TEMP_DIR}/global_stats_summary.json"
 
 # Validate global stats
-if ! __validate_json_with_schema \
- "${ATOMIC_TEMP_DIR}/global_stats.json" \
- "${SCHEMA_DIR}/global-stats.schema.json" \
- "global stats"; then
- VALIDATION_ERROR_COUNT=$((VALIDATION_ERROR_COUNT + 1))
+if [[ -f "${SCHEMA_DIR}/global-stats.schema.json" ]]; then
+ if ! __validate_json_with_schema \
+  "${ATOMIC_TEMP_DIR}/global_stats.json" \
+  "${SCHEMA_DIR}/global-stats.schema.json" \
+  "global stats"; then
+  VALIDATION_ERROR_COUNT=$((VALIDATION_ERROR_COUNT + 1))
+ fi
 fi
 
 echo "  ✓ Global statistics exported"
@@ -557,4 +521,5 @@ mv "${ATOMIC_TEMP_DIR}"/* "${OUTPUT_DIR}/"
 echo "$(date +%Y-%m-%d\ %H:%M:%S) - JSON export completed successfully"
 echo "  Users: $(find "${OUTPUT_DIR}/users" -maxdepth 1 -type f | wc -l) files"
 echo "  Countries: $(find "${OUTPUT_DIR}/countries" -maxdepth 1 -type f | wc -l) files"
+echo "  Global statistics: global_stats.json, global_stats_summary.json"
 echo "  Output directory: ${OUTPUT_DIR}"
