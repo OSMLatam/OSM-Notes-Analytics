@@ -147,11 +147,8 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
 
    -- Gets the id of the app, if the action is opening.
    IF (rec_note_action.action_comment = 'opened') THEN
-    SELECT /* Notes-staging */ body
-     INTO m_text_comment
-    FROM note_comments_text
-    WHERE note_id = rec_note_action.id_note
-     AND sequence_action = rec_note_action.seq; -- Sequence should be 1.
+    -- Use body from cursor (already loaded via LEFT JOIN in query)
+    m_text_comment := rec_note_action.body;
 --RAISE NOTICE 'Flag 8: %', CLOCK_TIMESTAMP();
      m_application := staging.get_application(m_text_comment);
      -- Try to parse version simple pattern N.N or N.N.N
