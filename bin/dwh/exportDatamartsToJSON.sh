@@ -168,10 +168,18 @@ psql -d "${DBNAME}" -Atq -c "
     SELECT
       user_id,
       username,
+      id_contributor_type,
+      date_starting_creating_notes,
       history_whole_open,
       history_whole_closed,
+      history_whole_commented,
       history_year_open,
-      history_year_closed
+      history_year_closed,
+      history_year_commented,
+      avg_days_to_resolution,
+      resolution_rate,
+      notes_resolved_count,
+      notes_still_open_count
     FROM dwh.datamartusers
     WHERE user_id IS NOT NULL
     ORDER BY history_whole_open DESC NULLS LAST, history_whole_closed DESC NULLS LAST
@@ -227,10 +235,17 @@ psql -d "${DBNAME}" -Atq -c "
       country_name,
       country_name_es,
       country_name_en,
+      date_starting_creating_notes,
       history_whole_open,
       history_whole_closed,
+      history_whole_commented,
       history_year_open,
-      history_year_closed
+      history_year_closed,
+      history_year_commented,
+      avg_days_to_resolution,
+      resolution_rate,
+      notes_resolved_count,
+      notes_still_open_count
     FROM dwh.datamartcountries
     WHERE country_id IS NOT NULL
     ORDER BY history_whole_open DESC NULLS LAST, history_whole_closed DESC NULLS LAST
