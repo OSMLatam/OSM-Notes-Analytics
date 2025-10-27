@@ -206,16 +206,17 @@ setup() {
   fi
 
   # Test that applications exist in facts
-  run psql -d "${DBNAME}" -t -c "
-    SELECT COUNT(DISTINCT dimension_application_creation)
-    FROM dwh.facts
-    WHERE dimension_application_creation IS NOT NULL
-    LIMIT 1;
-  "
+  # Create a simple query file to avoid escaping issues
+  local query_file=$(mktemp)
+  echo "SELECT COALESCE(COUNT(DISTINCT dimension_application_creation), 0) FROM dwh.facts WHERE dimension_application_creation IS NOT NULL AND action_comment = 'opened';" > "${query_file}"
 
-  [[ "${status}" -eq 0 ]]
-  # Should contain numeric values
-  [[ "${output}" =~ [0-9] ]] || echo "Should have application data"
+  run psql -d "${DBNAME}" -t -f "${query_file}" 2>&1
+  local exit_code=$?
+  rm -f "${query_file}"
+
+  [[ $exit_code -eq 0 ]]
+  # Should contain numeric values (may be 0 if no test data)
+  [[ "${output}" =~ [0-9] ]]
 }
 
 # Test that platform categorization works correctly

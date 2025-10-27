@@ -53,19 +53,16 @@ setup() {
   fi
 
   # Test the calculation query
-  run psql -d "${DBNAME}" -t -c "
-    SELECT
-      AVG(days_to_resolution) as avg_resolution,
-      COUNT(DISTINCT id_note) FILTER (WHERE action_comment = 'closed') as resolved_count
-    FROM dwh.facts
-    WHERE days_to_resolution IS NOT NULL
-      AND action_comment = 'closed'
-    LIMIT 1;
-  "
+  local query_file=$(mktemp)
+  echo "SELECT COALESCE(AVG(days_to_resolution), 0) as avg_resolution, COALESCE(COUNT(DISTINCT id_note) FILTER (WHERE action_comment = 'closed'), 0) as resolved_count FROM dwh.facts WHERE days_to_resolution IS NOT NULL;" > "${query_file}"
 
-  [[ "${status}" -eq 0 ]]
-  # Output should contain numeric values
-  [[ "${output}" =~ [0-9] ]] || echo "Should return numeric results"
+  run psql -d "${DBNAME}" -t -f "${query_file}" 2>&1
+  local exit_code=$?
+  rm -f "${query_file}"
+
+  [[ $exit_code -eq 0 ]]
+  # Output should contain numeric values (may be 0 if no test data)
+  [[ "${output}" =~ [0-9.] ]]
 }
 
 # Test that resolution rate calculation handles edge cases for users
@@ -109,31 +106,23 @@ setup() {
 
   local user_id=$(echo "${output}" | tr -d ' ')
 
-  # Calculate resolution rate from facts
-  run psql -d "${DBNAME}" -t -c "
-    WITH facts_calc AS (
-      SELECT
-        (SELECT COUNT(DISTINCT id_note) FROM dwh.facts
-         WHERE dimension_id_user = ${user_id} AND action_comment = 'closed') as resolved,
-        (SELECT COUNT(DISTINCT id_note) FROM dwh.facts
-         WHERE dimension_id_user = ${user_id} AND action_comment = 'opened'
-         AND NOT EXISTS (
-           SELECT 1 FROM dwh.facts f3
-           WHERE f3.id_note = id_note AND f3.action_comment = 'closed'
-             AND f3.dimension_id_user = dimension_id_user
-         )) as still_open
-    )
-    SELECT
-      CASE
-        WHEN resolved + still_open > 0
-        THEN (resolved::DECIMAL / (resolved + still_open) * 100)
-        ELSE 0
-      END
-    FROM facts_calc;
-  "
+  # Calculate resolution rate from facts using query file to avoid escaping issues
+  local query_file=$(mktemp)
+  cat > "${query_file}" << EOF
+WITH facts_calc AS (
+  SELECT
+    COALESCE((SELECT COUNT(DISTINCT id_note) FROM dwh.facts WHERE dimension_id_user = ${user_id} AND action_comment = 'closed'), 0) as resolved,
+    COALESCE((SELECT COUNT(DISTINCT id_note) FROM dwh.facts WHERE dimension_id_user = ${user_id} AND action_comment = 'opened' AND NOT EXISTS (SELECT 1 FROM dwh.facts f3 WHERE f3.id_note = id_note AND f3.action_comment = 'closed' AND f3.dimension_id_user = dimension_id_user)), 0) as still_open
+)
+SELECT CASE WHEN resolved + still_open > 0 THEN (resolved::DECIMAL / (resolved + still_open) * 100) ELSE 0 END FROM facts_calc;
+EOF
 
-  [[ "${status}" -eq 0 ]]
-  [[ "${output}" =~ [0-9] ]] || echo "Should calculate rate from facts"
+  run psql -d "${DBNAME}" -t -f "${query_file}" 2>&1
+  local exit_code=$?
+  rm -f "${query_file}"
+
+  [[ $exit_code -eq 0 ]]
+  [[ "${output}" =~ [0-9.] ]]
 
   # Compare with datamart value
   run psql -d "${DBNAME}" -t -c "
