@@ -274,12 +274,22 @@ Check `tests/properties.sh` settings match your database.
 5. **Mock external dependencies** when possible
 6. **Test error conditions** not just happy paths
 
+## Performance Testing
+
+Performance benchmarks are available in the `tests/performance/` directory:
+
+- **Manual execution**: Run benchmarks when needed to measure trigger impact
+- **Not part of CI**: Performance tests are not automated (long-running)
+- **Usage**: `./tests/performance/run_benchmark.sh`
+
+See [tests/performance/README.md](performance/README.md) for details.
+
 ## Future Enhancements
 
 - [ ] Add pgTAP framework for comprehensive SQL testing
-- [ ] Add performance benchmarking tests
+- [ ] Automate performance benchmarking in CI (monthly runs)
 - [ ] Add data quality tests
-- [ ] Increase test coverage to 80%+
+- [ ] Increase test coverage to 80%+ (currently ~90% on main functions)
 - [ ] Add mutation testing
 - [ ] Add test reports and coverage metrics
 
