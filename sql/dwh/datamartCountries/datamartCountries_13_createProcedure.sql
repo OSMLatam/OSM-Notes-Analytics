@@ -990,8 +990,9 @@ AS $proc$
    FROM dwh.facts f
     JOIN dwh.dimension_applications a
     ON a.dimension_application_id = f.dimension_application_creation
-   WHERE f.opened_dimension_id_country = m_dimension_id_country
+   WHERE f.dimension_id_country = m_dimension_id_country
     AND f.dimension_application_creation IS NOT NULL
+    AND f.action_comment = 'opened'
    GROUP BY f.dimension_application_creation, a.application_name
    ORDER BY app_count DESC
   ) AS app_stats;
@@ -1000,8 +1001,9 @@ AS $proc$
   SELECT /* Notes-datamartCountries */ dimension_application_creation
   INTO m_most_used_application_id
   FROM dwh.facts
-  WHERE opened_dimension_id_country = m_dimension_id_country
+  WHERE dimension_id_country = m_dimension_id_country
    AND dimension_application_creation IS NOT NULL
+   AND action_comment = 'opened'
   GROUP BY dimension_application_creation
   ORDER BY COUNT(*) DESC
   LIMIT 1;
@@ -1012,8 +1014,9 @@ AS $proc$
   FROM dwh.facts f
    JOIN dwh.dimension_applications a
    ON a.dimension_application_id = f.dimension_application_creation
-  WHERE f.opened_dimension_id_country = m_dimension_id_country
+  WHERE f.dimension_id_country = m_dimension_id_country
    AND f.dimension_application_creation IS NOT NULL
+   AND f.action_comment = 'opened'
    AND (a.platform IN ('android', 'ios')
     OR a.platform LIKE 'mobile%'
     OR a.category = 'mobile');
@@ -1024,8 +1027,9 @@ AS $proc$
   FROM dwh.facts f
    JOIN dwh.dimension_applications a
    ON a.dimension_application_id = f.dimension_application_creation
-  WHERE f.opened_dimension_id_country = m_dimension_id_country
+  WHERE f.dimension_id_country = m_dimension_id_country
    AND f.dimension_application_creation IS NOT NULL
+   AND f.action_comment = 'opened'
    AND (a.platform = 'web'
     OR a.platform IN ('desktop', 'windows', 'linux', 'macos'));
 
