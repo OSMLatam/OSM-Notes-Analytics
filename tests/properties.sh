@@ -8,7 +8,22 @@
 
 # Database configuration for tests
 # Detect if running in CI/CD environment
-if [[ -f "/app/bin/dwh/ETL.sh" ]]; then
+
+# First, check if variables are already set (e.g., by GitHub Actions)
+if [[ -n "${TEST_DBNAME:-}" ]] && [[ -n "${TEST_DBUSER:-}" ]]; then
+ # Variables already set by external environment (e.g., GitHub Actions)
+ if [[ "${TEST_DEBUG:-}" == "true" ]]; then
+  echo "DEBUG: Using environment-provided database configuration" >&2
+  echo "DEBUG: TEST_DBNAME=${TEST_DBNAME}" >&2
+  echo "DEBUG: TEST_DBUSER=${TEST_DBUSER}" >&2
+ fi
+ # Ensure all variables are exported
+ export TEST_DBNAME
+ export TEST_DBUSER="${TEST_DBUSER:-postgres}"
+ export TEST_DBPASSWORD="${TEST_DBPASSWORD:-postgres}"
+ export TEST_DBHOST="${TEST_DBHOST:-localhost}"
+ export TEST_DBPORT="${TEST_DBPORT:-5432}"
+elif [[ -f "/app/bin/dwh/ETL.sh" ]]; then
  # Running in Docker container
  if [[ "${TEST_DEBUG:-}" == "true" ]]; then
   echo "DEBUG: Detected Docker environment" >&2
@@ -19,15 +34,15 @@ if [[ -f "/app/bin/dwh/ETL.sh" ]]; then
  export TEST_DBHOST="postgres"
  export TEST_DBPORT="5432"
 elif [[ "${CI:-}" == "true" ]] || [[ "${GITHUB_ACTIONS:-}" == "true" ]]; then
- # Running in GitHub Actions CI
+ # Running in GitHub Actions CI without explicit variables
  if [[ "${TEST_DEBUG:-}" == "true" ]]; then
-  echo "DEBUG: Detected CI environment" >&2
+  echo "DEBUG: Detected CI environment without explicit DB config" >&2
  fi
- export TEST_DBNAME="osm_notes_test"
- export TEST_DBUSER="testuser"
- export TEST_DBPASSWORD="testpass"
- export TEST_DBHOST="postgres"
- export TEST_DBPORT="5432"
+ export TEST_DBNAME="${TEST_DBNAME:-dwh}"
+ export TEST_DBUSER="${TEST_DBUSER:-postgres}"
+ export TEST_DBPASSWORD="${TEST_DBPASSWORD:-postgres}"
+ export TEST_DBHOST="${TEST_DBHOST:-localhost}"
+ export TEST_DBPORT="${TEST_DBPORT:-5432}"
 else
  # Running on host - use local PostgreSQL with peer authentication
  if [[ "${TEST_DEBUG:-}" == "true" ]]; then
@@ -53,13 +68,17 @@ else
  unset DB_PASSWORD 2> /dev/null || true
 fi
 
-# Force override if variables are already set in CI
-if [[ "${CI:-}" == "true" ]] || [[ "${GITHUB_ACTIONS:-}" == "true" ]]; then
- unset TEST_DBUSER TEST_DBPASSWORD 2> /dev/null || true
- TEST_DBUSER="testuser"
- export TEST_DBUSER
- TEST_DBPASSWORD="testpass"
- export TEST_DBPASSWORD
+# Don't override variables that are already set by external environment
+# This allows GitHub Actions to pass the correct values
+if [[ -z "${TEST_DBNAME:-}" ]]; then
+ # Only set defaults if not already provided
+ export TEST_DBNAME="${TEST_DBNAME:-dwh}"
+fi
+if [[ -z "${TEST_DBUSER:-}" ]]; then
+ export TEST_DBUSER="${TEST_DBUSER:-postgres}"
+fi
+if [[ -z "${TEST_DBPASSWORD:-}" ]]; then
+ export TEST_DBPASSWORD="${TEST_DBPASSWORD:-postgres}"
 fi
 
 # Test application configuration

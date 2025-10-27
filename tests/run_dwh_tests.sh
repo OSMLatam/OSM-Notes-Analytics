@@ -65,6 +65,9 @@ fi
 log_info "Starting DWH and ETL tests..."
 echo "Project Root: ${PROJECT_ROOT}"
 echo "Test Database: ${TEST_DBNAME}"
+echo "Test DB Host: ${TEST_DBHOST:-localhost}"
+echo "Test DB Port: ${TEST_DBPORT:-5432}"
+echo "Test DB User: ${TEST_DBUSER:-postgres}"
 echo ""
 
 # Counter for test results
