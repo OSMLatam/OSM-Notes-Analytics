@@ -245,8 +245,17 @@ output/json/
 ├── indexes/
 │   ├── users.json
 │   └── countries.json
-└── metadata.json
+├── metadata.json
+└── global_stats.json
 ```
+
+The `global_stats.json` file contains aggregated statistics for the entire system:
+- Total notes opened/closed/commented
+- Unique users and countries
+- Currently open notes
+- First and latest notes in the system
+- Global resolution metrics
+- Recent activity (last 30 days, this year)
 
 ### Cron Integration
 
