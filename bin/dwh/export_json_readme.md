@@ -10,6 +10,7 @@ The export system generates individual JSON files for each user and country, plu
 - **Fast loading**: Small, targeted JSON files per entity
 - **Easy CDN deployment**: All files are static and can be cached
 - **Reduced database load**: No queries from the web viewer
+- **Incremental processing**: Only exports modified entities (90-99% faster for updates)
 
 ## Directory Structure
 

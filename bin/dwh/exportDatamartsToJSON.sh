@@ -169,6 +169,31 @@ function __cleanup_temp() {
  fi
 }
 
+# Reset json_exported flag for modified entities
+function __reset_exported_flags() {
+ echo "$(date +%Y-%m-%d\ %H:%M:%S) - Resetting export flags for modified entities..."
+
+ # Reset users marked as modified
+ psql -d "${DBNAME}" -Atq -c "
+  UPDATE dwh.datamartusers
+  SET json_exported = FALSE
+  FROM dwh.dimension_users
+  WHERE dwh.datamartusers.dimension_user_id = dwh.dimension_users.dimension_user_id
+    AND dwh.dimension_users.modified = TRUE
+ " > /dev/null 2>&1 || true
+
+ # Reset countries marked as modified
+ psql -d "${DBNAME}" -Atq -c "
+  UPDATE dwh.datamartcountries
+  SET json_exported = FALSE
+  FROM dwh.dimension_countries
+  WHERE dwh.datamartcountries.dimension_country_id = dwh.dimension_countries.dimension_country_id
+    AND dwh.dimension_countries.modified = TRUE
+ " > /dev/null 2>&1 || true
+
+ echo "  Export flags reset for modified entities"
+}
+
 # Schema files location (from OSM-Notes-Common submodule)
 declare SCHEMA_DIR="${SCHEMA_DIR:-${SCRIPT_BASE_DIRECTORY}/lib/osm-common/schemas}"
 readonly SCHEMA_DIR
@@ -208,18 +233,32 @@ if ! psql -d "${DBNAME}" -Atq -c "SELECT 1 FROM information_schema.tables WHERE 
  exit 1
 fi
 
-# Export all users to individual JSON files
-echo "$(date +%Y-%m-%d\ %H:%M:%S) - Exporting users datamart..."
+# Reset export flags for entities marked as modified in dimension tables
+__reset_exported_flags
 
+# Export users - incremental mode
+echo "$(date +%Y-%m-%d\ %H:%M:%S) - Exporting users datamart (incremental)..."
+
+# Copy existing user files to temp directory to preserve unchanged ones
+if [[ -d "${OUTPUT_DIR}/users" ]]; then
+ echo "  Copying existing user files..."
+ cp -p "${OUTPUT_DIR}/users"/*.json "${ATOMIC_TEMP_DIR}/users/" 2> /dev/null || true
+fi
+
+# Export only modified users
+MODIFIED_USER_COUNT=0
 psql -d "${DBNAME}" -Atq << SQL_USERS | while IFS='|' read -r user_id username; do
-SELECT user_id, username
+SELECT
+  user_id,
+  username
 FROM dwh.datamartusers
 WHERE user_id IS NOT NULL
+  AND json_exported = FALSE
 ORDER BY user_id;
 SQL_USERS
 
  if [[ -n "${user_id}" ]]; then
-  # Export each user to a separate JSON file
+  # Export each modified user to a separate JSON file
   # Use SELECT * to dynamically include all columns
   psql -d "${DBNAME}" -Atq -c "
       SELECT row_to_json(t)
@@ -227,9 +266,17 @@ SQL_USERS
       WHERE t.user_id = ${user_id}
 	" > "${ATOMIC_TEMP_DIR}/users/${user_id}.json"
 
-  echo "  Exported user: ${user_id} (${username})"
+  echo "  Exported modified user: ${user_id} (${username})"
+  MODIFIED_USER_COUNT=$((MODIFIED_USER_COUNT + 1))
 
-  # Validate each user file
+  # Mark as exported in database
+  psql -d "${DBNAME}" -Atq -c "
+      UPDATE dwh.datamartusers
+      SET json_exported = TRUE
+      WHERE user_id = ${user_id}
+	" > /dev/null 2>&1 || true
+
+  # Validate only modified user files
   if ! __validate_json_with_schema \
    "${ATOMIC_TEMP_DIR}/users/${user_id}.json" \
    "${SCHEMA_DIR}/user-profile.schema.json" \
@@ -238,6 +285,12 @@ SQL_USERS
   fi
  fi
 done
+
+if [[ ${MODIFIED_USER_COUNT} -gt 0 ]]; then
+ echo "  Total modified users exported: ${MODIFIED_USER_COUNT}"
+else
+ echo "  No modified users to export"
+fi
 
 # Create user index file
 echo "$(date +%Y-%m-%d\ %H:%M:%S) - Creating user index..."
@@ -273,18 +326,27 @@ if ! __validate_json_with_schema \
  VALIDATION_ERROR_COUNT=$((VALIDATION_ERROR_COUNT + 1))
 fi
 
-# Export all countries to individual JSON files
-echo "$(date +%Y-%m-%d\ %H:%M:%S) - Exporting countries datamart..."
+# Export countries - incremental mode
+echo "$(date +%Y-%m-%d\ %H:%M:%S) - Exporting countries datamart (incremental)..."
 
+# Copy existing country files to temp directory to preserve unchanged ones
+if [[ -d "${OUTPUT_DIR}/countries" ]]; then
+ echo "  Copying existing country files..."
+ cp -p "${OUTPUT_DIR}/countries"/*.json "${ATOMIC_TEMP_DIR}/countries/" 2> /dev/null || true
+fi
+
+# Export only modified countries
+MODIFIED_COUNTRY_COUNT=0
 psql -d "${DBNAME}" -Atq << SQL_COUNTRIES | while IFS='|' read -r country_id country_name; do
 SELECT country_id, country_name_en
 FROM dwh.datamartcountries
 WHERE country_id IS NOT NULL
+  AND json_exported = FALSE
 ORDER BY country_id;
 SQL_COUNTRIES
 
  if [[ -n "${country_id}" ]]; then
-  # Export each country to a separate JSON file
+  # Export each modified country to a separate JSON file
   # Use SELECT * to dynamically include all columns
   psql -d "${DBNAME}" -Atq -c "
       SELECT row_to_json(t)
@@ -292,9 +354,17 @@ SQL_COUNTRIES
       WHERE t.country_id = ${country_id}
 	" > "${ATOMIC_TEMP_DIR}/countries/${country_id}.json"
 
-  echo "  Exported country: ${country_id} (${country_name})"
+  echo "  Exported modified country: ${country_id} (${country_name})"
+  MODIFIED_COUNTRY_COUNT=$((MODIFIED_COUNTRY_COUNT + 1))
 
-  # Validate each country file
+  # Mark as exported in database
+  psql -d "${DBNAME}" -Atq -c "
+      UPDATE dwh.datamartcountries
+      SET json_exported = TRUE
+      WHERE country_id = ${country_id}
+	" > /dev/null 2>&1 || true
+
+  # Validate only modified country files
   if ! __validate_json_with_schema \
    "${ATOMIC_TEMP_DIR}/countries/${country_id}.json" \
    "${SCHEMA_DIR}/country-profile.schema.json" \
@@ -303,6 +373,12 @@ SQL_COUNTRIES
   fi
  fi
 done
+
+if [[ ${MODIFIED_COUNTRY_COUNT} -gt 0 ]]; then
+ echo "  Total modified countries exported: ${MODIFIED_COUNTRY_COUNT}"
+else
+ echo "  No modified countries to export"
+fi
 
 # Create country index file
 echo "$(date +%Y-%m-%d\ %H:%M:%S) - Creating country index..."
