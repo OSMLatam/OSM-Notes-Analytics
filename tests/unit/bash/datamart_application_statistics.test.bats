@@ -33,7 +33,7 @@ setup() {
     SELECT column_name
     FROM information_schema.columns
     WHERE table_schema = 'dwh'
-      AND table_name = 'datamartCountries'
+      AND table_name = 'datamartcountries'
       AND column_name IN ('applications_used', 'most_used_application_id',
                           'mobile_apps_count', 'desktop_apps_count');
   "
@@ -54,7 +54,7 @@ setup() {
     SELECT column_name
     FROM information_schema.columns
     WHERE table_schema = 'dwh'
-      AND table_name = 'datamartUsers'
+      AND table_name = 'datamartusers'
       AND column_name IN ('applications_used', 'most_used_application_id',
                           'mobile_apps_count', 'desktop_apps_count');
   "
@@ -66,21 +66,23 @@ setup() {
 
 # Test that applications_used JSON has valid structure
 @test "Applications_used JSON should have valid structure for countries" {
-  if [[ -z "${DBNAME:-}" ]]; then
+  if [[ -z "${TEST_DBNAME:-}" ]] && [[ -z "${DBNAME:-}" ]]; then
     skip "No database configured"
   fi
 
-  # Test JSON structure
-  run psql -d "${DBNAME}" -t -c "
+  local dbname="${TEST_DBNAME:-${DBNAME}}"
+
+  # Test JSON structure (skip if no data)
+  run psql -d "${dbname}" -t -c "
     SELECT json_typeof(applications_used)
-    FROM dwh.datamartCountries
+    FROM dwh.datamartcountries
     WHERE applications_used IS NOT NULL
     LIMIT 1;
   "
 
+  # Status 0 means query executed successfully
+  # If no data, output will be empty, which is acceptable
   [[ "${status}" -eq 0 ]]
-  # Should be array
-  [[ "${output}" == *"array"* ]] || echo "Should be valid JSON array"
 }
 
 # Test that applications_used JSON has valid structure for users
@@ -92,7 +94,7 @@ setup() {
   # Test JSON structure
   run psql -d "${DBNAME}" -t -c "
     SELECT json_typeof(applications_used)
-    FROM dwh.datamartUsers
+    FROM dwh.datamartusers
     WHERE applications_used IS NOT NULL
     LIMIT 1;
   "
@@ -111,7 +113,7 @@ setup() {
   # Check that counts are non-negative
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
-    FROM dwh.datamartCountries
+    FROM dwh.datamartcountries
     WHERE mobile_apps_count IS NOT NULL AND mobile_apps_count < 0
        OR desktop_apps_count IS NOT NULL AND desktop_apps_count < 0;
   "
@@ -130,7 +132,7 @@ setup() {
   # Check that counts are non-negative
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
-    FROM dwh.datamartUsers
+    FROM dwh.datamartusers
     WHERE mobile_apps_count IS NOT NULL AND mobile_apps_count < 0
        OR desktop_apps_count IS NOT NULL AND desktop_apps_count < 0;
   "
@@ -149,7 +151,7 @@ setup() {
   # Check that referenced application exists
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
-    FROM dwh.datamartCountries dc
+    FROM dwh.datamartcountries dc
     LEFT JOIN dwh.dimension_applications da ON da.dimension_application_id = dc.most_used_application_id
     WHERE dc.most_used_application_id IS NOT NULL
       AND da.dimension_application_id IS NULL;
@@ -169,7 +171,7 @@ setup() {
   # Check that referenced application exists
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
-    FROM dwh.datamartUsers du
+    FROM dwh.datamartusers du
     LEFT JOIN dwh.dimension_applications da ON da.dimension_application_id = du.most_used_application_id
     WHERE du.most_used_application_id IS NOT NULL
       AND da.dimension_application_id IS NULL;
@@ -189,7 +191,7 @@ setup() {
   # Check JSON structure for countries
   run psql -d "${DBNAME}" -t -c "
     SELECT jsonb_pretty(applications_used::jsonb)
-    FROM dwh.datamartCountries
+    FROM dwh.datamartcountries
     WHERE applications_used IS NOT NULL
     LIMIT 1;
   "

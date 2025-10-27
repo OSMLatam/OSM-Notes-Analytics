@@ -48,12 +48,14 @@ else
  if [[ "${TEST_DEBUG:-}" == "true" ]]; then
   echo "DEBUG: Detected host environment" >&2
  fi
- # Only set TEST_DBNAME to 'dwh' if not explicitly unset
- # This allows tests to skip when no DB is configured
- # If TEST_DBNAME is not set, don't set it - let it be empty so tests skip
- # This is different from the other branches that set default 'dwh'
- #
- # Note: Do NOT set TEST_DBNAME here to allow tests without DB to skip properly
+ # Set TEST_DBNAME to same as DBNAME from production properties if available
+ # This allows tests to use the same database as the main system
+ # Fall back to 'dwh' if DBNAME not set in production properties
+ if [[ -f "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh" ]]; then
+  # shellcheck disable=SC1090
+  source "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh"
+ fi
+ export TEST_DBNAME="${TEST_DBNAME:-${DBNAME:-dwh}}"
  export TEST_DBUSER="${TEST_DBUSER:-$(whoami)}"
  export TEST_DBPASSWORD="${TEST_DBPASSWORD:-}"
  export TEST_DBHOST="${TEST_DBHOST:-}"

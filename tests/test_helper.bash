@@ -112,11 +112,20 @@ else
  echo "Warning: validationFunctions.sh not found at lib/osm-common/"
 fi
 
-# Set additional environment variables for Docker container
-export PGHOST="${TEST_DBHOST}"
-export PGUSER="${TEST_DBUSER}"
-export PGPASSWORD="${TEST_DBPASSWORD}"
-export PGDATABASE="${TEST_DBNAME}"
+# Set additional environment variables for Docker container only
+# For host environment, don't set these to allow peer authentication
+if [[ -f "/app/bin/dwh/ETL.sh" ]]; then
+ # Running in Docker container - set PostgreSQL variables
+ export PGHOST="${TEST_DBHOST}"
+ export PGUSER="${TEST_DBUSER}"
+ export PGPASSWORD="${TEST_DBPASSWORD}"
+ export PGDATABASE="${TEST_DBNAME}"
+else
+ # Running on host - don't set PGUSER/PGPASSWORD to use peer authentication
+ # Only set PGDATABASE if needed
+ unset PGHOST PGPASSWORD PGUSER 2> /dev/null || true
+ export PGDATABASE="${TEST_DBNAME}"
+fi
 
 # Initialize logging system
 __start_logger
