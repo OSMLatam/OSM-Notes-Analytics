@@ -19,8 +19,8 @@ setup() {
   export TEST_COUNTRY_ID=99999
   export TEST_USER_ID=99999
 
-  # Setup test database if needed
-  if [[ -z "${SKIP_TEST_SETUP:-}" ]]; then
+  # Setup test database if needed and DBNAME is configured
+  if [[ -z "${SKIP_TEST_SETUP:-}" ]] && [[ -n "${DBNAME:-}" ]]; then
     setup_test_database
   fi
 }

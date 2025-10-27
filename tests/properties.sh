@@ -48,7 +48,12 @@ else
  if [[ "${TEST_DEBUG:-}" == "true" ]]; then
   echo "DEBUG: Detected host environment" >&2
  fi
- export TEST_DBNAME="${TEST_DBNAME:-dwh}"
+ # Only set TEST_DBNAME to 'dwh' if not explicitly unset
+ # This allows tests to skip when no DB is configured
+ # If TEST_DBNAME is not set, don't set it - let it be empty so tests skip
+ # This is different from the other branches that set default 'dwh'
+ #
+ # Note: Do NOT set TEST_DBNAME here to allow tests without DB to skip properly
  export TEST_DBUSER="${TEST_DBUSER:-$(whoami)}"
  export TEST_DBPASSWORD="${TEST_DBPASSWORD:-}"
  export TEST_DBHOST="${TEST_DBHOST:-}"
@@ -68,12 +73,9 @@ else
  unset DB_PASSWORD 2> /dev/null || true
 fi
 
-# Don't override variables that are already set by external environment
-# This allows GitHub Actions to pass the correct values
-if [[ -z "${TEST_DBNAME:-}" ]]; then
- # Only set defaults if not already provided
- export TEST_DBNAME="${TEST_DBNAME:-dwh}"
-fi
+# Variables are already set above in the if/elif/else block
+# Only set defaults here if they weren't set (for CI environments)
+# This allows tests to skip when no DB is configured
 if [[ -z "${TEST_DBUSER:-}" ]]; then
  export TEST_DBUSER="${TEST_DBUSER:-postgres}"
 fi

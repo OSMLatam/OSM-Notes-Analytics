@@ -16,8 +16,8 @@ setup() {
   # shellcheck disable=SC1090
   source "${SCRIPT_BASE_DIRECTORY}/tests/properties.sh"
 
-  # Setup test database if needed
-  if [[ -z "${SKIP_TEST_SETUP:-}" ]]; then
+  # Setup test database if needed and DBNAME is configured
+  if [[ -z "${SKIP_TEST_SETUP:-}" ]] && [[ -n "${DBNAME:-}" ]]; then
     setup_test_database
   fi
 }
