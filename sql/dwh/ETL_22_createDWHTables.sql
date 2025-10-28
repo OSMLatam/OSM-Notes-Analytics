@@ -7,6 +7,17 @@ CREATE SCHEMA IF NOT EXISTS dwh;
 COMMENT ON SCHEMA dwh IS
   'Data warehouse objects';
 
+-- Create note_event_enum type if it doesn't exist
+CREATE TYPE IF NOT EXISTS note_event_enum AS ENUM (
+  'opened',
+  'closed',
+  'commented',
+  'reopened',
+  'hidden'
+);
+COMMENT ON TYPE note_event_enum IS
+  'Types of events that can occur on an OSM note';
+
 CREATE TABLE IF NOT EXISTS dwh.facts (
  fact_id BIGSERIAL,
  id_note INTEGER NOT NULL,

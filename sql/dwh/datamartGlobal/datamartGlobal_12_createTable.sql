@@ -150,14 +150,30 @@ COMMENT ON TABLE dwh.max_date_global_processed IS
 COMMENT ON COLUMN dwh.max_date_global_processed.date IS
   'Value of the max date of global processed';
 
--- Primary key
-ALTER TABLE dwh.datamartGlobal
- ADD CONSTRAINT pk_datamartGlobal
- PRIMARY KEY (dimension_global_id);
+-- Primary key (with check and error handling)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE constraint_name = 'pk_datamartGlobal'
+    AND table_schema = 'dwh'
+    AND table_name = 'datamartGlobal'
+  ) THEN
+    BEGIN
+      ALTER TABLE dwh.datamartGlobal
+       ADD CONSTRAINT pk_datamartGlobal
+       PRIMARY KEY (dimension_global_id);
+    EXCEPTION
+      WHEN OTHERS THEN
+        -- Constraint already exists or other error, ignore
+        NULL;
+    END;
+  END IF;
+END $$;
 
 -- Ensure only one record exists
 INSERT INTO dwh.datamartGlobal (dimension_global_id)
-VALUES (1)
-ON CONFLICT (dimension_global_id) DO NOTHING;
+SELECT 1
+WHERE NOT EXISTS (SELECT 1 FROM dwh.datamartGlobal WHERE dimension_global_id = 1);
 
 

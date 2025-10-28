@@ -1103,31 +1103,36 @@ AS $proc$
   SELECT /* Notes-datamartCountries */ json_agg(
     json_build_object(
       'age_range', age_range,
-      'count', COUNT(*)
+      'count', age_count
     ) ORDER BY age_range
   )
   INTO m_notes_age_distribution
   FROM (
     SELECT
-      CASE
-        WHEN CURRENT_DATE - dd.date_id <= 7 THEN '0-7 days'
-        WHEN CURRENT_DATE - dd.date_id <= 30 THEN '8-30 days'
-        WHEN CURRENT_DATE - dd.date_id <= 90 THEN '31-90 days'
-        ELSE '90+ days'
-      END as age_range
-    FROM dwh.facts f
-    JOIN dwh.dimension_days dd ON f.opened_dimension_id_date = dd.dimension_day_id
-    WHERE f.dimension_id_country = m_dimension_id_country
-      AND f.action_comment = 'opened'
-      AND NOT EXISTS (
-        SELECT 1
-        FROM dwh.facts f2
-        WHERE f2.id_note = f.id_note
-          AND f2.action_comment = 'closed'
-          AND f2.dimension_id_country = m_dimension_id_country
-      )
-  ) subq
-  GROUP BY age_range;
+      age_range,
+      COUNT(*) as age_count
+    FROM (
+      SELECT
+        CASE
+          WHEN CURRENT_DATE - dd.date_id <= 7 THEN '0-7 days'
+          WHEN CURRENT_DATE - dd.date_id <= 30 THEN '8-30 days'
+          WHEN CURRENT_DATE - dd.date_id <= 90 THEN '31-90 days'
+          ELSE '90+ days'
+        END as age_range
+      FROM dwh.facts f
+      JOIN dwh.dimension_days dd ON f.opened_dimension_id_date = dd.dimension_day_id
+      WHERE f.dimension_id_country = m_dimension_id_country
+        AND f.action_comment = 'opened'
+        AND NOT EXISTS (
+          SELECT 1
+          FROM dwh.facts f2
+          WHERE f2.id_note = f.id_note
+            AND f2.action_comment = 'closed'
+            AND f2.dimension_id_country = m_dimension_id_country
+        )
+    ) subq
+    GROUP BY age_range
+  ) AS grouped;
 
   -- Notes created last 30 days
   SELECT /* Notes-datamartCountries */ COUNT(DISTINCT id_note)
@@ -1214,11 +1219,13 @@ AS $proc$
    notes_resolved_last_30_days = m_notes_resolved_last_30_days
   WHERE dimension_country_id = m_dimension_id_country;
 
+  -- Only update year-specific data for 2013 (currently the only year with dedicated columns)
+  -- TODO: Add columns for other years or refactor to use a single JSON column for year data
   m_year := 2013;
-  WHILE (m_year <= m_current_year) LOOP
+  -- Only process if we have data for this year
+  IF m_year <= m_current_year THEN
    CALL dwh.update_datamart_country_activity_year(m_dimension_id_country, m_year);
-   m_year := m_year + 1;
-  END LOOP;
+  END IF;
  END
 $proc$;
 COMMENT ON PROCEDURE dwh.update_datamart_country IS

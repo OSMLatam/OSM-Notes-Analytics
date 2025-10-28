@@ -95,6 +95,21 @@ run_test_suite() {
  echo ""
 }
 
+# Setup: Generate mock data and populate DWH
+log_info "Setting up test environment..."
+echo "===================="
+
+# Run mock ETL to populate test database
+if [[ -f "${SCRIPT_DIR}/run_mock_etl.sh" ]]; then
+ log_info "Populating test database with mock data..."
+ bash "${SCRIPT_DIR}/run_mock_etl.sh"
+ log_success "Test database populated"
+else
+ log_warning "Mock ETL script not found, skipping data setup"
+fi
+
+echo ""
+
 # Run unit tests
 log_info "Running unit tests..."
 echo "===================="
