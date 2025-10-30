@@ -29,24 +29,19 @@ setup() {
   exit 1
  fi
 
- # Set up test database - use osm-notes if available
+ # Prefer existing DB configured by runner; avoid creating/dropping DBs
  if [[ -z "${TEST_DBNAME:-}" ]]; then
-  export TEST_DBNAME="test_osm_notes_${BASENAME}"
+  export TEST_DBNAME="${DBNAME:-notes}"
  fi
 }
 
 teardown() {
  # Cleanup
  rm -rf "${TMP_DIR}"
- # Drop test database if it exists
- # NOTE: Don't drop the actual osm-notes database, just clean tables
- if [[ "${TEST_DBNAME:-}" == "osm-notes" ]]; then
-  psql -d osm-notes -c "DROP TABLE IF EXISTS dwh.datamartglobal CASCADE;" 2> /dev/null || true
-  psql -d osm-notes -c "DROP TABLE IF EXISTS dwh.max_date_global_processed CASCADE;" 2> /dev/null || true
- else
-  if [[ -n "${TEST_DBNAME:-}" ]]; then
-   psql -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DBNAME};" 2> /dev/null || true
-  fi
+ # Cleanup only tables in current DB (avoid DROP DATABASE)
+ if [[ -n "${TEST_DBNAME:-}" ]]; then
+  psql -d "${TEST_DBNAME}" -c "DROP TABLE IF EXISTS dwh.datamartglobal CASCADE;" 2> /dev/null || true
+  psql -d "${TEST_DBNAME}" -c "DROP TABLE IF EXISTS dwh.max_date_global_processed CASCADE;" 2> /dev/null || true
  fi
 }
 

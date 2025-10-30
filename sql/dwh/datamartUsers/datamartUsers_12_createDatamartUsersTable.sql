@@ -81,7 +81,9 @@ CREATE TABLE IF NOT EXISTS dwh.datamartUsers (
  notes_backlog_size INTEGER,
  notes_age_distribution JSON,
  notes_created_last_30_days INTEGER,
- notes_resolved_last_30_days INTEGER
+  notes_resolved_last_30_days INTEGER,
+  resolution_by_year JSON,
+  resolution_by_month JSON
 );
 COMMENT ON TABLE dwh.datamartUsers IS
   'Contains all precalculated statistical values for users';
@@ -232,6 +234,10 @@ COMMENT ON COLUMN dwh.datamartUsers.notes_created_last_30_days IS
   'Number of notes created by this user in the last 30 days';
 COMMENT ON COLUMN dwh.datamartUsers.notes_resolved_last_30_days IS
   'Number of notes resolved by this user in the last 30 days';
+COMMENT ON COLUMN dwh.datamartUsers.resolution_by_year IS
+  'JSON array of resolution metrics by year: [{year, avg_days, median_days, resolution_rate}]';
+COMMENT ON COLUMN dwh.datamartUsers.resolution_by_month IS
+  'JSON array of resolution metrics by month: [{year, month, avg_days, median_days, resolution_rate}]';
 
 CREATE TABLE IF NOT EXISTS dwh.badges (
  badge_id SERIAL,

@@ -495,6 +495,8 @@ AS $proc$
   m_notes_age_distribution JSON;
   m_notes_created_last_30_days INTEGER;
   m_notes_resolved_last_30_days INTEGER;
+  m_resolution_by_year JSON;
+  m_resolution_by_month JSON;
   BEGIN
   --m_start_time := CLOCK_TIMESTAMP();
   SELECT /* Notes-datamartUsers */ COUNT(1)
@@ -1274,6 +1276,108 @@ AS $proc$
       WHERE date_id >= CURRENT_DATE - INTERVAL '30 days'
     );
 
+  -- Resolution metrics by year (avg, median, resolution_rate)
+  WITH years AS (
+    SELECT DISTINCT EXTRACT(YEAR FROM d.date_id)::INT AS y
+    FROM dwh.facts f
+    JOIN dwh.dimension_days d ON f.action_dimension_id_date = d.dimension_day_id
+    WHERE f.action_dimension_id_user = m_dimension_user_id
+  ),
+  opened AS (
+    SELECT EXTRACT(YEAR FROM d.date_id)::INT AS y,
+           COUNT(DISTINCT id_note) AS opened_cnt
+    FROM dwh.facts f
+    JOIN dwh.dimension_days d ON f.opened_dimension_id_date = d.dimension_day_id
+    WHERE f.opened_dimension_id_user = m_dimension_user_id
+      AND f.action_comment = 'opened'
+    GROUP BY 1
+  ),
+  closed AS (
+    SELECT EXTRACT(YEAR FROM d.date_id)::INT AS y,
+           COUNT(DISTINCT id_note) AS closed_cnt,
+           AVG(days_to_resolution)::DECIMAL(10,2) AS avg_days,
+           PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY days_to_resolution)::DECIMAL(10,2) AS median_days
+    FROM dwh.facts f
+    JOIN dwh.dimension_days d ON f.closed_dimension_id_date = d.dimension_day_id
+    WHERE f.closed_dimension_id_user = m_dimension_user_id
+      AND f.action_comment = 'closed'
+      AND f.days_to_resolution IS NOT NULL
+    GROUP BY 1
+  )
+  SELECT json_agg(
+           json_build_object(
+             'year', y,
+             'avg_days', COALESCE(c.avg_days, 0),
+             'median_days', COALESCE(c.median_days, 0),
+             'resolution_rate', CASE WHEN COALESCE(o.opened_cnt,0) > 0
+                                     THEN ROUND(COALESCE(c.closed_cnt,0)::DECIMAL / o.opened_cnt * 100, 2)
+                                     ELSE 0 END
+           ) ORDER BY y
+         )
+  INTO m_resolution_by_year
+  FROM (
+    SELECT y FROM years
+    UNION
+    SELECT y FROM opened
+    UNION
+    SELECT y FROM closed
+  ) yx
+  LEFT JOIN opened o USING (y)
+  LEFT JOIN closed c USING (y);
+
+  -- Resolution metrics by month (avg, median, resolution_rate)
+  WITH ym AS (
+    SELECT DISTINCT EXTRACT(YEAR FROM d.date_id)::INT AS y,
+                    EXTRACT(MONTH FROM d.date_id)::INT AS m
+    FROM dwh.facts f
+    JOIN dwh.dimension_days d ON f.action_dimension_id_date = d.dimension_day_id
+    WHERE f.action_dimension_id_user = m_dimension_user_id
+  ),
+  opened_m AS (
+    SELECT EXTRACT(YEAR FROM d.date_id)::INT AS y,
+           EXTRACT(MONTH FROM d.date_id)::INT AS m,
+           COUNT(DISTINCT id_note) AS opened_cnt
+    FROM dwh.facts f
+    JOIN dwh.dimension_days d ON f.opened_dimension_id_date = d.dimension_day_id
+    WHERE f.opened_dimension_id_user = m_dimension_user_id
+      AND f.action_comment = 'opened'
+    GROUP BY 1,2
+  ),
+  closed_m AS (
+    SELECT EXTRACT(YEAR FROM d.date_id)::INT AS y,
+           EXTRACT(MONTH FROM d.date_id)::INT AS m,
+           COUNT(DISTINCT id_note) AS closed_cnt,
+           AVG(days_to_resolution)::DECIMAL(10,2) AS avg_days,
+           PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY days_to_resolution)::DECIMAL(10,2) AS median_days
+    FROM dwh.facts f
+    JOIN dwh.dimension_days d ON f.closed_dimension_id_date = d.dimension_day_id
+    WHERE f.closed_dimension_id_user = m_dimension_user_id
+      AND f.action_comment = 'closed'
+      AND f.days_to_resolution IS NOT NULL
+    GROUP BY 1,2
+  )
+  SELECT json_agg(
+           json_build_object(
+             'year', y,
+             'month', m,
+             'avg_days', COALESCE(c.avg_days, 0),
+             'median_days', COALESCE(c.median_days, 0),
+             'resolution_rate', CASE WHEN COALESCE(o.opened_cnt,0) > 0
+                                     THEN ROUND(COALESCE(c.closed_cnt,0)::DECIMAL / o.opened_cnt * 100, 2)
+                                     ELSE 0 END
+           ) ORDER BY y, m
+         )
+  INTO m_resolution_by_month
+  FROM (
+    SELECT y, m FROM ym
+    UNION
+    SELECT y, m FROM opened_m
+    UNION
+    SELECT y, m FROM closed_m
+  ) ymx
+  LEFT JOIN opened_m o USING (y,m)
+  LEFT JOIN closed_m c USING (y,m);
+
   -- Updates user with new values.
   UPDATE dwh.datamartUsers
   SET id_contributor_type = m_id_contributor_type,
@@ -1333,6 +1437,8 @@ AS $proc$
    notes_age_distribution = m_notes_age_distribution,
    notes_created_last_30_days = m_notes_created_last_30_days,
    notes_resolved_last_30_days = m_notes_resolved_last_30_days
+  , resolution_by_year = m_resolution_by_year
+  , resolution_by_month = m_resolution_by_month
   WHERE dimension_user_id = m_dimension_user_id;
 
   -- Only update year activity if procedure exists and years columns exist

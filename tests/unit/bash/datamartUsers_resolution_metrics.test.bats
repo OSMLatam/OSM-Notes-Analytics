@@ -35,7 +35,7 @@ setup() {
     SELECT column_name
     FROM information_schema.columns
     WHERE table_schema = 'dwh'
-      AND table_name = 'datamartUsers'
+      AND lower(table_name) = 'datamartusers'
       AND column_name IN ('avg_days_to_resolution', 'median_days_to_resolution',
                           'notes_resolved_count', 'notes_still_open_count',
                           'resolution_rate');

@@ -14,6 +14,54 @@ setup_test_database() {
     echo "Loading test data from setup_test_data.sql" >&2
     psql -d "${dbname}" -f "${TEST_BASE_DIR}/tests/sql/setup_test_data.sql" > /dev/null 2>&1 || true
   fi
+
+  # Ensure temporal resolution JSON columns exist for datamarts (idempotent)
+  psql -d "${dbname}" -tAc "SELECT 1 FROM information_schema.tables WHERE table_schema='dwh' AND table_name='datamartcountries'" > /dev/null 2>&1 && \
+    psql -d "${dbname}" -c "ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS resolution_by_year JSON; ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS resolution_by_month JSON;" > /dev/null 2>&1 || true
+  psql -d "${dbname}" -tAc "SELECT 1 FROM information_schema.tables WHERE table_schema='dwh' AND table_name='datamartusers'" > /dev/null 2>&1 && \
+    psql -d "${dbname}" -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS resolution_by_year JSON; ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS resolution_by_month JSON;" > /dev/null 2>&1 || true
+
+  # Create minimal datamart tables if missing (for unit tests that don't run full DDL)
+  psql -d "${dbname}" -c "
+  DO $$
+  BEGIN
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.tables WHERE table_schema='dwh' AND table_name='datamartcountries'
+    ) THEN
+      EXECUTE 'CREATE TABLE dwh.datamartCountries (
+        dimension_country_id INTEGER PRIMARY KEY,
+        applications_used JSON,
+        most_used_application_id INTEGER,
+        mobile_apps_count INTEGER,
+        desktop_apps_count INTEGER,
+        avg_days_to_resolution DECIMAL(10,2),
+        median_days_to_resolution DECIMAL(10,2),
+        notes_resolved_count INTEGER,
+        notes_still_open_count INTEGER,
+        resolution_rate DECIMAL(5,2),
+        resolution_by_year JSON,
+        resolution_by_month JSON
+      )';
+    END IF;
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.tables WHERE table_schema='dwh' AND table_name='datamartusers'
+    ) THEN
+      EXECUTE 'CREATE TABLE dwh.datamartUsers (
+        dimension_user_id INTEGER PRIMARY KEY,
+        applications_used JSON,
+        most_used_application_id INTEGER,
+        mobile_apps_count INTEGER,
+        desktop_apps_count INTEGER,
+        avg_days_to_resolution DECIMAL(10,2),
+        median_days_to_resolution DECIMAL(10,2),
+        notes_resolved_count INTEGER,
+        notes_still_open_count INTEGER,
+        resolution_rate DECIMAL(5,2),
+        resolution_by_year JSON,
+        resolution_by_month JSON
+      )';
+    END IF;
+  END$$;" > /dev/null 2>&1 || true
 }
 
 # Test database configuration
@@ -138,6 +186,53 @@ setup() {
  # Set up test environment
  export TMP_DIR="${TEST_TMP_DIR}"
  export DBNAME="${TEST_DBNAME}"
+
+ # Ensure DWH schema and minimal datamarts/columns exist for tests that don't run full DDL
+ if [[ -n "${DBNAME:-}" ]]; then
+  psql -d "${DBNAME}" -c "CREATE SCHEMA IF NOT EXISTS dwh;" > /dev/null 2>&1 || true
+  psql -d "${DBNAME}" -c "
+  DO $$
+  BEGIN
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.tables WHERE table_schema='dwh' AND table_name='datamartcountries'
+    ) THEN
+      EXECUTE 'CREATE TABLE dwh.datamartCountries (
+        dimension_country_id INTEGER PRIMARY KEY,
+        applications_used JSON,
+        most_used_application_id INTEGER,
+        mobile_apps_count INTEGER,
+        desktop_apps_count INTEGER,
+        avg_days_to_resolution DECIMAL(10,2),
+        median_days_to_resolution DECIMAL(10,2),
+        notes_resolved_count INTEGER,
+        notes_still_open_count INTEGER,
+        resolution_rate DECIMAL(5,2),
+        resolution_by_year JSON,
+        resolution_by_month JSON
+      )';
+    END IF;
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.tables WHERE table_schema='dwh' AND table_name='datamartusers'
+    ) THEN
+      EXECUTE 'CREATE TABLE dwh.datamartUsers (
+        dimension_user_id INTEGER PRIMARY KEY,
+        applications_used JSON,
+        most_used_application_id INTEGER,
+        mobile_apps_count INTEGER,
+        desktop_apps_count INTEGER,
+        avg_days_to_resolution DECIMAL(10,2),
+        median_days_to_resolution DECIMAL(10,2),
+        notes_resolved_count INTEGER,
+        notes_still_open_count INTEGER,
+        resolution_rate DECIMAL(5,2),
+        resolution_by_year JSON,
+        resolution_by_month JSON
+      )';
+    END IF;
+  END$$;" > /dev/null 2>&1 || true
+  psql -d "${DBNAME}" -c "ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS resolution_by_year JSON; ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS resolution_by_month JSON;" > /dev/null 2>&1 || true
+  psql -d "${DBNAME}" -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS resolution_by_year JSON; ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS resolution_by_month JSON;" > /dev/null 2>&1 || true
+ fi
 
  # Mock external commands if needed
  if ! command -v psql &> /dev/null; then

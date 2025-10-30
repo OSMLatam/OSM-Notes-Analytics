@@ -89,15 +89,8 @@ load "../../test_helper.bash"
 
  # Debug: Test simple command first
  echo "Testing simple psql command..."
- # Use local connection for host environment
- if [[ -n "${TEST_DBHOST}" ]]; then
-  # Remote connection
-  # shellcheck disable=SC2154,SC2153
-  run bash -c "unset PGUSER PGPASSWORD; psql -h ${TEST_DBHOST} -p ${TEST_DBPORT} -U ${TEST_DBUSER} -d ${TEST_DBNAME} -c 'SELECT 1;'"
- else
-  # Local connection
+  # For peer auth, always use local socket (no -h/-p/-U)
   run bash -c "unset PGUSER PGPASSWORD; psql -d ${TEST_DBNAME} -c 'SELECT 1;'"
- fi
  echo "Simple command status: ${status}"
  echo "Simple command output: ${output}"
 
@@ -109,55 +102,27 @@ load "../../test_helper.bash"
 
  # Create basic DWH tables
  echo "Testing ETL_22_createDWHTables.sql..."
- if [[ -n "${TEST_DBHOST}" ]]; then
-  # Remote connection
-  # shellcheck disable=SC2154
-  run bash -c "unset PGUSER PGPASSWORD; psql -h ${TEST_DBHOST} -p ${TEST_DBPORT} -U ${TEST_DBUSER} -d ${TEST_DBNAME} -f ${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_22_createDWHTables.sql"
- else
-  # Local connection
   run bash -c "unset PGUSER PGPASSWORD; psql -d ${TEST_DBNAME} -f ${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_22_createDWHTables.sql"
- fi
  echo "ETL_22 status: ${status}"
  echo "ETL_22 output: ${output}"
  [[ "${status}" -eq 0 ]]
 
  # Create base staging objects (including schema)
  echo "Testing Staging_31_createBaseStagingObjects.sql..."
- if [[ -n "${TEST_DBHOST}" ]]; then
-  # Remote connection
-  # shellcheck disable=SC2154
-  run psql -h "${TEST_DBHOST}" -p "${TEST_DBPORT}" -U "${TEST_DBUSER}" -d "${TEST_DBNAME}" -f "${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_31_createBaseStagingObjects.sql"
- else
-  # Local connection
   run psql -d "${TEST_DBNAME}" -f "${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_31_createBaseStagingObjects.sql"
- fi
  echo "Staging_31 status: ${status}"
  echo "Staging_31 output: ${output}"
  [[ "${status}" -eq 0 ]]
 
  # Create staging tables
  echo "Testing Staging_32_createStagingObjects.sql..."
- if [[ -n "${TEST_DBHOST}" ]]; then
-  # Remote connection
-  # shellcheck disable=SC2154
-  run psql -h "${TEST_DBHOST}" -p "${TEST_DBPORT}" -U "${TEST_DBUSER}" -d "${TEST_DBNAME}" -f "${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_32_createStagingObjects.sql"
- else
-  # Local connection
   run psql -d "${TEST_DBNAME}" -f "${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_32_createStagingObjects.sql"
- fi
  echo "Staging_32 status: ${status}"
  echo "Staging_32 output: ${output}"
  [[ "${status}" -eq 0 ]]
 
  # Verify tables exist
- if [[ -n "${TEST_DBHOST}" ]]; then
-  # Remote connection
-  # shellcheck disable=SC2154
-  run psql -h "${TEST_DBHOST}" -p "${TEST_DBPORT}" -U "${TEST_DBUSER}" -d "${TEST_DBNAME}" -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name LIKE '%staging%';"
- else
-  # Local connection
   run psql -d "${TEST_DBNAME}" -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name LIKE '%staging%';"
- fi
  [[ "${status}" -eq 0 ]]
  [[ "${output}" =~ ^[0-9]+$ ]] || echo "Expected numeric count, got: ${output}"
 }
