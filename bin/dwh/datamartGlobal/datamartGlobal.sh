@@ -131,6 +131,7 @@ function __checkPrereqs {
 
  # Validate each SQL file
  for SQL_FILE in "${SQL_FILES[@]}"; do
+  # shellcheck disable=SC2310
   if ! __validate_sql_structure "${SQL_FILE}"; then
    __loge "ERROR: SQL file validation failed: ${SQL_FILE}"
    exit "${ERROR_MISSING_LIBRARY}"
@@ -172,6 +173,7 @@ function __processGlobalStats {
 # Function that activates the error trap.
 function __trapOn() {
  __log_start
+ # shellcheck disable=SC2154  # variables inside trap are defined dynamically by Bash
  trap '{
   local ERROR_LINE="${LINENO}"
   local ERROR_COMMAND="${BASH_COMMAND}"
@@ -199,6 +201,7 @@ function __trapOn() {
    exit ${ERROR_EXIT_CODE};
   fi;
  }' ERR
+ # shellcheck disable=SC2154  # variables inside trap are defined dynamically by Bash
  trap '{
   # Get the main script name (the one that was executed, not the library)
   local MAIN_SCRIPT_NAME

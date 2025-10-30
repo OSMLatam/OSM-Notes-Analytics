@@ -291,6 +291,7 @@ function __checkPrereqs {
 
  # Validate each SQL file
  for SQL_FILE in "${SQL_FILES[@]}"; do
+  # shellcheck disable=SC2310  # invocation in condition is intentional; failures handled explicitly
   if ! __validate_sql_structure "${SQL_FILE}"; then
    __loge "ERROR: SQL file validation failed: ${SQL_FILE}"
    exit "${ERROR_MISSING_LIBRARY}"
@@ -487,9 +488,9 @@ function __initialFactsParallel {
  local pids=()
 
  # Create procedures for each year
- while [[ $year -le $current_year ]]; do
-  __logi "Creating procedure for year $year..."
-  YEAR=$year envsubst < "${POSTGRES_34_INITIAL_FACTS_LOAD_PARALLEL}" \
+ while [[ ${year} -le ${current_year} ]]; do
+  __logi "Creating procedure for year ${year}..."
+  YEAR=${year} envsubst < "${POSTGRES_34_INITIAL_FACTS_LOAD_PARALLEL}" \
    | psql -d "${DBNAME}" -v ON_ERROR_STOP=1 2>&1
 
   year=$((year + 1))
@@ -499,11 +500,11 @@ function __initialFactsParallel {
  year="${start_year}"
  __logi "Executing parallel load for years ${start_year}-${current_year} (max ${adjusted_threads} concurrent)..."
 
- while [[ $year -le $current_year ]]; do
+ while [[ ${year} -le ${current_year} ]]; do
   (
-   __logi "Starting year $year load (PID: $$)..."
+   __logi "Starting year ${year} load (PID: $$)..."
    psql -d "${DBNAME}" -c "CALL staging.process_initial_load_by_year_${year}();" 2>&1
-   __logi "Finished year $year load (PID: $$)."
+   __logi "Finished year ${year} load (PID: $$)."
   ) &
   pids+=($!)
   year=$((year + 1))
@@ -518,7 +519,7 @@ function __initialFactsParallel {
  # Wait for all remaining processes
  __logi "Waiting for all year loads to complete..."
  for pid in "${pids[@]}"; do
-  wait "$pid"
+  wait "${pid}"
  done
  __logi "Phase 1: All parallel loads completed."
 
@@ -691,6 +692,7 @@ function __perform_database_maintenance {
 # Function that activates the error trap.
 function __trapOn() {
  __log_start
+ # shellcheck disable=SC2154  # variables inside trap are defined dynamically by Bash
  trap '{
   local ERROR_LINE="${LINENO}"
   local ERROR_COMMAND="${BASH_COMMAND}"
@@ -705,6 +707,7 @@ function __trapOn() {
    exit "${ERROR_EXIT_CODE}";
   fi;
  }' ERR
+ # shellcheck disable=SC2154  # variables inside trap are defined dynamically by Bash
  trap '{
   local MAIN_SCRIPT_NAME
   MAIN_SCRIPT_NAME=$(basename "${0}" .sh)
@@ -747,6 +750,7 @@ function main() {
  if [[ "${PROCESS_TYPE}" == "--create" ]]; then
   __logi "CREATE MODE - Creating initial data warehouse (explicit)"
   set +E
+  # shellcheck disable=SC2310
   if ! __checkBaseTables; then
    __logi "Tables missing, creating them"
   fi
@@ -770,6 +774,7 @@ function main() {
   if [[ "${is_first_execution}" == "true" ]]; then
    __logi "AUTO-DETECTED FIRST EXECUTION - Performing initial load"
    set +E
+   # shellcheck disable=SC2310
    if ! __checkBaseTables; then
     __logi "Tables missing, creating them"
     __createBaseTables
@@ -785,6 +790,7 @@ function main() {
   else
    __logi "AUTO-DETECTED INCREMENTAL EXECUTION - Processing only new data"
    set +E
+   # shellcheck disable=SC2310
    if ! __checkBaseTables; then
     __logi "Tables missing, creating them"
     __createBaseTables
