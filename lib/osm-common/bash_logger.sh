@@ -167,7 +167,7 @@ __output_log() {
  local to_stderr="${2:-false}"
 
  if [[ -n "$__log_fd" ]]; then
-  echo "$message" >&${__log_fd}
+  echo "$message" >&"${__log_fd}"
  else
   if [[ "$to_stderr" == "true" ]]; then
    echo "$message" >&2
@@ -193,7 +193,7 @@ __generate_call_stack() {
  if [[ -z "${__log_fd}" ]]; then
   echo "${LOG}"
  else
-  echo "${LOG}" >&${__log_fd}
+  echo "${LOG}" >&"${__log_fd}"
  fi
 
  for ((i = 0; i < __bl_functions_length; i++)); do
@@ -203,7 +203,7 @@ __generate_call_stack() {
     if [[ -z "${__log_fd}" ]]; then
      echo "${LOG}"
     else
-     echo "${LOG}" >&${__log_fd}
+     echo "${LOG}" >&"${__log_fd}"
     fi
    fi
   else
@@ -211,7 +211,7 @@ __generate_call_stack() {
    if [[ -z "${__log_fd}" ]]; then
     echo "${LOG}"
    else
-    echo "${LOG}" >&${__log_fd}
+    echo "${LOG}" >&"${__log_fd}"
    fi
   fi
  done
@@ -233,7 +233,7 @@ __generate_call_stack_error() {
  if [[ -z "${__log_fd}" ]]; then
   echo "${LOG}" >&2
  else
-  echo "${LOG}" >&${__log_fd}
+  echo "${LOG}" >&"${__log_fd}"
  fi
 
  for ((i = 0; i < __bl_functions_length; i++)); do
@@ -243,7 +243,7 @@ __generate_call_stack_error() {
     if [[ -z "${__log_fd}" ]]; then
      echo "${LOG}" >&2
     else
-     echo "${LOG}" >&${__log_fd}
+     echo "${LOG}" >&"${__log_fd}"
     fi
    fi
   else
@@ -251,7 +251,7 @@ __generate_call_stack_error() {
    if [[ -z "${__log_fd}" ]]; then
     echo "${LOG}" >&2
    else
-    echo "${LOG}" >&${__log_fd}
+    echo "${LOG}" >&"${__log_fd}"
    fi
   fi
  done
@@ -273,7 +273,7 @@ __generate_call_stack_fatal() {
  if [[ -z "${__log_fd}" ]]; then
   echo "${LOG}" >&2
  else
-  echo "${LOG}" >&${__log_fd}
+  echo "${LOG}" >&"${__log_fd}"
  fi
 
  for ((i = 0; i < __bl_functions_length; i++)); do
@@ -283,7 +283,7 @@ __generate_call_stack_fatal() {
     if [[ -z "${__log_fd}" ]]; then
      echo "${LOG}" >&2
     else
-     echo "${LOG}" >&${__log_fd}
+     echo "${LOG}" >&"${__log_fd}"
     fi
    fi
   else
@@ -291,7 +291,7 @@ __generate_call_stack_fatal() {
    if [[ -z "${__log_fd}" ]]; then
     echo "${LOG}" >&2
    else
-    echo "${LOG}" >&${__log_fd}
+    echo "${LOG}" >&"${__log_fd}"
    fi
   fi
  done
@@ -309,9 +309,9 @@ __logt() {
  local formatted_message
 
  caller_info=$(__get_caller_info)
- formatted_message=$(__format_log_message "TRACE" "$*" "$caller_info")
+ formatted_message=$(__format_log_message "TRACE" "$*" "${caller_info}")
 
- __output_log "$formatted_message"
+ __output_log "${formatted_message}"
 
  # Show call stack for TRACE
  if [[ "${#FUNCNAME[@]}" -gt 1 ]]; then
@@ -329,9 +329,9 @@ __logd() {
  local formatted_message
 
  caller_info=$(__get_caller_info)
- formatted_message=$(__format_log_message "DEBUG" "$*" "$caller_info")
+ formatted_message=$(__format_log_message "DEBUG" "$*" "${caller_info}")
 
- __output_log "$formatted_message"
+ __output_log "${formatted_message}"
 }
 
 # INFO: General information
@@ -344,9 +344,9 @@ __logi() {
  local formatted_message
 
  caller_info=$(__get_caller_info)
- formatted_message=$(__format_log_message "INFO" "$*" "$caller_info")
+ formatted_message=$(__format_log_message "INFO" "$*" "${caller_info}")
 
- __output_log "$formatted_message"
+ __output_log "${formatted_message}"
 }
 
 # WARN: Warning messages
@@ -359,9 +359,9 @@ __logw() {
  local formatted_message
 
  caller_info=$(__get_caller_info)
- formatted_message=$(__format_log_message "WARN" "$*" "$caller_info")
+ formatted_message=$(__format_log_message "WARN" "$*" "${caller_info}")
 
- __output_log "$formatted_message" "true"
+ __output_log "${formatted_message}" "true"
 }
 
 # ERROR: Error messages with call stack
@@ -373,9 +373,9 @@ __loge() {
   local formatted_message
 
   caller_info=$(__get_caller_info)
-  formatted_message=$(__format_log_message "ERROR" "$*" "$caller_info")
+  formatted_message=$(__format_log_message "ERROR" "$*" "${caller_info}")
 
-  __output_log "$formatted_message" "true"
+  __output_log "${formatted_message}" "true"
 
   # Show call stack for ERROR
   if [[ "${#FUNCNAME[@]}" -gt 1 ]]; then
@@ -393,9 +393,9 @@ __logf() {
   local formatted_message
 
   caller_info=$(__get_caller_info)
-  formatted_message=$(__format_log_message "FATAL" "$*" "$caller_info")
+  formatted_message=$(__format_log_message "FATAL" "$*" "${caller_info}")
 
-  __output_log "$formatted_message" "true"
+  __output_log "${formatted_message}" "true"
 
   # Show call stack for FATAL
   if [[ "${#FUNCNAME[@]}" -gt 1 ]]; then
@@ -420,9 +420,9 @@ __log_start() {
  local caller_info
  caller_info=$(__get_caller_info)
  local formatted_message
- formatted_message=$(__format_log_message "INFO" "$message" "$caller_info")
+ formatted_message=$(__format_log_message "INFO" "${message}" "${caller_info}")
 
- __output_log "$formatted_message"
+ __output_log "${formatted_message}"
  # Add empty line after start message as expected by tests
  __output_log ""
 }
@@ -452,13 +452,13 @@ __log_finish() {
  local caller_info
  caller_info=$(__get_caller_info)
  local formatted_message
- formatted_message=$(__format_log_message "INFO" "$message" "$caller_info")
+ formatted_message=$(__format_log_message "INFO" "${message}" "${caller_info}")
 
- __output_log "$formatted_message"
+ __output_log "${formatted_message}"
 
  # Add timing information in the format expected by tests
  local timing_message="|-- Took: ${hours}h:${minutes}m:${seconds}s"
- __output_log "$timing_message"
+ __output_log "${timing_message}"
 
  # Add empty line after finish message as expected by tests
  __output_log ""
@@ -481,7 +481,7 @@ __log() {
  if [[ -z "${__log_fd}" ]]; then
   echo "${LOG}"
  else
-  echo "${LOG}" >&${__log_fd}
+  echo "${LOG}" >&"${__log_fd}"
  fi
 }
 
@@ -524,10 +524,10 @@ export -f __log
 
 # Set initial log level if LOG_LEVEL environment variable is set
 if [[ -n "${LOG_LEVEL:-}" ]]; then
- __set_log_level "$LOG_LEVEL"
+ __set_log_level "${LOG_LEVEL}"
 fi
 
 # Set initial log file if LOG_FILE environment variable is set
 if [[ -n "${LOG_FILE:-}" ]]; then
- __set_log_file "$LOG_FILE"
+ __set_log_file "${LOG_FILE}"
 fi

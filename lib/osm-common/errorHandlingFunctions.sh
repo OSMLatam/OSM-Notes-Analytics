@@ -162,6 +162,7 @@ function __database_operation_with_retry() {
   return 1
  fi
 
+ # shellcheck disable=SC2154  # DB_* vars are expected from the environment
  local COMMAND="PGPASSWORD='${DB_PASSWORD}' psql -h '${DB_HOST}' -p '${DB_PORT}' -U '${DB_USER}' -d '${DBNAME}' -f '${SQL_FILE}'"
  __circuit_breaker_execute "database_operation_${SQL_FILE}" "${COMMAND}" 3 "${TIMEOUT}" 300
  __log_finish
@@ -259,6 +260,7 @@ function __handle_error_with_cleanup() {
  fi
 
  # Generate failed execution file if enabled
+ # shellcheck disable=SC2154  # GENERATE_FAILED_FILE and FAILED_EXECUTION_FILE are set by caller/common lib
  if [[ "${GENERATE_FAILED_FILE}" == "true" ]]; then
   echo "$(date): ${ERROR_MESSAGE}" >> "${FAILED_EXECUTION_FILE}"
  fi

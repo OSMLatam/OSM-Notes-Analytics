@@ -214,7 +214,8 @@ function __checkBaseTables {
   exit "${ERROR_MISSING_LIBRARY}"
  fi
 
- if ! psql -d "${DBNAME}" -f "${POSTGRES_11_CHECK_BASE_TABLES}" 2> /dev/null; then
+# shellcheck disable=SC2154  # DBNAME is provided by the calling environment/script
+if ! psql -d "${DBNAME}" -f "${POSTGRES_11_CHECK_BASE_TABLES}" 2> /dev/null; then
   __logw "Base tables are missing. They will be created."
   __log_finish
   return 1
