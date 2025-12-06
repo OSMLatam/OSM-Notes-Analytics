@@ -19,8 +19,8 @@ ALTER TABLE staging.facts_temp ALTER fact_id
 ALTER TABLE staging.facts_temp ALTER processing_time
   SET DEFAULT CURRENT_TIMESTAMP;
 
--- Add primary key
-ALTER TABLE staging.facts_temp ADD PRIMARY KEY (fact_id);
+-- PRIMARY KEY is already copied from dwh.facts, so no need to add it again
+-- REMOVED: ALTER TABLE staging.facts_temp ADD PRIMARY KEY (fact_id);
 
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS facts_action_at_idx_temp ON staging.facts_temp (action_at);

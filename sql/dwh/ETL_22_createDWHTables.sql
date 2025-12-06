@@ -8,13 +8,21 @@ COMMENT ON SCHEMA dwh IS
   'Data warehouse objects';
 
 -- Create note_event_enum type if it doesn't exist
-CREATE TYPE IF NOT EXISTS note_event_enum AS ENUM (
-  'opened',
-  'closed',
-  'commented',
-  'reopened',
-  'hidden'
-);
+-- FIXED: Changed from CREATE TYPE IF NOT EXISTS (not supported in older PostgreSQL)
+--        to DO block that checks for existence first
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'note_event_enum') THEN
+    CREATE TYPE note_event_enum AS ENUM (
+      'opened',
+      'closed',
+      'commented',
+      'reopened',
+      'hidden'
+    );
+  END IF;
+END
+$$;
 COMMENT ON TYPE note_event_enum IS
   'Types of events that can occur on an OSM note';
 
