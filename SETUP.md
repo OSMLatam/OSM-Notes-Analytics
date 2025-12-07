@@ -9,7 +9,19 @@ git clone https://github.com/OSMLatam/OSM-Notes-Analytics.git
 cd OSM-Notes-Analytics
 ```
 
-### 2. Create local configuration files
+### 2. Initialize Git submodules
+
+This project uses a Git submodule for shared libraries. You must initialize it:
+
+```bash
+# Initialize and update submodules
+git submodule update --init --recursive
+
+# Or if you cloned with submodules already:
+# git clone --recurse-submodules https://github.com/OSMLatam/OSM-Notes-Analytics.git
+```
+
+### 3. Create local configuration files
 
 ```bash
 # Run the automated setup script
@@ -20,7 +32,7 @@ cd OSM-Notes-Analytics
 # - etc/etl.properties.local
 ```
 
-### 3. Configure your environment
+### 4. Configure your environment
 
 ```bash
 # Edit database configuration
@@ -39,7 +51,7 @@ nano etc/etl.properties.local
 ETL_TEST_MODE=true  # Process only 2013-2014
 ```
 
-### 4. Run the ETL
+### 5. Run the ETL
 
 ```bash
 # First time setup (creates data warehouse)
@@ -54,8 +66,11 @@ ETL_TEST_MODE=true ./bin/dwh/ETL.sh --create
 ### After git pull or git clone updates
 
 ```bash
-# Just pull the latest changes
+# Pull the latest changes
 git pull
+
+# Update submodules if they changed
+git submodule update --init --recursive
 
 # Your local configuration files (.local) are preserved automatically
 # The scripts will load them automatically
@@ -138,6 +153,14 @@ ETL_BATCH_SIZE=500
 Each server maintains its own `*.local` files independently.
 
 ## Troubleshooting
+
+### "Required file not found: lib/osm-common/commonFunctions.sh"
+
+This error means the Git submodule is not initialized. Run:
+
+```bash
+git submodule update --init --recursive
+```
 
 ### Configuration not taking effect?
 
