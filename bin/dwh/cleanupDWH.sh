@@ -46,8 +46,22 @@ SCRIPT_BASE_DIRECTORY="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." \
  &> /dev/null && pwd)"
 readonly SCRIPT_BASE_DIRECTORY
 
+# Validate that we're in the correct project directory
+if [[ ! -d "${SCRIPT_BASE_DIRECTORY}/lib/osm-common" ]]; then
+ echo "ERROR: Cannot find project directory structure." >&2
+ echo "Expected directory: ${SCRIPT_BASE_DIRECTORY}/lib/osm-common" >&2
+ echo "Current script location: ${BASH_SOURCE[0]}" >&2
+ echo "Please ensure you're running this script from the correct project directory." >&2
+ exit 1
+fi
+
 # Loads the global properties.
 # shellcheck disable=SC1091
+if [[ ! -f "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh" ]]; then
+ echo "ERROR: Required file not found: ${SCRIPT_BASE_DIRECTORY}/etc/properties.sh" >&2
+ echo "Please ensure you're running this script from the correct project directory." >&2
+ exit 1
+fi
 source "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh"
 # Load local properties if they exist (overrides global settings)
 if [[ -f "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh.local" ]]; then
@@ -70,14 +84,29 @@ declare CLEANUP_MODE="${1:-all}"
 
 # Load common functions
 # shellcheck disable=SC1091
+if [[ ! -f "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/commonFunctions.sh" ]]; then
+ echo "ERROR: Required file not found: ${SCRIPT_BASE_DIRECTORY}/lib/osm-common/commonFunctions.sh" >&2
+ echo "Please ensure you're running this script from the correct project directory." >&2
+ exit 1
+fi
 source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/commonFunctions.sh"
 
 # Load validation functions
 # shellcheck disable=SC1091
+if [[ ! -f "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/validationFunctions.sh" ]]; then
+ echo "ERROR: Required file not found: ${SCRIPT_BASE_DIRECTORY}/lib/osm-common/validationFunctions.sh" >&2
+ echo "Please ensure you're running this script from the correct project directory." >&2
+ exit 1
+fi
 source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/validationFunctions.sh"
 
 # Load error handling functions
 # shellcheck disable=SC1091
+if [[ ! -f "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/errorHandlingFunctions.sh" ]]; then
+ echo "ERROR: Required file not found: ${SCRIPT_BASE_DIRECTORY}/lib/osm-common/errorHandlingFunctions.sh" >&2
+ echo "Please ensure you're running this script from the correct project directory." >&2
+ exit 1
+fi
 source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/errorHandlingFunctions.sh"
 
 # Initialize logger
