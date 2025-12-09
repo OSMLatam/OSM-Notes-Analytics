@@ -25,35 +25,35 @@ DROP FUNCTION IF EXISTS dwh.get_season_id;
 
 DROP TABLE IF EXISTS dwh.properties;
 
-DROP TABLE IF EXISTS dwh.facts;
+DROP TABLE IF EXISTS dwh.facts CASCADE;
 
-DROP TABLE IF EXISTS dwh.fact_hashtags;
+DROP TABLE IF EXISTS dwh.fact_hashtags CASCADE;
 
 DROP TABLE IF EXISTS dwh.dimension_hours_of_week;
 
-DROP TABLE IF EXISTS dwh.dimension_time_of_week;
+DROP TABLE IF EXISTS dwh.dimension_time_of_week CASCADE;
 
-DROP TABLE IF EXISTS dwh.dimension_days;
+DROP TABLE IF EXISTS dwh.dimension_days CASCADE;
 
-DROP TABLE IF EXISTS dwh.dimension_countries;
+DROP TABLE IF EXISTS dwh.dimension_countries CASCADE;
 
-DROP TABLE IF EXISTS dwh.dimension_regions;
+DROP TABLE IF EXISTS dwh.dimension_regions CASCADE;
 
-DROP TABLE IF EXISTS dwh.dimension_continents;
+DROP TABLE IF EXISTS dwh.dimension_continents CASCADE;
 
-DROP TABLE IF EXISTS dwh.dimension_users;
+DROP TABLE IF EXISTS dwh.dimension_users CASCADE;
 
-DROP TABLE IF EXISTS dwh.dimension_applications;
+DROP TABLE IF EXISTS dwh.dimension_applications CASCADE;
 
-DROP TABLE IF EXISTS dwh.dimension_application_versions;
+DROP TABLE IF EXISTS dwh.dimension_application_versions CASCADE;
 
-DROP TABLE IF EXISTS dwh.dimension_hashtags;
+DROP TABLE IF EXISTS dwh.dimension_hashtags CASCADE;
 
-DROP TABLE IF EXISTS dwh.dimension_timezones;
+DROP TABLE IF EXISTS dwh.dimension_timezones CASCADE;
 
-DROP TABLE IF EXISTS dwh.dimension_seasons;
+DROP TABLE IF EXISTS dwh.dimension_seasons CASCADE;
 
 DROP TABLE IF EXISTS dwh.iso_country_codes;
 
-DROP SCHEMA IF EXISTS dwh;
+DROP SCHEMA IF EXISTS dwh CASCADE;
 
