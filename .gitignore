@@ -35,6 +35,10 @@ coverage/
 *.test.log
 
 # Configuration files with sensitive data (keep templates)
+# Real configuration files (ignored - use .example files as templates)
+etc/properties.sh
+etc/etl.properties
+# Local override files (also ignored)
 etc/properties.sh.local
 etc/properties.sh_local
 etc/etl.properties.local

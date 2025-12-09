@@ -11,39 +11,45 @@ datamart scripts.
 
 ## Configuration Files
 
-### Local Configuration (Recommended)
+### Main Configuration Files
 
-**For personal or environment-specific settings, use local configuration files:**
+**Configuration files are created from templates and contain your credentials:**
 
 ```bash
 # Option 1: Use the setup script (recommended)
 ./scripts/setup-local-config.sh
 
 # Option 2: Manual setup
-cp etc/properties.sh.example etc/properties.sh.local
-cp etc/etl.properties.example etc/etl.properties.local
+cp etc/properties.sh.example etc/properties.sh
+cp etc/etl.properties.example etc/etl.properties
 
-# Edit with your specific settings
-nano etc/properties.sh.local
-nano etc/etl.properties.local
+# Edit with your specific settings and credentials
+nano etc/properties.sh
+nano etc/etl.properties
 ```
 
-**Local files are automatically ignored by Git** (see `.gitignore`):
+**Configuration files are automatically ignored by Git** (see `.gitignore`):
 
-- `etc/properties.sh.local`
-- `etc/etl.properties.local`
-- `etc/*.local`
-- `etc/*_local`
+- `etc/properties.sh` - **NOT in Git** (contains your credentials)
+- `etc/etl.properties` - **NOT in Git** (contains your settings)
+- `etc/properties.sh.local` - Optional override (also ignored)
+- `etc/etl.properties.local` - Optional override (also ignored)
+- `etc/*.local` - All local overrides ignored
+- `etc/*_local` - All local overrides ignored
+
+**Only template files are versioned:**
+- `etc/properties.sh.example` - Template (safe to version)
+- `etc/etl.properties.example` - Template (safe to version)
 
 **Priority order:**
 
 1. Environment variables (highest)
-2. Local configuration files (`*.local`) - **loaded automatically**
-3. Default configuration files
+2. Local override files (`*.local`) - **loaded automatically if they exist**
+3. Main configuration files (`properties.sh`, `etl.properties`)
 4. Script defaults (lowest)
 
-**Automatic loading:** All scripts automatically load local configuration files if they exist. 
-No manual intervention needed after `git pull`.
+**Security:** Your credentials in `properties.sh` and `etl.properties` will never be committed to Git.
+Only the `.example` template files are versioned in the repository.
 
 ### properties.sh
 

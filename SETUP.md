@@ -21,31 +21,31 @@ git submodule update --init --recursive
 # git clone --recurse-submodules https://github.com/OSMLatam/OSM-Notes-Analytics.git
 ```
 
-### 3. Create local configuration files
+### 3. Create configuration files
 
 ```bash
 # Run the automated setup script
 ./scripts/setup-local-config.sh
 
 # This will create:
-# - etc/properties.sh.local
-# - etc/etl.properties.local
+# - etc/properties.sh (from properties.sh.example)
+# - etc/etl.properties (from etl.properties.example)
 ```
 
 ### 4. Configure your environment
 
 ```bash
 # Edit database configuration
-nano etc/properties.sh.local
+nano etc/properties.sh
 
 # Set at minimum:
-DBNAME="your_database_name"
-DB_USER="your_database_user"
+DBNAME="your_database_name"  # Default: "notes"
+DB_USER="your_database_user"  # Default: "myuser"
 ```
 
 ```bash
 # Edit ETL configuration (optional)
-nano etc/etl.properties.local
+nano etc/etl.properties
 
 # Example for testing:
 ETL_TEST_MODE=true  # Process only 2013-2014
@@ -85,35 +85,37 @@ git submodule update --init --recursive
 
 ```
 etc/
-├── properties.sh                  # Default configuration (in git)
-├── properties.sh.local            # Your config (NOT in git)
+├── properties.sh                  # Your configuration (NOT in git)
 ├── properties.sh.example          # Template (in git)
-├── etl.properties                 # Default ETL config (in git)
-├── etl.properties.local           # Your ETL config (NOT in git)
-└── etl.properties.example         # ETL template (in git)
+├── properties.sh.local            # Optional override (NOT in git)
+├── etl.properties                 # Your ETL config (NOT in git)
+├── etl.properties.example         # ETL template (in git)
+└── etl.properties.local           # Optional ETL override (NOT in git)
 ```
 
 ### Priority Order
 
 1. Environment variables (highest priority)
-2. Local files (`*.local`) - loaded automatically
-3. Default files
-4. Script defaults
+2. Local override files (`*.local`) - loaded automatically if they exist
+3. Main configuration files (`properties.sh`, `etl.properties`)
+4. Script defaults (lowest)
 
 ### Safety
 
-- ✅ `*.local` files are ignored by git
-- ✅ Your configs won't be overwritten by git pull
-- ✅ Each server can have different settings
-- ✅ No manual copying needed after git pull
+- ✅ Configuration files (`properties.sh`, `etl.properties`) are ignored by git
+- ✅ Only `.example` files are versioned (no credentials in repository)
+- ✅ Your credentials will never be committed to Git
+- ✅ Each server maintains its own configuration files
+- ✅ After `git pull`, your configuration files are preserved
+- ✅ Optional: Use `*.local` files for environment-specific overrides
 
 ## Common Tasks
 
 ### Enable test mode for faster testing
 
 ```bash
-# Edit local config
-nano etc/etl.properties.local
+# Edit configuration
+nano etc/etl.properties
 
 # Set to true
 ETL_TEST_MODE=true
@@ -126,8 +128,8 @@ ETL_TEST_MODE=true
 ### Switch to production mode
 
 ```bash
-# Edit local config
-nano etc/etl.properties.local
+# Edit configuration
+nano etc/etl.properties
 
 # Set to false (or remove the line)
 ETL_TEST_MODE=false
@@ -139,18 +141,22 @@ ETL_TEST_MODE=false
 
 ### Multiple servers with different configs
 
+Each server maintains its own configuration files independently:
+
 ```bash
-# Server A (production)
+# Server A (production) - etc/properties.sh
 DBNAME="notes_prod"
+DB_USER="prod_user"
 ETL_TEST_MODE=false
 
-# Server B (testing)
+# Server B (testing) - etc/properties.sh
 DBNAME="notes_test"
+DB_USER="test_user"
 ETL_TEST_MODE=true
 ETL_BATCH_SIZE=500
 ```
 
-Each server maintains its own `*.local` files independently.
+Configuration files are not versioned, so each server can have different settings.
 
 ## Troubleshooting
 
@@ -176,22 +182,27 @@ ls -la etc/*.local
 ### Reset to defaults
 
 ```bash
-# Remove local files to use defaults
-rm etc/properties.sh.local
-rm etc/etl.properties.local
+# Remove configuration files to recreate from templates
+rm etc/properties.sh
+rm etc/etl.properties
 
-# Scripts will use default configuration
+# Run setup script to recreate from examples
+./scripts/setup-local-config.sh
 ```
 
-### Create local files from scratch
+### Create configuration files from scratch
 
 ```bash
-# Run setup script again
+# Run setup script (recommended)
 ./scripts/setup-local-config.sh
 
 # Or manually
-cp etc/properties.sh.example etc/properties.sh.local
-cp etc/etl.properties.example etc/etl.properties.local
+cp etc/properties.sh.example etc/properties.sh
+cp etc/etl.properties.example etc/etl.properties
+
+# Then edit with your credentials
+nano etc/properties.sh
+nano etc/etl.properties
 ```
 
 ## Support

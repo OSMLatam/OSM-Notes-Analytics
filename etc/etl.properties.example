@@ -1,5 +1,8 @@
 # ETL Configuration Properties - EXAMPLE FILE
-# Copy this file to etl.properties.local for your local configuration
+# Copy this file to etl.properties for your local configuration:
+#   cp etc/etl.properties.example etc/etl.properties
+# Then edit etc/etl.properties with your specific settings if needed.
+#
 # Author: Andres Gomez (AngocA)
 # Version: 2025-08-18
 

@@ -1,7 +1,9 @@
 #!/bin/bash
 
 # Set of properties for all scripts - EXAMPLE FILE
-# Copy this file to properties.sh.local for your local configuration
+# Copy this file to properties.sh for your local configuration:
+#   cp etc/properties.sh.example etc/properties.sh
+# Then edit etc/properties.sh with your database credentials.
 #
 # Author: Andres Gomez
 # Version: 2025-08-18
