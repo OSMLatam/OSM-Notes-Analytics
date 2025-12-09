@@ -171,7 +171,7 @@ declare -r ETL_CONFIG_FILE="${SCRIPT_BASE_DIRECTORY}/etc/etl.properties"
 if [[ -f "${ETL_CONFIG_FILE}" ]]; then
  # shellcheck disable=SC1090
  source "${ETL_CONFIG_FILE}"
- __logi "Loaded ETL configuration from ${ETL_CONFIG_FILE}"
+ # Only log if there's a problem - configuration loading is expected
 else
  __logw "ETL configuration file not found, using defaults"
 fi
@@ -181,7 +181,7 @@ declare -r ETL_CONFIG_FILE_LOCAL="${SCRIPT_BASE_DIRECTORY}/etc/etl.properties.lo
 if [[ -f "${ETL_CONFIG_FILE_LOCAL}" ]]; then
  # shellcheck disable=SC1090
  source "${ETL_CONFIG_FILE_LOCAL}"
- __logi "Loaded local ETL configuration from ${ETL_CONFIG_FILE_LOCAL}"
+ # Only log if there's a problem - configuration loading is expected
 fi
 
 # Set default values for ETL configuration if not defined.
@@ -307,6 +307,30 @@ function __checkPrereqs {
 
  __logi "=== ETL PREREQUISITES CHECK COMPLETED ==="
  __log_finish
+}
+
+# Checks if base ingestion tables exist and have required columns.
+# Returns 0 if validation passes, 1 if validation fails.
+function __checkIngestionBaseTables {
+ __log_start
+ __logi "=== CHECKING INGESTION BASE TABLES AND COLUMNS ==="
+ set +e
+ psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+  -f "${POSTGRES_10_CHECK_BASE_TABLES}" 2>&1
+ RET=${?}
+ set -e
+ __logi "Base tables check result code: ${RET}"
+ if [[ "${RET}" -ne 0 ]]; then
+  __loge "Base ingestion tables validation failed. Please check the error message above."
+  __loge "This usually means tables or required columns are missing."
+  __loge "Please ensure OSM-Notes-Ingestion system has created the tables with correct schema."
+  __log_finish
+  return 1
+ fi
+
+ __logi "=== INGESTION BASE TABLES VALIDATION PASSED ==="
+ __log_finish
+ return 0
 }
 
 # Checks if DWH tables exist. Returns 0 if they exist, 1 if they don't.
@@ -722,20 +746,14 @@ function __trapOn() {
 # MAIN
 
 function main() {
- __log_start
- __logi "Preparing environment."
- __logd "Output saved at: ${TMP_DIR}."
- __logi "Processing: ${PROCESS_TYPE}."
-
+ # Only log errors during initialization - normal startup is silent
  if [[ "${PROCESS_TYPE}" == "-h" ]] || [[ "${PROCESS_TYPE}" == "--help" ]]; then
   __show_help
  fi
 
- __logw "Starting process."
  # Sets the trap in case of any signal.
  __trapOn
  exec 7> "${LOCK}"
- __logw "Validating single execution."
  # shellcheck disable=SC2034
  ONLY_EXECUTION="no"
  flock -n 7
@@ -743,6 +761,13 @@ function main() {
  ONLY_EXECUTION="yes"
 
  __checkPrereqs
+
+ # Validate base ingestion tables and columns before processing
+ __logi "Validating base ingestion tables and columns..."
+ if ! __checkIngestionBaseTables; then
+  __loge "Base ingestion tables validation failed. ETL cannot proceed."
+  exit 1
+ fi
 
  __logi "PROCESS_TYPE value: '${PROCESS_TYPE}'"
 
@@ -813,7 +838,7 @@ function main() {
 # Allows to other user read the directory.
 chmod go+x "${TMP_DIR}"
 
-__start_logger
+# Logger already initialized at line 93, no need to initialize again
 if [[ "${SKIP_MAIN:-}" != "true" ]]; then
  if [[ ! -t 1 ]]; then
   __set_log_file "${LOG_FILENAME}"
