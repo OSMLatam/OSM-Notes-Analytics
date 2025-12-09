@@ -89,6 +89,12 @@ source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/validationFunctions.sh"
 # shellcheck disable=SC1091
 source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/errorHandlingFunctions.sh"
 
+# Configure log file early if running from cron (not a terminal)
+# This prevents logger from writing to stdout which would be sent by email
+if [[ ! -t 1 ]]; then
+ __set_log_file "${LOG_FILENAME}"
+fi
+
 # Initialize logger
 __start_logger
 
@@ -838,10 +844,10 @@ function main() {
 # Allows to other user read the directory.
 chmod go+x "${TMP_DIR}"
 
-# Logger already initialized at line 93, no need to initialize again
+# Logger already initialized at line 93, log file already set if running from cron
 if [[ "${SKIP_MAIN:-}" != "true" ]]; then
  if [[ ! -t 1 ]]; then
-  __set_log_file "${LOG_FILENAME}"
+  # Log file already configured above, just redirect main output
   main >> "${LOG_FILENAME}"
   if [[ -n "${CLEAN}" ]] && [[ "${CLEAN}" = true ]]; then
    mv "${LOG_FILENAME}" "/tmp/${BASENAME}_$(date +%Y-%m-%d_%H-%M-%S || true).log"
