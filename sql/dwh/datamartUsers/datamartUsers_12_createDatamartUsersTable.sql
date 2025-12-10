@@ -80,17 +80,17 @@ CREATE TABLE IF NOT EXISTS dwh.datamartUsers (
  active_notes_count INTEGER,
  notes_backlog_size INTEGER,
  notes_age_distribution JSON,
-  notes_created_last_30_days INTEGER,
-  notes_resolved_last_30_days INTEGER,
-  resolution_by_year JSON,
-  resolution_by_month JSON,
-  hashtags_opening JSON,
-  hashtags_resolution JSON,
-  hashtags_comments JSON,
-  favorite_opening_hashtag VARCHAR(50),
-  favorite_resolution_hashtag VARCHAR(50),
-  opening_hashtag_count INTEGER DEFAULT 0,
-  resolution_hashtag_count INTEGER DEFAULT 0
+ notes_created_last_30_days INTEGER,
+ notes_resolved_last_30_days INTEGER,
+ resolution_by_year JSON,
+ resolution_by_month JSON,
+ hashtags_opening JSON,
+ hashtags_resolution JSON,
+ hashtags_comments JSON,
+ favorite_opening_hashtag VARCHAR(50),
+ favorite_resolution_hashtag VARCHAR(50),
+ opening_hashtag_count INTEGER DEFAULT 0,
+ resolution_hashtag_count INTEGER DEFAULT 0
 );
 COMMENT ON TABLE dwh.datamartUsers IS
   'Contains all precalculated statistical values for users';
