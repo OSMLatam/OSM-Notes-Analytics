@@ -67,8 +67,10 @@ LOCK="${TMP_DIR}/${BASENAME}.lock"
 readonly LOCK
 
 # Type of process to run in the script.
+# Empty string "" is a valid value (means default processing)
 if [[ -z "${PROCESS_TYPE:-}" ]]; then
- declare -r PROCESS_TYPE=${1:-}
+ declare PROCESS_TYPE=${1:-}
+ declare -r PROCESS_TYPE
 fi
 
 # Name of the SQL script that contains the objects to create in the DB.
@@ -237,10 +239,11 @@ function main() {
  fi
 
  # If no parameters provided, show help and return error
- if [[ -z "${PROCESS_TYPE}" ]]; then
-  __loge "No process type specified."
+ # Note: Empty string "" is a valid value for PROCESS_TYPE (means default processing)
+ if [[ "${PROCESS_TYPE}" != "" ]] && [[ "${PROCESS_TYPE}" != "--help" ]] && [[ "${PROCESS_TYPE}" != "-h" ]]; then
+  __loge "Invalid process type specified: ${PROCESS_TYPE}"
   echo "${0} version ${VERSION}"
-  echo "This script requires a process type parameter."
+  echo "Invalid process type parameter."
   echo ""
   echo "Usage:"
   echo "  ${0} [OPTIONS]"

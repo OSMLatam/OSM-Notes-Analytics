@@ -105,6 +105,7 @@ DO /* Notes-staging */
  $$
  DECLARE
   m_count_nulls INTEGER;
+  rec RECORD;
  BEGIN
   SELECT /* Notes-staging */ COUNT(*)
    INTO m_count_nulls

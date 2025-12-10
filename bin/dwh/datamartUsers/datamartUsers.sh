@@ -71,8 +71,10 @@ LOCK="/tmp/${BASENAME}.lock"
 readonly LOCK
 
 # Type of process to run in the script.
+# Empty string "" is a valid value (means default processing)
 if [[ -z "${PROCESS_TYPE:-}" ]]; then
- declare -r PROCESS_TYPE=${1:-}
+ declare PROCESS_TYPE=${1:-}
+ declare -r PROCESS_TYPE
 fi
 
 # Name of the SQL script that contains the objects to create in the DB.
@@ -348,7 +350,6 @@ function __trapOn() {
  # shellcheck disable=SC2154  # variables inside trap are defined dynamically by Bash
  trap '{
   # Get the main script name (the one that was executed, not the library)
-  local MAIN_SCRIPT_NAME
   MAIN_SCRIPT_NAME=$(basename "${0}" .sh)
 
   printf "%s WARN: The script %s was terminated. Temporary directory: ${TMP_DIR:-}\n" "$(date +%Y%m%d_%H:%M:%S)" "${MAIN_SCRIPT_NAME}";
@@ -381,10 +382,11 @@ function main() {
  fi
 
  # If no parameters provided, show help and return error
- if [[ -z "${PROCESS_TYPE}" ]]; then
-  __loge "No process type specified."
+ # Note: Empty string "" is a valid value for PROCESS_TYPE (means default processing)
+ if [[ "${PROCESS_TYPE}" != "" ]] && [[ "${PROCESS_TYPE}" != "--help" ]] && [[ "${PROCESS_TYPE}" != "-h" ]]; then
+  __loge "Invalid process type specified: ${PROCESS_TYPE}"
   echo "${0} version ${VERSION}"
-  echo "This script requires a process type parameter."
+  echo "Invalid process type parameter."
   echo ""
   echo "Usage:"
   echo "  ${0} [OPTIONS]"
@@ -434,7 +436,7 @@ if [[ "${SKIP_MAIN:-}" != "true" ]]; then
   if [[ -n "${CLEAN}" ]] && [[ "${CLEAN}" = true ]]; then
    mv "${LOG_FILENAME}" "/tmp/${BASENAME}_$(date +%Y-%m-%d_%H-%M-%S \
     || true).log"
-   rmdir "${TMP_DIR}"
+   rmdir "${TMP_DIR}" 2> /dev/null || rm -rf "${TMP_DIR}" 2> /dev/null || true
   fi
   exit "${EXIT_CODE}"
  else
