@@ -11,9 +11,9 @@
    SELECT /* Notes-datamartGlobal */ COUNT(TABLE_NAME)
     INTO qty
    FROM INFORMATION_SCHEMA.TABLES
-   WHERE TABLE_TYPE LIKE 'BASE TABLE'
-   AND TABLE_SCHEMA LIKE 'dwh'
-   AND TABLE_NAME = 'datamartglobal'
+   WHERE TABLE_TYPE = 'BASE TABLE'
+   AND TABLE_SCHEMA = 'dwh'
+   AND LOWER(TABLE_NAME) = 'datamartglobal'
    ;
    IF (qty <> 1) THEN
     RAISE EXCEPTION 'Base tables are missing: datamartGlobal.';

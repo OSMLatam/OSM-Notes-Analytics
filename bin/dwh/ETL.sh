@@ -440,6 +440,14 @@ function __processNotesETL {
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
   -c "SELECT dwh.enable_note_activity_metrics_trigger();" 2>&1
 
+ # Process notes actions into DWH.
+ __logi "Processing notes actions into DWH."
+ psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+  -c "CALL staging.process_notes_actions_into_dwh();" 2>&1
+
+ # Unify facts, by computing dates between years.
+ psql -d "${DBNAME}" -v ON_ERROR_STOP=1 -f "${POSTGRES_54_UNIFY_FACTS}" 2>&1
+
  # Create hashtag analysis views.
  __logi "Creating hashtag analysis views."
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
@@ -454,14 +462,6 @@ function __processNotesETL {
  __logi "Creating specialized hashtag indexes."
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_53B_CREATE_HASHTAG_INDEXES}" 2>&1
-
- # Process notes actions into DWH.
- __logi "Processing notes actions into DWH."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
-  -c "CALL staging.process_notes_actions_into_dwh();" 2>&1
-
- # Unify facts, by computing dates between years.
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 -f "${POSTGRES_54_UNIFY_FACTS}" 2>&1
 
  # Update automation levels for modified users.
  __logi "Updating automation levels for modified users."
@@ -832,9 +832,9 @@ function main() {
   __createBaseTables
   __initialFactsParallel # Use parallel version
   __perform_database_maintenance
-  "${DATAMART_COUNTRIES_SCRIPT}"
-  "${DATAMART_USERS_SCRIPT}"
-  "${DATAMART_GLOBAL_SCRIPT}"
+  "${DATAMART_COUNTRIES_SCRIPT}" ""
+  "${DATAMART_USERS_SCRIPT}" ""
+  "${DATAMART_GLOBAL_SCRIPT}" ""
  fi
 
  # Handle incremental mode or default mode (with auto-detection)
@@ -858,9 +858,9 @@ function main() {
    __initialFactsParallel # Use parallel version
    __logi "Finished calling __initialFactsParallel"
    __perform_database_maintenance
-   "${DATAMART_COUNTRIES_SCRIPT}"
-   "${DATAMART_USERS_SCRIPT}"
-   "${DATAMART_GLOBAL_SCRIPT}"
+   "${DATAMART_COUNTRIES_SCRIPT}" ""
+   "${DATAMART_USERS_SCRIPT}" ""
+   "${DATAMART_GLOBAL_SCRIPT}" ""
   else
    __logi "AUTO-DETECTED INCREMENTAL EXECUTION - Processing only new data"
    set +E
@@ -874,9 +874,9 @@ function main() {
    __processNotesETL
    __logi "Finished calling __processNotesETL"
    __perform_database_maintenance
-   "${DATAMART_COUNTRIES_SCRIPT}"
-   "${DATAMART_USERS_SCRIPT}"
-   "${DATAMART_GLOBAL_SCRIPT}"
+   "${DATAMART_COUNTRIES_SCRIPT}" ""
+   "${DATAMART_USERS_SCRIPT}" ""
+   "${DATAMART_GLOBAL_SCRIPT}" ""
   fi
  fi
 
