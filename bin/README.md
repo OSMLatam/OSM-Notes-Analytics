@@ -8,6 +8,25 @@ focused on ETL (Extract, Transform, Load) processes and datamart generation.
 The `bin/` directory houses the main operational scripts that transform raw OSM notes data into a
 comprehensive data warehouse with pre-computed analytics datamarts.
 
+## Quick Reference
+
+**New to the project?** Start here:
+
+- **[Entry Points Documentation](dwh/ENTRY_POINTS.md)** - Which scripts can be called directly
+- **[Environment Variables](dwh/ENVIRONMENT_VARIABLES.md)** - Configuration via environment variables
+- **[DWH README](dwh/README.md)** - Detailed DWH documentation
+
+**Key Entry Points:**
+
+1. `bin/dwh/ETL.sh` - Main ETL process (creates/updates data warehouse)
+2. `bin/dwh/datamartCountries/datamartCountries.sh` - Country datamart
+3. `bin/dwh/datamartUsers/datamartUsers.sh` - User datamart
+4. `bin/dwh/profile.sh` - Profile generator
+5. `bin/dwh/exportDatamartsToJSON.sh` - Export to JSON
+6. `bin/dwh/cleanupDWH.sh` - Cleanup script
+
+See [Entry Points Documentation](dwh/ENTRY_POINTS.md) for complete details.
+
 ## Directory Structure
 
 ```text
@@ -250,44 +269,177 @@ tail -40f $(ls -1rtd /tmp/ETL_* | tail -1)/ETL.log
 **Note:** This script is designed to run incrementally to avoid overwhelming the database. Schedule
 it to run regularly until all users are processed.
 
+### 6. datamartGlobal.sh - Global Datamart
+
+**Location:** `bin/dwh/datamartGlobal/datamartGlobal.sh`
+
+**Purpose:** Populates the global-level datamart with aggregated statistics.
+
+**Usage:**
+
+```bash
+./bin/dwh/datamartGlobal/datamartGlobal.sh
+```
+
+**Features:**
+
+- Aggregates global note statistics
+- Computes worldwide metrics
+- Provides system-wide analytics
+
+**Prerequisites:**
+
+- ETL must be completed
+- DWH fact and dimension tables must exist
+
+**Output:**
+
+- Populates `dwh.datamartGlobal` table
+- Global statistics and aggregated metrics
+
+**Note:** This script is automatically called by `ETL.sh` after processing. Manual execution is usually not needed.
+
+### 7. exportDatamartsToJSON.sh - Export to JSON
+
+**Location:** `bin/dwh/exportDatamartsToJSON.sh`
+
+**Purpose:** Exports datamart data to JSON files for web viewer consumption.
+
+**Usage:**
+
+```bash
+./bin/dwh/exportDatamartsToJSON.sh
+```
+
+**Features:**
+
+- Exports user datamarts to individual JSON files
+- Exports country datamarts to individual JSON files
+- Creates index files for efficient lookup
+- Generates metadata file
+- **Atomic writes**: Files generated in temporary directory, validated, then moved atomically
+- **Schema validation**: Each JSON file validated against schemas before export
+- **Fail-safe**: On validation failure, keeps existing files and exits with error
+
+**Output:**
+
+Creates JSON files in `./output/json/`:
+- Individual files per user: `users/{user_id}.json`
+- Individual files per country: `countries/{country_id}.json`
+- Index files: `indexes/users.json`, `indexes/countries.json`
+- Metadata: `metadata.json`
+
+**Prerequisites:**
+
+- Datamarts must be populated
+- `jq` and `ajv-cli` recommended for validation
+
+**Example:**
+
+```bash
+# Export all datamarts to JSON
+./bin/dwh/exportDatamartsToJSON.sh
+
+# Verify export
+ls -lh ./output/json/users/ | head -10
+ls -lh ./output/json/countries/ | head -10
+```
+
+**See also:** [JSON Export Documentation](dwh/export_json_readme.md)
+
+### 8. exportAndPushToGitHub.sh - Export and Deploy
+
+**Location:** `bin/dwh/exportAndPushToGitHub.sh`
+
+**Purpose:** Exports JSON files and automatically deploys them to GitHub Pages.
+
+**Usage:**
+
+```bash
+./bin/dwh/exportAndPushToGitHub.sh
+```
+
+**Features:**
+
+- Exports datamarts to JSON (calls `exportDatamartsToJSON.sh`)
+- Validates all JSON files
+- Commits and pushes to Git repository
+- Deploys to GitHub Pages automatically
+
+**Prerequisites:**
+
+- Datamarts must be populated
+- Git repository configured
+- GitHub Pages enabled
+- Git credentials configured
+
+**Example:**
+
+```bash
+# Export and deploy to GitHub Pages
+./bin/dwh/exportAndPushToGitHub.sh
+```
+
+**Note:** This script is typically scheduled to run after datamart updates.
+
 ## Workflow
 
 ### Initial Setup (First Time)
 
 ```bash
 # 1. Configure database connection
+cp etc/properties.sh.example etc/properties.sh
 nano etc/properties.sh
 
-# 2. Configure ETL settings
+# 2. Configure ETL settings (optional, defaults work for most cases)
+cp etc/etl.properties.example etc/etl.properties
 nano etc/etl.properties
 
-# 3. Run initial ETL
+# 3. Verify base tables exist (from OSM-Notes-Ingestion)
+psql -d osm_notes -c "SELECT COUNT(*) FROM notes;"
+psql -d osm_notes -c "SELECT COUNT(*) FROM note_comments;"
+
+# 4. Run initial ETL (creates DWH, populates facts/dimensions, updates datamarts)
 ./bin/dwh/ETL.sh --create
 # Wait ~30 hours for completion
+# Note: ETL.sh automatically updates datamarts, so steps 5-6 are optional
 
-# 4. Populate country datamart
+# 5. Verify DWH creation
+psql -d osm_notes -c "SELECT COUNT(*) FROM dwh.facts;"
+psql -d osm_notes -c "SELECT COUNT(*) FROM dwh.datamartcountries;"
+psql -d osm_notes -c "SELECT COUNT(*) FROM dwh.datamartusers;"
+
+# 6. (Optional) Manually update datamarts if needed
 ./bin/dwh/datamartCountries/datamartCountries.sh
-# Wait ~20 minutes
-
-# 5. Start populating user datamart (run multiple times)
 ./bin/dwh/datamartUsers/datamartUsers.sh
-# Repeat daily until all users processed (~5 days)
+
+# 7. Generate a test profile
+./bin/dwh/profile.sh --user AngocA
+
+# 8. Export to JSON (optional, for web viewer)
+./bin/dwh/exportDatamartsToJSON.sh
 ```
 
 ### Regular Updates (Scheduled)
 
 ```bash
-# Crontab example:
+# Crontab example (add with: crontab -e):
 
-# Incremental ETL every hour
-0 * * * * ~/OSM-Notes-Analytics/bin/dwh/ETL.sh --incremental
+# Incremental ETL every hour (automatically updates datamarts)
+0 * * * * cd ~/OSM-Notes-Analytics && ./bin/dwh/ETL.sh --incremental >> /var/log/osm-analytics-etl.log 2>&1
 
+# Export to JSON and push to GitHub Pages (after datamarts update)
+45 * * * * cd ~/OSM-Notes-Analytics && ./bin/dwh/exportAndPushToGitHub.sh >> /var/log/osm-analytics-export.log 2>&1
+
+# Optional: Manual datamart updates (usually not needed, ETL does this automatically)
 # Update country datamart daily at 2 AM
-0 2 * * * ~/OSM-Notes-Analytics/bin/dwh/datamartCountries/datamartCountries.sh
+# 0 2 * * * cd ~/OSM-Notes-Analytics && ./bin/dwh/datamartCountries/datamartCountries.sh >> /var/log/osm-analytics-datamart-countries.log 2>&1
 
-# Update user datamart daily at 2:30 AM
-30 2 * * * ~/OSM-Notes-Analytics/bin/dwh/datamartUsers/datamartUsers.sh
+# Update user datamart daily at 2:30 AM (processes 500 users per run)
+# 30 2 * * * cd ~/OSM-Notes-Analytics && ./bin/dwh/datamartUsers/datamartUsers.sh >> /var/log/osm-analytics-datamart-users.log 2>&1
 ```
+
+**Note:** `ETL.sh --incremental` automatically updates all datamarts, so separate datamart cron jobs are usually not needed.
 
 ### Generating Profiles
 
@@ -308,17 +460,40 @@ nano etc/etl.properties
 
 ### Database Configuration
 
-Edit `etc/properties.sh`:
+Create `etc/properties.sh` from the example:
+
+```bash
+cp etc/properties.sh.example etc/properties.sh
+nano etc/properties.sh
+```
+
+**Key settings:**
 
 ```bash
 DBNAME="osm_notes"    # Database name
 DB_USER="myuser"      # Database user
-MAX_THREADS="4"       # Parallel processing threads
+MAX_THREADS="4"       # Parallel processing threads (auto-calculated from CPU cores)
+CLEAN="true"          # Clean temporary files after processing
+```
+
+**Override via environment:**
+
+```bash
+export DBNAME=osm_notes_test
+export DB_USER=postgres
+./bin/dwh/ETL.sh --incremental
 ```
 
 ### ETL Configuration
 
-Edit `etc/etl.properties`:
+Create `etc/etl.properties` from the example (optional):
+
+```bash
+cp etc/etl.properties.example etc/etl.properties
+nano etc/etl.properties
+```
+
+**Key settings:**
 
 ```bash
 ETL_BATCH_SIZE=1000              # Records per batch
@@ -328,24 +503,65 @@ ETL_RECOVERY_ENABLED=true        # Enable recovery
 ETL_VALIDATE_INTEGRITY=true      # Validate data integrity
 MAX_MEMORY_USAGE=80              # Memory usage threshold (%)
 MAX_DISK_USAGE=90                # Disk usage threshold (%)
+ETL_TIMEOUT=7200                 # Execution timeout (seconds)
 ```
+
+**Override via environment:**
+
+```bash
+export ETL_BATCH_SIZE=5000
+export ETL_MAX_PARALLEL_JOBS=8
+./bin/dwh/ETL.sh --create
+```
+
+**See also:** [Environment Variables Documentation](dwh/ENVIRONMENT_VARIABLES.md) for complete variable reference.
 
 ## Logging and Monitoring
 
 All scripts create detailed logs in `/tmp/`:
 
 ```bash
-# ETL logs
-tail -f /tmp/ETL_*/ETL.log
+# ETL logs (follow latest)
+tail -40f $(ls -1rtd /tmp/ETL_* | tail -1)/ETL.log
 
 # Country datamart logs
-tail -f /tmp/datamartCountries_*/datamartCountries.log
+tail -f $(ls -1rtd /tmp/datamartCountries_* | tail -1)/datamartCountries.log
 
 # User datamart logs
-tail -f /tmp/datamartUsers_*/datamartUsers.log
+tail -f $(ls -1rtd /tmp/datamartUsers_* | tail -1)/datamartUsers.log
 
 # Profile logs
-tail -f /tmp/profile_*/profile.log
+tail -f $(ls -1rtd /tmp/profile_* | tail -1)/profile.log
+
+# Export logs
+tail -f $(ls -1rtd /tmp/exportDatamartsToJSON_* | tail -1)/exportDatamartsToJSON.log
+```
+
+**Set log level:**
+
+```bash
+# Debug mode (verbose)
+export LOG_LEVEL=DEBUG
+./bin/dwh/ETL.sh --incremental
+
+# Info mode (moderate)
+export LOG_LEVEL=INFO
+./bin/dwh/ETL.sh --incremental
+
+# Error mode (minimal, default)
+export LOG_LEVEL=ERROR
+./bin/dwh/ETL.sh --incremental
+```
+
+**Keep temporary files for inspection:**
+
+```bash
+export CLEAN=false
+export LOG_LEVEL=DEBUG
+./bin/dwh/ETL.sh --incremental
+
+# Files will remain in /tmp/ETL_*/
+# Inspect logs, CSV files, etc.
 ```
 
 ## Error Handling
@@ -421,36 +637,176 @@ psql -d osm_notes -c "REINDEX TABLE dwh.facts;"
 
 ### "Base tables do not exist"
 
-Ensure the OSM-Notes-Ingestion system has populated base tables:
+**Problem:** ETL cannot find base tables populated by OSM-Notes-Ingestion.
+
+**Solution:**
 
 ```bash
+# Verify base tables exist
 psql -d osm_notes -c "SELECT COUNT(*) FROM notes;"
+psql -d osm_notes -c "SELECT COUNT(*) FROM note_comments;"
+psql -d osm_notes -c "SELECT COUNT(*) FROM users;"
+psql -d osm_notes -c "SELECT COUNT(*) FROM countries;"
+
+# If tables are empty or don't exist, run OSM-Notes-Ingestion first
+# See: https://github.com/OSMLatam/OSM-Notes-Ingestion
+```
+
+### "Schema 'dwh' does not exist"
+
+**Problem:** DWH schema not created yet.
+
+**Solution:**
+
+```bash
+# Run initial ETL to create schema
+./bin/dwh/ETL.sh --create
 ```
 
 ### "Lock file exists"
 
-Another instance is running. Wait or remove lock:
+**Problem:** Another instance is running or previous execution crashed.
+
+**Solution:**
 
 ```bash
+# Check if process is actually running
+ps aux | grep ETL.sh
+
+# If no process found, remove lock file
 rm /tmp/ETL_*.lock
+
+# Or remove all lock files (use with caution)
+find /tmp -name "*ETL*.lock" -delete
 ```
 
 ### "Out of memory"
 
-Reduce parallel jobs or batch size:
+**Problem:** System running out of memory during processing.
+
+**Solution:**
 
 ```bash
-# Edit etc/etl.properties
-ETL_MAX_PARALLEL_JOBS=2
-ETL_BATCH_SIZE=500
+# Reduce parallel jobs
+export ETL_MAX_PARALLEL_JOBS=2
+
+# Reduce batch size
+export ETL_BATCH_SIZE=500
+
+# Disable parallel processing
+export ETL_PARALLEL_ENABLED=false
+
+# Or edit etc/etl.properties
+nano etc/etl.properties
+# Set: ETL_MAX_PARALLEL_JOBS=2
+# Set: ETL_BATCH_SIZE=500
+```
+
+### "ETL takes too long"
+
+**Problem:** ETL process is slow.
+
+**Solution:**
+
+```bash
+# Increase parallel jobs (if you have more CPU cores)
+export ETL_MAX_PARALLEL_JOBS=8
+
+# Increase batch size (if you have more memory)
+export ETL_BATCH_SIZE=5000
+
+# Check if base tables have indexes
+psql -d osm_notes -c "\d notes"
+psql -d osm_notes -c "\d note_comments"
+
+# Run VACUUM ANALYZE on base tables
+psql -d osm_notes -c "VACUUM ANALYZE notes;"
+psql -d osm_notes -c "VACUUM ANALYZE note_comments;"
+```
+
+### "Datamart not fully populated"
+
+**Problem:** Datamart tables are empty or incomplete.
+
+**Solution:**
+
+```bash
+# Check datamart counts
+psql -d osm_notes -c "SELECT COUNT(*) FROM dwh.datamartcountries;"
+psql -d osm_notes -c "SELECT COUNT(*) FROM dwh.datamartusers;"
+
+# Re-run datamart scripts
+./bin/dwh/datamartCountries/datamartCountries.sh
+./bin/dwh/datamartUsers/datamartUsers.sh
+
+# For users datamart, run multiple times (processes 500 users per run)
+# Keep running until it says "0 users processed"
+while true; do
+  ./bin/dwh/datamartUsers/datamartUsers.sh
+  sleep 5
+done
+```
+
+### "JSON export is empty"
+
+**Problem:** JSON export produces no files or empty files.
+
+**Solution:**
+
+```bash
+# Verify datamarts have data
+psql -d osm_notes -c "SELECT COUNT(*) FROM dwh.datamartusers;"
+psql -d osm_notes -c "SELECT COUNT(*) FROM dwh.datamartcountries;"
+
+# If counts are 0, re-run datamart population
+./bin/dwh/datamartCountries/datamartCountries.sh
+./bin/dwh/datamartUsers/datamartUsers.sh
+
+# Check export output directory
+ls -lh ./output/json/
+
+# Run export with debug logging
+export LOG_LEVEL=DEBUG
+./bin/dwh/exportDatamartsToJSON.sh
 ```
 
 ### Database Connection Issues
 
-Test connection:
+**Problem:** Cannot connect to database.
+
+**Solution:**
 
 ```bash
+# Test connection
 psql -d osm_notes -c "SELECT version();"
+
+# Verify database name in properties
+cat etc/properties.sh | grep DBNAME
+
+# Check PostgreSQL is running
+sudo systemctl status postgresql
+
+# Verify user permissions
+psql -d osm_notes -c "SELECT current_user;"
+```
+
+### "Profile not found"
+
+**Problem:** Profile script cannot find user or country.
+
+**Solution:**
+
+```bash
+# Check if user exists in datamart
+psql -d osm_notes -c "SELECT username FROM dwh.datamartusers WHERE username = 'AngocA';"
+
+# Check if country exists
+psql -d osm_notes -c "SELECT country_name_en FROM dwh.datamartcountries WHERE country_name_en = 'Colombia';"
+
+# Use exact name as stored in database
+# For countries, try both English and Spanish names
+./bin/dwh/profile.sh --country Colombia
+./bin/dwh/profile.sh --pais Colombia
 ```
 
 ## Development
@@ -474,10 +830,20 @@ psql -d osm_notes -c "SELECT version();"
 
 ## References
 
-- [ETL Enhanced Features](../docs/ETL_Enhanced_Features.md)
-- [DWH Star Schema ERD](../docs/DWH_Star_Schema_ERD.md)
-- [Data Dictionary](../docs/DWH_Star_Schema_Data_Dictionary.md)
-- [Testing Guide](../tests/README.md)
+### Documentation
+
+- **[Entry Points](dwh/ENTRY_POINTS.md)** - Which scripts can be called directly
+- **[Environment Variables](dwh/ENVIRONMENT_VARIABLES.md)** - Complete environment variable reference
+- **[DWH README](dwh/README.md)** - Detailed DWH documentation
+- **[ETL Enhanced Features](../docs/ETL_Enhanced_Features.md)** - Advanced ETL capabilities
+- **[DWH Star Schema ERD](../docs/DWH_Star_Schema_ERD.md)** - Entity-relationship diagram
+- **[Data Dictionary](../docs/DWH_Star_Schema_Data_Dictionary.md)** - Complete schema documentation
+- **[Testing Guide](../tests/README.md)** - Testing documentation
+
+### Related Projects
+
+- **[OSM-Notes-Ingestion](https://github.com/OSMLatam/OSM-Notes-Ingestion)** - Data ingestion system (upstream)
+- **[OSM-Notes-Viewer](https://github.com/OSMLatam/OSM-Notes-Viewer)** - Web frontend (downstream)
 
 ## Support
 
