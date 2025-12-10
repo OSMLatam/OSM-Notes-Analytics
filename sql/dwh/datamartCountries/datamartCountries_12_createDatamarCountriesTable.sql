@@ -81,10 +81,17 @@ CREATE TABLE IF NOT EXISTS dwh.datamartCountries (
  active_notes_count INTEGER,
  notes_backlog_size INTEGER,
  notes_age_distribution JSON,
- notes_created_last_30_days INTEGER,
+  notes_created_last_30_days INTEGER,
   notes_resolved_last_30_days INTEGER,
   resolution_by_year JSON,
-  resolution_by_month JSON
+  resolution_by_month JSON,
+  hashtags_opening JSON,
+  hashtags_resolution JSON,
+  hashtags_comments JSON,
+  top_opening_hashtag VARCHAR(50),
+  top_resolution_hashtag VARCHAR(50),
+  opening_hashtag_count INTEGER DEFAULT 0,
+  resolution_hashtag_count INTEGER DEFAULT 0
 );
 COMMENT ON TABLE dwh.datamartCountries IS
   'Contains all precalculated statistical values for countries';
@@ -241,6 +248,13 @@ COMMENT ON COLUMN dwh.datamartCountries.resolution_by_year IS
   'JSON array of resolution metrics by year: [{year, avg_days, median_days, resolution_rate}]';
 COMMENT ON COLUMN dwh.datamartCountries.resolution_by_month IS
   'JSON array of resolution metrics by month: [{year, month, avg_days, median_days, resolution_rate}]';
+COMMENT ON COLUMN dwh.datamartCountries.hashtags_opening IS 'Top hashtags used in note opening actions';
+COMMENT ON COLUMN dwh.datamartCountries.hashtags_resolution IS 'Top hashtags used in note resolution actions';
+COMMENT ON COLUMN dwh.datamartCountries.hashtags_comments IS 'Top hashtags used in comment actions';
+COMMENT ON COLUMN dwh.datamartCountries.top_opening_hashtag IS 'Most frequently used opening hashtag';
+COMMENT ON COLUMN dwh.datamartCountries.top_resolution_hashtag IS 'Most frequently used resolution hashtag';
+COMMENT ON COLUMN dwh.datamartCountries.opening_hashtag_count IS 'Total count of opening hashtags used';
+COMMENT ON COLUMN dwh.datamartCountries.resolution_hashtag_count IS 'Total count of resolution hashtags used';
 
 CREATE TABLE IF NOT EXISTS dwh.max_date_countries_processed (
   date date NOT NULL
