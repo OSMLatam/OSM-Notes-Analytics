@@ -318,7 +318,10 @@ CREATE OR REPLACE FUNCTION dwh.update_days_to_resolution()
 COMMENT ON FUNCTION dwh.update_days_to_resolution IS
   'Sets the number of days between the creation and the resolution dates';
 
-CREATE OR REPLACE TRIGGER update_days_to_resolution
+-- Drop trigger if exists before creating it
+DROP TRIGGER IF EXISTS update_days_to_resolution ON dwh.facts;
+
+CREATE TRIGGER update_days_to_resolution
   AFTER INSERT ON dwh.facts
   FOR EACH ROW
   EXECUTE FUNCTION dwh.update_days_to_resolution()
