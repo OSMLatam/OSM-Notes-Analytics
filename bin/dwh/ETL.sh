@@ -827,9 +827,13 @@ function main() {
   # shellcheck disable=SC2310
   if ! __checkBaseTables; then
    __logi "Tables missing, creating them"
+   __createBaseTables
+  else
+   # Ensure schema exists even if tables exist (for datamart scripts)
+   __logi "Ensuring dwh schema exists"
+   psql -d "${DBNAME}" -c "CREATE SCHEMA IF NOT EXISTS dwh;" 2>&1
   fi
   set -E
-  __createBaseTables
   __initialFactsParallel # Use parallel version
   __perform_database_maintenance
   "${DATAMART_COUNTRIES_SCRIPT}" ""
@@ -852,6 +856,10 @@ function main() {
    if ! __checkBaseTables; then
     __logi "Tables missing, creating them"
     __createBaseTables
+   else
+    # Ensure schema exists even if tables exist (for datamart scripts)
+    __logi "Ensuring dwh schema exists"
+    psql -d "${DBNAME}" -c "CREATE SCHEMA IF NOT EXISTS dwh;" 2>&1
    fi
    set -E
    __logi "About to call __initialFactsParallel"
@@ -868,6 +876,10 @@ function main() {
    if ! __checkBaseTables; then
     __logi "Tables missing, creating them"
     __createBaseTables
+   else
+    # Ensure schema exists even if tables exist (for datamart scripts)
+    __logi "Ensuring dwh schema exists"
+    psql -d "${DBNAME}" -c "CREATE SCHEMA IF NOT EXISTS dwh;" 2>&1
    fi
    set -E
    __logi "About to call __processNotesETL"

@@ -183,12 +183,27 @@ function __checkBaseTables {
   __logw "Creating datamart users tables."
   __createBaseTables
   __logw "Datamart users tables created."
+  # Reset return code to 0 since we successfully created the tables
+  RET=0
  fi
+ set +e
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_13_CREATE_PROCEDURES_FILE}"
+ local proc_ret=${?}
+ set -e
+ if [[ "${proc_ret}" -ne 0 ]]; then
+  __loge "Failed to create procedures, but continuing..."
+ fi
+ set +e
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_14_LAST_YEAR_ACTITIES_SCRIPT}"
+ local last_year_ret=${?}
+ set -e
+ if [[ "${last_year_ret}" -ne 0 ]]; then
+  __loge "Failed to create last year activities, but continuing..."
+ fi
  __log_finish
+ return ${RET}
 }
 
 # Adds the columns up to the current year.
@@ -414,7 +429,10 @@ function main() {
  PROCESS_OLD_USERS=no
 
  set +E
- __checkBaseTables
+ if ! __checkBaseTables; then
+  __loge "Failed to check/create base tables"
+  exit 1
+ fi
  # Add new columns for years after 2013.
  __addYears
  set -E

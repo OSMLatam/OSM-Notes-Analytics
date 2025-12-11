@@ -161,8 +161,11 @@ function __checkBaseTables {
   __logw "Creating datamart global tables."
   __createBaseTables
   __logw "Datamart global tables created."
+  # Reset return code to 0 since we successfully created the tables
+  RET=0
  fi
  __log_finish
+ return ${RET}
 }
 
 # Processes the global statistics.
@@ -266,7 +269,10 @@ function main() {
  ONLY_EXECUTION="yes"
 
  set +E
- __checkBaseTables
+ if ! __checkBaseTables; then
+  __loge "Failed to check/create base tables"
+  exit 1
+ fi
  set -E
  __processGlobalStats
 
