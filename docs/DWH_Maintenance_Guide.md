@@ -1,10 +1,5 @@
 # Data Warehouse Maintenance and Cleanup Guide
 
-**Version**: 2025-10-22  
-**Author**: Andres Gomez (AngocA)
-
----
-
 ## 📋 Overview
 
 This guide covers maintenance operations for the OSM-Notes-Analytics data warehouse, including when and how to use the cleanup script safely.

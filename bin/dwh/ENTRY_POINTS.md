@@ -110,7 +110,7 @@ These are the **only scripts** that should be executed directly:
 
 6. **`bin/dwh/exportDatamartsToJSON.sh`** - Export datamarts to JSON files
    - **Usage**: `./bin/dwh/exportDatamartsToJSON.sh`
-   - **Purpose**: Exports datamart data to JSON files for web viewer consumption
+   - **Purpose**: Exports datamart data to JSON files for OSM-Notes-Viewer (sister project) consumption
    - **When**: After datamarts are populated and updated
    - **Prerequisites**: Datamarts must be populated
    - **Output**: Creates JSON files in `./output/json/`:
@@ -118,6 +118,7 @@ These are the **only scripts** that should be executed directly:
      - Individual files per country: `countries/{country_id}.json`
      - Index files: `indexes/users.json`, `indexes/countries.json`
      - Metadata: `metadata.json`
+   - **Consumer**: JSON files are consumed by OSM-Notes-Viewer (sister project) web application
    - **Features**:
      - Atomic writes: Files generated in temporary directory, validated, then moved atomically
      - Schema validation: Each JSON file validated against schemas before export
@@ -129,12 +130,13 @@ These are the **only scripts** that should be executed directly:
 
 7. **`bin/dwh/exportAndPushToGitHub.sh`** - Export and push to GitHub Pages
    - **Usage**: `./bin/dwh/exportAndPushToGitHub.sh`
-   - **Purpose**: Exports JSON files and automatically deploys them to GitHub Pages
+   - **Purpose**: Exports JSON files and automatically deploys them to GitHub Pages for OSM-Notes-Viewer (sister project)
    - **When**: After datamarts are updated (typically scheduled)
    - **Prerequisites**: 
      - Datamarts must be populated
      - Git repository configured
      - GitHub Pages enabled
+   - **Consumer**: OSM-Notes-Viewer (sister project) reads these JSON files
    - **Example**:
      ```bash
      ./bin/dwh/exportAndPushToGitHub.sh

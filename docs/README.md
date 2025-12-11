@@ -10,6 +10,11 @@ testing strategies, and development workflows.
 
 ## Documentation Index
 
+### Core Documentation
+
+- **`Rationale.md`**: Project motivation, background, and design decisions
+- **`Troubleshooting_Guide.md`**: Centralized troubleshooting guide for common problems and solutions
+
 ### Data Warehouse Documentation
 
 #### [DWH_Star_Schema_ERD.md](DWH_Star_Schema_ERD.md)
@@ -149,6 +154,39 @@ testing strategies, and development workflows.
 
 ---
 
+#### [Troubleshooting_Guide.md](Troubleshooting_Guide.md)
+
+**Comprehensive Troubleshooting Guide**
+
+- Common problems and solutions
+- Diagnostic commands
+- Recovery procedures
+- Error code reference
+
+**Contents:**
+
+- Quick diagnostic commands
+- ETL issues and solutions
+- Database issues and solutions
+- Datamart issues and solutions
+- Performance issues and solutions
+- Export and profile generation issues
+- Configuration and integration issues
+- Recovery procedures
+
+**Audience:** All users, developers, system administrators
+
+**When to read:**
+
+- When encountering errors or problems
+- Before asking for help
+- Setting up new environments
+- Troubleshooting performance issues
+
+**See also:** [bin/README.md](../bin/README.md) for script-specific troubleshooting
+
+---
+
 ### Testing Documentation
 
 For comprehensive testing documentation, see **[tests/README.md](../tests/README.md)**:
@@ -235,40 +273,161 @@ For comprehensive testing documentation, see **[tests/README.md](../tests/README
 
 ---
 
+## Quick Start
+
+**New to the project?** Start here:
+
+1. **[Rationale.md](./Rationale.md)** (30 min) - Understand why this project exists
+2. **[Main README](../README.md)** (20 min) - Project overview and quick start
+3. **[DWH_Star_Schema_ERD.md](./DWH_Star_Schema_ERD.md)** (30 min) - Understand the data model
+
+**Total time: ~1.5 hours** for a complete overview.
+
+For detailed navigation paths by role, see [Recommended Reading Paths by Role](#recommended-reading-paths-by-role) below.
+
+## Recommended Reading Paths by Role
+
+### For New Users (~2 hours total)
+
+**Step 1: Project Context** (50 min)
+- **[Rationale.md](./Rationale.md)** (30 min) - Project purpose and motivation
+  - Why this project exists
+  - Problem statement
+  - Historical context
+- **[Main README](../README.md)** (20 min) - Project overview and quick start
+  - Features and capabilities
+  - Quick start guide
+  - Basic workflows
+
+**Step 2: System Overview** (45 min)
+- **[DWH_Star_Schema_ERD.md](./DWH_Star_Schema_ERD.md)** (30 min) - Data warehouse structure
+  - Star schema design
+  - Table relationships
+  - ETL data flow
+- **[bin/README.md](../bin/README.md)** (15 min) - Scripts overview
+  - Main entry points
+  - Basic usage examples
+
+**Step 3: Getting Started** (25 min)
+- **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/ENTRY_POINTS.md)** (15 min) - Which scripts to use
+  - Entry points documentation
+  - Usage examples
+- **[Troubleshooting_Guide.md](./Troubleshooting_Guide.md)** (10 min) - Common issues
+  - Quick diagnostic commands
+  - Common problems and solutions
+
+### For Developers (~3 hours total)
+
+**Step 1: Foundation** (75 min)
+- **[Rationale.md](./Rationale.md)** (30 min) - Project context
+- **[Main README](../README.md)** (20 min) - Overview and architecture
+- **[DWH_Star_Schema_ERD.md](./DWH_Star_Schema_ERD.md)** (25 min) - Data model
+
+**Step 2: Implementation Details** (60 min)
+- **[ETL_Enhanced_Features.md](./ETL_Enhanced_Features.md)** (30 min) - ETL capabilities
+  - Parallel processing
+  - Recovery mechanisms
+  - Performance optimization
+- **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/ENTRY_POINTS.md)** (15 min) - Script entry points
+- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)** (15 min) - Configuration
+
+**Step 3: Development Workflow** (45 min)
+- **[tests/README.md](../tests/README.md)** (20 min) - Testing guide
+- **[CI_CD_Guide.md](./CI_CD_Guide.md)** (25 min) - CI/CD workflows
+  - GitHub Actions
+  - Git hooks
+  - Quality gates
+
+**Step 4: Deep Dive** (as needed)
+- **[DWH_Star_Schema_Data_Dictionary.md](./DWH_Star_Schema_Data_Dictionary.md)** - Complete schema reference
+- **[CONTRIBUTING.md](../CONTRIBUTING.md)** - Contribution guidelines
+- **[bin/README.md](../bin/README.md)** - Script documentation
+
+### For Data Analysts (~2 hours total)
+
+**Step 1: Data Model** (60 min)
+- **[DWH_Star_Schema_ERD.md](./DWH_Star_Schema_ERD.md)** (30 min) - Schema overview
+  - Table relationships
+  - Fact and dimension tables
+- **[DWH_Star_Schema_Data_Dictionary.md](./DWH_Star_Schema_Data_Dictionary.md)** (30 min) - Column definitions
+  - Complete data dictionary
+  - Business rules
+  - Sample queries
+
+**Step 2: Data Access** (45 min)
+- **[Main README](../README.md)** (15 min) - Quick start
+- **[ETL_Enhanced_Features.md](./ETL_Enhanced_Features.md)** (15 min) - Data freshness
+- **[bin/dwh/profile.sh](../bin/dwh/profile.sh)** (15 min) - Profile generation
+  - User profiles
+  - Country profiles
+  - Statistics
+
+**Step 3: Advanced Topics** (15 min)
+- **[DASHBOARD_ANALYSIS.md](./DASHBOARD_ANALYSIS.md)** - Available metrics
+  - Resolution metrics
+  - Application statistics
+  - Content quality metrics
+  - Community health indicators
+
+### For DevOps/SRE (~2.5 hours total)
+
+**Step 1: Deployment** (45 min)
+- **[Main README](../README.md)** (20 min) - Setup and deployment
+- **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/ENTRY_POINTS.md)** (15 min) - Script entry points
+- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)** (10 min) - Configuration
+
+**Step 2: Operations** (60 min)
+- **[ETL_Enhanced_Features.md](./ETL_Enhanced_Features.md)** (30 min) - ETL operations
+  - Performance tuning
+  - Resource monitoring
+  - Recovery procedures
+- **[DWH_Maintenance_Guide.md](./DWH_Maintenance_Guide.md)** (30 min) - Maintenance
+  - Cleanup procedures
+  - Backup strategies
+  - Performance optimization
+
+**Step 3: Monitoring and Troubleshooting** (45 min)
+- **[Troubleshooting_Guide.md](./Troubleshooting_Guide.md)** (30 min) - Problem resolution
+  - Common issues
+  - Diagnostic commands
+  - Recovery procedures
+- **[CI_CD_Guide.md](./CI_CD_Guide.md)** (15 min) - CI/CD pipelines
+
+### For System Administrators (~2 hours total)
+
+**Step 1: System Overview** (45 min)
+- **[Rationale.md](./Rationale.md)** (30 min) - Project purpose
+- **[Main README](../README.md)** (15 min) - Architecture overview
+
+**Step 2: Operations** (60 min)
+- **[bin/README.md](../bin/README.md)** (20 min) - Scripts and workflows
+- **[DWH_Maintenance_Guide.md](./DWH_Maintenance_Guide.md)** (20 min) - Maintenance procedures
+- **[Troubleshooting_Guide.md](./Troubleshooting_Guide.md)** (20 min) - Problem resolution
+
+**Step 3: Configuration** (15 min)
+- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)** - Environment variables
+- **[etc/README.md](../etc/README.md)** - Configuration files
+
 ## Quick Reference
 
-### For New Users
+### Essential Documents
 
-**Start here:**
+- **[Rationale.md](./Rationale.md)** - Why this project exists
+- **[Main README](../README.md)** - Project overview and quick start
+- **[DWH_Star_Schema_ERD.md](./DWH_Star_Schema_ERD.md)** - Data model visualization
+- **[Troubleshooting_Guide.md](./Troubleshooting_Guide.md)** - Problem resolution
 
-1. [Main README](../README.md) - Project overview and quick start
-2. [DWH_Star_Schema_ERD.md](DWH_Star_Schema_ERD.md) - Understand the data model
-3. [ETL_Enhanced_Features.md](ETL_Enhanced_Features.md) - Learn about ETL capabilities
+### Script Documentation
 
-### For Developers
+- **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/ENTRY_POINTS.md)** - Which scripts can be called directly
+- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)** - Configuration variables
+- **[bin/README.md](../bin/README.md)** - Complete script documentation
 
-**Essential reading:**
+### Technical Reference
 
-1. [tests/README.md](../tests/README.md) - Testing guide and test suite documentation
-2. [CI_CD_Guide.md](CI_CD_Guide.md) - Development workflow and CI/CD
-3. [DWH_Star_Schema_Data_Dictionary.md](DWH_Star_Schema_Data_Dictionary.md) - Data reference
-
-### For Data Analysts
-
-**Key documents:**
-
-1. [DWH_Star_Schema_Data_Dictionary.md](DWH_Star_Schema_Data_Dictionary.md) - Column definitions
-2. [DWH_Star_Schema_ERD.md](DWH_Star_Schema_ERD.md) - Table relationships
-3. [ETL_Enhanced_Features.md](ETL_Enhanced_Features.md) - Data freshness and updates
-
-### For DevOps/SRE
-
-**Important guides:**
-
-1. [CI_CD_Guide.md](CI_CD_Guide.md) - Pipeline configuration and workflows
-2. [DWH_Maintenance_Guide.md](DWH_Maintenance_Guide.md) - Maintenance and cleanup procedures
-3. [ETL_Enhanced_Features.md](ETL_Enhanced_Features.md) - Performance tuning
-4. [tests/README.md](../tests/README.md) - Test automation and execution
+- **[DWH_Star_Schema_Data_Dictionary.md](./DWH_Star_Schema_Data_Dictionary.md)** - Complete schema reference
+- **[ETL_Enhanced_Features.md](./ETL_Enhanced_Features.md)** - ETL capabilities
+- **[DWH_Maintenance_Guide.md](./DWH_Maintenance_Guide.md)** - Maintenance procedures
 
 ## Documentation Standards
 

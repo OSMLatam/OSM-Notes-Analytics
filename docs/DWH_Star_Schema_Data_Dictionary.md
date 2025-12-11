@@ -1,7 +1,5 @@
 # DWH Star Schema Data Dictionary
 
-Version: 2025-08-08
-
 This document provides a tabular data dictionary for the star schema used
 in the data warehouse. It covers the fact table and all dimensions,
 including data types, nullability, defaults, keys, and functional

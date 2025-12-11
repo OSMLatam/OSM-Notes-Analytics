@@ -386,7 +386,3 @@ psql -d $DBNAME -c "SELECT pg_size_pretty(pg_database_size('osm_notes'))"
 - [DWH Maintenance Guide](DWH_Maintenance_Guide.md)
 - [Partitioning Strategy](partitioning_strategy.md)
 
----
-
-**Last Updated**: 2025-01-24  
-**Author**: Andres Gomez (AngocA)

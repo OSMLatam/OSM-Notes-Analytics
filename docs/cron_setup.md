@@ -397,7 +397,3 @@ Run ETL only during business hours:
 
 With cron automation configured, your OSM Notes Analytics data warehouse will stay current with minimal manual intervention. Regular monitoring and maintenance ensure optimal performance.
 
----
-
-**Last Updated**: 2025-01-24  
-**Author**: Andres Gomez (AngocA)

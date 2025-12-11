@@ -1,10 +1,5 @@
 # Partitioning Strategy - dwh.facts
 
-**Version**: 2025-10-21  
-**Author**: Andres Gomez (AngocA)
-
----
-
 ## 📊 Overview
 
 The `dwh.facts` table is partitioned by year using the `action_at` column as the partitioning key. This dramatically improves the performance of queries that filter by date.
@@ -397,6 +392,4 @@ For problems or questions about partitioning:
 
 ---
 
-**Last updated**: 2025-10-21  
-**Version**: 1.0  
 **Status**: ✅ Implemented

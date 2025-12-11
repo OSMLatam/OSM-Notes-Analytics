@@ -1,7 +1,5 @@
 # DWH Star Schema ERD
 
-Version: 2025-08-08
-
 This document shows the entity–relationship diagram (ERD) of the star schema.
 The central fact table is `dwh.facts`, connected to its dimensions.
 

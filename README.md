@@ -344,12 +344,13 @@ OSM-Notes-Analytics/
 │   ├── CI_CD_Guide.md                   # CI/CD workflows
 │   └── README.md                        # Documentation index
 └── lib/                    # Shared libraries
-    ├── osm-common/         # Common OSM utilities
+    ├── osm-common/         # OSM-Notes-Common submodule (Git submodule)
     │   ├── bash_logger.sh
     │   ├── commonFunctions.sh
     │   ├── validationFunctions.sh
     │   ├── errorHandlingFunctions.sh
-    │   └── consolidatedValidationFunctions.sh
+    │   ├── consolidatedValidationFunctions.sh
+    │   └── schemas/        # JSON schemas for validation
     └── README.md          # Library documentation
 ```
 
@@ -683,13 +684,17 @@ This analytics project is part of a larger ecosystem for OSM Notes analysis:
 
 ### Repository Structure
 
+The OSM Notes ecosystem consists of three sister projects at the same organizational level:
+
 ```
 OSMLatam/
 ├── OSM-Notes-Ingestion/     # Data ingestion from OSM API/Planet
 ├── OSM-Notes-Analytics/     # Data Warehouse & ETL (this repository)
-├── OSM-Notes-Viewer/        # Web frontend visualization
-└── osm-common/              # Shared Bash libraries
+├── OSM-Notes-Viewer/        # Web frontend visualization (web application)
+└── OSM-Notes-Common/        # Shared Bash libraries (Git submodule)
 ```
+
+**All three projects are independent repositories at the same level**, working together to provide a complete OSM Notes analysis solution.
 
 ### How Projects Work Together
 
@@ -719,12 +724,13 @@ OSMLatam/
 └──────────────────────────────────────┘
 
        ┌─────────────────────┐
-       │  osm-common/        │
+       │  OSM-Notes-Common/  │
        │  - Shared libraries │
        │  - bash_logger.sh   │
-       │  - validation.sh    │
+       │  - validation.sh   │
+       │  - commonFunctions  │
        └─────────────────────┘
-         ↑ used by all
+         ↑ used by all (via submodule)
 ```
 
 ### Related Projects
@@ -735,16 +741,19 @@ OSMLatam/
   - Publishes WMS layer for mapping applications
   - **Deploy this FIRST** - analytics needs base data
 
-- **OSM-Notes-Viewer** (not yet publicly available):
-  - Web frontend for visualizing analytics
-  - Interactive dashboards
+- **[OSM-Notes-Viewer](https://github.com/OSMLatam/OSM-Notes-Viewer)** (sister project):
+  - Web application (web page) for visualizing analytics
+  - Interactive dashboards and visualizations
   - User and country profiles
   - Reads JSON exports from this analytics system
+  - **Sister project** at the same organizational level as Ingestion and Analytics
 
-- **osm-common** (shared):
-  - Common Bash libraries
-  - Used by all three repositories
-  - Logging, validation, error handling
+- **[OSM-Notes-Common](https://github.com/OSMLatam/OSM-Notes-Common)** (shared library):
+  - Common Bash libraries and utilities (Git submodule)
+  - Used by Ingestion and Analytics projects
+  - Located at `lib/osm-common/` in each project
+  - Provides: logging, validation, error handling, common functions, schemas
+  - Shared via Git submodule across repositories
 
 - **OpenStreetMap**: [https://www.openstreetmap.org](https://www.openstreetmap.org)
 

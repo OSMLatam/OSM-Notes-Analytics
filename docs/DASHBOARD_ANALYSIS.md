@@ -1,12 +1,6 @@
 # Dashboard Analysis: OSM Notes Analytics
 ## Data Mapping Between Star Schema and Datamarts
 
-**Author:** Andres Gomez (AngocA)  
-**Date:** 2025-10-26  
-**Version:** 2.0
-
----
-
 ## 📊 Executive Summary
 
 This document analyzes the data available in the OSM Notes Analytics data warehouse (star schema) versus what's exposed through the datamarts. It identifies gaps, recommendations for dashboard implementation, and documents the enhancements implemented in October 2025.

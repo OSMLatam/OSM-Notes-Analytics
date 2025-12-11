@@ -1,7 +1,5 @@
 # Star model
 
-Version: 2025-08-08
-
 This document describes the star schema used by the data warehouse.
 It includes the fact table, the dimensions, their relationships,
 and the ETL flow that populates them.

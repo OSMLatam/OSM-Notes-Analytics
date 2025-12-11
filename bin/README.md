@@ -605,9 +605,11 @@ These scripts integrate with:
    - Reads base tables: `notes`, `note_comments`, `users`, `countries`
    - Requires ingestion system to run first
 
-2. **Web Frontend** (downstream)
-   - Provides data through datamarts
-   - Profile scripts can generate reports
+2. **OSM-Notes-Viewer** (sister project - downstream)
+   - Web application that consumes JSON exports
+   - Interactive dashboards and visualizations
+   - User and country profiles
+   - Reads JSON files exported by this analytics system
 
 ## Performance Tuning
 
@@ -815,7 +817,7 @@ psql -d osm_notes -c "SELECT country_name_en FROM dwh.datamartcountries WHERE co
 
 1. Follow naming convention: `descriptiveName.sh`
 2. Include header with purpose, author, version
-3. Source common libraries from `lib/osm-common/`
+3. Source common libraries from `lib/osm-common/` (OSM-Notes-Common submodule)
 4. Add error handling and logging
 5. Include help text (`--help` flag)
 6. Test with shellcheck: `shellcheck -x -o all script.sh`
@@ -843,7 +845,7 @@ psql -d osm_notes -c "SELECT country_name_en FROM dwh.datamartcountries WHERE co
 ### Related Projects
 
 - **[OSM-Notes-Ingestion](https://github.com/OSMLatam/OSM-Notes-Ingestion)** - Data ingestion system (upstream)
-- **[OSM-Notes-Viewer](https://github.com/OSMLatam/OSM-Notes-Viewer)** - Web frontend (downstream)
+- **[OSM-Notes-Viewer](https://github.com/OSMLatam/OSM-Notes-Viewer)** - Web application (sister project)
 
 ## Support
 
