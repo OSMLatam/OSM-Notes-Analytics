@@ -830,6 +830,43 @@ psql -d osm_notes -c "SELECT country_name_en FROM dwh.datamartcountries WHERE co
 - Include error codes in help text
 - Use strict error handling (`set -euo pipefail`)
 
+## Related Documentation
+
+### Essential Reading
+
+- **[Entry Points](dwh/ENTRY_POINTS.md)** - Which scripts can be called directly
+- **[Environment Variables](dwh/ENVIRONMENT_VARIABLES.md)** - Complete environment variable reference
+- **[DWH README](dwh/README.md)** - Detailed DWH documentation
+- **[Main README](../README.md)** - Project overview and quick start
+
+### Technical Documentation
+
+- **[ETL Enhanced Features](../docs/ETL_Enhanced_Features.md)** - Advanced ETL capabilities
+- **[DWH Star Schema ERD](../docs/DWH_Star_Schema_ERD.md)** - Entity-relationship diagram
+- **[Data Dictionary](../docs/DWH_Star_Schema_Data_Dictionary.md)** - Complete schema documentation
+- **[DWH Maintenance Guide](../docs/DWH_Maintenance_Guide.md)** - Maintenance procedures
+
+### Configuration
+
+- **[etc/README.md](../etc/README.md)** - Configuration files and setup
+- **[sql/README.md](../sql/README.md)** - SQL scripts documentation
+
+### Troubleshooting
+
+- **[Troubleshooting Guide](../docs/Troubleshooting_Guide.md)** - Common issues and solutions
+
+### Development
+
+- **[Testing Guide](../tests/README.md)** - Testing documentation
+- **[Contributing Guide](../CONTRIBUTING.md)** - Development standards
+- **[CI/CD Guide](../docs/CI_CD_Guide.md)** - CI/CD workflows
+
+### Related Projects
+
+- **[OSM-Notes-Ingestion](https://github.com/OSMLatam/OSM-Notes-Ingestion)** - Data ingestion system (upstream)
+- **[OSM-Notes-Viewer](https://github.com/OSMLatam/OSM-Notes-Viewer)** - Web application (sister project)
+- **[OSM-Notes-Common](https://github.com/OSMLatam/OSM-Notes-Common)** - Shared libraries (Git submodule)
+
 ## References
 
 ### Documentation

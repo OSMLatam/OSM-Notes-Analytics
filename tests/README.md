@@ -303,6 +303,33 @@ When adding new features:
 4. Update this README if adding new test categories
 5. Run full test suite before submitting PR
 
+## Related Documentation
+
+### Essential Reading
+
+- **[Main README](../README.md)** - Project overview and quick start
+- **[Contributing Guide](../CONTRIBUTING.md)** - Development standards and testing requirements
+- **[CI/CD Guide](../docs/CI_CD_Guide.md)** - CI/CD workflows and test integration
+
+### Scripts and Entry Points
+
+- **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/ENTRY_POINTS.md)** - Script entry points (what to test)
+- **[bin/README.md](../bin/README.md)** - Script usage and examples
+
+### Configuration
+
+- **[etc/README.md](../etc/README.md)** - Configuration files for test environment
+- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)** - Environment variables
+
+### Troubleshooting
+
+- **[Troubleshooting Guide](../docs/Troubleshooting_Guide.md)** - Common test failures and solutions
+
+### External References
+
+- [BATS Documentation](https://github.com/bats-core/bats-core) - BATS testing framework
+- [pgTAP Documentation](https://pgtap.org/) - PostgreSQL testing framework
+
 ## References
 
 - [BATS Documentation](https://github.com/bats-core/bats-core)

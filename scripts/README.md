@@ -539,6 +539,28 @@ psql -d osm_notes -c "CREATE EXTENSION postgis;"
 4. Update documentation in this README
 5. Commit changes with descriptive message
 
+## Related Documentation
+
+### Essential Reading
+
+- **[Main README](../README.md)** - Project overview and setup
+- **[Contributing Guide](../CONTRIBUTING.md)** - Development workflow and standards
+- **[CI/CD Guide](../docs/CI_CD_Guide.md)** - CI/CD workflows and git hooks
+
+### Configuration
+
+- **[etc/README.md](../etc/README.md)** - Configuration files and setup
+- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)** - Environment variables
+
+### Testing
+
+- **[Testing Guide](../tests/README.md)** - Test infrastructure and execution
+- **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/ENTRY_POINTS.md)** - Script entry points
+
+### Troubleshooting
+
+- **[Troubleshooting Guide](../docs/Troubleshooting_Guide.md)** - Common issues and solutions
+
 ## References
 
 - [Main README](../README.md)

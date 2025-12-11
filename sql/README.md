@@ -658,6 +658,36 @@ SELECT pg_terminate_backend(pid);
 
 1. **Document complex queries with comments**
 
+## Related Documentation
+
+### Essential Reading
+
+- **[DWH Star Schema ERD](../docs/DWH_Star_Schema_ERD.md)** - Visual schema diagrams
+- **[Data Dictionary](../docs/DWH_Star_Schema_Data_Dictionary.md)** - Complete column definitions
+- **[ETL Enhanced Features](../docs/ETL_Enhanced_Features.md)** - ETL capabilities and features
+
+### Scripts and Execution
+
+- **[bin/dwh/ETL.sh](../bin/dwh/ETL.sh)** - Main ETL orchestration script
+- **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/ENTRY_POINTS.md)** - Script entry points
+- **[bin/README.md](../bin/README.md)** - Script usage guide
+
+### Configuration
+
+- **[etc/README.md](../etc/README.md)** - Configuration files and ETL properties
+- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)** - Environment variables
+
+### Maintenance and Troubleshooting
+
+- **[DWH Maintenance Guide](../docs/DWH_Maintenance_Guide.md)** - Maintenance procedures
+- **[Troubleshooting Guide](../docs/Troubleshooting_Guide.md)** - Common SQL and database issues
+- **[partitioning_strategy.md](../docs/partitioning_strategy.md)** - Facts table partitioning
+
+### External References
+
+- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
+- [PostGIS Documentation](https://postgis.net/documentation/)
+
 ## References
 
 - [DWH Star Schema ERD](../docs/DWH_Star_Schema_ERD.md)

@@ -654,14 +654,16 @@ __validate_sql_structure "file.sql"
 set +x  # Disable debug output
 ```
 
-## Integration with OSM-Notes-Ingestion
+## Integration with OSM-Notes-Common
 
-These libraries are shared with the OSM-Notes-Ingestion repository:
+These libraries are maintained in the **[OSM-Notes-Common](https://github.com/OSMLatam/OSM-Notes-Common)** repository:
 
-- Maintained in separate Git submodule
-- Versioned independently
-- Changes should be backward compatible
-- Test in both projects before committing
+- **Repository**: [OSM-Notes-Common](https://github.com/OSMLatam/OSM-Notes-Common)
+- **Location**: `lib/osm-common/` (Git submodule)
+- **Shared with**: OSM-Notes-Ingestion, OSM-Notes-Analytics (and potentially OSM-Notes-Viewer)
+- **Versioning**: Independent versioning
+- **Compatibility**: Changes should be backward compatible
+- **Testing**: Test in all projects before committing changes
 
 **Update submodule:**
 
@@ -670,8 +672,34 @@ cd lib/osm-common
 git pull origin main
 cd ../..
 git add lib/osm-common
-git commit -m "Update osm-common library"
+git commit -m "Update OSM-Notes-Common submodule"
 ```
+
+**Initialize submodule (if missing):**
+
+```bash
+git submodule update --init --recursive
+```
+
+## Related Documentation
+
+### Project Documentation
+
+- **[Main README](../README.md)** - Project overview
+- **[Contributing Guide](../CONTRIBUTING.md)** - Development standards and library usage
+- **[bin/README.md](../bin/README.md)** - Script usage examples
+- **[docs/Rationale.md](../docs/Rationale.md)** - Project context and design decisions
+
+### Library Documentation
+
+- **[OSM-Notes-Common Repository](https://github.com/OSMLatam/OSM-Notes-Common)** - Source repository
+- **[lib/osm-common/README.md](osm-common/README.md)** - Detailed library documentation
+
+### External References
+
+- [Bash Best Practices](https://bertvv.github.io/cheat-sheets/Bash.html)
+- [Google Shell Style Guide](https://google.github.io/styleguide/shellguide.html)
+- [Advanced Bash-Scripting Guide](https://tldp.org/LDP/abs/html/)
 
 ## References
 

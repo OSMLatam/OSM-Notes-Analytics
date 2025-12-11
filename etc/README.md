@@ -606,6 +606,26 @@ unset ETL_BATCH_SIZE
 5. **Document custom changes** in comments
 6. **Test configuration** with `--dry-run` before full execution
 
+## Related Documentation
+
+### Essential Reading
+
+- **[Main README](../README.md)** - Project overview and quick start guide
+- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)** - Complete environment variable reference
+- **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/ENTRY_POINTS.md)** - Script entry points and usage
+
+### Technical Documentation
+
+- **[ETL Enhanced Features](../docs/ETL_Enhanced_Features.md)** - ETL capabilities and configuration
+- **[DWH Maintenance Guide](../docs/DWH_Maintenance_Guide.md)** - Maintenance procedures
+- **[Troubleshooting Guide](../docs/Troubleshooting_Guide.md)** - Common configuration issues
+
+### Testing and Development
+
+- **[Testing Guide](../tests/README.md)** - Test execution and writing tests
+- **[CI/CD Guide](../docs/CI_CD_Guide.md)** - CI/CD workflows and validation
+- **[Contributing Guide](../CONTRIBUTING.md)** - Development standards
+
 ## References
 
 - [Main README](../README.md)
