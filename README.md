@@ -1091,11 +1091,21 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on contributing to this pr
 
 See [LICENSE](LICENSE) for license information.
 
+## Data License
+
+**Important:** This repository contains only code and configuration files. All data processed by this system comes from **OpenStreetMap (OSM)** and is licensed under the **Open Database License (ODbL)**. The processed data (notes, analytics, datamarts, etc.) stored in the database is derived from OSM and must comply with OSM's licensing requirements.
+
+- **OSM Data License:** [Open Database License (ODbL)](http://opendatacommons.org/licenses/odbl/)
+- **OSM Copyright:** [OpenStreetMap contributors](http://www.openstreetmap.org/copyright)
+- **OSM Attribution:** Required when using or distributing OSM data
+
+For more information about OSM licensing, see: [https://www.openstreetmap.org/copyright](https://www.openstreetmap.org/copyright)
+
 ## Acknowledgments
 
 - **Andres Gomez (@AngocA)**: Main developer
 - **Jose Luis Ceron Sarria**: Architecture design and infrastructure
-- **OSM Community**: For the valuable notes data
+- **OpenStreetMap contributors**: For the valuable notes data and their contributions to the OSM project
 
 ## Project Ecosystem
 
