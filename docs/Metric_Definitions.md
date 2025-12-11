@@ -2,6 +2,35 @@
 
 This document provides comprehensive business definitions for all 70+ metrics available in the OSM-Notes-Analytics datamarts. Each metric includes business name, definition, calculation formula, unit, interpretation, and use cases.
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Metric Categories](#metric-categories)
+  - [1. Historical Count Metrics](#1-historical-count-metrics)
+    - [1.1 Whole History Metrics](#11-whole-history-metrics)
+    - [1.2 Time Period Metrics](#12-time-period-metrics)
+  - [2. Resolution Metrics](#2-resolution-metrics)
+  - [3. Application Statistics](#3-application-statistics)
+  - [4. Content Quality Metrics](#4-content-quality-metrics)
+  - [5. Temporal Pattern Metrics](#5-temporal-pattern-metrics)
+  - [6. Geographic Pattern Metrics](#6-geographic-pattern-metrics)
+  - [7. Community Health Metrics](#7-community-health-metrics)
+  - [8. Hashtag Metrics](#8-hashtag-metrics)
+  - [9. First/Last Action Metrics](#9-firstlast-action-metrics)
+  - [10. Current Period Metrics](#10-current-period-metrics)
+  - [11. User Classification Metrics](#11-user-classification-metrics)
+- [Metric Summary Table](#metric-summary-table)
+  - [User Datamart Metrics (70+ metrics)](#user-datamart-metrics-70-metrics)
+  - [Country Datamart Metrics (70+ metrics)](#country-datamart-metrics-70-metrics)
+- [Metric Calculation Details](#metric-calculation-details)
+- [Metric Interpretation Guide](#metric-interpretation-guide)
+  - [Understanding Metric Values](#understanding-metric-values)
+  - [Comparing Metrics](#comparing-metrics)
+- [Related Documentation](#related-documentation)
+- [References](#references)
+
+---
+
 ## Overview
 
 The datamarts contain pre-computed metrics organized into categories:

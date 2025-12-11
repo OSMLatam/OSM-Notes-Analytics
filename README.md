@@ -145,6 +145,23 @@ For complete schema documentation, see [DWH Star Schema ERD](docs/DWH_Star_Schem
 
 This guide walks you through the complete process from scratch to having exportable JSON datamarts.
 
+### Table of Contents
+
+- [Process Overview](#process-overview)
+- [Prerequisites Check](#prerequisites-check)
+  - [Step 1: Clone Repository](#step-1-clone-repository)
+  - [Step 2: Configure Database](#step-2-configure-database)
+  - [Step 3: Verify Base Tables](#step-3-verify-base-tables)
+- [Data Warehouse Setup](#data-warehouse-setup)
+  - [Step 4: Run ETL Process](#step-4-run-etl-process)
+  - [Step 5: Verify DWH Creation](#step-5-verify-dwh-creation)
+- [Analytics and Export](#analytics-and-export)
+  - [Step 6: Create and Populate Datamarts](#step-6-create-and-populate-datamarts)
+  - [Step 7: Verify Datamart Creation](#step-7-verify-datamart-creation)
+  - [Step 8: Export to JSON (Optional)](#step-8-export-to-json-optional)
+- [Quick Troubleshooting](#quick-troubleshooting)
+- [Incremental Updates](#incremental-updates)
+
 ### Process Overview
 
 ```
@@ -152,9 +169,9 @@ This guide walks you through the complete process from scratch to having exporta
    (notes)            (facts, dims)       (aggregations)      (web viewer)
 ```
 
-### Step-by-Step Instructions
+### Prerequisites Check
 
-#### Step 1: Clone the Repository
+### Step 1: Clone Repository
 
 ```bash
 git clone https://github.com/OSMLatam/OSM-Notes-Analytics.git
@@ -174,7 +191,7 @@ ls -la OSM-Notes-Analytics/
 git submodule update --init --recursive
 ```
 
-#### Step 2: Configure Database Connection
+### Step 2: Configure Database
 
 **What this does:** Sets up database connection settings for all scripts.
 
@@ -210,7 +227,7 @@ PostgreSQL 12.x or higher
 - Verify database exists: `psql -l | grep osm_notes`
 - Check user permissions: `psql -d osm_notes -c "SELECT current_user;"`
 
-#### Step 3: Verify Base Tables
+### Step 3: Verify Base Tables
 
 **What this does:** Ensures the base data from OSM-Notes-Ingestion exists before running ETL.
 
@@ -244,7 +261,9 @@ Each query should return a number > 0. If any table is empty or doesn't exist, y
 - **Count is 0**: Tables exist but empty. Run OSM-Notes-Ingestion to populate data.
 - **Connection error**: Check Step 2 configuration and PostgreSQL service.
 
-#### Step 4: Run the ETL Process
+## Data Warehouse Setup
+
+### Step 4: Run ETL Process
 
 **What this does:** Transforms base data into a [star schema data warehouse](docs/DWH_Star_Schema_ERD.md) with pre-computed analytics.
 
@@ -325,7 +344,7 @@ For detailed ETL process flow, see [ETL Enhanced Features](docs/ETL_Enhanced_Fea
 - **Takes too long**: Increase parallelism or check system resources
 - **See [Troubleshooting Guide](docs/Troubleshooting_Guide.md#etl-issues) for more solutions**
 
-#### Step 5: Verify DWH Creation
+### Step 5: Verify DWH Creation
 
 **What this does:** Confirms the data warehouse was created successfully with data.
 
@@ -386,7 +405,9 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM dwh.dimension_countries;
 - **Tables missing**: ETL failed partway through. Check error logs.
 - **Count is 0**: ETL ran but no data loaded. Check base tables have data (Step 3).
 
-#### Step 6: Create and Populate Datamarts
+## Analytics and Export
+
+### Step 6: Create and Populate Datamarts
 
 **What this does:** Creates pre-computed analytics tables for fast querying.
 
@@ -448,7 +469,7 @@ cd bin/dwh/datamartCountries
 - **Count is 0**: Datamarts empty. Run datamart scripts manually.
 - **See [Troubleshooting Guide](docs/Troubleshooting_Guide.md#datamart-issues) for more solutions**
 
-#### Step 7: Verify Datamart Creation
+### Step 7: Verify Datamart Creation
 
 **What this does:** Confirms datamarts are populated with data.
 
@@ -518,7 +539,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT country_id, country_name_en, history_w
 - **Tables don't exist**: ETL didn't create datamarts. Check ETL logs.
 - **See [Troubleshooting Guide](docs/Troubleshooting_Guide.md#datamart-issues) for more solutions**
 
-#### Step 8: Export to JSON (Optional)
+### Step 8: Export to JSON (Optional)
 
 **What this does:** Exports datamart data to JSON files for OSM-Notes-Viewer (sister project) consumption.
 
@@ -590,7 +611,7 @@ output/json/
 
 See [JSON Export Documentation](bin/dwh/export_json_readme.md) and [Atomic Validation Export](docs/ATOMIC_VALIDATION_EXPORT.md) for complete details.
 
-### Quick Troubleshooting
+## Quick Troubleshooting
 
 If you encounter issues during setup, here are quick solutions:
 
@@ -614,7 +635,7 @@ If you encounter issues during setup, here are quick solutions:
 
 For comprehensive troubleshooting, see [Troubleshooting Guide](docs/Troubleshooting_Guide.md).
 
-### Incremental Updates
+## Incremental Updates
 
 For ongoing updates, run these in sequence:
 

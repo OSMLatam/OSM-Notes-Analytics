@@ -2,6 +2,46 @@
 
 This document provides deployment architecture and operational diagrams for the OSM-Notes-Analytics system, including infrastructure, scheduling, dependencies, and operational workflows.
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Deployment Architecture](#deployment-architecture)
+  - [Single Server Deployment (Typical)](#single-server-deployment-typical)
+  - [Multi-Server Deployment (Scalable)](#multi-server-deployment-scalable)
+- [Operational Schedule](#operational-schedule)
+  - [Production Schedule (Recommended)](#production-schedule-recommended)
+  - [Cron Configuration](#cron-configuration)
+- [Process Dependencies](#process-dependencies)
+  - [Dependency Graph](#dependency-graph)
+  - [Execution Order](#execution-order)
+- [Infrastructure Requirements](#infrastructure-requirements)
+  - [Server Specifications](#server-specifications)
+  - [Database Server](#database-server)
+- [Deployment Steps](#deployment-steps)
+- [Operational Workflows](#operational-workflows)
+  - [Workflow 1: Regular Incremental Update](#workflow-1-regular-incremental-update)
+  - [Workflow 2: Daily Datamart Update](#workflow-2-daily-datamart-update)
+  - [Workflow 3: JSON Export](#workflow-3-json-export)
+- [Monitoring and Alerting](#monitoring-and-alerting)
+  - [Health Checks](#health-checks)
+  - [Monitoring Dashboard](#monitoring-dashboard)
+- [Backup and Recovery](#backup-and-recovery)
+  - [Backup Strategy](#backup-strategy)
+  - [Recovery Procedures](#recovery-procedures)
+- [Security Considerations](#security-considerations)
+  - [Access Control](#access-control)
+  - [Network Security](#network-security)
+- [Performance Tuning](#performance-tuning)
+  - [Database Tuning](#database-tuning)
+  - [ETL Tuning](#etl-tuning)
+- [Disaster Recovery](#disaster-recovery)
+  - [Recovery Time Objectives (RTO)](#recovery-time-objectives-rto)
+  - [Recovery Point Objectives (RPO)](#recovery-point-objectives-rpo)
+- [Related Documentation](#related-documentation)
+- [References](#references)
+
+---
+
 ## Overview
 
 The deployment diagram shows:
