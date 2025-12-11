@@ -134,6 +134,69 @@ testing strategies, and development workflows.
 
 ---
 
+#### [Deployment_Diagram.md](Deployment_Diagram.md)
+
+**Deployment Diagram - Infrastructure and Operations**
+
+- Deployment architecture (single and multi-server)
+- Operational schedules and cron configuration
+- Process dependencies and execution order
+- Infrastructure requirements
+- Monitoring, backup, and disaster recovery
+
+**Contents:**
+- Deployment architecture diagrams
+- Production schedule (Gantt chart)
+- Cron configuration examples
+- Process dependency graphs
+- Infrastructure specifications
+- Deployment steps
+- Operational workflows
+- Monitoring and alerting
+- Backup and recovery procedures
+- Security considerations
+- Performance tuning
+
+**Audience:** DevOps engineers, system administrators, SREs, deployment teams
+
+**When to read:**
+- Planning production deployment
+- Setting up cron automation
+- Understanding operational dependencies
+- Configuring monitoring
+- Disaster recovery planning
+- Performance optimization
+
+---
+
+#### [cron_setup.md](cron_setup.md)
+
+**Cron Setup Guide - Automated Execution**
+
+- Complete guide for setting up automated ETL execution
+- Cron configuration and scheduling
+- Monitoring and troubleshooting
+- Best practices for production
+
+**Contents:**
+- Installation and configuration
+- Scheduling options
+- Lock file behavior
+- Log management
+- Monitoring scripts
+- Troubleshooting common issues
+- Best practices
+
+**Audience:** System administrators, DevOps engineers
+
+**When to read:**
+- Setting up automated ETL execution
+- Configuring cron jobs
+- Troubleshooting cron issues
+- See also: [Deployment Diagram](Deployment_Diagram.md) for complete deployment architecture
+
+---
+
 #### [DWH_Star_Schema_ERD.md](DWH_Star_Schema_ERD.md)
 
 **Entity-Relationship Diagram and Schema Overview**
