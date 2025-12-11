@@ -17,6 +17,33 @@ testing strategies, and development workflows.
 
 ### Data Warehouse Documentation
 
+#### [Data_Flow_Diagrams.md](Data_Flow_Diagrams.md)
+
+**Data Flow Diagrams (DFD) - System Data Flow**
+
+- DFD Level 0: Context diagram (system and external entities)
+- DFD Level 1: System decomposition (Extract, Transform, Load, Export)
+- DFD Level 2: ETL process detail
+- Data stores and data flow descriptions
+- Process descriptions and frequencies
+
+**Contents:**
+- Context diagram showing system boundaries
+- Process decomposition diagrams
+- Data store documentation
+- Data flow descriptions
+- Incremental vs full load flows
+
+**Audience:** Data engineers, system architects, business analysts
+
+**When to read:**
+- Understanding overall data flow
+- Designing new data pipelines
+- Troubleshooting data flow issues
+- Explaining system to stakeholders
+
+---
+
 #### [DWH_Star_Schema_ERD.md](DWH_Star_Schema_ERD.md)
 
 **Entity-Relationship Diagram and Schema Overview**
@@ -299,12 +326,16 @@ For detailed navigation paths by role, see [Recommended Reading Paths by Role](#
   - Quick start guide
   - Basic workflows
 
-**Step 2: System Overview** (45 min)
+**Step 2: System Overview** (60 min)
+- **[Data_Flow_Diagrams.md](./Data_Flow_Diagrams.md)** (20 min) - System data flow
+  - Context diagram
+  - Process decomposition
+  - Data flow overview
 - **[DWH_Star_Schema_ERD.md](./DWH_Star_Schema_ERD.md)** (30 min) - Data warehouse structure
   - Star schema design
   - Table relationships
   - ETL data flow
-- **[bin/README.md](../bin/README.md)** (15 min) - Scripts overview
+- **[bin/README.md](../bin/README.md)** (10 min) - Scripts overview
   - Main entry points
   - Basic usage examples
 
