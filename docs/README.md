@@ -75,32 +75,61 @@ testing strategies, and development workflows.
 
 #### [Business_Glossary.md](Business_Glossary.md)
 
-**Business Glossary - Terms and Metric Definitions**
+**Business Glossary - Terms and Key Metrics**
 
 - Business definitions for core terms (Note, Resolution, Active User, etc.)
-- Metric definitions from business perspective
+- Key metric definitions from business perspective
 - Calculation formulas and interpretations
 - Business rules and their rationale
 - Example calculations
 
 **Contents:**
 - Core business terms (Note, Resolution, Community Health, etc.)
-- Historical count metrics (opened, closed, commented, reopened)
-- Resolution metrics (average/median days, resolution rate)
-- Application statistics (mobile/desktop counts, most used)
-- Content quality metrics (comment length, URLs, mentions)
-- Temporal patterns (working hours, activity heatmaps)
-- Geographic patterns (countries, rankings)
-- User classification (contributor types)
+- Key metrics overview (historical counts, resolution, applications, content quality)
+- Business rules documentation
+- Example calculations
 
 **Audience:** Business analysts, product managers, stakeholders, new team members
 
 **When to read:**
-- Understanding what metrics mean from business perspective
+- Understanding core business concepts
+- Getting overview of available metrics
 - Communicating with non-technical stakeholders
-- Interpreting dashboard results
-- Defining new metrics
-- Onboarding new team members
+- See also: [Metric Definitions](Metric_Definitions.md) for complete 70+ metrics reference
+
+---
+
+#### [Metric_Definitions.md](Metric_Definitions.md)
+
+**Metric Definitions - Complete Reference**
+
+- Comprehensive definitions for all 70+ metrics in datamarts
+- Detailed business definitions, formulas, and interpretations
+- Organized by category (Historical, Resolution, Applications, Content, Temporal, Geographic, etc.)
+- Metric summary tables
+
+**Contents:**
+- Historical count metrics (30+ metrics across time periods)
+- Resolution metrics (7 metrics: avg, median, rate, by year/month)
+- Application statistics (4 metrics: mobile/desktop counts, most used)
+- Content quality metrics (5 metrics: length, URLs, mentions, engagement)
+- Temporal pattern metrics (5 metrics: working hours, activity heatmap, peak dates)
+- Geographic pattern metrics (15+ metrics: countries, users, rankings)
+- Community health metrics (5 metrics: backlog, active notes, age distribution)
+- Hashtag metrics (8 metrics: usage, top hashtags, favorites)
+- First/Last action metrics (8 metrics: dates and note IDs)
+- User classification (1 metric: contributor type with 23 types)
+- Metric interpretation guide
+- Metric calculation details
+
+**Audience:** Data analysts, BI developers, dashboard builders, business analysts
+
+**When to read:**
+- Building dashboards and reports
+- Understanding all available metrics
+- Interpreting metric values
+- Comparing metrics across users/countries
+- See also: [Business Glossary](Business_Glossary.md) for core terms
 
 ---
 
