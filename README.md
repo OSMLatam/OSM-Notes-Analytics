@@ -11,7 +11,7 @@ Data Warehouse, ETL, and Analytics for OpenStreetMap Notes
 ## Overview
 
 This repository contains the analytics and data warehouse components for the OSM Notes profiling
-system. It provides ETL (Extract, Transform, Load) processes, a star schema data warehouse, and
+system. It provides ETL (Extract, Transform, Load) processes, a [star schema data warehouse](docs/DWH_Star_Schema_ERD.md), and
 datamarts for analyzing OSM notes data.
 
 ## Recommended Reading Path
@@ -91,7 +91,7 @@ For complete navigation by role, see [docs/README.md](docs/README.md#recommended
 
 ## Features
 
-- **Star Schema Data Warehouse**: Comprehensive dimensional model for notes analysis
+- **Star Schema Data Warehouse**: Comprehensive dimensional model for notes analysis (see [DWH Star Schema ERD](docs/DWH_Star_Schema_ERD.md))
 - **Enhanced ETL Process**: Robust ETL with recovery, validation, and monitoring
 - **Partitioned Facts Table**: Automatic partitioning by year (2013-2025+)
 - **Country Datamart**: Pre-computed analytics by country (70+ metrics)
@@ -134,10 +134,12 @@ Database: osm_notes
 │   ├── users
 │   └── countries
 └── Schema: dwh             # Data Warehouse (managed by this repo)
-    ├── facts               # Fact table
-    ├── dimension_*         # Dimension tables
+    ├── facts               # Fact table (see Data Dictionary)
+    ├── dimension_*         # Dimension tables (see ERD)
     └── datamart_*          # Datamart tables
 ```
+
+For complete schema documentation, see [DWH Star Schema ERD](docs/DWH_Star_Schema_ERD.md) and [Data Dictionary](docs/DWH_Star_Schema_Data_Dictionary.md).
 
 ## Quick Start
 
@@ -244,14 +246,14 @@ Each query should return a number > 0. If any table is empty or doesn't exist, y
 
 #### Step 4: Run the ETL Process
 
-**What this does:** Transforms base data into a star schema data warehouse with pre-computed analytics.
+**What this does:** Transforms base data into a [star schema data warehouse](docs/DWH_Star_Schema_ERD.md) with pre-computed analytics.
 
 **Why this matters:** The ETL process creates the dimensional model that enables fast analytical queries and generates the datamarts used for profiles and dashboards.
 
 The ETL creates the data warehouse (schema `dwh`) with:
-- Fact tables (partitioned by year for optimal performance)
-- Dimension tables (users, countries, dates, etc.)
-- All necessary transformations
+- Fact table (partitioned by year for optimal performance) - see [Data Dictionary](docs/DWH_Star_Schema_Data_Dictionary.md#table-dwhfacts)
+- Dimension tables (users, countries, dates, etc.) - see [ERD](docs/DWH_Star_Schema_ERD.md)
+- All necessary transformations - see [ETL Enhanced Features](docs/ETL_Enhanced_Features.md)
 - **Automatically updates datamarts**
 
 **Initial Load** (first time, complete data):
@@ -304,16 +306,18 @@ tail -40f $(ls -1rtd /tmp/ETL_* | tail -1)/ETL.log
 ```
 
 **What the ETL does automatically:**
-- Creates schema `dwh` with all tables
-- Creates automatic partitions for facts table (2013-2025+)
+- Creates schema `dwh` with all tables (see [ERD](docs/DWH_Star_Schema_ERD.md))
+- Creates automatic partitions for facts table (2013-2025+) - see [Partitioning Strategy](docs/partitioning_strategy.md)
 - Populates dimension tables
-- Loads facts from note_comments
+- Loads facts from note_comments - see [ETL Process Flow](docs/DWH_Star_Schema_ERD.md#etl-data-flow)
 - Creates indexes and constraints
 - Updates datamarts (countries and users)
 - Creates specialized views for hashtag analytics
 - Calculates automation levels for users
 - Updates experience levels for users
 - Creates note activity metrics (comment counts, reopenings)
+
+For detailed ETL process flow, see [ETL Enhanced Features](docs/ETL_Enhanced_Features.md) and [DWH Star Schema ERD](docs/DWH_Star_Schema_ERD.md).
 
 **Troubleshooting:**
 - **ETL fails immediately**: Check base tables exist (Step 3)
@@ -771,7 +775,7 @@ Processes only new data since the last ETL run. Use this for scheduled updates.
 
 ### Fact Table
 
-- **`dwh.facts`**: Central fact table containing note actions and metrics
+- **`dwh.facts`**: Central fact table containing note actions and metrics (see [Data Dictionary](docs/DWH_Star_Schema_Data_Dictionary.md#table-dwhfacts) for complete column definitions)
   - **Partitioned by year** (action_at) for optimal performance
   - Automatic partition creation for current and future years
   - Each year stored in separate partition (e.g., `facts_2024`, `facts_2025`)

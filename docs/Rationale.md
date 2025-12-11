@@ -129,10 +129,10 @@ JSON Export → OSM-Notes-Viewer (Web Application)
 
 1. **Base Data**: The ingestion system populates base tables (`notes`, `note_comments`, `users`, `countries`)
 
-2. **ETL Process**: The analytics system transforms base data into a star schema:
-   - **Fact Table**: `dwh.facts` - One row per note action (open, comment, close, reopen)
-   - **Dimension Tables**: Users, countries, dates, times, applications, hashtags, etc.
-   - **Partitioning**: Facts table partitioned by year for optimal performance
+2. **ETL Process**: The analytics system transforms base data into a [star schema](DWH_Star_Schema_ERD.md):
+   - **Fact Table**: `dwh.facts` - One row per note action (open, comment, close, reopen) - see [Data Dictionary](DWH_Star_Schema_Data_Dictionary.md#table-dwhfacts)
+   - **Dimension Tables**: Users, countries, dates, times, applications, hashtags, etc. - see [ERD](DWH_Star_Schema_ERD.md)
+   - **Partitioning**: Facts table partitioned by year for optimal performance - see [Partitioning Strategy](partitioning_strategy.md)
 
 3. **Datamarts**: Pre-computed aggregations:
    - `dwh.datamartUsers` - One row per user with 70+ metrics
@@ -145,7 +145,8 @@ JSON Export → OSM-Notes-Viewer (Web Application)
 
 #### Star Schema Design
 
-**Why a star schema?**
+**Why a star schema?** (See [DWH Star Schema ERD](DWH_Star_Schema_ERD.md) for complete schema documentation)
+
 - **Performance**: Pre-aggregated datamarts enable fast queries
 - **Flexibility**: Easy to add new dimensions without changing fact table
 - **Clarity**: Clear separation between facts (events) and dimensions (descriptors)
@@ -197,7 +198,8 @@ JSON Export → OSM-Notes-Viewer (Web Application)
 
 #### Star Schema
 
-**Why dimensional modeling?**
+**Why dimensional modeling?** (See [DWH Star Schema ERD](DWH_Star_Schema_ERD.md) for schema details)
+
 - **Industry Standard**: Proven approach for analytics
 - **Performance**: Optimized for read-heavy workloads
 - **Flexibility**: Easy to add new dimensions

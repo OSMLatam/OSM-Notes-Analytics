@@ -1,10 +1,20 @@
-# Star model
+# Star Schema Documentation
 
-This document describes the star schema used by the data warehouse.
-It includes the fact table, the dimensions, their relationships,
-and the ETL flow that populates them.
+This document provides a high-level overview of the star schema. For complete documentation, see:
+- **[DWH Star Schema ERD](../../docs/DWH_Star_Schema_ERD.md)** - Complete entity-relationship diagram
+- **[Data Dictionary](../../docs/DWH_Star_Schema_Data_Dictionary.md)** - Detailed column definitions
+- **[ETL Enhanced Features](../../docs/ETL_Enhanced_Features.md)** - ETL capabilities
 
-## ETL flow (high level)
+## Overview
+
+The data warehouse uses a star schema design with:
+- **Fact Table**: `dwh.facts` - One row per note action (see [Data Dictionary](../../docs/DWH_Star_Schema_Data_Dictionary.md#table-dwhfacts))
+- **Dimension Tables**: Users, countries, dates, times, applications, hashtags, etc. (see [ERD](../../docs/DWH_Star_Schema_ERD.md))
+- **ETL Flow**: Transforms base tables into star schema (see [ETL Process Flow](#etl-flow-high-level) below)
+
+## ETL Flow (High Level)
+
+**Note:** For detailed ETL process flow, see [ETL Enhanced Features](../../docs/ETL_Enhanced_Features.md) and [SQL README](../../sql/README.md#execution-flow).
 
 ```mermaid
 flowchart TD
@@ -17,6 +27,7 @@ flowchart TD
   F --> E
 ```
 
+**Process Overview:**
 - The staging procedures select note actions from base tables by date,
   resolve dimensional keys, and write to `staging.facts_${YEAR}` or
   directly to `dwh.facts` depending on the path.
@@ -24,6 +35,10 @@ flowchart TD
   all facts before enforcing NOT NULL.
 - A trigger computes resolution-day metrics when a closing action is
   inserted.
+
+**For complete ETL documentation:**
+- See [ETL Enhanced Features](../../docs/ETL_Enhanced_Features.md) for capabilities and configuration
+- See [SQL README](../../sql/README.md#execution-flow) for detailed SQL execution flow
 
 Key scripts:
 
@@ -37,21 +52,20 @@ Key scripts:
 - `sql/dwh/Staging_35_initialFactsLoadExecute.sql`
 - `sql/dwh/Staging_51_unify.sql`
 
-### Fact table: dwh.facts
+### Fact Table: dwh.facts
 
-Columns:
+**For complete column definitions, see [Data Dictionary](../../docs/DWH_Star_Schema_Data_Dictionary.md#table-dwhfacts).**
 
-- fact_id: Surrogate key (PK).
-- id_note: OSM note identifier.
-- sequence_action: Creation sequence per note action.
-- dimension_id_country: Country (dimension key) where the note belongs.
-- processing_time: Timestamp when the fact was inserted.
-- action_at: Timestamp when the action occurred.
-- action_comment: Action type: opened, closed, reopened, commented, hidden.
-- action_dimension_id_date: Date (dimension key) of the action.
-- action_dimension_id_hour_of_week: Hour-of-week (dimension key) of action.
-- action_dimension_id_user: User (dimension key) who did the action.
-- opened_dimension_id_date: Date (dimension key) when the note was created.
+**Key Columns:**
+- `fact_id`: Surrogate key (PK)
+- `id_note`: OSM note identifier
+- `action_comment`: Action type (opened, closed, reopened, commented, hidden)
+- `action_dimension_id_date`: Date dimension key of the action
+- `action_dimension_id_user`: User dimension key who did the action
+- `dimension_id_country`: Country dimension key where the note belongs
+- `days_to_resolution`: Calculated metric for resolution time
+
+**See [Data Dictionary](../../docs/DWH_Star_Schema_Data_Dictionary.md#table-dwhfacts) for all 30+ columns with complete descriptions.**
 - opened_dimension_id_hour_of_week: Hour-of-week at note creation.
 - opened_dimension_id_user: User (dimension key) who created the note.
 - closed_dimension_id_date: Date (dimension key) when the note was closed.

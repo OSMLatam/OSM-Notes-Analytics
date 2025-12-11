@@ -6,7 +6,7 @@ including the star schema, dimensions, facts, and datamarts.
 ## Overview
 
 The SQL scripts implement a complete ETL (Extract, Transform, Load) pipeline that transforms raw OSM
-notes data into a star schema data warehouse with pre-computed datamarts for analytics.
+notes data into a [star schema data warehouse](../docs/DWH_Star_Schema_ERD.md) with pre-computed datamarts for analytics.
 
 ## Directory Structure
 
@@ -111,7 +111,7 @@ SQL scripts follow a structured naming pattern:
 
 #### ETL_22_createDWHTables.sql
 
-**Purpose:** Creates the complete star schema structure.
+**Purpose:** Creates the complete [star schema structure](../docs/DWH_Star_Schema_ERD.md).
 
 **Creates:**
 
@@ -132,7 +132,7 @@ SQL scripts follow a structured naming pattern:
    - `dimension_seasons` - Seasonal information
 
 3. **Fact Table:**
-   - `dwh.facts` - Central fact table with all note actions
+   - `dwh.facts` - Central fact table with all note actions (see [Data Dictionary](../docs/DWH_Star_Schema_Data_Dictionary.md#table-dwhfacts) for complete column definitions)
 
 4. **Control Tables:**
    - `dwh.properties` - ETL metadata
@@ -278,7 +278,7 @@ enrichment data.
 
 #### ETL_41_addConstraintsIndexesTriggers.sql
 
-**Purpose:** Adds referential integrity, indexes, and triggers to fact table.
+**Purpose:** Adds referential integrity, indexes, and triggers to [fact table](../docs/DWH_Star_Schema_Data_Dictionary.md#table-dwhfacts).
 
 **Adds:**
 
@@ -325,7 +325,7 @@ enrichment data.
 1. Identifies notes added since last ETL run
 2. Processes only new note actions
 3. Updates dimensions if needed
-4. Appends to fact table
+4. Appends to [fact table](../docs/DWH_Star_Schema_Data_Dictionary.md#table-dwhfacts)
 
 **Performance:** Much faster than full reload (minutes vs hours)
 
@@ -435,6 +435,8 @@ Computes last year activity patterns (GitHub-style contribution graph).
 
 ### Initial Load (--create)
 
+**For detailed ETL process documentation, see [ETL Enhanced Features](../docs/ETL_Enhanced_Features.md).**
+
 ```mermaid
 graph TD
     A[Start] --> B[Check Base Tables - 11]
@@ -462,9 +464,15 @@ graph TD
     E --> F[End]
 ```
 
+**For complete ETL flow documentation, see:**
+- [ETL Enhanced Features](../docs/ETL_Enhanced_Features.md) - ETL capabilities and features
+- [bin/dwh/README.md](../bin/dwh/README.md#etl-flow-high-level) - High-level ETL overview
+
 ## Database Schema
 
 ### Star Schema Overview
+
+For complete schema documentation, see [DWH Star Schema ERD](../docs/DWH_Star_Schema_ERD.md).
 
 ```text
                     dimension_days
@@ -479,6 +487,12 @@ graph TD
                         |
               dimension_hashtags
 ```
+
+**See [DWH Star Schema ERD](../docs/DWH_Star_Schema_ERD.md) for:**
+- Complete entity-relationship diagram
+- All dimension tables and relationships
+- Foreign key relationships
+- Cardinalities
 
 ### Key Tables
 

@@ -23,7 +23,7 @@ warehouse system.
 
 OSM-Notes-Analytics is a data warehouse and analytics system for OpenStreetMap notes. It:
 
-- **Transforms** raw note data into a star schema data warehouse
+- **Transforms** raw note data into a [star schema data warehouse](../docs/DWH_Star_Schema_ERD.md)
 - **Processes** data through ETL (Extract, Transform, Load) pipelines
 - **Generates** pre-computed analytics datamarts (users and countries)
 - **Exports** data to JSON for web visualization
@@ -33,7 +33,7 @@ OSM-Notes-Analytics is a data warehouse and analytics system for OpenStreetMap n
 
 ### Key Design Principles
 
-1. **Star Schema Design**: Dimensional modeling for fast analytical queries
+1. **Star Schema Design**: Dimensional modeling for fast analytical queries (see [DWH Star Schema ERD](../docs/DWH_Star_Schema_ERD.md))
 2. **Performance**: Partitioned facts table, pre-computed datamarts, parallel processing
 3. **Reliability**: Comprehensive error handling, recovery mechanisms, data validation
 4. **Maintainability**: Modular design, shared libraries, comprehensive testing
@@ -107,7 +107,7 @@ Output:
 
 #### 1. ETL Process (`bin/dwh/ETL.sh`)
 
-- **Purpose**: Transforms base data into star schema data warehouse
+- **Purpose**: Transforms base data into [star schema data warehouse](../docs/DWH_Star_Schema_ERD.md)
 - **Modes**:
   - `--create`: Full initial load (creates all DWH objects)
   - `--incremental`: Processes only new data since last run
@@ -183,9 +183,9 @@ For detailed flow diagrams, see [docs/DWH_Star_Schema_ERD.md](../docs/DWH_Star_S
 
 ### Database Schema
 
-The system uses a **star schema** design:
+The system uses a **[star schema](../docs/DWH_Star_Schema_ERD.md)** design:
 
-- **Fact Table**: `dwh.facts` - One row per note action (open, comment, close, reopen)
+- **Fact Table**: `dwh.facts` - One row per note action (open, comment, close, reopen) - see [Data Dictionary](../docs/DWH_Star_Schema_Data_Dictionary.md#table-dwhfacts) for complete details
   - Partitioned by year (2013-2025+)
   - Foreign keys to all dimension tables
   
