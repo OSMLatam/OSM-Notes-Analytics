@@ -6,6 +6,8 @@ warehouse system.
 
 ## Table of Contents
 
+- [Project Context](#project-context)
+- [System Architecture Overview](#system-architecture-overview)
 - [Code Standards](#code-standards)
 - [Development Workflow](#development-workflow)
 - [Testing Requirements](#testing-requirements)
@@ -14,6 +16,198 @@ warehouse system.
 - [Code Documentation](#code-documentation)
 - [Quality Assurance](#quality-assurance)
 - [Pull Request Process](#pull-request-process)
+
+## Project Context
+
+### What is OSM-Notes-Analytics?
+
+OSM-Notes-Analytics is a data warehouse and analytics system for OpenStreetMap notes. It:
+
+- **Transforms** raw note data into a star schema data warehouse
+- **Processes** data through ETL (Extract, Transform, Load) pipelines
+- **Generates** pre-computed analytics datamarts (users and countries)
+- **Exports** data to JSON for web visualization
+- **Provides** comprehensive analytics with 70+ metrics per user/country
+
+> **Note:** Base data ingestion is handled by the [OSM-Notes-Ingestion](https://github.com/OSMLatam/OSM-Notes-Ingestion) system. This analytics system reads from those base tables.
+
+### Key Design Principles
+
+1. **Star Schema Design**: Dimensional modeling for fast analytical queries
+2. **Performance**: Partitioned facts table, pre-computed datamarts, parallel processing
+3. **Reliability**: Comprehensive error handling, recovery mechanisms, data validation
+4. **Maintainability**: Modular design, shared libraries, comprehensive testing
+5. **Incremental Processing**: Efficient updates processing only new data
+
+### Essential Documentation
+
+Before contributing, familiarize yourself with:
+
+#### Core Documentation
+
+- **[README.md](../README.md)**: Project overview and quick start
+- **[docs/Rationale.md](../docs/Rationale.md)**: Project motivation and design decisions
+- **[docs/DWH_Star_Schema_ERD.md](../docs/DWH_Star_Schema_ERD.md)**: Data warehouse structure and relationships
+- **[docs/Troubleshooting_Guide.md](../docs/Troubleshooting_Guide.md)**: Centralized troubleshooting guide
+
+#### Technical Documentation
+
+- **[docs/ETL_Enhanced_Features.md](../docs/ETL_Enhanced_Features.md)**: ETL capabilities and features
+- **[docs/DWH_Star_Schema_Data_Dictionary.md](../docs/DWH_Star_Schema_Data_Dictionary.md)**: Complete schema reference
+- **[docs/DWH_Maintenance_Guide.md](../docs/DWH_Maintenance_Guide.md)**: Maintenance and cleanup procedures
+- **[docs/partitioning_strategy.md](../docs/partitioning_strategy.md)**: Facts table partitioning strategy
+
+#### Script Reference
+
+- **[bin/README.md](../bin/README.md)**: Script usage examples and workflows
+- **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/ENTRY_POINTS.md)**: Which scripts can be called directly
+- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)**: Environment variable documentation
+
+#### Testing Documentation
+
+- **[tests/README.md](../tests/README.md)**: Testing infrastructure overview
+- **[docs/CI_CD_Guide.md](../docs/CI_CD_Guide.md)**: CI/CD workflows and git hooks
+
+## System Architecture Overview
+
+### High-Level Architecture
+
+```text
+┌─────────────────────────────────────────────────────────────────────┐
+│                    OSM-Notes-Analytics System                        │
+└─────────────────────────────────────────────────────────────────────┘
+
+Data Sources:
+    └─▶ Base Tables (from OSM-Notes-Ingestion)
+        ├─▶ notes
+        ├─▶ note_comments
+        ├─▶ note_comments_text
+        ├─▶ users
+        └─▶ countries
+
+Processing Layer:
+    ├─▶ ETL.sh (data warehouse creation and updates)
+    ├─▶ datamartUsers.sh (user analytics)
+    ├─▶ datamartCountries.sh (country analytics)
+    └─▶ datamartGlobal.sh (global analytics)
+
+Storage Layer:
+    └─▶ PostgreSQL/PostGIS Database
+        └─▶ Schema: dwh (Data Warehouse)
+            ├─▶ facts (partitioned by year)
+            ├─▶ dimension_* (dimension tables)
+            └─▶ datamart_* (pre-computed analytics)
+
+Output:
+    ├─▶ JSON Export (for OSM-Notes-Viewer)
+    └─▶ Profile Generator (command-line profiles)
+```
+
+### Core Components
+
+#### 1. ETL Process (`bin/dwh/ETL.sh`)
+
+- **Purpose**: Transforms base data into star schema data warehouse
+- **Modes**:
+  - `--create`: Full initial load (creates all DWH objects)
+  - `--incremental`: Processes only new data since last run
+- **Features**:
+  - Parallel processing by year (2013-present)
+  - Automatic partition management
+  - Recovery and resume capabilities
+  - Resource monitoring
+  - Automatic datamart updates
+- **See [docs/ETL_Enhanced_Features.md](../docs/ETL_Enhanced_Features.md) for details**
+
+#### 2. Datamart Scripts (`bin/dwh/datamart*/`)
+
+- **`datamartUsers.sh`**: Pre-computes user analytics (70+ metrics)
+  - Processes incrementally (500 users per run)
+  - Tracks historical activity, resolution metrics, content quality
+- **`datamartCountries.sh`**: Pre-computes country analytics (70+ metrics)
+  - Processes all countries at once
+  - Tracks community health, resolution rates, application usage
+- **`datamartGlobal.sh`**: Pre-computes global statistics
+  - System-wide aggregated metrics
+
+#### 3. Export Scripts (`bin/dwh/export*.sh`)
+
+- **`exportDatamartsToJSON.sh`**: Exports datamarts to JSON files
+  - Atomic writes with validation
+  - Schema validation before export
+  - Fail-safe error handling
+- **`exportAndPushToGitHub.sh`**: Exports and deploys to GitHub Pages
+  - For OSM-Notes-Viewer (sister project) consumption
+
+#### 4. Profile Generator (`bin/dwh/profile.sh`)
+
+- **Purpose**: Generates detailed profiles for users and countries
+- **Usage**: Command-line tool for testing and validation
+- **Output**: Formatted text profiles with statistics
+
+#### 5. Function Libraries (`lib/osm-common/`)
+
+- **`lib/osm-common/`**: Shared functions (OSM-Notes-Common Git submodule)
+  - `commonFunctions.sh`: Core utilities
+  - `validationFunctions.sh`: Data validation
+  - `errorHandlingFunctions.sh`: Error handling and recovery
+  - `bash_logger.sh`: Logging library (log4j-style)
+  - `consolidatedValidationFunctions.sh`: Enhanced validation
+
+#### 6. Database Layer (`sql/dwh/`)
+
+- **`ETL_*.sql`**: ETL SQL scripts (creation, population, constraints)
+- **`Staging_*.sql`**: Staging procedures for data transformation
+- **`datamartCountries/*.sql`**: Country datamart SQL
+- **`datamartUsers/*.sql`**: User datamart SQL
+- **`datamartGlobal/*.sql`**: Global datamart SQL
+
+### Data Flow
+
+1. **ETL Flow**:
+   ```
+   Base Tables → Staging → Facts (partitioned) + Dimensions → Datamarts
+   ```
+
+2. **Datamart Flow**:
+   ```
+   Facts + Dimensions → Aggregations → Datamart Tables (pre-computed)
+   ```
+
+3. **Export Flow**:
+   ```
+   Datamart Tables → JSON Export → Validation → OSM-Notes-Viewer
+   ```
+
+For detailed flow diagrams, see [docs/DWH_Star_Schema_ERD.md](../docs/DWH_Star_Schema_ERD.md).
+
+### Database Schema
+
+The system uses a **star schema** design:
+
+- **Fact Table**: `dwh.facts` - One row per note action (open, comment, close, reopen)
+  - Partitioned by year (2013-2025+)
+  - Foreign keys to all dimension tables
+  
+- **Dimension Tables**: Descriptive attributes
+  - `dimension_users` - User information (SCD2 for username changes)
+  - `dimension_countries` - Country data with ISO codes
+  - `dimension_days` - Date dimension with enhanced attributes
+  - `dimension_time_of_week` - Temporal dimension (hour of week)
+  - `dimension_applications` - Application tracking
+  - `dimension_application_versions` - Version history
+  - `dimension_hashtags` - Hashtag catalog
+  - `dimension_timezones` - Timezone information
+  - `dimension_seasons` - Seasonal classifications
+  - `dimension_automation_level` - Bot/script detection
+  - `dimension_experience_levels` - User experience classification
+
+- **Datamart Tables**: Pre-computed aggregations
+  - `datamartusers` - User analytics (70+ metrics)
+  - `datamartcountries` - Country analytics (70+ metrics)
+  - `datamartglobal` - Global statistics
+
+For complete schema documentation, see [docs/DWH_Star_Schema_Data_Dictionary.md](../docs/DWH_Star_Schema_Data_Dictionary.md).
 
 ## Code Standards
 
@@ -436,8 +630,11 @@ Follow the naming pattern: `<Component>_<Phase><Step>_<Description>.sql`
 
 ### Library Organization
 
-The project uses shared libraries in `lib/osm-common/` to eliminate code duplication and improve
-maintainability:
+The project uses shared libraries from [OSM-Notes-Common](https://github.com/OSMLatam/OSM-Notes-Common) (Git submodule located at `lib/osm-common/`) to eliminate code duplication and improve maintainability:
+
+**Repository**: [OSM-Notes-Common](https://github.com/OSMLatam/OSM-Notes-Common)  
+**Location**: `lib/osm-common/` (Git submodule)  
+**Used by**: OSM-Notes-Ingestion, OSM-Notes-Analytics (and potentially OSM-Notes-Viewer)
 
 #### 1. Logging (`lib/osm-common/bash_logger.sh`)
 
@@ -468,9 +665,37 @@ maintainability:
 
 #### 5. Implementation Guidelines
 
-- **New Functions**: Add to appropriate library file rather than duplicating
+- **New Functions**: Add to appropriate library file in OSM-Notes-Common repository rather than duplicating
 - **Consistent Usage**: All scripts should source and use these libraries
 - **Testing**: Test library functions independently
+- **Submodule Updates**: Update submodule when new library features are needed
+  ```bash
+  cd lib/osm-common
+  git pull origin main
+  cd ../..
+  git add lib/osm-common
+  git commit -m "Update OSM-Notes-Common submodule"
+  ```
+
+### Using the Libraries
+
+All scripts should source the required libraries at the beginning:
+
+```bash
+# Load common functions from OSM-Notes-Common submodule
+source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/commonFunctions.sh"
+source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/validationFunctions.sh"
+source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/errorHandlingFunctions.sh"
+source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/bash_logger.sh"
+```
+
+**Note**: The `lib/osm-common/` directory is a Git submodule pointing to the [OSM-Notes-Common](https://github.com/OSMLatam/OSM-Notes-Common) repository. Always initialize submodules when cloning:
+
+```bash
+git clone --recurse-submodules https://github.com/OSMLatam/OSM-Notes-Analytics.git
+# Or after cloning:
+git submodule update --init --recursive
+```
 
 ## Code Documentation
 
