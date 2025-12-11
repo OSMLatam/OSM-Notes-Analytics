@@ -382,7 +382,7 @@ bin/dwh/exportDatamartsToJSON.sh
 
 ### Viewer Repository
 - `scripts/validate-schemas.sh` - Still useful for manual testing/debugging
-- `docs/ATOMIC_VALIDATION_EXPORT.md` - This document
+- `docs/Atomic_Validation_Export.md` - This document
 
 ## Migration Steps
 

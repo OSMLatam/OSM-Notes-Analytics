@@ -52,7 +52,7 @@ bash tests/run_quality_tests.sh
 ---
 
 ### run_dwh_tests.sh
-**Purpose**: Tests Data Warehouse, ETL, and Datamarts with real database
+**Purpose**: Tests data warehouse, ETL, and Datamarts with real database
 **What it does**:
 1. **Setup**: Runs `run_mock_etl.sh` to populate test database
 2. **Tests**: Executes all BATS test files in:

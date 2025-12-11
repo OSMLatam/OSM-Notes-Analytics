@@ -576,7 +576,7 @@ For detailed navigation paths by role, see [Recommended Reading Paths by Role](#
   - Statistics
 
 **Step 3: Advanced Topics** (15 min)
-- **[DASHBOARD_ANALYSIS.md](./DASHBOARD_ANALYSIS.md)** - Available metrics
+- **[Dashboard_Analysis.md](./Dashboard_Analysis.md)** - Available metrics
   - Resolution metrics
   - Application statistics
   - Content quality metrics

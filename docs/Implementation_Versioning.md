@@ -66,9 +66,9 @@ The export script automatically:
 
 Created comprehensive documentation:
 
-- **docs/VERSION_COMPATIBILITY.md** - Viewer implementation guide
+- **docs/Version_Compatibility.md** - Viewer implementation guide
 - **lib/osm-common/schemas/README.md** - Schema documentation
-- **docs/IMPLEMENTATION_VERSIONING.md** - This file
+- **docs/Implementation_Versioning.md** - This file
 
 ## How It Works
 
@@ -113,7 +113,7 @@ The web viewer must:
 3. **Verify MAJOR version** for breaking changes
 4. **Handle incompatibilities** gracefully
 
-Example implementation provided in `docs/VERSION_COMPATIBILITY.md`.
+Example implementation provided in `docs/Version_Compatibility.md`.
 
 ## Testing
 
@@ -154,8 +154,8 @@ cat output/json/metadata.json
 - `lib/osm-common/schemas/metadata.schema.json`
 - `lib/osm-common/schemas/user-profile.schema.json`
 - `lib/osm-common/schemas/country-profile.schema.json`
-- `docs/VERSION_COMPATIBILITY.md`
-- `docs/IMPLEMENTATION_VERSIONING.md`
+- `docs/Version_Compatibility.md`
+- `docs/Implementation_Versioning.md`
 
 ### Modified
 
@@ -202,7 +202,7 @@ To complete the implementation, you may want to:
 
 ## Related Documentation
 
-- [Version Compatibility Guide](docs/VERSION_COMPATIBILITY.md)
+- [Version Compatibility Guide](docs/Version_Compatibility.md)
 - [JSON Export Documentation](bin/dwh/export_json_readme.md)
-- [Atomic Validation Export](docs/ATOMIC_VALIDATION_EXPORT.md)
+- [Atomic Validation Export](docs/Atomic_Validation_Export.md)
 

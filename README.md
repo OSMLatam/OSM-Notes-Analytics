@@ -71,7 +71,7 @@ datamarts for analyzing OSM notes data.
 
 2. **Data Access** (30 min)
    - [bin/dwh/profile.sh](bin/dwh/profile.sh) - Profile generation
-   - [docs/DASHBOARD_ANALYSIS.md](docs/DASHBOARD_ANALYSIS.md) - Available metrics
+   - [docs/Dashboard_Analysis.md](docs/Dashboard_Analysis.md) - Available metrics
 
 ### For System Administrators
 
@@ -609,7 +609,7 @@ output/json/
 - **Permission errors**: Check `./output/json/` directory is writable
 - **See [Troubleshooting Guide](docs/Troubleshooting_Guide.md#export-issues) for more solutions**
 
-See [JSON Export Documentation](bin/dwh/export_json_readme.md) and [Atomic Validation Export](docs/ATOMIC_VALIDATION_EXPORT.md) for complete details.
+See [JSON Export Documentation](bin/dwh/export_json_readme.md) and [Atomic Validation Export](docs/Atomic_Validation_Export.md) for complete details.
 
 ## Quick Troubleshooting
 
@@ -1205,7 +1205,7 @@ The following major enhancements have been implemented:
 - **Specialized indexes**: Optimized for common query patterns
 - **Automated maintenance**: VACUUM and ANALYZE on partitions
 
-See `docs/DASHBOARD_ANALYSIS.md` for complete details on available metrics.
+See `docs/Dashboard_Analysis.md` for complete details on available metrics.
 
 ## Version
 

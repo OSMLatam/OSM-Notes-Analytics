@@ -1285,7 +1285,7 @@ Metrics for current time periods (month, day).
 - **[Business Glossary](Business_Glossary.md)**: Core business terms and key metrics
 - **[Data Dictionary](DWH_Star_Schema_Data_Dictionary.md)**: Technical column definitions
 - **[Data Lineage](Data_Lineage.md)**: How metrics are calculated from source data
-- **[Dashboard Analysis](DASHBOARD_ANALYSIS.md)**: Available metrics for dashboards
+- **[Dashboard Analysis](Dashboard_Analysis.md)**: Available metrics for dashboards
 
 ---
 

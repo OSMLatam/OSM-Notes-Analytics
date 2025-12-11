@@ -594,7 +594,7 @@ Hour 80 = Wednesday 8:00 AM
 - **[Metric Definitions](Metric_Definitions.md)**: Complete reference for all 70+ metrics with detailed definitions
 - **[Data Dictionary](DWH_Star_Schema_Data_Dictionary.md)**: Technical column definitions
 - **[Data Lineage](Data_Lineage.md)**: How metrics are calculated
-- **[Dashboard Analysis](DASHBOARD_ANALYSIS.md)**: Available metrics for dashboards
+- **[Dashboard Analysis](Dashboard_Analysis.md)**: Available metrics for dashboards
 
 ---
 

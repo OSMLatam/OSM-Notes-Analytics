@@ -164,4 +164,4 @@ Or use a complete workflow wrapper:
 */15 * * * * /opt/osm-analytics/update-and-export.sh
 ```
 
-See [Atomic Validation Export](docs/ATOMIC_VALIDATION_EXPORT.md) for detailed documentation.
+See [Atomic Validation Export](docs/Atomic_Validation_Export.md) for detailed documentation.
