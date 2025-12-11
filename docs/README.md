@@ -434,6 +434,48 @@ For comprehensive testing documentation, see **[tests/README.md](../tests/README
 
 ---
 
+#### [Hybrid_ETL_Execution_Guide.md](Hybrid_ETL_Execution_Guide.md)
+
+**Hybrid ETL Execution Guide - Complete Pipeline Testing**
+
+- Complete guide for running hybrid ETL execution scripts
+- End-to-end pipeline testing (Ingestion + ETL)
+- Hybrid mode configuration (real DB, mocked downloads)
+- Step-by-step execution control
+- Expected behavior in each iteration
+
+**Contents:**
+
+- Overview of hybrid execution scripts
+- Architecture and dependencies
+- Hybrid mode configuration (real PostgreSQL + mocked downloads)
+- Complete execution flow (4 iterations)
+- Expected behavior for each execution:
+  - Execution #1: Planet/Base Load
+  - Execution #2: API Sequential (5 notes)
+  - Execution #3: API Parallel (20 notes)
+  - Execution #4: API Empty (0 notes)
+- Cleanup and error handling
+- Troubleshooting common issues
+- Integration with CI/CD
+
+**Scripts:**
+
+- `run_processAPINotes_with_etl.sh` - Automatic execution mode
+- `run_processAPINotes_with_etl_controlled.sh` - Step-by-step control mode
+
+**Audience:** Developers, QA engineers, system integrators
+
+**When to read:**
+
+- Testing complete data pipeline (Ingestion → DWH)
+- Understanding hybrid mode execution
+- Debugging end-to-end workflows
+- Setting up integration tests
+- Verifying ETL after ingestion updates
+
+---
+
 ### CI/CD Documentation
 
 #### [CI_CD_Guide.md](CI_CD_Guide.md)
