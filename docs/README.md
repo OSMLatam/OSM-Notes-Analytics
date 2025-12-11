@@ -104,6 +104,36 @@ testing strategies, and development workflows.
 
 ---
 
+#### [Architecture_Diagram.md](Architecture_Diagram.md)
+
+**Architecture Diagrams - System Structure**
+
+- C4 model architecture documentation (Level 1 and Level 2)
+- System context and container diagrams
+- Component interactions and data flows
+- Technology stack documentation
+- Deployment and security architecture
+
+**Contents:**
+- C4 Level 1: System context (system and external entities)
+- C4 Level 2: Container diagram (high-level building blocks)
+- Detailed architecture with components
+- Technology stack (PostgreSQL, Bash, SQL)
+- Deployment architecture
+- Security architecture
+- Performance and scalability considerations
+
+**Audience:** System architects, DevOps engineers, developers, technical leads
+
+**When to read:**
+- Understanding overall system structure
+- Planning deployments
+- Designing new features
+- Troubleshooting architecture issues
+- Onboarding new developers
+
+---
+
 #### [DWH_Star_Schema_ERD.md](DWH_Star_Schema_ERD.md)
 
 **Entity-Relationship Diagram and Schema Overview**
