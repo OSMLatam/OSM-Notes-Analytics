@@ -472,44 +472,22 @@ graph TD
 
 ### Star Schema Overview
 
-For complete schema documentation, see [DWH Star Schema ERD](../docs/DWH_Star_Schema_ERD.md).
+The data warehouse uses a **star schema design** with:
+- **Fact Table**: `dwh.facts` - One row per note action (partitioned by year)
+- **Dimension Tables**: Users, countries, dates, times, applications, hashtags, and more
+- **Datamart Tables**: Pre-computed analytics for users and countries
 
-```text
-                    dimension_days
-                         |
-                         |
-    dimension_users -- dwh.facts -- dimension_countries
-         |               |                    |
-    dimension_          |          dimension_regions
-    time_of_week        |                    |
-                        |          dimension_continents
-              dimension_applications
-                        |
-              dimension_hashtags
-```
+**For complete schema documentation:**
+- **[DWH Star Schema ERD](../docs/DWH_Star_Schema_ERD.md)** - Complete entity-relationship diagram with all relationships and cardinalities
+- **[Data Dictionary](../docs/DWH_Star_Schema_Data_Dictionary.md)** - Detailed column definitions for all tables
 
-**See [DWH Star Schema ERD](../docs/DWH_Star_Schema_ERD.md) for:**
-- Complete entity-relationship diagram
-- All dimension tables and relationships
-- Foreign key relationships
-- Cardinalities
-
-### Key Tables
-
-**Facts:**
+### Table Sizes (Approximate)
 
 - `dwh.facts` - ~20M+ rows (depends on notes volume)
-
-**Dimensions:**
-
 - `dimension_users` - ~500K rows
 - `dimension_countries` - ~200 rows
 - `dimension_days` - ~5K rows (2013-2030)
 - `dimension_time_of_week` - 168 rows
-- Others - Various sizes
-
-**Datamarts:**
-
 - `dwh.datamartCountries` - ~200 rows
 - `dwh.datamartUsers` - ~500K rows
 
