@@ -23,7 +23,7 @@ graph TB
     
     subgraph Ecosystem["OSM Notes Ecosystem"]
         INGESTION[OSM-Notes-Ingestion<br/>Data Ingestion System]
-        ANALYTICS[OSM-Notes-Analytics<br/>Data Warehouse & ETL<br/>This System]
+        ANALYTICS[OSM-Notes-Analytics<br/>data warehouse & ETL<br/>This System]
         VIEWER[OSM-Notes-Viewer<br/>Web Application]
         COMMON[OSM-Notes-Common<br/>Shared Libraries<br/>Git Submodule]
     end
@@ -186,7 +186,7 @@ graph TB
         UNIFY[Unify Process<br/>Cross-Year Metrics]
     end
     
-    subgraph Data_Warehouse["Data Warehouse"]
+    subgraph Data_Warehouse["data warehouse"]
         FACTS_TABLE[facts Table<br/>Partitioned by Year<br/>~20M+ rows]
         DIM_TABLES[Dimension Tables<br/>users, countries,<br/>days, times, apps]
         INDEXES[Indexes & Constraints<br/>Performance Optimization]
@@ -499,7 +499,7 @@ graph TB
     
     subgraph Database["PostgreSQL"]
         PUBLIC_SCHEMA[public Schema<br/>Base Tables]
-        DWH_SCHEMA[dwh Schema<br/>Data Warehouse]
+        DWH_SCHEMA[dwh Schema<br/>data warehouse]
         STAGING_SCHEMA[staging Schema<br/>Temporary]
     end
     

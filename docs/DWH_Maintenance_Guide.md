@@ -1,4 +1,4 @@
-# Data Warehouse Maintenance and Cleanup Guide
+# data warehouse Maintenance and Cleanup Guide
 
 ## 📋 Overview
 
@@ -137,7 +137,7 @@ The script includes several safety mechanisms:
 
 **Schemas:**
 - `staging` - Staging area objects
-- `dwh` - Data warehouse schema
+- `dwh` - data warehouse schema
 
 **Tables:**
 - `dwh.facts` - Main fact table (partitioned)

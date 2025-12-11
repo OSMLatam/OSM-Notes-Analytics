@@ -234,7 +234,7 @@ dwh schema
 
 Once the data warehouse is populated, the system provides:
 
-1. **Data Warehouse**: Star schema for analytical queries
+1. **data warehouse**: Star schema for analytical queries
 2. **Datamarts**: Pre-computed analytics for fast access
 3. **Profile Generator**: Command-line tool to generate user/country profiles
 4. **JSON Export**: Validated JSON files for OSM-Notes-Viewer (sister project)
@@ -251,7 +251,7 @@ The OSM-Notes-Analytics project is part of a three-project ecosystem, all at the
 ```
 OSMLatam/
 ├── OSM-Notes-Ingestion/     # Data ingestion from OSM API/Planet
-├── OSM-Notes-Analytics/     # Data Warehouse & ETL (this repository)
+├── OSM-Notes-Analytics/     # data warehouse & ETL (this repository)
 ├── OSM-Notes-Viewer/        # Web frontend visualization
 └── OSM-Notes-Common/        # Shared Bash libraries (Git submodule)
 ```

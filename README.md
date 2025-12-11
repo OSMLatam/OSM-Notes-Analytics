@@ -133,7 +133,7 @@ Database: osm_notes
 │   ├── note_comments_text
 │   ├── users
 │   └── countries
-└── Schema: dwh             # Data Warehouse (managed by this repo)
+└── Schema: dwh             # data warehouse (managed by this repo)
     ├── facts               # Fact table (see Data Dictionary)
     ├── dimension_*         # Dimension tables (see ERD)
     └── datamart_*          # Datamart tables
@@ -1108,7 +1108,7 @@ The OSM Notes ecosystem consists of three sister projects at the same organizati
 ```
 OSMLatam/
 ├── OSM-Notes-Ingestion/     # Data ingestion from OSM API/Planet
-├── OSM-Notes-Analytics/     # Data Warehouse & ETL (this repository)
+├── OSM-Notes-Analytics/     # data warehouse & ETL (this repository)
 ├── OSM-Notes-Viewer/        # Web frontend visualization (web application)
 └── OSM-Notes-Common/        # Shared Bash libraries (Git submodule)
 ```

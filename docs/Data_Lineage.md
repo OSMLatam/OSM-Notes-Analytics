@@ -38,7 +38,7 @@ flowchart LR
         STAGING_FACTS[staging.facts_YYYY]
     end
     
-    subgraph DWH["Data Warehouse"]
+    subgraph DWH["data warehouse"]
         DIM_USERS[dwh.dimension_users]
         DIM_COUNTRIES[dwh.dimension_countries]
         DIM_DAYS[dwh.dimension_days]

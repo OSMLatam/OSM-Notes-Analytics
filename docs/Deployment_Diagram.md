@@ -83,7 +83,7 @@ graph TB
     subgraph Database_Server["Database Server"]
         POSTGRES[PostgreSQL<br/>+ PostGIS]
         BASE_SCHEMA[public Schema<br/>Base Tables]
-        DWH_SCHEMA[dwh Schema<br/>Data Warehouse]
+        DWH_SCHEMA[dwh Schema<br/>data warehouse]
     end
     
     subgraph External["External Systems"]
@@ -312,7 +312,7 @@ graph TD
 
 **Storage:**
 - **Base Tables**: ~50 GB (depends on ingestion)
-- **Data Warehouse**: ~100 GB (facts + dimensions)
+- **data warehouse**: ~100 GB (facts + dimensions)
 - **Datamarts**: ~5 GB
 - **Indexes**: ~20 GB
 - **Total Estimated**: ~175 GB
@@ -726,7 +726,7 @@ MAX_MEMORY_USAGE=85
 
 | Component | RPO | Backup Frequency |
 |-----------|-----|------------------|
-| **Data Warehouse** | 24 hours | Daily backups |
+| **data warehouse** | 24 hours | Daily backups |
 | **JSON Exports** | 24 hours | Daily backups |
 | **Configuration** | 7 days | Weekly backups |
 

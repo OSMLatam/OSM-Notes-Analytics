@@ -144,7 +144,7 @@ These are the **only scripts** that should be executed directly:
 
 ### Maintenance Scripts
 
-8. **`bin/dwh/cleanupDWH.sh`** - Data warehouse cleanup script
+8. **`bin/dwh/cleanupDWH.sh`** - data warehouse cleanup script
    - **Usage**: `./bin/dwh/cleanupDWH.sh [OPTIONS]`
    - **Options**:
      - `--remove-temp-files`: Remove only temporary files (safe, no confirmation)

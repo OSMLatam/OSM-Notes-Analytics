@@ -93,7 +93,7 @@ Processing Layer:
 
 Storage Layer:
     └─▶ PostgreSQL/PostGIS Database
-        └─▶ Schema: dwh (Data Warehouse)
+        └─▶ Schema: dwh (data warehouse)
             ├─▶ facts (partitioned by year)
             ├─▶ dimension_* (dimension tables)
             └─▶ datamart_* (pre-computed analytics)
@@ -539,13 +539,13 @@ Tests are automatically run in GitHub Actions workflows:
 ```text
 OSM-Notes-Analytics/
 ├── bin/                    # Executable scripts
-│   └── dwh/               # Data warehouse scripts
+│   └── dwh/               # data warehouse scripts
 │       ├── ETL.sh         # Main ETL process
 │       ├── profile.sh     # Profile generator
 │       ├── datamartCountries/  # Country datamart
 │       └── datamartUsers/      # User datamart
 ├── sql/                   # Database scripts
-│   └── dwh/              # Data warehouse SQL
+│   └── dwh/              # data warehouse SQL
 │       ├── ETL_*.sql     # ETL scripts
 │       ├── Staging_*.sql # Staging procedures
 │       ├── datamartCountries/  # Country datamart SQL

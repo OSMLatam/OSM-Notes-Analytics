@@ -24,7 +24,7 @@ flowchart TD
     end
     
     subgraph System["OSM-Notes-Analytics System"]
-        ANALYTICS[Analytics & Data Warehouse]
+        ANALYTICS[Analytics & data warehouse]
     end
     
     subgraph Upstream["Upstream System"]
@@ -83,7 +83,7 @@ flowchart TD
     end
     
     subgraph Load["3. Load Process"]
-        DWH[Data Warehouse<br/>dwh schema]
+        DWH[data warehouse<br/>dwh schema]
         DATAMARTS[Datamarts]
     end
     
@@ -132,7 +132,7 @@ flowchart TD
    - **Calculate Metrics**: Compute derived metrics (days to resolution, etc.)
 
 3. **Load Process**
-   - **Data Warehouse**: Load facts and dimensions into star schema
+   - **data warehouse**: Load facts and dimensions into star schema
    - **Datamarts**: Aggregate data into pre-computed analytics tables
 
 4. **Export Process**
@@ -234,7 +234,7 @@ flowchart TD
 - **staging.facts_YYYY**: Year-specific staging tables (2013-2025+)
 - Temporary storage for parallel processing
 
-### Data Warehouse (dwh schema)
+### data warehouse (dwh schema)
 - **dwh.facts**: Central fact table (partitioned by year)
 - **dwh.dimension_***: Dimension tables (users, countries, days, etc.)
 - **dwh.datamartusers**: User analytics (70+ metrics)
@@ -270,12 +270,12 @@ flowchart TD
 - **Transformation**: Combine note actions with dimension keys
 - **Metrics**: Calculate days to resolution, etc.
 
-### Flow 5: Facts → Data Warehouse
+### Flow 5: Facts → data warehouse
 - **Content**: Fact rows with all metrics
 - **Storage**: Partitioned fact table (`dwh.facts`)
 - **Partitioning**: By year (2013-2025+)
 
-### Flow 6: Data Warehouse → Datamarts
+### Flow 6: data warehouse → Datamarts
 - **Content**: Aggregated metrics
 - **Transformation**: Group by user, country, or global
 - **Output**: Pre-computed analytics (70+ metrics per entity)
@@ -325,7 +325,7 @@ flowchart TD
 - **Metrics**: Days to resolution, resolution rates, etc.
 - **Scripts**: `sql/dwh/Staging_35_initialFactsLoadExecute.sql`
 
-### Process 5: Load to Data Warehouse
+### Process 5: Load to data warehouse
 - **Purpose**: Load facts into partitioned table
 - **Input**: Fact rows
 - **Output**: `dwh.facts` table (partitioned)
@@ -334,7 +334,7 @@ flowchart TD
 
 ### Process 6: Generate Datamarts
 - **Purpose**: Pre-compute aggregations
-- **Input**: Data warehouse (facts + dimensions)
+- **Input**: data warehouse (facts + dimensions)
 - **Output**: Datamart tables
 - **Metrics**: 70+ metrics per user/country
 - **Scripts**: `bin/dwh/datamartUsers/datamartUsers.sh`, `bin/dwh/datamartCountries/datamartCountries.sh`

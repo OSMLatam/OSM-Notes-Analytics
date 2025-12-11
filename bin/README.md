@@ -31,7 +31,7 @@ See [Entry Points Documentation](dwh/ENTRY_POINTS.md) for complete details.
 
 ```text
 bin/
-└── dwh/                           # Data Warehouse scripts
+└── dwh/                           # data warehouse scripts
     ├── ETL.sh                     # Main ETL orchestration script
     ├── profile.sh                 # Profile generator for users and countries
     ├── cleanupDWH.sh              # Cleanup DWH objects and temp files

@@ -12,7 +12,7 @@ notes data into a [star schema data warehouse](../docs/DWH_Star_Schema_ERD.md) w
 
 ```text
 sql/
-└── dwh/                                  # Data Warehouse SQL scripts
+└── dwh/                                  # data warehouse SQL scripts
     ├── ETL_*.sql                         # Main ETL scripts
     ├── Staging_*.sql                     # Staging area scripts
     ├── datamarts_lastYearActivities.sql  # Last year activity aggregation

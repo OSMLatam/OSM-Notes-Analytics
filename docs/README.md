@@ -15,7 +15,7 @@ testing strategies, and development workflows.
 - **`Rationale.md`**: Project motivation, background, and design decisions
 - **`Troubleshooting_Guide.md`**: Centralized troubleshooting guide for common problems and solutions
 
-### Data Warehouse Documentation
+### data warehouse Documentation
 
 #### [Data_Flow_Diagrams.md](Data_Flow_Diagrams.md)
 
@@ -336,7 +336,7 @@ testing strategies, and development workflows.
 
 #### [DWH_Maintenance_Guide.md](DWH_Maintenance_Guide.md)
 
-**Data Warehouse Maintenance and Cleanup Guide**
+**data warehouse Maintenance and Cleanup Guide**
 
 - Cleanup script usage and safety guidelines
 - Maintenance workflows and best practices
@@ -513,7 +513,7 @@ For detailed navigation paths by role, see [Recommended Reading Paths by Role](#
   - Context diagram
   - Process decomposition
   - Data flow overview
-- **[DWH_Star_Schema_ERD.md](./DWH_Star_Schema_ERD.md)** (30 min) - Data warehouse structure
+- **[DWH_Star_Schema_ERD.md](./DWH_Star_Schema_ERD.md)** (30 min) - data warehouse structure
   - Star schema design
   - Table relationships
   - ETL data flow

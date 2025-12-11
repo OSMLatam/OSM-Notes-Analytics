@@ -67,7 +67,7 @@ Quick validation tests that don't require database connectivity:
 
 ### 2. DWH Tests (Database Required)
 
-Tests that validate the Data Warehouse ETL processes and datamarts:
+Tests that validate the data warehouse ETL processes and datamarts:
 
 - ETL process testing
 - Datamart population testing
