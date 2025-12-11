@@ -73,6 +73,37 @@ testing strategies, and development workflows.
 
 ---
 
+#### [Business_Glossary.md](Business_Glossary.md)
+
+**Business Glossary - Terms and Metric Definitions**
+
+- Business definitions for core terms (Note, Resolution, Active User, etc.)
+- Metric definitions from business perspective
+- Calculation formulas and interpretations
+- Business rules and their rationale
+- Example calculations
+
+**Contents:**
+- Core business terms (Note, Resolution, Community Health, etc.)
+- Historical count metrics (opened, closed, commented, reopened)
+- Resolution metrics (average/median days, resolution rate)
+- Application statistics (mobile/desktop counts, most used)
+- Content quality metrics (comment length, URLs, mentions)
+- Temporal patterns (working hours, activity heatmaps)
+- Geographic patterns (countries, rankings)
+- User classification (contributor types)
+
+**Audience:** Business analysts, product managers, stakeholders, new team members
+
+**When to read:**
+- Understanding what metrics mean from business perspective
+- Communicating with non-technical stakeholders
+- Interpreting dashboard results
+- Defining new metrics
+- Onboarding new team members
+
+---
+
 #### [DWH_Star_Schema_ERD.md](DWH_Star_Schema_ERD.md)
 
 **Entity-Relationship Diagram and Schema Overview**
