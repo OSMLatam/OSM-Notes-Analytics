@@ -44,6 +44,35 @@ testing strategies, and development workflows.
 
 ---
 
+#### [Data_Lineage.md](Data_Lineage.md)
+
+**Data Lineage - Complete Data Traces**
+
+- Complete lineage paths from source to destination
+- Column-level transformations and mappings
+- Business rules applied at each stage
+- Dependencies between processes
+- Impact analysis for schema changes
+
+**Contents:**
+- Lineage diagram (source → staging → DWH → datamarts → JSON)
+- Detailed transformation rules for each path
+- Dimension lineage (users, countries, dates)
+- Business rules documentation
+- Data quality checks
+- Impact analysis
+
+**Audience:** Data engineers, data quality analysts, compliance officers
+
+**When to read:**
+- Understanding data transformations
+- Debugging data quality issues
+- Impact analysis (what breaks if source changes)
+- Compliance and auditing
+- Onboarding new team members
+
+---
+
 #### [DWH_Star_Schema_ERD.md](DWH_Star_Schema_ERD.md)
 
 **Entity-Relationship Diagram and Schema Overview**
