@@ -329,6 +329,6 @@ ORDER BY year;
 
 ## Related Documentation
 
-- See `ToDo/DWH_Improvements_Plan.md > TAREA 12` for detailed implementation notes
 - See `tests/performance/benchmark_trigger_performance.sql` for performance testing
+- See `ToDo/ActionPlan.md` for current development tasks
 

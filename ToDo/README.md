@@ -48,22 +48,6 @@ This directory contains all TODO items, action plans, and progress tracking for 
 
 ---
 
-### 📝 DWH_Improvements_Plan.md
-**Purpose**: Original DWH improvement plan  
-**Status**: Reference document for completed work
-
-**Note**: Most tasks from this plan have been completed or cancelled. New tasks should be added to ActionPlan.md.
-
----
-
-### 💡 prompts
-**Purpose**: Future ideas and enhancements  
-**Use for**:
-- Long-term planning
-- Feature ideas
-- Research notes
-
-**Status**: Reference document for future consideration
 
 ---
 

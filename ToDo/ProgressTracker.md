@@ -83,7 +83,7 @@ Version: 2025-01-21
   - Note: Columns are empty - need to run ETL update procedure to populate with fixed calculation logic
   - Columns added: resolution metrics, application stats, content quality, community health metrics
 
-### Previous Improvements (from DWH_Improvements_Plan.md):
+### Previous Improvements:
 
 1. ✅ **Partitioning** - Implemented table partitioning for performance
 2. ✅ **Unlimited Hashtags** - Bridge table implemented
@@ -119,7 +119,7 @@ Version: 2025-01-21
 - Adopted same priority system (CRITICAL, HIGH, MEDIUM, LOW)
 - Identified current test failures that need attention
 - Documented missing metrics from dashboard analysis
-- Migrated completed tasks from DWH_Improvements_Plan.md
+- Migrated completed tasks to ActionPlan.md
 - Documented cancelled tasks with rationale
 
 ### Priorities Identified
@@ -132,8 +132,6 @@ Version: 2025-01-21
 ## Quick Reference Links
 
 - Detailed Action Plan: `ToDo/ActionPlan.md`
-- DWH Improvements: `ToDo/DWH_Improvements_Plan.md`
-- Prompts: `ToDo/prompts`
 - Dashboard Analysis: `docs/DASHBOARD_ANALYSIS.md`
 
 ---

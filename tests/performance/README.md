@@ -171,7 +171,7 @@ If performance is unacceptable:
 
 ## References
 
-- [TAREA 12: Métricas de Actividad](../ToDo/DWH_Improvements_Plan.md#tarea-12)
+- See `docs/Note_Activity_Metrics_Trigger.md` for implementation details
 - [Trigger Code](../sql/dwh/ETL_52_createNoteActivityMetrics.sql)
 - [PostgreSQL EXPLAIN Documentation](https://www.postgresql.org/docs/current/sql-explain.html)
 

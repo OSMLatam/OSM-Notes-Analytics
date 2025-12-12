@@ -118,8 +118,8 @@ Based on analysis in `docs/DASHBOARD_ANALYSIS.md`, these metrics are MISSING fro
 ### Code Quality and Refactoring
 
 - [ ] **REF #1**: Consolidate DWH improvements documentation
-  - **Action**: Migrate completed items from `DWH_Improvements_Plan.md` to this ActionPlan
-  - **Files**: `ToDo/ActionPlan.md`, `ToDo/DWH_Improvements_Plan.md`
+  - **Action**: Document completed and cancelled tasks
+  - **Files**: `ToDo/ActionPlan.md`
   - **Priority**: Organize completed work for better tracking
 
 - [ ] **REF #2**: Create comprehensive testing guide
@@ -188,7 +188,7 @@ Based on analysis in `docs/DASHBOARD_ANALYSIS.md`, these metrics are MISSING fro
 - **Medium**: 5 active
 - **Low**: 6 active
 
-### Completed (from DWH_Improvements_Plan.md)
+### Completed Tasks
 - ✅ TASK 1: Partitioning implemented
 - ✅ TASK 2: Unlimited hashtags via bridge table
 - ✅ TASK 6: Additional metrics in facts (comment_length, has_url, has_mention)
@@ -199,7 +199,7 @@ Based on analysis in `docs/DASHBOARD_ANALYSIS.md`, these metrics are MISSING fro
 - ✅ TASK 15: Execution guide simplified
 - ✅ TASK 16: Cron automation configured
 
-### Cancelled (from DWH_Improvements_Plan.md)
+### Cancelled Tasks
 - ❌ TASK 3: dimension_note_status (no benefit over enum)
 - ❌ TASK 4: Granular checkpointing (unnecessary for incremental ETL)
 - ❌ TASK 5: SCD2 in countries (names don't change)
