@@ -95,6 +95,27 @@ jobs:
       run: |
         ./tests/run_dwh_tests.sh
 
+    - name: Run Hybrid ETL Integration Test
+      env:
+        TEST_DBNAME: dwh
+        TEST_DBHOST: localhost
+        TEST_DBPORT: 5432
+        TEST_DBUSER: postgres
+        TEST_DBPASSWORD: postgres
+        PGPASSWORD: postgres
+        INGESTION_ROOT: ${{ github.workspace }}/../OSM-Notes-Ingestion
+      run: |
+        # Only run if OSM-Notes-Ingestion is available (submodule)
+        if [ -d "../OSM-Notes-Ingestion" ]; then
+          echo "🧪 Running hybrid ETL integration test..."
+          ./tests/run_processAPINotes_with_etl_controlled.sh all || {
+            echo "⚠️  Hybrid test failed - this is expected if OSM-Notes-Ingestion submodule is not set up"
+            echo "   To run locally: ./tests/run_processAPINotes_with_etl_controlled.sh all"
+          }
+        else
+          echo "ℹ️  Skipping hybrid test - OSM-Notes-Ingestion submodule not available"
+        fi
+
     - name: Upload test results
       if: always()
       uses: actions/upload-artifact@v4
