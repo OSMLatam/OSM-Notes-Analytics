@@ -482,7 +482,7 @@ export DBNAME="test_database"
 export LOG_LEVEL="DEBUG"
 
 # Run ETL
-./bin/dwh/ETL.sh --incremental
+./bin/dwh/ETL.sh
 ```
 
 **Priority Order:**

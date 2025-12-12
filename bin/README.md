@@ -62,21 +62,18 @@ bin/
 **Usage:**
 
 ```bash
-# Initial DWH creation (first run)
-./bin/dwh/ETL.sh --create
-
-# Incremental update (for scheduled runs)
-./bin/dwh/ETL.sh --incremental
+# ETL execution (auto-detects first run vs incremental)
+./bin/dwh/ETL.sh
 
 # Show help
 ./bin/dwh/ETL.sh --help
 ```
 
-**Execution Modes:**
+**Auto-detection:**
 
-- **--create**: Full initial load, creates all DWH objects from scratch
-- **--incremental**: Processes only new data since last run (default for cron jobs)
-- **--help**: Shows detailed help information
+- **First execution**: Automatically detects if DWH doesn't exist or is empty, creates all DWH objects and performs initial load
+- **Subsequent runs**: Automatically detects existing data and processes only incremental updates
+- **Perfect for cron**: Same command works for both scenarios
 
 **Configuration:**
 
@@ -227,7 +224,7 @@ tail -40f $(ls -1rtd /tmp/ETL_* | tail -1)/ETL.log
 - **Development:** Clean temporary files with `--remove-temp-files`
 - **Testing:** Reset environment with `--dry-run` first, then full cleanup
 - **Troubleshooting:** Remove corrupted DWH objects with `--remove-all-data`
-- **Clean restart:** Remove all objects before running `ETL.sh --create`
+- **Clean restart:** Remove all objects before running `ETL.sh`
 - **Maintenance:** Regular cleanup of temporary files
 
 ### 5. datamartUsers.sh - User Datamart
@@ -400,7 +397,7 @@ psql -d osm_notes -c "SELECT COUNT(*) FROM notes;"
 psql -d osm_notes -c "SELECT COUNT(*) FROM note_comments;"
 
 # 4. Run initial ETL (creates DWH, populates facts/dimensions, updates datamarts)
-./bin/dwh/ETL.sh --create
+./bin/dwh/ETL.sh
 # Wait ~30 hours for completion
 # Note: ETL.sh automatically updates datamarts, so steps 5-6 are optional
 
@@ -426,7 +423,7 @@ psql -d osm_notes -c "SELECT COUNT(*) FROM dwh.datamartusers;"
 # Crontab example (add with: crontab -e):
 
 # Incremental ETL every hour (automatically updates datamarts)
-0 * * * * cd ~/OSM-Notes-Analytics && ./bin/dwh/ETL.sh --incremental >> /var/log/osm-analytics-etl.log 2>&1
+0 * * * * cd ~/OSM-Notes-Analytics && ./bin/dwh/ETL.sh >> /var/log/osm-analytics-etl.log 2>&1
 
 # Export to JSON and push to GitHub Pages (after datamarts update)
 45 * * * * cd ~/OSM-Notes-Analytics && ./bin/dwh/exportAndPushToGitHub.sh >> /var/log/osm-analytics-export.log 2>&1
@@ -439,7 +436,7 @@ psql -d osm_notes -c "SELECT COUNT(*) FROM dwh.datamartusers;"
 # 30 2 * * * cd ~/OSM-Notes-Analytics && ./bin/dwh/datamartUsers/datamartUsers.sh >> /var/log/osm-analytics-datamart-users.log 2>&1
 ```
 
-**Note:** `ETL.sh --incremental` automatically updates all datamarts, so separate datamart cron jobs are usually not needed.
+**Note:** `ETL.sh` automatically updates all datamarts, so separate datamart cron jobs are usually not needed.
 
 ### Generating Profiles
 
@@ -481,7 +478,7 @@ CLEAN="true"          # Clean temporary files after processing
 ```bash
 export DBNAME=osm_notes_test
 export DB_USER=postgres
-./bin/dwh/ETL.sh --incremental
+./bin/dwh/ETL.sh
 ```
 
 ### ETL Configuration
@@ -511,7 +508,7 @@ ETL_TIMEOUT=7200                 # Execution timeout (seconds)
 ```bash
 export ETL_BATCH_SIZE=5000
 export ETL_MAX_PARALLEL_JOBS=8
-./bin/dwh/ETL.sh --create
+./bin/dwh/ETL.sh
 ```
 
 **See also:** [Environment Variables Documentation](dwh/ENVIRONMENT_VARIABLES.md) for complete variable reference.
@@ -542,15 +539,15 @@ tail -f $(ls -1rtd /tmp/exportDatamartsToJSON_* | tail -1)/exportDatamartsToJSON
 ```bash
 # Debug mode (verbose)
 export LOG_LEVEL=DEBUG
-./bin/dwh/ETL.sh --incremental
+./bin/dwh/ETL.sh
 
 # Info mode (moderate)
 export LOG_LEVEL=INFO
-./bin/dwh/ETL.sh --incremental
+./bin/dwh/ETL.sh
 
 # Error mode (minimal, default)
 export LOG_LEVEL=ERROR
-./bin/dwh/ETL.sh --incremental
+./bin/dwh/ETL.sh
 ```
 
 **Keep temporary files for inspection:**
@@ -558,7 +555,7 @@ export LOG_LEVEL=ERROR
 ```bash
 export CLEAN=false
 export LOG_LEVEL=DEBUG
-./bin/dwh/ETL.sh --incremental
+./bin/dwh/ETL.sh
 
 # Files will remain in /tmp/ETL_*/
 # Inspect logs, CSV files, etc.
@@ -573,7 +570,7 @@ If ETL fails:
 1. Check logs in `/tmp/ETL_*/ETL.log`
 2. Review error messages
 3. Fix underlying issue
-4. Restart: `./bin/dwh/ETL.sh --incremental`
+4. Restart: `./bin/dwh/ETL.sh`
 
 ### Resource Monitoring
 
@@ -662,7 +659,7 @@ psql -d osm_notes -c "SELECT COUNT(*) FROM countries;"
 
 ```bash
 # Run initial ETL to create schema
-./bin/dwh/ETL.sh --create
+./bin/dwh/ETL.sh
 ```
 
 ### "Lock file exists"

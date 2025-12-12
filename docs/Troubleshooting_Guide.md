@@ -83,7 +83,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT tablename FROM pg_tables WHERE scheman
 
 1. **Run initial ETL:**
    ```bash
-   ./bin/dwh/ETL.sh --create
+   ./bin/dwh/ETL.sh
    ```
 
 2. **Verify base tables exist first:**
@@ -187,10 +187,10 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT pid, state, query FROM pg_stat_activit
    psql -d "${DBNAME:-osm_notes}" -c "\d note_comments"
    ```
 
-4. **Use incremental mode for updates:**
+4. **Run ETL for updates (auto-detects mode):**
    ```bash
-   # Instead of --create, use --incremental for regular updates
-   ./bin/dwh/ETL.sh --incremental
+   # Same command works for both initial setup and incremental updates
+   ./bin/dwh/ETL.sh
    ```
 
 ### Problem: ETL Fails Mid-Execution
@@ -231,7 +231,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM dwh.facts;"
 3. **Resume from checkpoint (if recovery enabled):**
    ```bash
    # ETL recovery should automatically resume from last checkpoint
-   ./bin/dwh/ETL.sh --incremental
+   ./bin/dwh/ETL.sh
    ```
 
 4. **Clean and restart (if needed):**
@@ -239,7 +239,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM dwh.facts;"
    # Use cleanup script (WARNING: removes data)
    ./bin/dwh/cleanupDWH.sh --dry-run  # Preview first
    ./bin/dwh/cleanupDWH.sh --remove-all-data
-   ./bin/dwh/ETL.sh --create
+   ./bin/dwh/ETL.sh  # Will auto-detect and recreate DWH
    ```
 
 ---
@@ -375,7 +375,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM dwh.facts;"
 
 2. **Or run ETL (which updates datamarts automatically):**
    ```bash
-   ./bin/dwh/ETL.sh --incremental
+   ./bin/dwh/ETL.sh
    ```
 
 ### Problem: Datamart Not Fully Populated
@@ -503,7 +503,7 @@ cat etc/etl.properties | grep -E "ETL_MAX_PARALLEL_JOBS|ETL_BATCH_SIZE"
 2. **Disable parallel processing:**
    ```bash
    export ETL_PARALLEL_ENABLED=false
-   ./bin/dwh/ETL.sh --incremental
+   ./bin/dwh/ETL.sh
    ```
 
 3. **Increase system memory** or use swap space
@@ -724,7 +724,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM notes;"
 3. **Resume ETL:**
    ```bash
    # Recovery should automatically resume from checkpoint
-   ./bin/dwh/ETL.sh --incremental
+   ./bin/dwh/ETL.sh
    ```
 
 ### Recovering from Corrupted Data
@@ -738,7 +738,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM notes;"
    ```bash
    ./bin/dwh/cleanupDWH.sh --dry-run  # Preview
    ./bin/dwh/cleanupDWH.sh --remove-all-data
-   ./bin/dwh/ETL.sh --create
+   ./bin/dwh/ETL.sh
    ```
 
 ---

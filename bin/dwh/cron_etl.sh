@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# Cron wrapper for ETL incremental execution
+# Cron wrapper for ETL execution
 # Safe execution wrapper for cron environment
+# Auto-detects first execution vs incremental updates
 #
 # Author: Andres Gomez (AngocA)
 # Version: 2025-01-24
@@ -27,7 +28,7 @@ log_message() {
 }
 
 # Start execution
-log_message "Starting ETL incremental execution"
+log_message "Starting ETL execution (auto-detect mode)"
 
 # Load database properties if available
 if [[ -f "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh" ]]; then
@@ -44,11 +45,11 @@ fi
 export LOG_LEVEL="${LOG_LEVEL:-ERROR}"
 export CLEAN="${CLEAN:-true}"
 
-# Execute ETL incremental
-log_message "Executing: ${SCRIPT_DIR}/ETL.sh incremental"
+# Execute ETL (auto-detects first execution vs incremental)
+log_message "Executing: ${SCRIPT_DIR}/ETL.sh"
 
 # Redirect output to log file
-if "${SCRIPT_DIR}/ETL.sh" incremental >> "${ETL_LOG_FILE}" 2>&1; then
+if "${SCRIPT_DIR}/ETL.sh" >> "${ETL_LOG_FILE}" 2>&1; then
  log_message "ETL completed successfully"
  exit 0
 else

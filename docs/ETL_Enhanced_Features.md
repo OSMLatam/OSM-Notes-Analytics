@@ -83,15 +83,15 @@ The ETL now uses a dedicated configuration file (`etc/etl.properties`) that allo
 
 ### 3. Execution Modes
 
-The ETL script now supports multiple execution modes:
+The ETL script uses auto-detection:
 
-#### `--create` (Default)
+#### Auto-detect Mode (Default)
 
-Creates or updates the entire data warehouse. This is the traditional mode.
+The script automatically detects if it's the first execution or a subsequent run:
+- **First execution**: Creates the entire data warehouse and performs initial load
+- **Subsequent runs**: Processes only new data since the last run (incremental updates)
 
-#### `--incremental`
-
-Processes only new data since the last run. This is faster for regular updates.
+Simply run: `./bin/dwh/ETL.sh` (no arguments needed)
 
 #### `--help` or `-h`
 
@@ -198,10 +198,10 @@ The ETL now includes automatic database maintenance:
 
 ```bash
 # Create/update data warehouse
-./bin/dwh/ETL.sh --create
+./bin/dwh/ETL.sh
 
 # Incremental update
-./bin/dwh/ETL.sh --incremental
+./bin/dwh/ETL.sh
 
 # Show help
 ./bin/dwh/ETL.sh --help
@@ -213,11 +213,11 @@ The ETL now includes automatic database maintenance:
 # Use custom configuration
 export ETL_BATCH_SIZE=500
 export ETL_TIMEOUT=3600
-./bin/dwh/ETL.sh --create
+./bin/dwh/ETL.sh
 
 # Disable resource monitoring
 export ETL_MONITOR_RESOURCES=false
-./bin/dwh/ETL.sh --create
+./bin/dwh/ETL.sh
 ```
 
 ### Environment Variables
@@ -299,7 +299,7 @@ Enable debug logging:
 
 ```bash
 export LOG_LEVEL=DEBUG
-./bin/dwh/ETL.sh --create
+./bin/dwh/ETL.sh
 ```
 
 ## Migration from Previous Version

@@ -194,7 +194,7 @@ gantt
 
 ```cron
 # ETL: Incremental updates every 15 minutes
-*/15 * * * * /path/to/OSM-Notes-Analytics/bin/dwh/ETL.sh --incremental >> /var/log/osm-notes-etl.log 2>&1
+*/15 * * * * /path/to/OSM-Notes-Analytics/bin/dwh/ETL.sh >> /var/log/osm-notes-etl.log 2>&1
 
 # Datamarts: Update daily at 2 AM (after ETL completes)
 0 2 * * * /path/to/OSM-Notes-Analytics/bin/dwh/datamartUsers/datamartUsers.sh >> /var/log/osm-notes-datamarts.log 2>&1
@@ -230,8 +230,7 @@ gantt
 graph TD
     INGESTION[OSM-Notes-Ingestion<br/>Updates Base Tables]
     
-    ETL[ETL Process<br/>--incremental]
-    ETL_FULL[ETL Process<br/>--create]
+    ETL[ETL Process<br/>Auto-detect]
     
     DATAMART_USERS[User Datamart]
     DATAMART_COUNTRIES[Country Datamart]
@@ -242,15 +241,10 @@ graph TD
     VIEWER[OSM-Notes-Viewer<br/>Consumes JSON]
     
     INGESTION -->|Must Complete| ETL
-    INGESTION -->|Must Complete| ETL_FULL
     
-    ETL -->|Updates DWH| DATAMART_USERS
-    ETL -->|Updates DWH| DATAMART_COUNTRIES
-    ETL -->|Updates DWH| DATAMART_GLOBAL
-    
-    ETL_FULL -->|Creates DWH| DATAMART_USERS
-    ETL_FULL -->|Creates DWH| DATAMART_COUNTRIES
-    ETL_FULL -->|Creates DWH| DATAMART_GLOBAL
+    ETL -->|Creates/Updates DWH| DATAMART_USERS
+    ETL -->|Creates/Updates DWH| DATAMART_COUNTRIES
+    ETL -->|Creates/Updates DWH| DATAMART_GLOBAL
     
     DATAMART_USERS -->|Required| EXPORT
     DATAMART_COUNTRIES -->|Required| EXPORT
@@ -264,14 +258,14 @@ graph TD
 **Initial Deployment:**
 1. Deploy OSM-Notes-Ingestion (populate base tables)
 2. Wait for base tables to have data
-3. Run ETL `--create` (initial load)
+3. Run ETL (auto-detects first execution, creates DWH)
 4. Run datamart scripts (initial population)
 5. Run JSON export
 6. Deploy OSM-Notes-Viewer
 
 **Regular Operations:**
 1. OSM-Notes-Ingestion runs (updates base tables)
-2. ETL `--incremental` runs (every 15 minutes)
+2. ETL runs (every 15 minutes, auto-detects incremental)
 3. Datamarts update (daily at 2 AM)
 4. JSON export runs (every 15 minutes)
 5. OSM-Notes-Viewer reads JSON files
@@ -375,7 +369,7 @@ psql -d osm_notes -c "SELECT COUNT(*) FROM note_comments;"
 ```bash
 # Run initial ETL (takes ~30 hours)
 cd bin/dwh
-./ETL.sh --create
+./ETL.sh
 
 # Monitor progress
 tail -f /tmp/ETL_*/ETL.log
@@ -604,7 +598,7 @@ ls -lh /tmp/ETL_*/ETL.lock
 find /tmp/ETL_* -name "ETL.lock" -mmin +240 -delete
 
 # Resume ETL
-./bin/dwh/ETL.sh --incremental
+./bin/dwh/ETL.sh
 ```
 
 **Scenario 2: Database Corruption**
@@ -614,7 +608,7 @@ find /tmp/ETL_* -name "ETL.lock" -mmin +240 -delete
 psql -U postgres -d osm_notes < /backups/dwh_20250115.sql
 
 # Re-run ETL if needed
-./bin/dwh/ETL.sh --create
+./bin/dwh/ETL.sh
 ```
 
 **Scenario 3: JSON Export Failure**

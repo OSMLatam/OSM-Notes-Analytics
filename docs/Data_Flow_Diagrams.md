@@ -388,7 +388,7 @@ flowchart TD
 - Populates all dimensions
 - Loads all facts
 - **Time**: ~30 hours
-- **Trigger**: `ETL.sh --create`
+- **Trigger**: `ETL.sh` (auto-detects first execution)
 
 ### Incremental Load
 - Processes only new data since last run
@@ -396,7 +396,7 @@ flowchart TD
 - Loads only new facts
 - Updates affected datamarts
 - **Time**: 5-15 minutes
-- **Trigger**: `ETL.sh --incremental`
+- **Trigger**: `ETL.sh` (auto-detects incremental execution)
 
 ## Parallel Processing
 

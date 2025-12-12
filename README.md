@@ -275,17 +275,18 @@ The ETL creates the data warehouse (schema `dwh`) with:
 - All necessary transformations - see [ETL Enhanced Features](docs/ETL_Enhanced_Features.md)
 - **Automatically updates datamarts**
 
-**Initial Load** (first time, complete data):
+**ETL Process** (auto-detects first execution vs incremental):
 ```bash
 cd bin/dwh
-./ETL.sh --create
+./ETL.sh
 ```
 
-**Expected output:**
+**First execution output** (creates DWH and loads all historical data):
 ```
 [INFO] Preparing environment.
-[INFO] Process: From scratch.
+[INFO] Entering auto-detect mode
 [WARN] Starting process.
+[INFO] AUTO-DETECTED FIRST EXECUTION - Performing initial load
 [INFO] Creating base tables...
 [INFO] Processing years in parallel...
 [INFO] Using 4 threads for parallel processing
@@ -297,22 +298,21 @@ cd bin/dwh
 [WARN] Ending process.
 ```
 
-**Incremental Update** (regular operations, new data only):
-```bash
-cd bin/dwh
-./ETL.sh --incremental
-```
-
-**Expected output:**
+**Subsequent executions output** (incremental updates only):
 ```
 [INFO] Preparing environment.
-[INFO] Process: Incremental update.
+[INFO] Entering auto-detect mode
 [WARN] Starting process.
+[INFO] AUTO-DETECTED INCREMENTAL EXECUTION - Processing only new data
 [INFO] Processing new data since last run...
 [INFO] Updated 1234 facts
 [INFO] Updating datamarts...
 [WARN] Ending process.
 ```
+
+**Note:** The same command works for both initial setup and regular updates.
+The script automatically detects if it's the first execution by checking if
+the `dwh.facts` table exists and has data.
 
 **Time estimates:**
 - **Initial load**: ~30 hours (processes all years from 2013 to present)
@@ -616,7 +616,7 @@ See [JSON Export Documentation](bin/dwh/export_json_readme.md) and [Atomic Valid
 If you encounter issues during setup, here are quick solutions:
 
 **Problem: "Schema 'dwh' does not exist"**
-- **Solution**: Run `./bin/dwh/ETL.sh --create` first
+- **Solution**: Run `./bin/dwh/ETL.sh` first
 
 **Problem: "Base tables do not exist"**
 - **Solution**: Run [OSM-Notes-Ingestion](https://github.com/OSMLatam/OSM-Notes-Ingestion) first to populate base tables
@@ -644,7 +644,7 @@ For ongoing updates, run these in sequence:
 
 # 2. Update DWH
 cd bin/dwh
-./ETL.sh --incremental
+./ETL.sh
 
 # 3. Update datamarts
 cd datamartUsers
@@ -666,7 +666,7 @@ For automated analytics updates:
 
 ```bash
 # Update ETL every hour (after ingestion completes)
-0 * * * * ~/OSM-Notes-Analytics/bin/dwh/ETL.sh --incremental
+0 * * * * ~/OSM-Notes-Analytics/bin/dwh/ETL.sh
 
 # Update country datamart daily
 0 2 * * * ~/OSM-Notes-Analytics/bin/dwh/datamartCountries/datamartCountries.sh
@@ -689,7 +689,7 @@ For a complete automated pipeline that includes JSON export with validation:
 cd /opt/osm-analytics/OSM-Notes-Analytics
 
 # ETL incremental update
-./bin/dwh/ETL.sh --incremental || exit 1
+./bin/dwh/ETL.sh || exit 1
 
 # Update datamarts
 ./bin/dwh/datamartUsers/datamartUsers.sh || exit 1
@@ -778,7 +778,7 @@ OSM-Notes-Analytics/
 ### Create Mode (Initial Setup)
 
 ```bash
-./bin/dwh/ETL.sh --create
+./bin/dwh/ETL.sh
 ```
 
 Creates the complete data warehouse from scratch, including all dimensions and facts.
@@ -786,7 +786,7 @@ Creates the complete data warehouse from scratch, including all dimensions and f
 ### Incremental Mode (Regular Updates)
 
 ```bash
-./bin/dwh/ETL.sh --incremental
+./bin/dwh/ETL.sh
 ```
 
 Processes only new data since the last ETL run. Use this for scheduled updates.
@@ -914,7 +914,7 @@ tail -40f $(ls -1rtd /tmp/ETL_* | tail -1)/ETL.log
 
 # Set log level
 export LOG_LEVEL=DEBUG
-./bin/dwh/ETL.sh --incremental
+./bin/dwh/ETL.sh
 ```
 
 Available log levels: TRACE, DEBUG, INFO, WARN, ERROR, FATAL
@@ -951,7 +951,7 @@ For detailed maintenance procedures, see [DWH Maintenance Guide](docs/DWH_Mainte
 
 #### "Schema 'dwh' does not exist"
 
-**Solution**: Run `./bin/dwh/ETL.sh --create` first to create the data warehouse.
+**Solution**: Run `./bin/dwh/ETL.sh` first to create the data warehouse.
 
 #### "Table 'dwh.datamartusers' does not exist"
 

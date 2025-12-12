@@ -90,7 +90,7 @@ SQL scripts follow a structured naming pattern:
 
 **Warning:** This is destructive! Only used during full rebuild.
 
-**Usage:** Called by `ETL.sh --create` mode
+**Usage:** Called by `ETL.sh` on first execution (auto-detected)
 
 #### ETL_13_removeDWHObjects.sql
 
@@ -105,7 +105,7 @@ SQL scripts follow a structured naming pattern:
 
 **Warning:** This removes all data warehouse data!
 
-**Usage:** Called by `ETL.sh --create` for clean rebuild
+**Usage:** Called by `ETL.sh` on first execution (auto-detected) for clean rebuild
 
 ### Phase 2: Object Creation (2x)
 
@@ -433,7 +433,7 @@ Computes last year activity patterns (GitHub-style contribution graph).
 
 ## Execution Flow
 
-### Initial Load (--create)
+### Initial Load (first execution - auto-detected)
 
 **For detailed ETL process documentation, see [ETL Enhanced Features](../docs/ETL_Enhanced_Features.md).**
 
@@ -453,7 +453,7 @@ graph TD
     L --> M[End]
 ```
 
-### Incremental Update (--incremental)
+### Incremental Update (subsequent executions - auto-detected)
 
 ```mermaid
 graph TD

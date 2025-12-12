@@ -14,26 +14,24 @@ These are the **only scripts** that should be executed directly:
 
 1. **`bin/dwh/ETL.sh`** - Main ETL orchestration script
    - **Usage**: `./bin/dwh/ETL.sh [OPTIONS]`
+   - **Usage**: `./bin/dwh/ETL.sh` (no arguments needed)
    - **Options**:
-     - `--create`: Full initial load, creates all DWH objects from scratch
-     - `--incremental`: Processes only new data since last run (default for cron jobs)
+     - `(no arguments)`: Auto-detect mode - creates DWH if first execution,
+       otherwise processes incremental updates (perfect for cron jobs)
      - `--help` or `-h`: Shows detailed help information
    - **Purpose**: Orchestrates the complete ETL process to populate the data warehouse
-   - **When**: 
-     - Initial setup: `--create` (first time, takes ~30 hours)
-     - Regular updates: `--incremental` (scheduled, takes 5-15 minutes)
-   - **Auto-detection**: If no option is provided, automatically detects if first execution and runs appropriate mode
+   - **Auto-detection**: Automatically detects if first execution
+     (checks if `dwh.facts` table exists and has data):
+     - **First execution**: Creates all DWH objects and performs initial load (~30 hours)
+     - **Subsequent runs**: Processes only incremental updates (5-15 minutes)
    - **Prerequisites**: Base tables must exist (populated by OSM-Notes-Ingestion)
    - **Example**:
      ```bash
-     # Initial setup
-     ./bin/dwh/ETL.sh --create
-     
-     # Regular updates (production)
-     ./bin/dwh/ETL.sh --incremental
-     
-     # Auto-detect mode (default)
+     # First time or regular updates (same command for both)
      ./bin/dwh/ETL.sh
+     
+     # For cron jobs (recommended)
+     0 * * * * /path/to/OSM-Notes-Analytics/bin/dwh/ETL.sh
      ```
 
 ### Datamart Scripts
@@ -200,10 +198,10 @@ All SQL scripts in `sql/dwh/` are called internally by the entry point scripts:
 
 ```bash
 # Initial setup workflow
-./bin/dwh/ETL.sh --create
+./bin/dwh/ETL.sh
 
 # Regular updates workflow
-./bin/dwh/ETL.sh --incremental
+./bin/dwh/ETL.sh
 
 # Update datamarts manually (if needed)
 ./bin/dwh/datamartCountries/datamartCountries.sh
@@ -237,7 +235,7 @@ psql -d osm_notes -f sql/dwh/ETL_22_createDWHTables.sql  # WRONG (use ETL.sh ins
 
 ```bash
 # 1. Run initial ETL (creates DWH, populates facts and dimensions, updates datamarts)
-./bin/dwh/ETL.sh --create
+./bin/dwh/ETL.sh
 
 # 2. Verify datamarts are populated
 psql -d osm_notes -c "SELECT COUNT(*) FROM dwh.datamartcountries;"
@@ -254,7 +252,7 @@ psql -d osm_notes -c "SELECT COUNT(*) FROM dwh.datamartusers;"
 
 ```bash
 # 1. Incremental ETL (processes new data, updates datamarts automatically)
-./bin/dwh/ETL.sh --incremental
+./bin/dwh/ETL.sh
 
 # 2. Export to JSON and push to GitHub (optional)
 ./bin/dwh/exportAndPushToGitHub.sh
@@ -282,7 +280,7 @@ psql -d osm_notes -c "SELECT COUNT(*) FROM dwh.datamartusers;"
 
 1. **Always use entry points**: Never call internal scripts or SQL files directly
 2. **Check prerequisites**: Ensure base tables exist before running ETL
-3. **Use appropriate mode**: `--create` for first time, `--incremental` for updates
+3. **Use auto-detect mode**: Simply run `ETL.sh` without arguments - it handles both first execution and incremental updates automatically
 4. **Monitor logs**: Check log files in `/tmp/` for execution details
 5. **Use dry-run**: For cleanup operations, always use `--dry-run` first
 

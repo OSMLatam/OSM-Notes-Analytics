@@ -444,8 +444,8 @@ run_etl() {
  log_info "ETL will use database: ${DBNAME}"
 
  # Run ETL in incremental mode (it will auto-detect if it's first execution)
- log_info "Executing: ${ETL_SCRIPT} --incremental"
- if "${ETL_SCRIPT}" --incremental; then
+ log_info "Executing: ${ETL_SCRIPT}"
+ if "${ETL_SCRIPT}"; then
   log_success "ETL completed successfully after ${source_type} execution #${execution_number}"
   return 0
  else

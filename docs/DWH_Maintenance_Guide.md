@@ -94,8 +94,8 @@ The script includes several safety mechanisms:
 # 2. Remove everything (with confirmation)
 ./bin/dwh/cleanupDWH.sh
 
-# 3. Recreate data warehouse
-./bin/dwh/ETL.sh --create
+# 3. Recreate data warehouse (auto-detects first execution)
+./bin/dwh/ETL.sh
 ```
 
 ### Regular Maintenance
@@ -114,8 +114,8 @@ The script includes several safety mechanisms:
 # 2. Remove only DWH objects
 ./bin/dwh/cleanupDWH.sh --remove-all-data
 
-# 3. Recreate schema
-./bin/dwh/ETL.sh --create
+# 3. Recreate schema (auto-detects first execution)
+./bin/dwh/ETL.sh
 ```
 
 ### Testing Environment

@@ -229,7 +229,8 @@ The automatic script executes 4 complete cycles:
 │     → Detects missing tables                                │
 │     → Calls processPlanetNotes.sh --base                   │
 │     → Loads base data from mocked planet download           │
-│  3. Run ETL.sh --incremental                                │
+│  3. Run ETL.sh                                               │
+│     → Auto-detects first execution                           │
 │     → Creates DWH schema if needed                          │
 │     → Loads facts and dimensions from base tables           │
 │     → Updates datamarts                                     │
@@ -244,7 +245,8 @@ The automatic script executes 4 complete cycles:
 │     → Uses API mode (not planet)                            │
 │     → Processes 5 notes sequentially (< 10 notes)           │
 │     → Updates base tables with new notes                    │
-│  4. Run ETL.sh --incremental                                │
+│  4. Run ETL.sh                                               │
+│     → Auto-detects incremental execution                     │
 │     → Processes only new data since last run                │
 │     → Updates facts and dimensions                          │
 │     → Updates datamarts                                     │
@@ -259,7 +261,8 @@ The automatic script executes 4 complete cycles:
 │     → Uses API mode (not planet)                            │
 │     → Processes 20 notes in parallel (>= 10 notes)          │
 │     → Updates base tables with new notes                    │
-│  4. Run ETL.sh --incremental                                │
+│  4. Run ETL.sh                                               │
+│     → Auto-detects incremental execution                     │
 │     → Processes only new data since last run                │
 │     → Updates facts and dimensions                          │
 │     → Updates datamarts                                     │
@@ -274,7 +277,7 @@ The automatic script executes 4 complete cycles:
 │     → Uses API mode (not planet)                            │
 │     → Receives empty response (no new notes)                │
 │     → Handles gracefully (no errors)                        │
-│  4. Run ETL.sh --incremental                                │
+│  4. Run ETL.sh                                               │
 │     → Processes only new data since last run                │
 │     → No new data to process                                │
 │     → Updates datamarts (may have no changes)               │
@@ -303,8 +306,8 @@ The automatic script executes 4 complete cycles:
    - Populates tables with test data
    - **Expected Result:** Base tables created and populated
 
-2. **ETL.sh --incremental:**
-   - Detects DWH schema doesn't exist (first run)
+2. **ETL.sh:**
+   - Auto-detects DWH schema doesn't exist (first run)
    - Creates DWH schema and all dimension tables
    - Creates partitioned facts table
    - Loads facts from `note_comments` table
@@ -344,7 +347,7 @@ SELECT COUNT(*) FROM dwh.dimension_countries;
    - Inserts/updates notes in base tables
    - **Expected Result:** 5 new/updated notes in base tables
 
-2. **ETL.sh --incremental:**
+2. **ETL.sh:**
    - Detects DWH exists (not first run)
    - Uses incremental mode
    - Processes only new/updated data since last ETL run
@@ -382,7 +385,7 @@ SELECT COUNT(*) FROM dwh.facts WHERE action_at > (SELECT MAX(action_at) - INTERV
    - Inserts/updates notes in base tables
    - **Expected Result:** 20 new/updated notes in base tables
 
-2. **ETL.sh --incremental:**
+2. **ETL.sh:**
    - Uses incremental mode
    - Processes only new/updated data since last ETL run
    - Updates facts table with new note comments
@@ -416,7 +419,7 @@ SELECT COUNT(*) FROM notes WHERE created_at > (SELECT MAX(created_at) - INTERVAL
    - No database changes
    - **Expected Result:** No errors, graceful handling of empty response
 
-2. **ETL.sh --incremental:**
+2. **ETL.sh:**
    - Uses incremental mode
    - Detects no new data since last run
    - Skips data processing (no new facts)

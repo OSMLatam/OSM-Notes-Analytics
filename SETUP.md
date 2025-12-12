@@ -54,11 +54,11 @@ ETL_TEST_MODE=true  # Process only 2013-2014
 ### 5. Run the ETL
 
 ```bash
-# First time setup (creates data warehouse)
-./bin/dwh/ETL.sh --create
+# First time setup (creates data warehouse automatically)
+./bin/dwh/ETL.sh
 
-# Or with test mode (faster)
-ETL_TEST_MODE=true ./bin/dwh/ETL.sh --create
+# Or with test mode (faster, only 2013-2014)
+ETL_TEST_MODE=true ./bin/dwh/ETL.sh
 ```
 
 ## Updating on Existing Server
@@ -75,8 +75,8 @@ git submodule update --init --recursive
 # Your local configuration files (.local) are preserved automatically
 # The scripts will load them automatically
 
-# Run the ETL as usual
-./bin/dwh/ETL.sh --incremental
+# Run the ETL as usual (auto-detects mode)
+./bin/dwh/ETL.sh
 ```
 
 ## Configuration Files
@@ -121,7 +121,7 @@ nano etc/etl.properties
 ETL_TEST_MODE=true
 
 # Run ETL
-./bin/dwh/ETL.sh --create
+./bin/dwh/ETL.sh
 # This will process only 2013-2014
 ```
 
@@ -135,7 +135,7 @@ nano etc/etl.properties
 ETL_TEST_MODE=false
 
 # Run ETL
-./bin/dwh/ETL.sh --create
+./bin/dwh/ETL.sh
 # This will process all years from 2013 to current
 ```
 

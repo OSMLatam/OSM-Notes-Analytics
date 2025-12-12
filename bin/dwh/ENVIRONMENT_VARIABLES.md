@@ -24,7 +24,7 @@ These variables are used across **all scripts** and should be standardized:
 - **Example**: 
   ```bash
   export LOG_LEVEL=DEBUG
-  ./bin/dwh/ETL.sh --incremental
+  ./bin/dwh/ETL.sh
   ```
 
 ### `CLEAN`
@@ -36,7 +36,7 @@ These variables are used across **all scripts** and should be standardized:
 - **Example**: 
   ```bash
   export CLEAN=false
-  ./bin/dwh/ETL.sh --incremental
+  ./bin/dwh/ETL.sh
   # Files will remain in /tmp/ETL_*/
   ```
 
@@ -49,7 +49,7 @@ These variables are used across **all scripts** and should be standardized:
 - **Example**: 
   ```bash
   export DBNAME=osm_notes_test
-  ./bin/dwh/ETL.sh --create
+  ./bin/dwh/ETL.sh
   ```
 
 ### `DB_USER`
@@ -61,7 +61,7 @@ These variables are used across **all scripts** and should be standardized:
 - **Example**: 
   ```bash
   export DB_USER=postgres
-  ./bin/dwh/ETL.sh --incremental
+  ./bin/dwh/ETL.sh
   ```
 
 ## 📝 ETL-Specific Variables
@@ -79,7 +79,7 @@ These variables control the ETL process behavior:
 - **Example**: 
   ```bash
   export ETL_BATCH_SIZE=5000
-  ./bin/dwh/ETL.sh --incremental
+  ./bin/dwh/ETL.sh
   ```
 
 #### `ETL_COMMIT_INTERVAL`
@@ -91,7 +91,7 @@ These variables control the ETL process behavior:
 - **Example**: 
   ```bash
   export ETL_COMMIT_INTERVAL=500
-  ./bin/dwh/ETL.sh --incremental
+  ./bin/dwh/ETL.sh
   ```
 
 #### `ETL_MAX_PARALLEL_JOBS`
@@ -103,7 +103,7 @@ These variables control the ETL process behavior:
 - **Example**: 
   ```bash
   export ETL_MAX_PARALLEL_JOBS=8
-  ./bin/dwh/ETL.sh --create
+  ./bin/dwh/ETL.sh
   ```
 
 #### `ETL_PARALLEL_ENABLED`
@@ -115,7 +115,7 @@ These variables control the ETL process behavior:
 - **Example**: 
   ```bash
   export ETL_PARALLEL_ENABLED=false
-  ./bin/dwh/ETL.sh --create
+  ./bin/dwh/ETL.sh
   ```
 
 ### Resource Control
@@ -129,7 +129,7 @@ These variables control the ETL process behavior:
 - **Example**: 
   ```bash
   export MAX_MEMORY_USAGE=90
-  ./bin/dwh/ETL.sh --incremental
+  ./bin/dwh/ETL.sh
   ```
 
 #### `MAX_DISK_USAGE`
@@ -141,7 +141,7 @@ These variables control the ETL process behavior:
 - **Example**: 
   ```bash
   export MAX_DISK_USAGE=85
-  ./bin/dwh/ETL.sh --incremental
+  ./bin/dwh/ETL.sh
   ```
 
 #### `ETL_TIMEOUT`
@@ -153,7 +153,7 @@ These variables control the ETL process behavior:
 - **Example**: 
   ```bash
   export ETL_TIMEOUT=14400  # 4 hours for initial load
-  ./bin/dwh/ETL.sh --create
+  ./bin/dwh/ETL.sh
   ```
 
 ### Database Maintenance
@@ -167,7 +167,7 @@ These variables control the ETL process behavior:
 - **Example**: 
   ```bash
   export ETL_VACUUM_AFTER_LOAD=false
-  ./bin/dwh/ETL.sh --incremental
+  ./bin/dwh/ETL.sh
   ```
 
 #### `ETL_ANALYZE_AFTER_LOAD`
@@ -179,7 +179,7 @@ These variables control the ETL process behavior:
 - **Example**: 
   ```bash
   export ETL_ANALYZE_AFTER_LOAD=false
-  ./bin/dwh/ETL.sh --incremental
+  ./bin/dwh/ETL.sh
   ```
 
 ### Recovery and Validation
@@ -193,7 +193,7 @@ These variables control the ETL process behavior:
 - **Example**: 
   ```bash
   export ETL_RECOVERY_ENABLED=false
-  ./bin/dwh/ETL.sh --create
+  ./bin/dwh/ETL.sh
   ```
 
 #### `ETL_VALIDATE_INTEGRITY`
@@ -205,7 +205,7 @@ These variables control the ETL process behavior:
 - **Example**: 
   ```bash
   export ETL_VALIDATE_INTEGRITY=false
-  ./bin/dwh/ETL.sh --incremental
+  ./bin/dwh/ETL.sh
   ```
 
 #### `ETL_VALIDATE_DIMENSIONS`
@@ -217,7 +217,7 @@ These variables control the ETL process behavior:
 - **Example**: 
   ```bash
   export ETL_VALIDATE_DIMENSIONS=false
-  ./bin/dwh/ETL.sh --incremental
+  ./bin/dwh/ETL.sh
   ```
 
 #### `ETL_VALIDATE_FACTS`
@@ -229,7 +229,7 @@ These variables control the ETL process behavior:
 - **Example**: 
   ```bash
   export ETL_VALIDATE_FACTS=false
-  ./bin/dwh/ETL.sh --incremental
+  ./bin/dwh/ETL.sh
   ```
 
 ### Monitoring
@@ -243,7 +243,7 @@ These variables control the ETL process behavior:
 - **Example**: 
   ```bash
   export ETL_MONITOR_RESOURCES=false
-  ./bin/dwh/ETL.sh --incremental
+  ./bin/dwh/ETL.sh
   ```
 
 #### `ETL_MONITOR_INTERVAL`
@@ -255,7 +255,7 @@ These variables control the ETL process behavior:
 - **Example**: 
   ```bash
   export ETL_MONITOR_INTERVAL=60
-  ./bin/dwh/ETL.sh --incremental
+  ./bin/dwh/ETL.sh
   ```
 
 ### Test Mode
@@ -269,7 +269,7 @@ These variables control the ETL process behavior:
 - **Example**: 
   ```bash
   export ETL_TEST_MODE=true
-  ./bin/dwh/ETL.sh --create
+  ./bin/dwh/ETL.sh
   # Processes only 2013-2014
   # Then run incremental to process 2015+
   ```
@@ -314,7 +314,7 @@ export ETL_VALIDATE_INTEGRITY=true
 export ETL_VALIDATE_DIMENSIONS=true
 export ETL_VALIDATE_FACTS=true
 export ETL_TEST_MODE=true
-./bin/dwh/ETL.sh --create
+./bin/dwh/ETL.sh
 ```
 
 ### Production
@@ -326,7 +326,7 @@ export ETL_BATCH_SIZE=1000
 export ETL_MAX_PARALLEL_JOBS=4
 export ETL_RECOVERY_ENABLED=true
 export ETL_VALIDATE_INTEGRITY=true
-./bin/dwh/ETL.sh --incremental
+./bin/dwh/ETL.sh
 ```
 
 ### Testing
@@ -336,7 +336,7 @@ export DBNAME=osm_notes_test
 export LOG_LEVEL=INFO
 export CLEAN=true
 export ETL_TEST_MODE=true
-./bin/dwh/ETL.sh --create
+./bin/dwh/ETL.sh
 ```
 
 ### High-Performance System
@@ -346,7 +346,7 @@ export ETL_BATCH_SIZE=5000
 export ETL_MAX_PARALLEL_JOBS=8
 export ETL_COMMIT_INTERVAL=500
 export MAX_MEMORY_USAGE=90
-./bin/dwh/ETL.sh --create
+./bin/dwh/ETL.sh
 ```
 
 ### Low-Resource System
@@ -356,7 +356,7 @@ export ETL_BATCH_SIZE=500
 export ETL_MAX_PARALLEL_JOBS=2
 export ETL_PARALLEL_ENABLED=false
 export MAX_MEMORY_USAGE=70
-./bin/dwh/ETL.sh --incremental
+./bin/dwh/ETL.sh
 ```
 
 ## 🔧 Internal Variables (Do Not Modify)

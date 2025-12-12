@@ -33,21 +33,21 @@ dwh.facts (main table - PARTITIONED)
 
 Partitions are created automatically during the ETL process:
 
-### First Execution (ETL --create)
+### First Execution (Auto-detected)
 
 ```bash
-./bin/dwh/ETL.sh --create
+./bin/dwh/ETL.sh
 ```
 
-The ETL executes these steps:
+The ETL automatically detects first execution and executes these steps:
 1. `ETL_22_createDWHTables.sql` - Creates main partitioned table
 2. `ETL_22a_createFactPartitions.sql` - Creates partitions from 2013 to current_year + 1
 3. Loads data directly into partitions
 
-### Incremental Executions
+### Incremental Executions (Auto-detected)
 
 ```bash
-./bin/dwh/ETL.sh --incremental
+./bin/dwh/ETL.sh
 ```
 
 - Existing partitions are reused
@@ -63,8 +63,8 @@ The ETL executes these steps:
 The ETL **automatically verifies and creates** necessary partitions on each execution:
 
 ```bash
-# Simply run the ETL (--create or --incremental)
-./bin/dwh/ETL.sh --incremental
+# Simply run the ETL (auto-detects mode)
+./bin/dwh/ETL.sh
 
 # The ETL automatically:
 # ✅ Verifies if partition for current year exists
@@ -79,7 +79,7 @@ The ETL **automatically verifies and creates** necessary partitions on each exec
 **January 1st, 2026 - First execution of the year:**
 
 ```bash
-./bin/dwh/ETL.sh --incremental
+./bin/dwh/ETL.sh
 
 # ETL Output:
 # "Verifying and creating partitions for dwh.facts"
@@ -94,7 +94,7 @@ The ETL **automatically verifies and creates** necessary partitions on each exec
 **Subsequent executions in 2026:**
 
 ```bash
-./bin/dwh/ETL.sh --incremental
+./bin/dwh/ETL.sh
 
 # ETL Output:
 # "✓ Partition facts_2026 already exists"

@@ -108,9 +108,7 @@ Output:
 #### 1. ETL Process (`bin/dwh/ETL.sh`)
 
 - **Purpose**: Transforms base data into [star schema data warehouse](../docs/DWH_Star_Schema_ERD.md)
-- **Modes**:
-  - `--create`: Full initial load (creates all DWH objects)
-  - `--incremental`: Processes only new data since last run
+- **Auto-detection**: Automatically detects first execution (creates DWH) vs incremental updates
 - **Features**:
   - Parallel processing by year (2013-present)
   - Automatic partition management

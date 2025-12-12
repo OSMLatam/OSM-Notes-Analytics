@@ -105,7 +105,7 @@ The incremental export integrates seamlessly with the ETL process:
 
 ```bash
 # 1. Run ETL (updates dimension.modified flags)
-./bin/dwh/ETL.sh --incremental
+./bin/dwh/ETL.sh
 
 # 2. Update datamarts (processes only modified entities)
 ./bin/dwh/datamartUsers/datamartUsers.sh

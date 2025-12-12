@@ -227,8 +227,8 @@ function __show_help {
  echo "  ${0} [OPTIONS]"
  echo
  echo "Options:"
- echo "  --create          Create initial data warehouse (first time setup)"
- echo "  --incremental     Run incremental update (production mode)"
+ echo "  (no arguments)    Auto-detect mode: first execution creates DWH,"
+ echo "                    subsequent runs process incremental updates"
  echo "  --help, -h        Show this help"
  echo
  echo "Environment variables:"
@@ -239,9 +239,9 @@ function __show_help {
  echo "  LOG_LEVEL            Logging level (default: ERROR)"
  echo
  echo "Examples:"
- echo "  ${0} --create                    # First time setup (all years)"
- echo "  ${0} --incremental               # Regular updates (use in crontab)"
- echo "  ETL_TEST_MODE=true ${0} --create # Test mode (2013-2014 only)"
+ echo "  ${0}                              # Auto-detect: creates DWH if first run,"
+ echo "                                    # otherwise processes incremental updates"
+ echo "  ETL_TEST_MODE=true ${0}           # Test mode (2013-2014 only)"
  echo
  echo "Written by: Andres Gomez (AngocA)"
  echo "OSM-LatAm, OSM-Colombia, MaptimeBogota."
@@ -252,14 +252,11 @@ function __show_help {
 function __checkPrereqs {
  __log_start
  __logi "=== STARTING ETL PREREQUISITES CHECK ==="
- if [[ "${PROCESS_TYPE}" != "" ]] && [[ "${PROCESS_TYPE}" != "--create" ]] \
-  && [[ "${PROCESS_TYPE}" != "--incremental" ]] \
+ if [[ "${PROCESS_TYPE}" != "" ]] \
   && [[ "${PROCESS_TYPE}" != "--help" ]] \
   && [[ "${PROCESS_TYPE}" != "-h" ]]; then
   echo "ERROR: Invalid parameter. It should be:"
-  echo " * Empty string, nothing (same as --incremental)"
-  echo " * --create"
-  echo " * --incremental"
+  echo " * Empty string, nothing (auto-detect mode)"
   echo " * --help"
   exit "${ERROR_INVALID_ARGUMENT}"
  fi
@@ -820,9 +817,15 @@ function main() {
 
  __logi "PROCESS_TYPE value: '${PROCESS_TYPE}'"
 
- # Handle create mode (explicit)
- if [[ "${PROCESS_TYPE}" == "--create" ]]; then
-  __logi "CREATE MODE - Creating initial data warehouse (explicit)"
+ # Auto-detect execution mode
+ __logi "Entering auto-detect mode"
+ # Auto-detect if this is the first execution
+ local is_first_execution
+ is_first_execution=$(__detectFirstExecution | tail -1)
+ __logi "Detection result: '${is_first_execution}'"
+
+ if [[ "${is_first_execution}" == "true" ]]; then
+  __logi "AUTO-DETECTED FIRST EXECUTION - Performing initial load"
   set +E
   # shellcheck disable=SC2310
   if ! __checkBaseTables; then
@@ -831,69 +834,40 @@ function main() {
   else
    # Ensure schema exists even if tables exist (for datamart scripts)
    __logi "Ensuring dwh schema exists"
-   psql -d "${DBNAME}" -c "CREATE SCHEMA IF NOT EXISTS dwh;" 2>&1
+   psql -d "${DBNAME}" -c "CREATE SCHEMA IF NOT EXISTS dwh;" 2>&1 || true
   fi
   set -E
+  __logi "About to call __initialFactsParallel"
   __initialFactsParallel # Use parallel version
+  __logi "Finished calling __initialFactsParallel"
   __perform_database_maintenance
-  "${DATAMART_COUNTRIES_SCRIPT}" ""
-  "${DATAMART_USERS_SCRIPT}" ""
-  "${DATAMART_GLOBAL_SCRIPT}" ""
- fi
-
- # Handle incremental mode or default mode (with auto-detection)
- if [[ "${PROCESS_TYPE}" == "--incremental" ]] || [[ "${PROCESS_TYPE}" == "" ]]; then
-  __logi "Entering incremental mode with auto-detection"
-  # Auto-detect if this is the first execution
-  local is_first_execution
-  is_first_execution=$(__detectFirstExecution | tail -1)
-  __logi "Detection result: '${is_first_execution}'"
-
-  if [[ "${is_first_execution}" == "true" ]]; then
-   __logi "AUTO-DETECTED FIRST EXECUTION - Performing initial load"
-   set +E
-   # shellcheck disable=SC2310
-   if ! __checkBaseTables; then
-    __logi "Tables missing, creating them"
-    __createBaseTables
-   else
-    # Ensure schema exists even if tables exist (for datamart scripts)
-    __logi "Ensuring dwh schema exists"
-    psql -d "${DBNAME}" -c "CREATE SCHEMA IF NOT EXISTS dwh;" 2>&1 || true
-   fi
-   set -E
-   __logi "About to call __initialFactsParallel"
-   __initialFactsParallel # Use parallel version
-   __logi "Finished calling __initialFactsParallel"
-   __perform_database_maintenance
-   set +e
-   "${DATAMART_COUNTRIES_SCRIPT}" "" || true
-   "${DATAMART_USERS_SCRIPT}" "" || true
-   "${DATAMART_GLOBAL_SCRIPT}" "" || true
-   set -e
+  set +e
+  "${DATAMART_COUNTRIES_SCRIPT}" "" || true
+  "${DATAMART_USERS_SCRIPT}" "" || true
+  "${DATAMART_GLOBAL_SCRIPT}" "" || true
+  set -e
+ else
+  __logi "AUTO-DETECTED INCREMENTAL EXECUTION - Processing only new data"
+  set +E
+  # shellcheck disable=SC2310
+  if ! __checkBaseTables; then
+   __logi "Tables missing, creating them"
+   __createBaseTables
   else
-   __logi "AUTO-DETECTED INCREMENTAL EXECUTION - Processing only new data"
-   set +E
-   # shellcheck disable=SC2310
-   if ! __checkBaseTables; then
-    __logi "Tables missing, creating them"
-    __createBaseTables
-   else
-    # Ensure schema exists even if tables exist (for datamart scripts)
-    __logi "Ensuring dwh schema exists"
-    psql -d "${DBNAME}" -c "CREATE SCHEMA IF NOT EXISTS dwh;" 2>&1 || true
-   fi
-   set -E
-   __logi "About to call __processNotesETL"
-   __processNotesETL
-   __logi "Finished calling __processNotesETL"
-   __perform_database_maintenance
-   set +e
-   "${DATAMART_COUNTRIES_SCRIPT}" "" || true
-   "${DATAMART_USERS_SCRIPT}" "" || true
-   "${DATAMART_GLOBAL_SCRIPT}" "" || true
-   set -e
+   # Ensure schema exists even if tables exist (for datamart scripts)
+   __logi "Ensuring dwh schema exists"
+   psql -d "${DBNAME}" -c "CREATE SCHEMA IF NOT EXISTS dwh;" 2>&1 || true
   fi
+  set -E
+  __logi "About to call __processNotesETL"
+  __processNotesETL
+  __logi "Finished calling __processNotesETL"
+  __perform_database_maintenance
+  set +e
+  "${DATAMART_COUNTRIES_SCRIPT}" "" || true
+  "${DATAMART_USERS_SCRIPT}" "" || true
+  "${DATAMART_GLOBAL_SCRIPT}" "" || true
+  set -e
  fi
 
  __logw "Ending process."

@@ -527,9 +527,9 @@ run_etl() {
  END \$\$;
  " > /dev/null 2>&1 || true
 
- # Run ETL in incremental mode (it will auto-detect if it's first execution)
- log_info "Executing: ${ETL_SCRIPT} --incremental"
- if "${ETL_SCRIPT}" --incremental; then
+ # Run ETL in auto-detect mode (it will auto-detect if it's first execution)
+ log_info "Executing: ${ETL_SCRIPT}"
+ if "${ETL_SCRIPT}"; then
   log_success "ETL completed successfully after execution #${execution_number}"
   return 0
  else

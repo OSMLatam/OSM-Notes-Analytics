@@ -78,7 +78,7 @@ Checking directory structure...
 
 Next Steps:
 1. Edit etc/properties.sh with your database credentials
-2. Run: ./bin/dwh/ETL.sh --create
+2. Run: ./bin/dwh/ETL.sh
 3. Install git hooks: ./scripts/install-hooks.sh
 ```
 
