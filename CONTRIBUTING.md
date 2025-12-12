@@ -471,11 +471,8 @@ psql -d dwh -f tests/unit/sql/dwh_functions_enhanced.test.sql
 #### Test Validation
 
 ```bash
-# Validate all code (comprehensive check)
-./scripts/validate-all.sh
-
-# Install git hooks for automatic validation
-./scripts/install-hooks.sh
+# Git hooks are available in .git-hooks/ and can be installed manually if needed
+# See scripts/README.md for details
 ```
 
 ### Test Documentation
@@ -557,9 +554,7 @@ OSM-Notes-Analytics/
 │   ├── run_quality_tests.sh   # Quality tests
 │   └── run_dwh_tests.sh       # DWH tests
 ├── scripts/              # Utility scripts
-│   ├── install-hooks.sh       # Git hooks
-│   ├── setup_analytics.sh     # Initial setup
-│   └── validate-all.sh        # Validation
+│   └── README.md         # Scripts documentation
 ├── docs/                 # Documentation
 │   ├── DWH_Star_Schema_ERD.md
 │   ├── DWH_Star_Schema_Data_Dictionary.md
@@ -582,7 +577,7 @@ OSM-Notes-Analytics/
 #### Script Files
 
 - **Main scripts**: `ETL.sh`, `profile.sh`, `datamartCountries.sh`, `datamartUsers.sh`
-- **Utility scripts**: `install-hooks.sh`, `setup_analytics.sh`, `validate-all.sh`
+- **Utility scripts**: See `scripts/README.md` for available scripts
 - **Test runners**: `run_all_tests.sh`, `run_quality_tests.sh`, `run_dwh_tests.sh`
 
 #### SQL Files

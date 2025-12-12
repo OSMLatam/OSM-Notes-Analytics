@@ -743,9 +743,6 @@ OSM-Notes-Analytics/
 │   │   └── datamartUsers/      # User datamart SQL
 │   └── README.md          # SQL documentation
 ├── scripts/                # Utility scripts
-│   ├── install-hooks.sh   # Git hooks installer
-│   ├── setup_analytics.sh # Initial setup script
-│   ├── validate-all.sh    # Validation script
 │   └── README.md          # Scripts documentation
 ├── tests/                  # Test suites
 │   ├── unit/              # Unit tests
@@ -886,21 +883,9 @@ See `docs/partitioning_strategy.md` for complete details.
 This project includes comprehensive CI/CD with:
 
 - ✅ GitHub Actions workflows for automated testing
-- ✅ Pre-commit hooks for code quality
-- ✅ Pre-push hooks for full validation
 - ✅ Automated dependency checking
 
-**Install git hooks:**
-
-```bash
-./scripts/install-hooks.sh
-```
-
-**Full validation:**
-
-```bash
-./scripts/validate-all.sh
-```
+Git hooks are available in `.git-hooks/` and can be installed manually if needed.
 
 See [CI/CD Guide](docs/CI_CD_Guide.md) for complete documentation.
 

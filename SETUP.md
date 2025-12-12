@@ -24,12 +24,9 @@ git submodule update --init --recursive
 ### 3. Create configuration files
 
 ```bash
-# Run the automated setup script
-./scripts/setup-local-config.sh
-
-# This will create:
-# - etc/properties.sh (from properties.sh.example)
-# - etc/etl.properties (from etl.properties.example)
+# Copy example files to create your configuration files
+cp etc/properties.sh.example etc/properties.sh
+cp etc/etl.properties.example etc/etl.properties
 ```
 
 ### 4. Configure your environment
@@ -186,17 +183,15 @@ ls -la etc/*.local
 rm etc/properties.sh
 rm etc/etl.properties
 
-# Run setup script to recreate from examples
-./scripts/setup-local-config.sh
+# Recreate configuration files from examples
+cp etc/properties.sh.example etc/properties.sh
+cp etc/etl.properties.example etc/etl.properties
 ```
 
 ### Create configuration files from scratch
 
 ```bash
-# Run setup script (recommended)
-./scripts/setup-local-config.sh
-
-# Or manually
+# Copy example files to create your configuration
 cp etc/properties.sh.example etc/properties.sh
 cp etc/etl.properties.example etc/etl.properties
 

@@ -197,11 +197,7 @@ Tests are automatically run in CI/CD pipelines:
 
 ### Git Hooks
 
-Install git hooks for local testing:
-
-```bash
-./scripts/install-hooks.sh
-```
+Git hooks are available in `.git-hooks/` and can be installed manually if needed for local testing.
 
 **Pre-commit Hook:**
 

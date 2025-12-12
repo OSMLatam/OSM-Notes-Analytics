@@ -16,10 +16,7 @@ datamart scripts.
 **Configuration files are created from templates and contain your credentials:**
 
 ```bash
-# Option 1: Use the setup script (recommended)
-./scripts/setup-local-config.sh
-
-# Option 2: Manual setup
+# Copy example files to create your configuration
 cp etc/properties.sh.example etc/properties.sh
 cp etc/etl.properties.example etc/etl.properties
 

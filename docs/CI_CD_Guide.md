@@ -87,10 +87,11 @@ validation to ensure code quality.
 3. ✅ Trailing whitespace
 4. ✅ Correct shebangs
 
-**Install:**
+**Install manually:**
 
 ```bash
-./scripts/install-hooks.sh
+ln -sf ../../.git-hooks/pre-commit .git/hooks/pre-commit
+chmod +x .git-hooks/pre-commit
 ```
 
 **Bypass (not recommended):**
@@ -115,47 +116,25 @@ git commit --no-verify
 git push --no-verify
 ```
 
-## 🔧 Validation Scripts
+## 🔧 Git Hooks
 
-### install-hooks.sh
+Git hooks are available in `.git-hooks/` directory and can be installed manually:
 
-Installs git hooks automatically.
-
-```bash
-./scripts/install-hooks.sh
-```
-
-**Functionality:**
-
-- Creates symlinks in `.git/hooks/`
-- Sets executable permissions
-- Validates you're in a git repository
-
-### validate-all.sh
-
-Complete project validation.
+**Install pre-commit hook:**
 
 ```bash
-./scripts/validate-all.sh
+ln -sf ../../.git-hooks/pre-commit .git/hooks/pre-commit
+chmod +x .git-hooks/pre-commit
 ```
 
-**Verifies:**
+**Install pre-push hook:**
 
-- ✅ Dependencies (PostgreSQL, Bash, Git)
-- ✅ Testing tools (BATS, shellcheck, shfmt)
-- ✅ File structure
-- ✅ Key files
-- ✅ Database connection
-- ✅ PostgreSQL extensions
-- ✅ Quality tests
-- ✅ DWH tests (optional)
-
-**Usage in CI/CD:**
-
-```yaml
-- name: Full Validation
-  run: ./scripts/validate-all.sh
+```bash
+ln -sf ../../.git-hooks/pre-push .git/hooks/pre-push
+chmod +x .git-hooks/pre-push
 ```
+
+**Note:** Git hooks are optional and mainly useful for local development. CI/CD uses GitHub Actions workflows for validation.
 
 ## 📈 Status Badges
 
@@ -278,8 +257,7 @@ env:
 
 ### Per Developer
 
-- [x] Install git hooks: `./scripts/install-hooks.sh`
-- [x] Verify tools: `./scripts/validate-all.sh`
+- [x] Install git hooks manually if needed (see above)
 - [x] Run tests locally before push
 - [x] Review GitHub Actions results in PRs
 
@@ -296,7 +274,7 @@ env:
 
 ```bash
 # Re-install
-./scripts/install-hooks.sh
+# Install git hooks manually if needed (see above)
 
 # Verify permissions
 ls -la .git/hooks/

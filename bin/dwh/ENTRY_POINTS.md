@@ -13,7 +13,6 @@ These are the **only scripts** that should be executed directly:
 ### Primary ETL Processing
 
 1. **`bin/dwh/ETL.sh`** - Main ETL orchestration script
-   - **Usage**: `./bin/dwh/ETL.sh [OPTIONS]`
    - **Usage**: `./bin/dwh/ETL.sh` (no arguments needed)
    - **Options**:
      - `(no arguments)`: Auto-detect mode - creates DWH if first execution,

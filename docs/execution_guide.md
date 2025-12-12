@@ -54,13 +54,13 @@ This will:
 #### Incremental Update (Regular Operations)
 
 ```bash
-# Update with only new data since last run
-./bin/dwh/ETL.sh incremental
+# Update with only new data since last run (auto-detected)
+./bin/dwh/ETL.sh
 ```
 
 This will:
-1. Check existing DWH tables
-2. Process only new notes/comments
+1. Auto-detect that DWH already exists
+2. Process only new notes/comments since last run
 3. Update affected datamarts
 4. Much faster than initial load
 
@@ -70,8 +70,7 @@ This will:
 
 | Type | Command | Description |
 |------|---------|-------------|
-| **Initial Load** | `./bin/dwh/ETL.sh` | Complete load from scratch |
-| **Incremental** | `./bin/dwh/ETL.sh incremental` | Process only new data |
+| **Auto-detect** | `./bin/dwh/ETL.sh` | Automatically detects first execution (full load) or incremental update |
 | **Validation** | Built-in | Automatic validation after each run |
 
 ### Environment Variables
@@ -313,8 +312,8 @@ export ETL_BATCH_SIZE="500"
 # Disable parallel processing
 export ETL_PARALLEL_ENABLED="false"
 
-# Re-run ETL
-./bin/dwh/ETL.sh incremental
+# Re-run ETL (auto-detects incremental mode)
+./bin/dwh/ETL.sh
 ```
 
 #### 3. Database Connection Issues
@@ -356,8 +355,8 @@ psql -d $DBNAME -c "REINDEX SCHEMA dwh"
 ### Daily Operations
 
 ```bash
-# Incremental update (recommended every 15-30 minutes)
-*/15 * * * * /path/to/OSM-Notes-Analytics/bin/dwh/ETL.sh incremental
+# Incremental update (recommended every 15-30 minutes, auto-detects mode)
+*/15 * * * * /path/to/OSM-Notes-Analytics/bin/dwh/ETL.sh
 ```
 
 ### Weekly Maintenance
