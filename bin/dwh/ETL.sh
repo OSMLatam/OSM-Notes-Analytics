@@ -165,6 +165,13 @@ declare -r POSTGRES_54_UNIFY_FACTS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_51_
 # Load notes staging.
 declare -r POSTGRES_61_LOAD_NOTES_STAGING="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_61_loadNotes.sql"
 
+# Setup Foreign Data Wrappers for incremental processing.
+declare -r POSTGRES_60_SETUP_FDW="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_60_setupFDW.sql"
+
+# Scripts for hybrid strategy (copy tables for initial load).
+declare -r COPY_BASE_TABLES_SCRIPT="${SCRIPT_BASE_DIRECTORY}/bin/dwh/copyBaseTables.sh"
+declare -r DROP_COPIED_BASE_TABLES_SCRIPT="${SCRIPT_BASE_DIRECTORY}/bin/dwh/dropCopiedBaseTables.sh"
+
 # Datamart script files.
 declare -r DATAMART_COUNTRIES_SCRIPT="${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartCountries/datamartCountries.sh"
 declare -r DATAMART_USERS_SCRIPT="${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartUsers/datamartUsers.sh"
@@ -427,8 +434,31 @@ function __processNotesETL {
  __log_start
  __logi "=== PROCESSING NOTES ETL ==="
 
+ # Step 1: Setup Foreign Data Wrappers for incremental processing (hybrid strategy)
+ # Foreign tables provide access to latest data from Ingestion DB
+ __logi "Step 1: Setting up Foreign Data Wrappers for incremental processing..."
+ if [[ -f "${POSTGRES_60_SETUP_FDW}" ]]; then
+  # Export FDW configuration variables if not set
+  export FDW_INGESTION_HOST="${FDW_INGESTION_HOST:-localhost}"
+  export FDW_INGESTION_DBNAME="${DBNAME_INGESTION:-${DBNAME:-osm_notes}}"
+  export FDW_INGESTION_PORT="${FDW_INGESTION_PORT:-5432}"
+  export FDW_INGESTION_USER="${FDW_INGESTION_USER:-analytics_readonly}"
+  export FDW_INGESTION_PASSWORD="${FDW_INGESTION_PASSWORD:-}"
+
+  # Use envsubst to replace variables in SQL file
+  envsubst < "${POSTGRES_60_SETUP_FDW}" \
+   | psql -d "${DBNAME}" -v ON_ERROR_STOP=1 2>&1 || {
+   __loge "ERROR: Failed to setup Foreign Data Wrappers"
+   exit 1
+  }
+  __logi "Foreign Data Wrappers setup completed"
+ else
+  __loge "ERROR: FDW setup script not found: ${POSTGRES_60_SETUP_FDW}"
+  exit 1
+ fi
+
  # Load notes into staging.
- __logi "Loading notes into staging."
+ __logi "Step 2: Loading notes into staging."
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_61_LOAD_NOTES_STAGING}" 2>&1
 
@@ -483,8 +513,23 @@ function __initialFactsParallel {
  __log_start
  __logi "=== CREATING INITIAL FACTS (PARALLEL) ==="
 
+ # Step 1: Copy base tables from Ingestion DB to Analytics DB (hybrid strategy)
+ # This avoids millions of cross-database queries during initial load
+ __logi "Step 1: Copying base tables from Ingestion DB for initial load..."
+ if [[ -f "${COPY_BASE_TABLES_SCRIPT}" ]]; then
+  if bash "${COPY_BASE_TABLES_SCRIPT}"; then
+   __logi "Base tables copied successfully"
+  else
+   __loge "ERROR: Failed to copy base tables. Initial load cannot proceed."
+   exit 1
+  fi
+ else
+  __loge "ERROR: Copy base tables script not found: ${COPY_BASE_TABLES_SCRIPT}"
+  exit 1
+ fi
+
  # Create initial facts base objects.
- __logi "Creating initial facts base objects."
+ __logi "Step 2: Creating initial facts base objects."
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_33_CREATE_FACTS_BASE_OBJECTS_SIMPLE}" 2>&1
 
@@ -608,6 +653,19 @@ function __initialFactsParallel {
  __logi "Enabling note activity metrics trigger for future incremental loads..."
  psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
   -c "SELECT dwh.enable_note_activity_metrics_trigger();" 2>&1
+
+ # Step N: Drop copied base tables after DWH population (hybrid strategy)
+ # This frees disk space and ensures incremental uses FDW
+ __logi "Step N: Dropping copied base tables after DWH population..."
+ if [[ -f "${DROP_COPIED_BASE_TABLES_SCRIPT}" ]]; then
+  if bash "${DROP_COPIED_BASE_TABLES_SCRIPT}"; then
+   __logi "Copied base tables dropped successfully"
+  else
+   __logw "Warning: Failed to drop copied base tables (non-critical, continuing...)"
+  fi
+ else
+  __logw "Warning: Drop copied base tables script not found: ${DROP_COPIED_BASE_TABLES_SCRIPT}"
+ fi
 
  # Create hashtag analysis views.
  __logi "Creating hashtag analysis views."

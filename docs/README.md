@@ -434,6 +434,29 @@ For comprehensive testing documentation, see **[tests/README.md](../tests/README
 
 ---
 
+#### [Hybrid_Strategy_Copy_FDW.md](Hybrid_Strategy_Copy_FDW.md)
+
+**Hybrid Strategy: Database Separation**
+
+- Implemented strategy to separate Ingestion and Analytics databases
+- Local table copy for initial load (avoids millions of cross-database queries)
+- Foreign Data Wrappers (FDW) for incremental execution
+
+**Contents:**
+- Configuration and usage
+- Implementation scripts
+- Troubleshooting
+- Technical details
+
+**Audience:** Developers, database administrators
+
+**When to read:**
+- Configuring database separation
+- Understanding how the hybrid strategy works
+- Troubleshooting table copy or FDW issues
+
+---
+
 #### [Hybrid_ETL_Execution_Guide.md](Hybrid_ETL_Execution_Guide.md)
 
 **Hybrid ETL Execution Guide - Complete Pipeline Testing**
