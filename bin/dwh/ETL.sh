@@ -56,6 +56,11 @@ declare BASENAME
 BASENAME=$(basename -s .sh "${0}")
 readonly BASENAME
 
+# Main script name for trap handlers (must be global, not local)
+declare MAIN_SCRIPT_NAME
+MAIN_SCRIPT_NAME=$(basename "${0}" .sh)
+readonly MAIN_SCRIPT_NAME
+
 # Temporary directory for all files.
 declare TMP_DIR
 TMP_DIR=$(mktemp -d "/tmp/${BASENAME}_XXXXXX")
@@ -766,15 +771,13 @@ function __perform_database_maintenance {
 function __trapOn() {
  __log_start
  # shellcheck disable=SC2154  # variables inside trap are defined dynamically by Bash
+ # Note: Cannot use 'local' in trap handlers as they execute outside function context
  trap '{
-  local ERROR_LINE="${LINENO}"
-  local ERROR_COMMAND="${BASH_COMMAND}"
-  local ERROR_EXIT_CODE="$?"
+  ERROR_LINE="${LINENO}"
+  ERROR_COMMAND="${BASH_COMMAND}"
+  ERROR_EXIT_CODE="$?"
 
   if [[ "${ERROR_EXIT_CODE}" -ne 0 ]]; then
-   local MAIN_SCRIPT_NAME
-   MAIN_SCRIPT_NAME=$(basename "${0}" .sh)
-
    printf "%s ERROR: The script %s did not finish correctly. Temporary directory: ${TMP_DIR:-} - Line number: %d.\n" "$(date +%Y%m%d_%H:%M:%S)" "${MAIN_SCRIPT_NAME}" "${ERROR_LINE}";
    printf "ERROR: Failed command: %s (exit code: %d)\n" "${ERROR_COMMAND}" "${ERROR_EXIT_CODE}";
    exit "${ERROR_EXIT_CODE}";
@@ -782,9 +785,6 @@ function __trapOn() {
  }' ERR
  # shellcheck disable=SC2154  # variables inside trap are defined dynamically by Bash
  trap '{
-  local MAIN_SCRIPT_NAME
-  MAIN_SCRIPT_NAME=$(basename "${0}" .sh)
-
   printf "%s WARN: The script %s was terminated. Temporary directory: ${TMP_DIR:-}\n" "$(date +%Y%m%d_%H:%M:%S)" "${MAIN_SCRIPT_NAME}";
   exit ${ERROR_GENERAL};
  }' SIGINT SIGTERM
@@ -859,16 +859,18 @@ function main() {
    else
     # Ensure schema exists even if tables exist (for datamart scripts)
     __logi "Ensuring dwh schema exists"
-    psql -d "${DBNAME}" -c "CREATE SCHEMA IF NOT EXISTS dwh;" 2>&1
+    psql -d "${DBNAME}" -c "CREATE SCHEMA IF NOT EXISTS dwh;" 2>&1 || true
    fi
    set -E
    __logi "About to call __initialFactsParallel"
    __initialFactsParallel # Use parallel version
    __logi "Finished calling __initialFactsParallel"
    __perform_database_maintenance
-   "${DATAMART_COUNTRIES_SCRIPT}" ""
-   "${DATAMART_USERS_SCRIPT}" ""
-   "${DATAMART_GLOBAL_SCRIPT}" ""
+   set +e
+   "${DATAMART_COUNTRIES_SCRIPT}" "" || true
+   "${DATAMART_USERS_SCRIPT}" "" || true
+   "${DATAMART_GLOBAL_SCRIPT}" "" || true
+   set -e
   else
    __logi "AUTO-DETECTED INCREMENTAL EXECUTION - Processing only new data"
    set +E
@@ -879,16 +881,18 @@ function main() {
    else
     # Ensure schema exists even if tables exist (for datamart scripts)
     __logi "Ensuring dwh schema exists"
-    psql -d "${DBNAME}" -c "CREATE SCHEMA IF NOT EXISTS dwh;" 2>&1
+    psql -d "${DBNAME}" -c "CREATE SCHEMA IF NOT EXISTS dwh;" 2>&1 || true
    fi
    set -E
    __logi "About to call __processNotesETL"
    __processNotesETL
    __logi "Finished calling __processNotesETL"
    __perform_database_maintenance
-   "${DATAMART_COUNTRIES_SCRIPT}" ""
-   "${DATAMART_USERS_SCRIPT}" ""
-   "${DATAMART_GLOBAL_SCRIPT}" ""
+   set +e
+   "${DATAMART_COUNTRIES_SCRIPT}" "" || true
+   "${DATAMART_USERS_SCRIPT}" "" || true
+   "${DATAMART_GLOBAL_SCRIPT}" "" || true
+   set -e
   fi
  fi
 
@@ -906,7 +910,7 @@ if [[ "${SKIP_MAIN:-}" != "true" ]]; then
   main >> "${LOG_FILENAME}"
   if [[ -n "${CLEAN}" ]] && [[ "${CLEAN}" = true ]]; then
    mv "${LOG_FILENAME}" "/tmp/${BASENAME}_$(date +%Y-%m-%d_%H-%M-%S || true).log"
-   rmdir "${TMP_DIR}"
+   rmdir "${TMP_DIR}" 2> /dev/null || rm -rf "${TMP_DIR}" 2> /dev/null || true
   fi
  else
   main
