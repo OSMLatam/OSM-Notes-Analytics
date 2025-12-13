@@ -436,25 +436,37 @@ function __processNotesETL {
 
  # Step 1: Setup Foreign Data Wrappers for incremental processing (hybrid strategy)
  # Foreign tables provide access to latest data from Ingestion DB
- __logi "Step 1: Setting up Foreign Data Wrappers for incremental processing..."
- if [[ -f "${POSTGRES_60_SETUP_FDW}" ]]; then
-  # Export FDW configuration variables if not set
-  export FDW_INGESTION_HOST="${FDW_INGESTION_HOST:-localhost}"
-  export FDW_INGESTION_DBNAME="${DBNAME_INGESTION:-${DBNAME:-osm_notes}}"
-  export FDW_INGESTION_PORT="${FDW_INGESTION_PORT:-5432}"
-  export FDW_INGESTION_USER="${FDW_INGESTION_USER:-analytics_readonly}"
-  export FDW_INGESTION_PASSWORD="${FDW_INGESTION_PASSWORD:-}"
+ # Only setup FDW if Ingestion and Analytics are in different databases
+ local ingestion_db="${DBNAME_INGESTION:-${DBNAME:-osm_notes}}"
+ local analytics_db="${DBNAME_DWH:-${DBNAME:-osm_notes}}"
 
-  # Use envsubst to replace variables in SQL file
-  envsubst < "${POSTGRES_60_SETUP_FDW}" \
-   | psql -d "${DBNAME}" -v ON_ERROR_STOP=1 2>&1 || {
-   __loge "ERROR: Failed to setup Foreign Data Wrappers"
+ __logi "Checking database configuration: ingestion_db='${ingestion_db}', analytics_db='${analytics_db}'"
+
+ if [[ "${ingestion_db}" != "${analytics_db}" ]]; then
+  __logi "Databases are different, setting up FDW"
+  __logi "Step 1: Setting up Foreign Data Wrappers for incremental processing (different databases)..."
+  if [[ -f "${POSTGRES_60_SETUP_FDW}" ]]; then
+   # Export FDW configuration variables if not set (required for envsubst)
+   export FDW_INGESTION_HOST="${FDW_INGESTION_HOST:-localhost}"
+   export FDW_INGESTION_DBNAME="${ingestion_db}"
+   export FDW_INGESTION_PORT="${FDW_INGESTION_PORT:-5432}"
+   export FDW_INGESTION_USER="${FDW_INGESTION_USER:-analytics_readonly}"
+   export FDW_INGESTION_PASSWORD="${FDW_INGESTION_PASSWORD:-}"
+
+   # Use envsubst to replace variables in SQL file
+   envsubst < "${POSTGRES_60_SETUP_FDW}" \
+    | psql -d "${analytics_db}" -v ON_ERROR_STOP=1 2>&1 || {
+    __loge "ERROR: Failed to setup Foreign Data Wrappers"
+    exit 1
+   }
+   __logi "Foreign Data Wrappers setup completed"
+  else
+   __loge "ERROR: FDW setup script not found: ${POSTGRES_60_SETUP_FDW}"
    exit 1
-  }
-  __logi "Foreign Data Wrappers setup completed"
+  fi
  else
-  __loge "ERROR: FDW setup script not found: ${POSTGRES_60_SETUP_FDW}"
-  exit 1
+  __logi "Step 1: Ingestion and Analytics use same database (${analytics_db}), skipping FDW setup"
+  __logi "Tables are directly accessible, no Foreign Data Wrappers needed"
  fi
 
  # Load notes into staging.

@@ -6,7 +6,7 @@
 -- For incremental processing, foreign tables provide access to latest data.
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2025-10-27
+-- Version: 2025-12-13
 
 SELECT /* Notes-ETL-FDW */ clock_timestamp() AS Processing,
  'Setting up Foreign Data Wrappers for incremental processing' AS Task;
@@ -23,9 +23,9 @@ DROP SERVER IF EXISTS ingestion_server CASCADE;
 CREATE SERVER ingestion_server
 FOREIGN DATA WRAPPER postgres_fdw
 OPTIONS (
-  host '${FDW_INGESTION_HOST:-localhost}',
-  dbname '${FDW_INGESTION_DBNAME:-osm_notes}',
-  port '${FDW_INGESTION_PORT:-5432}',
+  host '${FDW_INGESTION_HOST}',
+  dbname '${FDW_INGESTION_DBNAME}',
+  port '${FDW_INGESTION_PORT}',
   fetch_size '10000',
   use_remote_estimate 'true'
 );
@@ -35,16 +35,31 @@ OPTIONS (
 CREATE USER MAPPING IF NOT EXISTS FOR CURRENT_USER
 SERVER ingestion_server
 OPTIONS (
-  user '${FDW_INGESTION_USER:-analytics_readonly}',
-  password '${FDW_INGESTION_PASSWORD:-}'
+  user '${FDW_INGESTION_USER}',
+  password '${FDW_INGESTION_PASSWORD}'
 );
 
 -- Drop existing foreign tables if they exist (for idempotency)
-DROP FOREIGN TABLE IF EXISTS public.note_comments CASCADE;
-DROP FOREIGN TABLE IF EXISTS public.notes CASCADE;
-DROP FOREIGN TABLE IF EXISTS public.note_comments_text CASCADE;
-DROP FOREIGN TABLE IF EXISTS public.users CASCADE;
-DROP FOREIGN TABLE IF EXISTS public.countries CASCADE;
+-- Use DO block to handle errors gracefully if tables are not foreign tables
+DO $$
+BEGIN
+ -- Drop foreign tables only if they exist as foreign tables
+ IF EXISTS (SELECT 1 FROM information_schema.foreign_tables WHERE foreign_table_schema = 'public' AND foreign_table_name = 'note_comments') THEN
+  DROP FOREIGN TABLE IF EXISTS public.note_comments CASCADE;
+ END IF;
+ IF EXISTS (SELECT 1 FROM information_schema.foreign_tables WHERE foreign_table_schema = 'public' AND foreign_table_name = 'notes') THEN
+  DROP FOREIGN TABLE IF EXISTS public.notes CASCADE;
+ END IF;
+ IF EXISTS (SELECT 1 FROM information_schema.foreign_tables WHERE foreign_table_schema = 'public' AND foreign_table_name = 'note_comments_text') THEN
+  DROP FOREIGN TABLE IF EXISTS public.note_comments_text CASCADE;
+ END IF;
+ IF EXISTS (SELECT 1 FROM information_schema.foreign_tables WHERE foreign_table_schema = 'public' AND foreign_table_name = 'users') THEN
+  DROP FOREIGN TABLE IF EXISTS public.users CASCADE;
+ END IF;
+ IF EXISTS (SELECT 1 FROM information_schema.foreign_tables WHERE foreign_table_schema = 'public' AND foreign_table_name = 'countries') THEN
+  DROP FOREIGN TABLE IF EXISTS public.countries CASCADE;
+ END IF;
+END $$;
 
 -- Create foreign table: note_comments
 -- This is the most important table for ETL processing

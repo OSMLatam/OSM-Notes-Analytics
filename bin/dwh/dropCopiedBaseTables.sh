@@ -30,7 +30,8 @@ fi
 
 # Database configuration
 ANALYTICS_DB="${DBNAME_DWH:-${DBNAME:-osm_notes}}"
-ANALYTICS_USER="${DB_USER_DWH:-${DB_USER:-postgres}}"
+# Only set user if explicitly provided (allows peer authentication when not set)
+ANALYTICS_USER="${DB_USER_DWH:-}"
 
 # Tables to drop (in reverse order of dependencies)
 TABLES=("note_comments_text" "note_comments" "notes" "users" "countries")
@@ -40,7 +41,7 @@ __logi "=== DROPPING COPIED BASE TABLES ==="
 __logi "Target DB: ${ANALYTICS_DB} (user: ${ANALYTICS_USER})"
 
 # Validate database connection
-if ! psql -d "${ANALYTICS_DB}" -U "${ANALYTICS_USER}" -c "SELECT 1;" > /dev/null 2>&1; then
+if ! psql -d "${ANALYTICS_DB}" ${ANALYTICS_USER:+-U "${ANALYTICS_USER}"} -c "SELECT 1;" > /dev/null 2>&1; then
  __loge "ERROR: Cannot connect to database ${ANALYTICS_DB}"
  exit 1
 fi
@@ -50,16 +51,16 @@ for table in "${TABLES[@]}"; do
  __logi "Dropping table: ${table}"
 
  # Check if table exists
- if psql -d "${ANALYTICS_DB}" -U "${ANALYTICS_USER}" -t -c \
+ if psql -d "${ANALYTICS_DB}" ${ANALYTICS_USER:+-U "${ANALYTICS_USER}"} -t -c \
   "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '${table}';" \
   | grep -q 1; then
 
   # Get row count before dropping (for logging)
-  local_row_count=$(psql -d "${ANALYTICS_DB}" -U "${ANALYTICS_USER}" -t -c "SELECT COUNT(*) FROM public.${table};" 2> /dev/null | tr -d ' ' || echo "0")
+  local_row_count=$(psql -d "${ANALYTICS_DB}" ${ANALYTICS_USER:+-U "${ANALYTICS_USER}"} -t -c "SELECT COUNT(*) FROM public.${table};" 2> /dev/null | tr -d ' ' || echo "0")
   __logi "Dropping ${table} (${local_row_count} rows)"
 
   # Drop table
-  if psql -d "${ANALYTICS_DB}" -U "${ANALYTICS_USER}" \
+  if psql -d "${ANALYTICS_DB}" ${ANALYTICS_USER:+-U "${ANALYTICS_USER}"} \
    -c "DROP TABLE IF EXISTS public.${table} CASCADE;" > /dev/null 2>&1; then
    __logi "Table ${table} dropped successfully"
   else
