@@ -184,6 +184,13 @@ The scripts use and set these environment variables:
    - The exported `DBNAME` will override any value in `ANALYTICS_ROOT/etc/properties.sh`
    - This guarantees both processes use the same database
 
+4. **Automatic FDW Skip:**
+   - When both processes use the same database, the ETL automatically detects this condition
+   - The ETL compares `DBNAME_INGESTION` (or `DBNAME` if not set) with `DBNAME_DWH` (or `DBNAME` if not set)
+   - If they are the same, FDW setup is **automatically skipped** since tables are directly accessible
+   - The ETL logs: `"Ingestion and Analytics use same database, skipping FDW setup"`
+   - This prevents SQL errors that would occur when trying to create foreign tables pointing to the same database
+
 **Verification:**
 ```bash
 # The script logs the database being used:

@@ -42,9 +42,14 @@
 ```
 1. ETL.sh detects incremental execution
    ↓
-2. ETL_60_setupFDW.sql configures FDW (if not exists)
+2. ETL compares DBNAME_INGESTION and DBNAME_DWH
    ↓
-3. ETL processes new data using foreign tables
+3a. If databases are DIFFERENT:
+    - ETL_60_setupFDW.sql configures FDW (if not exists)
+    - ETL processes new data using foreign tables
+3b. If databases are the SAME:
+    - FDW setup is skipped (tables are directly accessible)
+    - ETL processes new data using local tables
 ```
 
 ---
@@ -53,20 +58,32 @@
 
 ### Variables in `etc/properties.sh`
 
+**Option 1: Separate Databases (FDW enabled)**
 ```bash
-# If using separate DBs
+# Separate databases
 DBNAME_INGESTION="osm_notes"
 DBNAME_DWH="osm_notes_dwh"
 DB_USER_INGESTION="ingestion_user"
 DB_USER_DWH="analytics_user"
 
-# FDW configuration (for incremental)
+# FDW configuration (required for incremental when databases are different)
 FDW_INGESTION_HOST="localhost"
 FDW_INGESTION_DBNAME="osm_notes"
 FDW_INGESTION_PORT="5432"
 FDW_INGESTION_USER="analytics_readonly"
 FDW_INGESTION_PASSWORD=""  # Use .pgpass or environment variable
 ```
+
+**Option 2: Same Database (FDW disabled automatically)**
+```bash
+# Same database for both Ingestion and Analytics
+DBNAME="osm_notes"
+# DBNAME_INGESTION and DBNAME_DWH are not set, or set to the same value
+
+# FDW configuration is not needed (will be skipped automatically)
+```
+
+**Note:** When `DBNAME_INGESTION` and `DBNAME_DWH` are the same (or both unset), the ETL automatically skips FDW setup since tables are directly accessible in the same database.
 
 ### Create Read-Only User for FDW
 
@@ -101,8 +118,13 @@ Auto-detects first execution and:
 ```
 
 Auto-detects incremental execution and:
-1. Configures FDW (if not exists)
-2. Processes new data using foreign tables
+1. Compares `DBNAME_INGESTION` and `DBNAME_DWH` to determine if databases are separate
+2. **If databases are different:**
+   - Configures FDW (if not exists)
+   - Processes new data using foreign tables
+3. **If databases are the same:**
+   - Skips FDW setup (tables are directly accessible)
+   - Processes new data using local tables directly
 
 ---
 
@@ -167,6 +189,8 @@ The `ETL_60_setupFDW.sql` script configures:
 - Optimizations: `fetch_size='10000'`, `use_remote_estimate='true'`
 
 **Estimated overhead:** 15-25% on incremental queries (acceptable for small volumes)
+
+**Automatic Skip:** When `DBNAME_INGESTION` equals `DBNAME_DWH` (or both are unset), the ETL automatically skips FDW setup. The system logs: `"Ingestion and Analytics use same database, skipping FDW setup"`. This prevents SQL errors that would occur when trying to create foreign tables pointing to the same database.
 
 ---
 

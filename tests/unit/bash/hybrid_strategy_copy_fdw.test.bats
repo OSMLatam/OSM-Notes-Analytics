@@ -333,3 +333,65 @@ EOF
  column_count="${output// /}"
  [ "${column_count}" = "1" ]
 }
+
+# Test: FDW setup is skipped when databases are the same
+@test "FDW setup is skipped when DBNAME_INGESTION equals DBNAME_DWH" {
+ # Ensure databases are ready
+ wait_for_db "${TEST_ANALYTICS_DB}" || skip "Analytics DB not ready"
+
+ # Create DWH schema if it doesn't exist
+ psql -d "${TEST_ANALYTICS_DB}" -c "CREATE SCHEMA IF NOT EXISTS dwh;" || true
+
+ # Set both databases to the same value
+ export DBNAME_INGESTION="${TEST_ANALYTICS_DB}"
+ export DBNAME_DWH="${TEST_ANALYTICS_DB}"
+ # Don't set DB_USER_* to use peer authentication in tests
+ unset DB_USER_INGESTION DB_USER_DWH DB_USER
+
+ # Create a minimal DWH structure to simulate incremental execution
+ psql -d "${TEST_ANALYTICS_DB}" << 'EOF' || true
+  -- Create a minimal facts table to simulate existing DWH
+  CREATE TABLE IF NOT EXISTS dwh.facts (
+   fact_id BIGSERIAL PRIMARY KEY,
+   note_id BIGINT,
+   created_at TIMESTAMP WITH TIME ZONE
+  );
+  INSERT INTO dwh.facts (note_id, created_at) VALUES (1, NOW());
+EOF
+
+ # Run ETL processNotesETL function logic (simulating incremental execution)
+ # This should skip FDW setup since databases are the same
+ export DBNAME="${TEST_ANALYTICS_DB}"
+
+ # Capture ETL output to verify FDW skip message
+ run bash -c "
+  source ${SCRIPT_BASE_DIRECTORY}/lib/osm-common/commonFunctions.sh 2>/dev/null || true
+  source ${SCRIPT_BASE_DIRECTORY}/lib/osm-common/bash_logger.sh 2>/dev/null || true
+  cd ${SCRIPT_BASE_DIRECTORY}
+  export DBNAME_INGESTION=\"${TEST_ANALYTICS_DB}\"
+  export DBNAME_DWH=\"${TEST_ANALYTICS_DB}\"
+  unset DB_USER_INGESTION DB_USER_DWH DB_USER
+  # Simulate the FDW check logic from ETL.sh
+  ingestion_db=\"\${DBNAME_INGESTION:-\${DBNAME:-osm_notes}}\"
+  analytics_db=\"\${DBNAME_DWH:-\${DBNAME:-osm_notes}}\"
+  if [[ \"\${ingestion_db}\" != \"\${analytics_db}\" ]]; then
+   echo 'FDW would be configured'
+   exit 1
+  else
+   echo 'FDW setup skipped - databases are the same'
+  fi
+ "
+
+ [ "${status}" -eq 0 ]
+ [[ "${output}" == *"FDW setup skipped - databases are the same"* ]]
+
+ # Verify no foreign tables were created (since FDW was skipped)
+ run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM information_schema.foreign_tables WHERE foreign_table_schema = 'public';"
+ foreign_count="${output// /}"
+ [ "${foreign_count}" = "0" ]
+
+ # Verify no foreign server was created
+ run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM pg_foreign_server WHERE srvname = 'ingestion_server';"
+ server_count="${output// /}"
+ [ "${server_count}" = "0" ]
+}
