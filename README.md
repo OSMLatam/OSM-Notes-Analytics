@@ -111,7 +111,7 @@ For complete navigation by role, see [docs/README.md](docs/README.md#recommended
   - Application statistics: mobile/desktop apps count, most used app
   - Content quality: comment length, URL/mention detection, engagement metrics
   - Community health: active notes, backlog, age distribution, recent activity
-- **Comprehensive Testing**: 168+ automated tests (90%+ function coverage)
+- **Comprehensive Testing**: 197 automated tests (90%+ function coverage)
 
 ## Prerequisites
 
