@@ -71,14 +71,14 @@ echo ""
 # Check database connectivity
 echo "3. Database Connection:"
 if command -v psql &> /dev/null; then
- if psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DBUSER:-postgres}" -d "${DBNAME:-osm_notes}" -c "SELECT 1" &> /dev/null; then
+ if psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DBUSER:-postgres}" -d "${DBNAME_DWH:-osm_notes}" -c "SELECT 1" &> /dev/null; then
   echo -e "${GREEN}✓ Database connection OK${NC}"
 
   # Check ETL status if etl_control table exists
-  if psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DBUSER:-postgres}" -d "${DBNAME:-osm_notes}" -t -c "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'dwh' AND table_name = 'etl_control')" 2> /dev/null | grep -q "t"; then
+  if psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DBUSER:-postgres}" -d "${DBNAME_DWH:-osm_notes}" -t -c "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'dwh' AND table_name = 'etl_control')" 2> /dev/null | grep -q "t"; then
    echo ""
    echo "  ETL Control Status:"
-   psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DBUSER:-postgres}" -d "${DBNAME:-osm_notes}" -c "
+   psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DBUSER:-postgres}" -d "${DBNAME_DWH:-osm_notes}" -c "
         SELECT
           table_name,
           COALESCE(last_processed_timestamp::text, 'N/A') as last_processed,
@@ -98,7 +98,7 @@ echo ""
 # Check facts table statistics
 echo "4. Data Warehouse Statistics:"
 if command -v psql &> /dev/null; then
- psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DBUSER:-postgres}" -d "${DBNAME:-osm_notes}" -c "
+ psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DBUSER:-postgres}" -d "${DBNAME_DWH:-osm_notes}" -c "
     SELECT
       'facts' as table_name,
       COUNT(*)::text as row_count,

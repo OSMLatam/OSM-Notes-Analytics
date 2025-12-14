@@ -92,7 +92,7 @@ function __calculate_schema_hash() {
  # Get column definitions from datamart tables
  local SCHEMA_HASH
  SCHEMA_HASH=$(
-  psql -d "${DBNAME}" -Atq << 'EOF' | sha256sum | cut -d' ' -f1
+  psql -d "${DBNAME_DWH}" -Atq << 'EOF' | sha256sum | cut -d' ' -f1
 SELECT
   COALESCE(string_agg(column_name || ':' || data_type || ':' || ordinal_position, '|' ORDER BY table_name, ordinal_position), '')
 FROM (
@@ -174,7 +174,7 @@ function __reset_exported_flags() {
  echo "$(date +%Y-%m-%d\ %H:%M:%S) - Resetting export flags for modified entities..."
 
  # Reset users marked as modified
- psql -d "${DBNAME}" -Atq -c "
+ psql -d "${DBNAME_DWH}" -Atq -c "
   UPDATE dwh.datamartusers
   SET json_exported = FALSE
   FROM dwh.dimension_users
@@ -183,7 +183,7 @@ function __reset_exported_flags() {
  " > /dev/null 2>&1 || true
 
  # Reset countries marked as modified
- psql -d "${DBNAME}" -Atq -c "
+ psql -d "${DBNAME_DWH}" -Atq -c "
   UPDATE dwh.datamartcountries
   SET json_exported = FALSE
   FROM dwh.dimension_countries
@@ -220,13 +220,13 @@ mkdir -p "${ATOMIC_TEMP_DIR}/indexes"
 echo "$(date +%Y-%m-%d\ %H:%M:%S) - Starting datamart JSON export to temporary directory"
 
 # Check if dwh schema exists
-if ! psql -d "${DBNAME}" -Atq -c "SELECT 1 FROM information_schema.schemata WHERE schema_name = 'dwh'" | grep -q 1; then
+if ! psql -d "${DBNAME_DWH}" -Atq -c "SELECT 1 FROM information_schema.schemata WHERE schema_name = 'dwh'" | grep -q 1; then
  __loge "Schema 'dwh' does not exist. Please run the ETL process first to create the data warehouse."
  exit 1
 fi
 
 # Check if datamart tables exist
-if ! psql -d "${DBNAME}" -Atq -c "SELECT 1 FROM information_schema.tables WHERE table_schema = 'dwh' AND table_name = 'datamartusers'" | grep -q 1; then
+if ! psql -d "${DBNAME_DWH}" -Atq -c "SELECT 1 FROM information_schema.tables WHERE table_schema = 'dwh' AND table_name = 'datamartusers'" | grep -q 1; then
  __loge "Datamart tables do not exist. Please run the datamart population scripts first:
 	- bin/dwh/datamartUsers/datamartUsers.sh
 	- bin/dwh/datamartCountries/datamartCountries.sh
@@ -248,7 +248,7 @@ fi
 
 # Export only modified users
 MODIFIED_USER_COUNT=0
-psql -d "${DBNAME}" -Atq << SQL_USERS | while IFS='|' read -r user_id username; do
+psql -d "${DBNAME_DWH}" -Atq << SQL_USERS | while IFS='|' read -r user_id username; do
 SELECT
   user_id,
   username
@@ -261,7 +261,7 @@ SQL_USERS
  if [[ -n "${user_id}" ]]; then
   # Export each modified user to a separate JSON file
   # Use SELECT * to dynamically include all columns
-  psql -d "${DBNAME}" -Atq -c "
+  psql -d "${DBNAME_DWH}" -Atq -c "
       SELECT row_to_json(t)
       FROM dwh.datamartusers t
       WHERE t.user_id = ${user_id}
@@ -271,7 +271,7 @@ SQL_USERS
   MODIFIED_USER_COUNT=$((MODIFIED_USER_COUNT + 1))
 
   # Mark as exported in database
-  psql -d "${DBNAME}" -Atq -c "
+  psql -d "${DBNAME_DWH}" -Atq -c "
       UPDATE dwh.datamartusers
       SET json_exported = TRUE
       WHERE user_id = ${user_id}
@@ -295,7 +295,7 @@ fi
 
 # Create user index file
 echo "$(date +%Y-%m-%d\ %H:%M:%S) - Creating user index..."
-psql -d "${DBNAME}" -Atq -c "
+psql -d "${DBNAME_DWH}" -Atq -c "
   SELECT json_agg(t)
   FROM (
     SELECT
@@ -338,7 +338,7 @@ fi
 
 # Export only modified countries
 MODIFIED_COUNTRY_COUNT=0
-psql -d "${DBNAME}" -Atq << SQL_COUNTRIES | while IFS='|' read -r country_id country_name; do
+psql -d "${DBNAME_DWH}" -Atq << SQL_COUNTRIES | while IFS='|' read -r country_id country_name; do
 SELECT country_id, country_name_en
 FROM dwh.datamartcountries
 WHERE country_id IS NOT NULL
@@ -349,7 +349,7 @@ SQL_COUNTRIES
  if [[ -n "${country_id}" ]]; then
   # Export each modified country to a separate JSON file
   # Use SELECT * to dynamically include all columns
-  psql -d "${DBNAME}" -Atq -c "
+  psql -d "${DBNAME_DWH}" -Atq -c "
       SELECT row_to_json(t)
       FROM dwh.datamartcountries t
       WHERE t.country_id = ${country_id}
@@ -359,7 +359,7 @@ SQL_COUNTRIES
   MODIFIED_COUNTRY_COUNT=$((MODIFIED_COUNTRY_COUNT + 1))
 
   # Mark as exported in database
-  psql -d "${DBNAME}" -Atq -c "
+  psql -d "${DBNAME_DWH}" -Atq -c "
       UPDATE dwh.datamartcountries
       SET json_exported = TRUE
       WHERE country_id = ${country_id}
@@ -383,7 +383,7 @@ fi
 
 # Create country index file
 echo "$(date +%Y-%m-%d\ %H:%M:%S) - Creating country index..."
-psql -d "${DBNAME}" -Atq -c "
+psql -d "${DBNAME_DWH}" -Atq -c "
   SELECT json_agg(t)
   FROM (
     SELECT
@@ -451,14 +451,14 @@ fi
 
 # Export global statistics
 echo "$(date +%Y-%m-%d\ %H:%M:%S) - Exporting global datamart..."
-psql -d "${DBNAME}" -Atq -c "
+psql -d "${DBNAME_DWH}" -Atq -c "
   SELECT row_to_json(t)
   FROM dwh.datamartglobal t
   WHERE dimension_global_id = 1
 " > "${ATOMIC_TEMP_DIR}/global_stats.json"
 
 # Also create a simplified version for quick loading
-psql -d "${DBNAME}" -Atq -c "
+psql -d "${DBNAME_DWH}" -Atq -c "
   SELECT row_to_json(t)
   FROM (
     SELECT

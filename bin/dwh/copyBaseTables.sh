@@ -32,8 +32,8 @@ fi
 
 # Database configuration
 # Default to same DB if not specified (backward compatibility)
-INGESTION_DB="${DBNAME_INGESTION:-${DBNAME:-osm_notes}}"
-ANALYTICS_DB="${DBNAME_DWH:-${DBNAME:-osm_notes}}"
+INGESTION_DB="${DBNAME_INGESTION:-osm_notes}"
+ANALYTICS_DB="${DBNAME_DWH:-osm_notes}"
 # Only set user if explicitly provided (allows peer authentication when not set)
 INGESTION_USER="${DB_USER_INGESTION:-}"
 ANALYTICS_USER="${DB_USER_DWH:-}"

@@ -141,7 +141,7 @@ function __show_help {
  echo "  ${0} --dry-run                 # Show what would be done (safe)"
  echo
  echo "Database configuration from etc/properties.sh:"
- echo "  Database: ${DBNAME:-not set}"
+ echo "  Database: ${DBNAME_DWH:-not set}"
  echo "  User: ${DB_USER:-not set}"
  echo
  echo "WARNING: Default behavior removes ALL data warehouse data AND temporary files!"
@@ -392,7 +392,7 @@ function main() {
  __checkPrereqs
 
  # Parse mode from CLEANUP_MODE (first argument)
- local TARGET_DB="${DBNAME}"
+ local TARGET_DB="${DBNAME_DWH}"
  local MODE="all"
 
  if [[ "${CLEANUP_MODE}" == "--dry-run" ]]; then

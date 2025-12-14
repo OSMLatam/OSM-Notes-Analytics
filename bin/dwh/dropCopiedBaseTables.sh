@@ -29,7 +29,7 @@ if [[ -f "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh.local" ]]; then
 fi
 
 # Database configuration
-ANALYTICS_DB="${DBNAME_DWH:-${DBNAME:-osm_notes}}"
+ANALYTICS_DB="${DBNAME_DWH:-osm_notes}"
 # Only set user if explicitly provided (allows peer authentication when not set)
 ANALYTICS_USER="${DB_USER_DWH:-}"
 

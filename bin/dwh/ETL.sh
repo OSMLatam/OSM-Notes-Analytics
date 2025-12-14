@@ -330,7 +330,7 @@ function __checkIngestionBaseTables {
  __log_start
  __logi "=== CHECKING INGESTION BASE TABLES AND COLUMNS ==="
  set +e
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_10_CHECK_BASE_TABLES}" 2>&1
  RET=${?}
  set -e
@@ -353,7 +353,7 @@ function __checkBaseTables {
  __log_start
  __logi "=== CHECKING DWH TABLES ==="
  set +e
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_11_CHECK_DWH_BASE_TABLES}" 2>&1
  RET=${?}
  set -e
@@ -366,11 +366,11 @@ function __checkBaseTables {
 
  __logi "DWH tables exist, recreating staging objects"
  __logi "Recreating base staging objects."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_31_CREATE_BASE_STAGING_OBJECTS}" 2>&1
 
  __logi "Recreating staging objects."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_32_CREATE_STAGING_OBJECTS}" 2>&1
 
  __logi "=== DWH TABLES CHECK COMPLETED ==="
@@ -383,43 +383,43 @@ function __createBaseTables {
  __log_start
  __logi "=== CREATING DWH TABLES ==="
  __logi "Dropping any existing DWH objects."
- psql -d "${DBNAME}" -f "${POSTGRES_12_DROP_DATAMART_OBJECTS}" 2>&1
- psql -d "${DBNAME}" -f "${POSTGRES_13_DROP_DWH_OBJECTS}" 2>&1
+ psql -d "${DBNAME_DWH}" -f "${POSTGRES_12_DROP_DATAMART_OBJECTS}" 2>&1
+ psql -d "${DBNAME_DWH}" -f "${POSTGRES_13_DROP_DWH_OBJECTS}" 2>&1
 
  __logi "Creating tables for star model if they do not exist."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_22_CREATE_DWH_TABLES}" 2>&1
  __logi "Creating partitions for facts table."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_22A_CREATE_FACT_PARTITIONS}" 2>&1
  __logi "Regions for countries."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 -f "${POSTGRES_23_GET_WORLD_REGIONS}" 2>&1
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -f "${POSTGRES_23_GET_WORLD_REGIONS}" 2>&1
  __logi "Adding functions."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_24_ADD_FUNCTIONS}" 2>&1
 
  __logi "Populating ISO country codes reference table."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_24A_POPULATE_ISO_CODES}" 2>&1
 
  __logi "Initial dimension population."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_25_POPULATE_DIMENSIONS}" 2>&1
 
  __logi "Initial user dimension population."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_26_UPDATE_DIMENSIONS}" 2>&1
 
  __logi "Creating base staging objects."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_31_CREATE_BASE_STAGING_OBJECTS}" 2>&1
 
  __logi "Creating staging objects."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_32_CREATE_STAGING_OBJECTS}" 2>&1
 
  echo "INSERT INTO dwh.properties VALUES ('initial load', 'true')" \
-  | psql -d "${DBNAME}" -v ON_ERROR_STOP=1 2>&1
+  | psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 2>&1
 
  # Note: __initialFacts is called separately by the caller
  # (either __initialFacts or __initialFactsParallel)
@@ -437,25 +437,22 @@ function __processNotesETL {
  # Step 1: Setup Foreign Data Wrappers for incremental processing (hybrid strategy)
  # Foreign tables provide access to latest data from Ingestion DB
  # Only setup FDW if Ingestion and Analytics are in different databases
- local ingestion_db="${DBNAME_INGESTION:-${DBNAME:-osm_notes}}"
- local analytics_db="${DBNAME_DWH:-${DBNAME:-osm_notes}}"
+ __logi "Checking database configuration: DBNAME_INGESTION='${DBNAME_INGESTION}', DBNAME_DWH='${DBNAME_DWH}'"
 
- __logi "Checking database configuration: ingestion_db='${ingestion_db}', analytics_db='${analytics_db}'"
-
- if [[ "${ingestion_db}" != "${analytics_db}" ]]; then
+ if [[ "${DBNAME_INGESTION}" != "${DBNAME_DWH}" ]]; then
   __logi "Databases are different, setting up FDW"
   __logi "Step 1: Setting up Foreign Data Wrappers for incremental processing (different databases)..."
   if [[ -f "${POSTGRES_60_SETUP_FDW}" ]]; then
    # Export FDW configuration variables if not set (required for envsubst)
    export FDW_INGESTION_HOST="${FDW_INGESTION_HOST:-localhost}"
-   export FDW_INGESTION_DBNAME="${ingestion_db}"
+   export FDW_INGESTION_DBNAME="${DBNAME_INGESTION}"
    export FDW_INGESTION_PORT="${FDW_INGESTION_PORT:-5432}"
    export FDW_INGESTION_USER="${FDW_INGESTION_USER:-analytics_readonly}"
    export FDW_INGESTION_PASSWORD="${FDW_INGESTION_PASSWORD:-}"
 
    # Use envsubst to replace variables in SQL file
    envsubst < "${POSTGRES_60_SETUP_FDW}" \
-    | psql -d "${analytics_db}" -v ON_ERROR_STOP=1 2>&1 || {
+    | psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 2>&1 || {
     __loge "ERROR: Failed to setup Foreign Data Wrappers"
     exit 1
    }
@@ -465,56 +462,56 @@ function __processNotesETL {
    exit 1
   fi
  else
-  __logi "Step 1: Ingestion and Analytics use same database (${analytics_db}), skipping FDW setup"
+  __logi "Step 1: Ingestion and Analytics use same database (${DBNAME_DWH}), skipping FDW setup"
   __logi "Tables are directly accessible, no Foreign Data Wrappers needed"
  fi
 
  # Load notes into staging.
  __logi "Step 2: Loading notes into staging."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_61_LOAD_NOTES_STAGING}" 2>&1
 
  # Create note activity metrics trigger (before processing to ensure metrics are calculated).
  __logi "Creating note activity metrics trigger."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_52_CREATE_NOTE_ACTIVITY_METRICS}" 2>&1
 
  # Ensure trigger is enabled for incremental loads (needed for metrics calculation)
  __logi "Ensuring note activity metrics trigger is enabled for incremental processing..."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -c "SELECT dwh.enable_note_activity_metrics_trigger();" 2>&1
 
  # Process notes actions into DWH.
  __logi "Processing notes actions into DWH."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -c "CALL staging.process_notes_actions_into_dwh();" 2>&1
 
  # Unify facts, by computing dates between years.
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 -f "${POSTGRES_54_UNIFY_FACTS}" 2>&1
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -f "${POSTGRES_54_UNIFY_FACTS}" 2>&1
 
  # Create hashtag analysis views.
  __logi "Creating hashtag analysis views."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_53_CREATE_HASHTAG_VIEWS}" 2>&1
 
  # Enhance datamarts with hashtag metrics.
  __logi "Enhancing datamarts with hashtag metrics."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_53A_ENHANCE_DATAMARTS_HASHTAGS}" 2>&1
 
  # Create specialized hashtag indexes.
  __logi "Creating specialized hashtag indexes."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_53B_CREATE_HASHTAG_INDEXES}" 2>&1
 
  # Update automation levels for modified users.
  __logi "Updating automation levels for modified users."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -c "CALL dwh.update_automation_levels_for_modified_users();" 2>&1
 
  # Update experience levels for modified users.
  __logi "Updating experience levels for modified users."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -c "CALL dwh.update_experience_levels_for_modified_users();" 2>&1
 
  __log_finish
@@ -542,14 +539,14 @@ function __initialFactsParallel {
 
  # Create initial facts base objects.
  __logi "Step 2: Creating initial facts base objects."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_33_CREATE_FACTS_BASE_OBJECTS_SIMPLE}" 2>&1
 
  # Disable note activity metrics trigger for performance during bulk load
  # This improves ETL speed by 5-15% during initial load
  # Note: Trigger may not exist yet, so we'll handle the error gracefully
  __logi "Disabling note activity metrics trigger for bulk load performance..."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=0 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=0 \
   -c "SELECT dwh.disable_note_activity_metrics_trigger();" 2>&1 || {
   __logw "Note: Trigger may not exist yet (will be created later). Continuing..."
  }
@@ -594,7 +591,7 @@ function __initialFactsParallel {
  while [[ ${year} -le ${current_year} ]]; do
   __logi "Creating procedure for year ${year}..."
   YEAR=${year} envsubst < "${POSTGRES_34_INITIAL_FACTS_LOAD_PARALLEL}" \
-   | psql -d "${DBNAME}" -v ON_ERROR_STOP=1 2>&1
+   | psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 2>&1
 
   year=$((year + 1))
  done
@@ -602,7 +599,7 @@ function __initialFactsParallel {
  # Disable note activity metrics trigger for performance during bulk load
  # This improves ETL speed by 5-15% during initial load
  __logi "Disabling note activity metrics trigger for bulk load performance..."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -c "SELECT dwh.disable_note_activity_metrics_trigger();" 2>&1 || {
   __logw "Note: Trigger may not exist yet (will be created later). Continuing..."
  }
@@ -614,7 +611,7 @@ function __initialFactsParallel {
  while [[ ${year} -le ${current_year} ]]; do
   (
    __logi "Starting year ${year} load (PID: $$)..."
-   psql -d "${DBNAME}" -c "CALL staging.process_initial_load_by_year_${year}();" 2>&1
+   psql -d "${DBNAME_DWH}" -c "CALL staging.process_initial_load_by_year_${year}();" 2>&1
    __logi "Finished year ${year} load (PID: $$)."
   ) &
   pids+=($!)
@@ -636,34 +633,34 @@ function __initialFactsParallel {
 
  # Phase 2: Update recent_opened_dimension_id_date for all facts
  __logi "Phase 2: Updating recent_opened_dimension_id_date for all facts..."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_35_EXECUTE_FACTS_YEAR_LOAD_PHASE2}" 2>&1
  __logi "Phase 2: Update completed."
 
  # Add constraints, indexes and triggers.
  __logi "Adding constraints, indexes and triggers."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_41_ADD_CONSTRAINTS_INDEXES_TRIGGERS}" 2>&1
 
  # Create automation detection system.
  __logi "Creating automation detection system."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_50_CREATE_AUTOMATION_DETECTION}" 2>&1
 
  # Create experience levels system.
  __logi "Creating experience levels system."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_51_CREATE_EXPERIENCE_LEVELS}" 2>&1
 
  # Create note activity metrics trigger.
  __logi "Creating note activity metrics trigger."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_52_CREATE_NOTE_ACTIVITY_METRICS}" 2>&1
 
  # Enable note activity metrics trigger after creation
  # (It was disabled before bulk load for performance)
  __logi "Enabling note activity metrics trigger for future incremental loads..."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -c "SELECT dwh.enable_note_activity_metrics_trigger();" 2>&1
 
  # Step N: Drop copied base tables after DWH population (hybrid strategy)
@@ -681,17 +678,17 @@ function __initialFactsParallel {
 
  # Create hashtag analysis views.
  __logi "Creating hashtag analysis views."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_53_CREATE_HASHTAG_VIEWS}" 2>&1
 
  # Enhance datamarts with hashtag metrics.
  __logi "Enhancing datamarts with hashtag metrics."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_53A_ENHANCE_DATAMARTS_HASHTAGS}" 2>&1
 
  # Create specialized hashtag indexes.
  __logi "Creating specialized hashtag indexes."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_53B_CREATE_HASHTAG_INDEXES}" 2>&1
 
  __log_finish
@@ -704,69 +701,69 @@ function __initialFacts {
 
  # Create initial facts base objects.
  __logi "Creating initial facts base objects."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_33_CREATE_FACTS_BASE_OBJECTS_SIMPLE}" 2>&1
 
  # Disable note activity metrics trigger for performance during bulk load
  # This improves ETL speed by 5-15% during initial load
  # Note: Trigger may not exist yet, so we'll handle the error gracefully
  __logi "Disabling note activity metrics trigger for bulk load performance..."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=0 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=0 \
   -c "SELECT dwh.disable_note_activity_metrics_trigger();" 2>&1 || {
   __logw "Note: Trigger may not exist yet (will be created later). Continuing..."
  }
 
  # Skip year-specific load creation for simple initial load
  # __logi "Creating initial facts load."
- # psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ # psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
  #  -f "${POSTGRES_34_CREATE_FACTS_YEAR_LOAD}" 2>&1
 
  # Execute initial facts load.
  __logi "Executing initial facts load."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_35_EXECUTE_FACTS_YEAR_LOAD_SIMPLE}" 2>&1
 
  # Skip the year-specific load creation and drop steps for simple initial load
 
  # Add constraints, indexes and triggers.
  __logi "Adding constraints, indexes and triggers."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_41_ADD_CONSTRAINTS_INDEXES_TRIGGERS}" 2>&1
 
  # Create automation detection system.
  __logi "Creating automation detection system."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_50_CREATE_AUTOMATION_DETECTION}" 2>&1
 
  # Create experience levels system.
  __logi "Creating experience levels system."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_51_CREATE_EXPERIENCE_LEVELS}" 2>&1
 
  # Create note activity metrics trigger.
  __logi "Creating note activity metrics trigger."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_52_CREATE_NOTE_ACTIVITY_METRICS}" 2>&1
 
  # Enable note activity metrics trigger after creation
  # (It was disabled before bulk load for performance)
  __logi "Enabling note activity metrics trigger for future incremental loads..."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -c "SELECT dwh.enable_note_activity_metrics_trigger();" 2>&1
 
  # Create hashtag analysis views.
  __logi "Creating hashtag analysis views."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_53_CREATE_HASHTAG_VIEWS}" 2>&1
 
  # Enhance datamarts with hashtag metrics.
  __logi "Enhancing datamarts with hashtag metrics."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_53A_ENHANCE_DATAMARTS_HASHTAGS}" 2>&1
 
  # Create specialized hashtag indexes.
  __logi "Creating specialized hashtag indexes."
- psql -d "${DBNAME}" -v ON_ERROR_STOP=1 \
+ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_53B_CREATE_HASHTAG_INDEXES}" 2>&1
 
  __log_finish
@@ -784,12 +781,12 @@ function __detectFirstExecution {
 
   # Check if DWH facts table exists and has data
   local facts_count
-  facts_count=$(psql -d "${DBNAME}" -Atq -c "SELECT COUNT(*) FROM dwh.facts;" 2> /dev/null || echo "0")
+  facts_count=$(psql -d "${DBNAME_DWH}" -Atq -c "SELECT COUNT(*) FROM dwh.facts;" 2> /dev/null || echo "0")
   __logi "Query result for facts count: '${facts_count}'"
 
   # Check if initial load flag exists
   local initial_load_flag
-  initial_load_flag=$(psql -d "${DBNAME}" -Atq -c "SELECT value FROM dwh.properties WHERE key = 'initial load';" 2> /dev/null || echo "")
+  initial_load_flag=$(psql -d "${DBNAME_DWH}" -Atq -c "SELECT value FROM dwh.properties WHERE key = 'initial load';" 2> /dev/null || echo "")
   __logi "Query result for initial load flag: '${initial_load_flag}'"
 
   local result
@@ -822,12 +819,12 @@ function __perform_database_maintenance {
 
  if [[ "${ETL_VACUUM_AFTER_LOAD}" == "true" ]]; then
   __logi "Running VACUUM ANALYZE on fact table"
-  psql -d "${DBNAME}" -c "VACUUM ANALYZE dwh.facts;" 2>&1
+  psql -d "${DBNAME_DWH}" -c "VACUUM ANALYZE dwh.facts;" 2>&1
  fi
 
  if [[ "${ETL_ANALYZE_AFTER_LOAD}" == "true" ]]; then
   __logi "Running ANALYZE on dimension tables"
-  psql -d "${DBNAME}" -c "ANALYZE dwh.dimension_users, dwh.dimension_countries, dwh.dimension_regions, dwh.dimension_continents, dwh.dimension_days, dwh.dimension_time_of_week, dwh.dimension_applications, dwh.dimension_application_versions, dwh.dimension_hashtags, dwh.dimension_timezones, dwh.dimension_seasons;" 2>&1
+  psql -d "${DBNAME_DWH}" -c "ANALYZE dwh.dimension_users, dwh.dimension_countries, dwh.dimension_regions, dwh.dimension_continents, dwh.dimension_days, dwh.dimension_time_of_week, dwh.dimension_applications, dwh.dimension_application_versions, dwh.dimension_hashtags, dwh.dimension_timezones, dwh.dimension_seasons;" 2>&1
  fi
 
  __logi "=== DATABASE MAINTENANCE COMPLETED ==="
@@ -904,7 +901,7 @@ function main() {
   else
    # Ensure schema exists even if tables exist (for datamart scripts)
    __logi "Ensuring dwh schema exists"
-   psql -d "${DBNAME}" -c "CREATE SCHEMA IF NOT EXISTS dwh;" 2>&1 || true
+   psql -d "${DBNAME_DWH}" -c "CREATE SCHEMA IF NOT EXISTS dwh;" 2>&1 || true
   fi
   set -E
   __logi "About to call __initialFactsParallel"
@@ -926,7 +923,7 @@ function main() {
   else
    # Ensure schema exists even if tables exist (for datamart scripts)
    __logi "Ensuring dwh schema exists"
-   psql -d "${DBNAME}" -c "CREATE SCHEMA IF NOT EXISTS dwh;" 2>&1 || true
+   psql -d "${DBNAME_DWH}" -c "CREATE SCHEMA IF NOT EXISTS dwh;" 2>&1 || true
   fi
   set -E
   __logi "About to call __processNotesETL"

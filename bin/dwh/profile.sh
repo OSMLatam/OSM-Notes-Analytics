@@ -202,7 +202,7 @@ function __checkPrereqs {
 # Retrieves the dimension_user_id from a username.
 function __getUserId {
  __log_start
- DIMENSION_USER_ID=$(psql -d "${DBNAME}" -Atq -v ON_ERROR_STOP=1 \
+ DIMENSION_USER_ID=$(psql -d "${DBNAME_DWH}" -Atq -v ON_ERROR_STOP=1 \
   <<< "SELECT dimension_user_id FROM dwh.datamartUsers
   WHERE username = '${USERNAME}'")
  if [[ "${DIMENSION_USER_ID}" == "" ]] \
@@ -217,11 +217,11 @@ function __getUserId {
 function __getCountryId {
  __log_start
  if [[ "${PROCESS_TYPE}" == "--country" ]]; then
-  COUNTRY_ID=$(psql -d "${DBNAME}" -Atq -v ON_ERROR_STOP=1 \
+  COUNTRY_ID=$(psql -d "${DBNAME_DWH}" -Atq -v ON_ERROR_STOP=1 \
    <<< "SELECT dimension_country_id FROM dwh.datamartCountries
    WHERE country_name_en = '${COUNTRY_NAME}'")
  else
-  COUNTRY_ID=$(psql -d "${DBNAME}" -Atq -v ON_ERROR_STOP=1 \
+  COUNTRY_ID=$(psql -d "${DBNAME_DWH}" -Atq -v ON_ERROR_STOP=1 \
    <<< "SELECT dimension_country_id FROM dwh.datamartCountries
    WHERE country_name_es = '${PAIS_NAME}'")
  fi
@@ -239,7 +239,7 @@ function __showActivityYearUsers {
  YEAR="${1}"
 
  declare -i HISTORY_YEAR_OPEN
- HISTORY_YEAR_OPEN=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_YEAR_OPEN=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_${YEAR}_open
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -247,7 +247,7 @@ function __showActivityYearUsers {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_YEAR_COMMENTED
- HISTORY_YEAR_COMMENTED=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_YEAR_COMMENTED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_${YEAR}_commented
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -255,7 +255,7 @@ function __showActivityYearUsers {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_YEAR_CLOSED
- HISTORY_YEAR_CLOSED=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_YEAR_CLOSED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_${YEAR}_closed
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -263,7 +263,7 @@ function __showActivityYearUsers {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_YEAR_CLOSED_WITH_COMMENT
- HISTORY_YEAR_CLOSED_WITH_COMMENT=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_YEAR_CLOSED_WITH_COMMENT=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_${YEAR}_closed_with_comment
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -271,7 +271,7 @@ function __showActivityYearUsers {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_YEAR_REOPENED
- HISTORY_YEAR_REOPENED=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_YEAR_REOPENED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_${YEAR}_reopened
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -288,7 +288,7 @@ function __showActivityYearCountries {
  YEAR="${1}"
 
  declare -i HISTORY_YEAR_OPEN
- HISTORY_YEAR_OPEN=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_YEAR_OPEN=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_${YEAR}_open
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -296,7 +296,7 @@ function __showActivityYearCountries {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_YEAR_COMMENTED
- HISTORY_YEAR_COMMENTED=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_YEAR_COMMENTED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_${YEAR}_commented
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -304,7 +304,7 @@ function __showActivityYearCountries {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_YEAR_CLOSED
- HISTORY_YEAR_CLOSED=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_YEAR_CLOSED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_${YEAR}_closed
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -312,7 +312,7 @@ function __showActivityYearCountries {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_YEAR_CLOSED_WITH_COMMENT
- HISTORY_YEAR_CLOSED_WITH_COMMENT=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_YEAR_CLOSED_WITH_COMMENT=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_${YEAR}_closed_with_comment
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -320,7 +320,7 @@ function __showActivityYearCountries {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_YEAR_REOPENED
- HISTORY_YEAR_REOPENED=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_YEAR_REOPENED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_${YEAR}_reopened
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -346,7 +346,7 @@ function __showRankingYearUsers {
  YEAR="${1}"
 
  declare RANKING_OPENING
- RANKING_OPENING=$(psql -d "${DBNAME}" -Atq \
+ RANKING_OPENING=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT ranking_countries_opening_${YEAR}
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -354,7 +354,7 @@ function __showRankingYearUsers {
   -v ON_ERROR_STOP=1)
 
  declare RANKING_CLOSING
- RANKING_CLOSING=$(psql -d "${DBNAME}" -Atq \
+ RANKING_CLOSING=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT ranking_countries_closing_${YEAR}
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -375,7 +375,7 @@ function __showRankingYearCountries {
  YEAR="${1}"
 
  declare RANKING_OPENING
- RANKING_OPENING=$(psql -d "${DBNAME}" -Atq \
+ RANKING_OPENING=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT ranking_users_opening_${YEAR}
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -383,7 +383,7 @@ function __showRankingYearCountries {
   -v ON_ERROR_STOP=1)
 
  declare RANKING_CLOSING
- RANKING_CLOSING=$(psql -d "${DBNAME}" -Atq \
+ RANKING_CLOSING=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT ranking_users_closing_${YEAR}
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -551,7 +551,7 @@ function __printActivity {
 function __processUserProfile {
  __log_start
  declare -i OSM_USER_ID
- OSM_USER_ID=$(psql -d "${DBNAME}" -Atq \
+ OSM_USER_ID=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT user_id
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -560,7 +560,7 @@ function __processUserProfile {
 
  # Quantity of days creating notes. (TODO profile - May have stopped opening or closing notes)
  declare -i QTY_DAYS_OPEN
- QTY_DAYS_OPEN=$(psql -d "${DBNAME}" -Atq \
+ QTY_DAYS_OPEN=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT CURRENT_DATE - date_starting_creating_notes
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -568,7 +568,7 @@ function __processUserProfile {
   -v ON_ERROR_STOP=1)
 
  declare DATE_FIRST_OPEN
- DATE_FIRST_OPEN=$(psql -d "${DBNAME}" -Atq \
+ DATE_FIRST_OPEN=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT date_starting_creating_notes
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -577,7 +577,7 @@ function __processUserProfile {
 
  # Quantity of days solving notes.
  declare -i QTY_DAYS_CLOSE
- QTY_DAYS_CLOSE=$(psql -d "${DBNAME}" -Atq \
+ QTY_DAYS_CLOSE=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT CURRENT_DATE - date_starting_solving_notes
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -585,7 +585,7 @@ function __processUserProfile {
   -v ON_ERROR_STOP=1)
 
  declare DATE_FIRST_CLOSE
- DATE_FIRST_CLOSE=$(psql -d "${DBNAME}" -Atq \
+ DATE_FIRST_CLOSE=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT date_starting_solving_notes
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -594,7 +594,7 @@ function __processUserProfile {
 
  # First actions.
  declare -i FIRST_OPEN_NOTE_ID
- FIRST_OPEN_NOTE_ID=$(psql -d "${DBNAME}" -Atq \
+ FIRST_OPEN_NOTE_ID=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT first_open_note_id
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -602,7 +602,7 @@ function __processUserProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i FIRST_COMMENTED_NOTE_ID
- FIRST_COMMENTED_NOTE_ID=$(psql -d "${DBNAME}" -Atq \
+ FIRST_COMMENTED_NOTE_ID=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT first_commented_note_id
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -610,7 +610,7 @@ function __processUserProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i FIRST_CLOSED_NOTE_ID
- FIRST_CLOSED_NOTE_ID=$(psql -d "${DBNAME}" -Atq \
+ FIRST_CLOSED_NOTE_ID=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT first_closed_note_id
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -618,7 +618,7 @@ function __processUserProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i FIRST_REOPENED_NOTE_ID
- FIRST_REOPENED_NOTE_ID=$(psql -d "${DBNAME}" -Atq \
+ FIRST_REOPENED_NOTE_ID=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT first_reopened_note_id
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -627,7 +627,7 @@ function __processUserProfile {
 
  # Type of contributor.
  declare CONTRIBUTOR_TYPE
- CONTRIBUTOR_TYPE=$(psql -d "${DBNAME}" -Atq \
+ CONTRIBUTOR_TYPE=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT contributor_type_name
      FROM dwh.datamartUsers u
       JOIN dwh.contributor_types t
@@ -638,7 +638,7 @@ function __processUserProfile {
 
  # Last activity year.
  declare LAST_ACTIVITY_YEAR
- LAST_ACTIVITY_YEAR=$(psql -d "${DBNAME}" -Atq \
+ LAST_ACTIVITY_YEAR=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT last_year_activity
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -647,7 +647,7 @@ function __processUserProfile {
 
  # Most recent actions.
  declare -i LAST_OPEN_NOTE_ID
- LAST_OPEN_NOTE_ID=$(psql -d "${DBNAME}" -Atq \
+ LAST_OPEN_NOTE_ID=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT lastest_open_note_id
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -655,7 +655,7 @@ function __processUserProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i LAST_COMMENTED_NOTE_ID
- LAST_COMMENTED_NOTE_ID=$(psql -d "${DBNAME}" -Atq \
+ LAST_COMMENTED_NOTE_ID=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT lastest_commented_note_id
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -663,7 +663,7 @@ function __processUserProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i LAST_CLOSED_NOTE_ID
- LAST_CLOSED_NOTE_ID=$(psql -d "${DBNAME}" -Atq \
+ LAST_CLOSED_NOTE_ID=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT lastest_closed_note_id
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -671,7 +671,7 @@ function __processUserProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i LAST_REOPENED_NOTE_ID
- LAST_REOPENED_NOTE_ID=$(psql -d "${DBNAME}" -Atq \
+ LAST_REOPENED_NOTE_ID=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT lastest_reopened_note_id
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -680,7 +680,7 @@ function __processUserProfile {
 
  # Dates with more opened notes.
  declare DATES_MOST_OPEN
- DATES_MOST_OPEN=$(psql -d "${DBNAME}" -Atq \
+ DATES_MOST_OPEN=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT dates_most_open
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -689,7 +689,7 @@ function __processUserProfile {
 
  # Dates with more closed notes
  declare DATES_MOST_CLOSED
- DATES_MOST_CLOSED=$(psql -d "${DBNAME}" -Atq \
+ DATES_MOST_CLOSED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT dates_most_closed
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -698,7 +698,7 @@ function __processUserProfile {
 
  # Used hashtags TODO profile - procesar texto de notas
  declare HASHTAGS
- HASHTAGS=$(psql -d "${DBNAME}" -Atq \
+ HASHTAGS=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT hashtags
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -707,7 +707,7 @@ function __processUserProfile {
 
  # Countries opening notes.
  declare COUNTRIES_OPENING
- COUNTRIES_OPENING=$(psql -d "${DBNAME}" -Atq \
+ COUNTRIES_OPENING=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT countries_open_notes
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -716,7 +716,7 @@ function __processUserProfile {
 
  # Countries closing notes.
  declare COUNTRIES_CLOSING
- COUNTRIES_CLOSING=$(psql -d "${DBNAME}" -Atq \
+ COUNTRIES_CLOSING=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT countries_solving_notes
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -725,7 +725,7 @@ function __processUserProfile {
 
  # Countries opening notes current month.
  declare COUNTRIES_OPENING_CURRENT_MONTH
- COUNTRIES_OPENING_CURRENT_MONTH=$(psql -d "${DBNAME}" -Atq \
+ COUNTRIES_OPENING_CURRENT_MONTH=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT countries_open_notes_current_month
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -734,7 +734,7 @@ function __processUserProfile {
 
  # Countries closing notes current month.
  declare COUNTRIES_CLOSING_CURRENT_MONTH
- COUNTRIES_CLOSING_CURRENT_MONTH=$(psql -d "${DBNAME}" -Atq \
+ COUNTRIES_CLOSING_CURRENT_MONTH=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT countries_solving_notes_current_month
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -743,7 +743,7 @@ function __processUserProfile {
 
  # Countries opening notes current day.
  declare COUNTRIES_OPENING_CURRENT_DAY
- COUNTRIES_OPENING_CURRENT_DAY=$(psql -d "${DBNAME}" -Atq \
+ COUNTRIES_OPENING_CURRENT_DAY=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT countries_open_notes_current_day
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -752,7 +752,7 @@ function __processUserProfile {
 
  # Countries closing notes current day.
  declare COUNTRIES_CLOSING_CURRENT_DAY
- COUNTRIES_CLOSING_CURRENT_DAY=$(psql -d "${DBNAME}" -Atq \
+ COUNTRIES_CLOSING_CURRENT_DAY=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT countries_solving_notes_current_day
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -761,7 +761,7 @@ function __processUserProfile {
 
  # Working hours.
  declare WORKING_HOURS_OPENING
- WORKING_HOURS_OPENING=$(psql -d "${DBNAME}" -Atq \
+ WORKING_HOURS_OPENING=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT working_hours_of_week_opening
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -769,7 +769,7 @@ function __processUserProfile {
   -v ON_ERROR_STOP=1)
 
  declare WORKING_HOURS_COMMENTING
- WORKING_HOURS_COMMENTING=$(psql -d "${DBNAME}" -Atq \
+ WORKING_HOURS_COMMENTING=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT working_hours_of_week_commenting
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -777,7 +777,7 @@ function __processUserProfile {
   -v ON_ERROR_STOP=1)
 
  declare WORKING_HOURS_CLOSING
- WORKING_HOURS_CLOSING=$(psql -d "${DBNAME}" -Atq \
+ WORKING_HOURS_CLOSING=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT working_hours_of_week_closing
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -787,7 +787,7 @@ function __processUserProfile {
  # History values.
  # Whole history.
  declare -i HISTORY_WHOLE_OPEN
- HISTORY_WHOLE_OPEN=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_WHOLE_OPEN=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_whole_open
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -795,7 +795,7 @@ function __processUserProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_WHOLE_COMMENTED
- HISTORY_WHOLE_COMMENTED=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_WHOLE_COMMENTED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_whole_commented
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -803,7 +803,7 @@ function __processUserProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_WHOLE_CLOSED
- HISTORY_WHOLE_CLOSED=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_WHOLE_CLOSED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_whole_closed
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -811,7 +811,7 @@ function __processUserProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_WHOLE_CLOSED_WITH_COMMENT # TODO profile - process text
- HISTORY_WHOLE_CLOSED_WITH_COMMENT=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_WHOLE_CLOSED_WITH_COMMENT=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_whole_closed_with_comment
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -819,7 +819,7 @@ function __processUserProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_WHOLE_REOPENED
- HISTORY_WHOLE_REOPENED=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_WHOLE_REOPENED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_whole_reopened
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -828,7 +828,7 @@ function __processUserProfile {
 
  # Last year history.
  declare -i HISTORY_YEAR_OPEN
- HISTORY_YEAR_OPEN=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_YEAR_OPEN=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_year_open
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -836,7 +836,7 @@ function __processUserProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_YEAR_COMMENTED
- HISTORY_YEAR_COMMENTED=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_YEAR_COMMENTED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_year_commented
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -844,7 +844,7 @@ function __processUserProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_YEAR_CLOSED
- HISTORY_YEAR_CLOSED=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_YEAR_CLOSED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_year_closed
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -852,7 +852,7 @@ function __processUserProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_YEAR_CLOSED_WITH_COMMENT # TODO profile - process text
- HISTORY_YEAR_CLOSED_WITH_COMMENT=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_YEAR_CLOSED_WITH_COMMENT=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_year_closed_with_comment
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -860,7 +860,7 @@ function __processUserProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_YEAR_REOPENED
- HISTORY_YEAR_REOPENED=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_YEAR_REOPENED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_year_reopened
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -869,7 +869,7 @@ function __processUserProfile {
 
  # Last month history.
  declare -i HISTORY_MONTH_OPEN
- HISTORY_MONTH_OPEN=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_MONTH_OPEN=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_month_open
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -877,7 +877,7 @@ function __processUserProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_MONTH_COMMENTED
- HISTORY_MONTH_COMMENTED=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_MONTH_COMMENTED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_month_commented
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -885,7 +885,7 @@ function __processUserProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_MONTH_CLOSED
- HISTORY_MONTH_CLOSED=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_MONTH_CLOSED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_month_closed
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -893,7 +893,7 @@ function __processUserProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_MONTH_CLOSED_WITH_COMMENT # TODO profile - process text
- HISTORY_MONTH_CLOSED_WITH_COMMENT=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_MONTH_CLOSED_WITH_COMMENT=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_month_closed_with_comment
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -901,7 +901,7 @@ function __processUserProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_MONTH_REOPENED
- HISTORY_MONTH_REOPENED=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_MONTH_REOPENED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_month_reopened
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -910,7 +910,7 @@ function __processUserProfile {
 
  # Last day history.
  declare -i HISTORY_DAY_OPEN
- HISTORY_DAY_OPEN=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_DAY_OPEN=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_day_open
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -918,7 +918,7 @@ function __processUserProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_DAY_COMMENTED
- HISTORY_DAY_COMMENTED=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_DAY_COMMENTED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_day_commented
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -926,7 +926,7 @@ function __processUserProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_DAY_CLOSED
- HISTORY_DAY_CLOSED=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_DAY_CLOSED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_day_closed
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -934,7 +934,7 @@ function __processUserProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_DAY_CLOSED_WITH_COMMENT # TODO profile - process text
- HISTORY_DAY_CLOSED_WITH_COMMENT=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_DAY_CLOSED_WITH_COMMENT=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_day_closed_with_comment
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -942,7 +942,7 @@ function __processUserProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_DAY_REOPENED
- HISTORY_DAY_REOPENED=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_DAY_REOPENED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_day_reopened
      FROM dwh.datamartUsers
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
@@ -951,7 +951,7 @@ function __processUserProfile {
 
  # Badges. TODO profile - asignar
  # declare BADGES
- # BADGES=$(psql -d "${DBNAME}" -Atq \
+ # BADGES=$(psql -d "${DBNAME_DWH}" -Atq \
  #    -c "SELECT b.badge_name, p.date_awarded
  #     FROM dwh.badges_per_users p
  #      JOIN dwh.badges b
@@ -1037,7 +1037,7 @@ function __processCountryProfile {
  __log_start
  # Country OSM Id
  declare -i COUNTRY_OSM_ID
- COUNTRY_OSM_ID=$(psql -d "${DBNAME}" -Atq \
+ COUNTRY_OSM_ID=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT country_id
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1046,7 +1046,7 @@ function __processCountryProfile {
 
  # Quantity of days with open notes.
  declare -i QTY_DAYS_OPEN
- QTY_DAYS_OPEN=$(psql -d "${DBNAME}" -Atq \
+ QTY_DAYS_OPEN=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT CURRENT_DATE - date_starting_creating_notes
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1054,7 +1054,7 @@ function __processCountryProfile {
   -v ON_ERROR_STOP=1)
 
  declare DATE_FIRST_OPEN
- DATE_FIRST_OPEN=$(psql -d "${DBNAME}" -Atq \
+ DATE_FIRST_OPEN=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT date_starting_creating_notes
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1063,7 +1063,7 @@ function __processCountryProfile {
 
  # Quantity of days solving notes.
  declare -i QTY_DAYS_CLOSE
- QTY_DAYS_CLOSE=$(psql -d "${DBNAME}" -Atq \
+ QTY_DAYS_CLOSE=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT CURRENT_DATE - date_starting_solving_notes
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1071,7 +1071,7 @@ function __processCountryProfile {
   -v ON_ERROR_STOP=1)
 
  declare DATE_FIRST_CLOSE
- DATE_FIRST_CLOSE=$(psql -d "${DBNAME}" -Atq \
+ DATE_FIRST_CLOSE=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT date_starting_solving_notes
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1080,7 +1080,7 @@ function __processCountryProfile {
 
  # First actions.
  declare -i FIRST_OPEN_NOTE_ID
- FIRST_OPEN_NOTE_ID=$(psql -d "${DBNAME}" -Atq \
+ FIRST_OPEN_NOTE_ID=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT first_open_note_id
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1088,7 +1088,7 @@ function __processCountryProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i FIRST_COMMENTED_NOTE_ID
- FIRST_COMMENTED_NOTE_ID=$(psql -d "${DBNAME}" -Atq \
+ FIRST_COMMENTED_NOTE_ID=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT first_commented_note_id
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1096,7 +1096,7 @@ function __processCountryProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i FIRST_CLOSED_NOTE_ID
- FIRST_CLOSED_NOTE_ID=$(psql -d "${DBNAME}" -Atq \
+ FIRST_CLOSED_NOTE_ID=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT first_closed_note_id
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1104,7 +1104,7 @@ function __processCountryProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i FIRST_REOPENED_NOTE_ID
- FIRST_REOPENED_NOTE_ID=$(psql -d "${DBNAME}" -Atq \
+ FIRST_REOPENED_NOTE_ID=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT first_reopened_note_id
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1113,7 +1113,7 @@ function __processCountryProfile {
 
  # Last activity year.
  declare LAST_ACTIVITY_YEAR
- LAST_ACTIVITY_YEAR=$(psql -d "${DBNAME}" -Atq \
+ LAST_ACTIVITY_YEAR=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT last_year_activity
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1122,7 +1122,7 @@ function __processCountryProfile {
 
  # Most recent actions.
  declare -i LAST_OPEN_NOTE_ID
- LAST_OPEN_NOTE_ID=$(psql -d "${DBNAME}" -Atq \
+ LAST_OPEN_NOTE_ID=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT lastest_open_note_id
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1130,7 +1130,7 @@ function __processCountryProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i LAST_COMMENTED_NOTE_ID
- LAST_COMMENTED_NOTE_ID=$(psql -d "${DBNAME}" -Atq \
+ LAST_COMMENTED_NOTE_ID=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT lastest_commented_note_id
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1138,7 +1138,7 @@ function __processCountryProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i LAST_CLOSED_NOTE_ID
- LAST_CLOSED_NOTE_ID=$(psql -d "${DBNAME}" -Atq \
+ LAST_CLOSED_NOTE_ID=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT lastest_closed_note_id
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1146,7 +1146,7 @@ function __processCountryProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i LAST_REOPENED_NOTE_ID
- LAST_REOPENED_NOTE_ID=$(psql -d "${DBNAME}" -Atq \
+ LAST_REOPENED_NOTE_ID=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT lastest_reopened_note_id
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1155,7 +1155,7 @@ function __processCountryProfile {
 
  # Date with more opened notes.
  declare DATES_MOST_OPEN
- DATES_MOST_OPEN=$(psql -d "${DBNAME}" -Atq \
+ DATES_MOST_OPEN=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT dateS_most_open
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1164,7 +1164,7 @@ function __processCountryProfile {
 
  # Date with more closed notes
  declare DATES_MOST_CLOSED
- DATES_MOST_CLOSED=$(psql -d "${DBNAME}" -Atq \
+ DATES_MOST_CLOSED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT dates_most_closed
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1173,7 +1173,7 @@ function __processCountryProfile {
 
  # Used hashtags TODO profile - procesar texto de notas
  declare HASHTAGS
- HASHTAGS=$(psql -d "${DBNAME}" -Atq \
+ HASHTAGS=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT hashtags
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1182,7 +1182,7 @@ function __processCountryProfile {
 
  # Users opening notes. Global ranking, historically.
  declare USERS_OPENING
- USERS_OPENING=$(psql -d "${DBNAME}" -Atq \
+ USERS_OPENING=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT users_open_notes
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1191,7 +1191,7 @@ function __processCountryProfile {
 
  # Users closing notes. Global ranking, historically.
  declare USERS_CLOSING
- USERS_CLOSING=$(psql -d "${DBNAME}" -Atq \
+ USERS_CLOSING=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT users_solving_notes
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1200,7 +1200,7 @@ function __processCountryProfile {
 
  # Users opening notes. Current month.
  declare USERS_OPENING_CURRENT_MONTH
- USERS_OPENING_CURRENT_MONTH=$(psql -d "${DBNAME}" -Atq \
+ USERS_OPENING_CURRENT_MONTH=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT users_open_notes_current_month
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1209,7 +1209,7 @@ function __processCountryProfile {
 
  # Users closing notes. Current month.
  declare USERS_CLOSING_CURRENT_MONTH
- USERS_CLOSING_CURRENT_MONTH=$(psql -d "${DBNAME}" -Atq \
+ USERS_CLOSING_CURRENT_MONTH=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT users_solving_notes_current_month
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1218,7 +1218,7 @@ function __processCountryProfile {
 
  # Users opening notes. Current day.
  declare USERS_OPENING_CURRENT_DAY
- USERS_OPENING_CURRENT_DAY=$(psql -d "${DBNAME}" -Atq \
+ USERS_OPENING_CURRENT_DAY=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT users_open_notes_current_day
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1227,7 +1227,7 @@ function __processCountryProfile {
 
  # Users closing notes. Current day.
  declare USERS_CLOSING_CURRENT_DAY
- USERS_CLOSING_CURRENT_DAY=$(psql -d "${DBNAME}" -Atq \
+ USERS_CLOSING_CURRENT_DAY=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT users_solving_notes_current_day
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1236,7 +1236,7 @@ function __processCountryProfile {
 
  # Working hours.
  declare WORKING_HOURS_OF_WEEK_OPENING
- WORKING_HOURS_OF_WEEK_OPENING=$(psql -d "${DBNAME}" -Atq \
+ WORKING_HOURS_OF_WEEK_OPENING=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT working_hours_of_week_opening
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1244,7 +1244,7 @@ function __processCountryProfile {
   -v ON_ERROR_STOP=1)
 
  declare WORKING_HOURS_OF_WEEK_COMMENTING
- WORKING_HOURS_OF_WEEK_COMMENTING=$(psql -d "${DBNAME}" -Atq \
+ WORKING_HOURS_OF_WEEK_COMMENTING=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT working_hours_of_week_commenting
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1252,7 +1252,7 @@ function __processCountryProfile {
   -v ON_ERROR_STOP=1)
 
  declare WORKING_HOURS_OF_WEEK_CLOSING
- WORKING_HOURS_OF_WEEK_CLOSING=$(psql -d "${DBNAME}" -Atq \
+ WORKING_HOURS_OF_WEEK_CLOSING=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT working_hours_of_week_closing
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1262,7 +1262,7 @@ function __processCountryProfile {
  # History values.
  # Whole history.
  declare -i HISTORY_WHOLE_OPEN
- HISTORY_WHOLE_OPEN=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_WHOLE_OPEN=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_whole_open
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1270,7 +1270,7 @@ function __processCountryProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_WHOLE_COMMENTED
- HISTORY_WHOLE_COMMENTED=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_WHOLE_COMMENTED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_whole_commented
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1278,7 +1278,7 @@ function __processCountryProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_WHOLE_CLOSED
- HISTORY_WHOLE_CLOSED=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_WHOLE_CLOSED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_whole_closed
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1286,7 +1286,7 @@ function __processCountryProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_WHOLE_CLOSED_WITH_COMMENT # TODO profile - process text
- HISTORY_WHOLE_CLOSED_WITH_COMMENT=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_WHOLE_CLOSED_WITH_COMMENT=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_whole_closed_with_comment
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1294,7 +1294,7 @@ function __processCountryProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_WHOLE_REOPENED
- HISTORY_WHOLE_REOPENED=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_WHOLE_REOPENED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_whole_reopened
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1303,7 +1303,7 @@ function __processCountryProfile {
 
  # Last year history.
  declare -i HISTORY_YEAR_OPEN
- HISTORY_YEAR_OPEN=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_YEAR_OPEN=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_year_open
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1311,7 +1311,7 @@ function __processCountryProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_YEAR_COMMENTED
- HISTORY_YEAR_COMMENTED=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_YEAR_COMMENTED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_year_commented
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1319,7 +1319,7 @@ function __processCountryProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_YEAR_CLOSED
- HISTORY_YEAR_CLOSED=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_YEAR_CLOSED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_year_closed
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1327,7 +1327,7 @@ function __processCountryProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_YEAR_CLOSED_WITH_COMMENT # TODO profile - process text
- HISTORY_YEAR_CLOSED_WITH_COMMENT=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_YEAR_CLOSED_WITH_COMMENT=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_year_closed_with_comment
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1335,7 +1335,7 @@ function __processCountryProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_YEAR_REOPENED
- HISTORY_YEAR_REOPENED=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_YEAR_REOPENED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_year_reopened
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1344,7 +1344,7 @@ function __processCountryProfile {
 
  # Last month history.
  declare -i HISTORY_MONTH_OPEN
- HISTORY_MONTH_OPEN=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_MONTH_OPEN=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_month_open
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1352,7 +1352,7 @@ function __processCountryProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_MONTH_COMMENTED
- HISTORY_MONTH_COMMENTED=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_MONTH_COMMENTED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_month_commented
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1360,7 +1360,7 @@ function __processCountryProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_MONTH_CLOSED
- HISTORY_MONTH_CLOSED=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_MONTH_CLOSED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_month_closed
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1368,7 +1368,7 @@ function __processCountryProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_MONTH_CLOSED_WITH_COMMENT # TODO profile - process text
- HISTORY_MONTH_CLOSED_WITH_COMMENT=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_MONTH_CLOSED_WITH_COMMENT=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_month_closed_with_comment
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1376,7 +1376,7 @@ function __processCountryProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_MONTH_REOPENED
- HISTORY_MONTH_REOPENED=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_MONTH_REOPENED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_month_reopened
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1385,7 +1385,7 @@ function __processCountryProfile {
 
  # Last day history.
  declare -i HISTORY_DAY_OPEN
- HISTORY_DAY_OPEN=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_DAY_OPEN=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_day_open
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1393,7 +1393,7 @@ function __processCountryProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_DAY_COMMENTED
- HISTORY_DAY_COMMENTED=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_DAY_COMMENTED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_day_commented
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1401,7 +1401,7 @@ function __processCountryProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_DAY_CLOSED
- HISTORY_DAY_CLOSED=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_DAY_CLOSED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_day_closed
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1409,7 +1409,7 @@ function __processCountryProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_DAY_CLOSED_WITH_COMMENT # TODO profile - process text
- HISTORY_DAY_CLOSED_WITH_COMMENT=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_DAY_CLOSED_WITH_COMMENT=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_day_closed_with_comment
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
@@ -1417,7 +1417,7 @@ function __processCountryProfile {
   -v ON_ERROR_STOP=1)
 
  declare -i HISTORY_DAY_REOPENED
- HISTORY_DAY_REOPENED=$(psql -d "${DBNAME}" -Atq \
+ HISTORY_DAY_REOPENED=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_day_reopened
      FROM dwh.datamartCountries
      WHERE dimension_country_id = ${COUNTRY_ID}
