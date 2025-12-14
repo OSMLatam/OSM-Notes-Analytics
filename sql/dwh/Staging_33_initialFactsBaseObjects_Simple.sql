@@ -7,7 +7,8 @@ SELECT /* Notes-staging */ clock_timestamp() AS Processing,
  'Creating base staging objects for initial load' AS Task;
 
 -- Create staging facts table (temporary for initial load)
-CREATE TABLE IF NOT EXISTS staging.facts_temp AS TABLE dwh.facts;
+DROP TABLE IF EXISTS staging.facts_temp;
+CREATE TABLE staging.facts_temp AS TABLE dwh.facts;
 
 -- Create sequence for staging facts
 CREATE SEQUENCE IF NOT EXISTS staging.facts_temp_seq;

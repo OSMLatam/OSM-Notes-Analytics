@@ -46,6 +46,14 @@ __logi "=== COPYING BASE TABLES FOR INITIAL LOAD ==="
 __logi "Source DB: ${INGESTION_DB} (user: ${INGESTION_USER})"
 __logi "Target DB: ${ANALYTICS_DB} (user: ${ANALYTICS_USER})"
 
+# Skip copying if source and target are the same database (hybrid test mode)
+if [[ "${INGESTION_DB}" == "${ANALYTICS_DB}" ]]; then
+ __logi "Source and target databases are the same (${INGESTION_DB}), skipping table copy"
+ __logi "Tables are already accessible in the same database"
+ __log_finish
+ exit 0
+fi
+
 # Validate source database connection
 if ! psql -d "${INGESTION_DB}" ${INGESTION_USER:+-U "${INGESTION_USER}"} -c "SELECT 1;" > /dev/null 2>&1; then
  __loge "ERROR: Cannot connect to source database ${INGESTION_DB}"

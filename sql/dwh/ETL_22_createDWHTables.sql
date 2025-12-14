@@ -26,7 +26,7 @@ $$;
 COMMENT ON TYPE note_event_enum IS
   'Types of events that can occur on an OSM note';
 
-CREATE TABLE IF NOT EXISTS dwh.facts (
+CREATE TABLE dwh.facts (
  fact_id BIGSERIAL,
  id_note INTEGER NOT NULL,
  sequence_action INTEGER,
@@ -136,7 +136,7 @@ COMMENT ON COLUMN dwh.facts.total_reopenings_count IS
 COMMENT ON COLUMN dwh.facts.total_actions_on_note IS
   'Total actions count on this note UP TO this action (calculated by trigger)';
 
-CREATE TABLE IF NOT EXISTS dwh.dimension_users (
+CREATE TABLE dwh.dimension_users (
  dimension_user_id SERIAL,
  user_id INTEGER NOT NULL,
  username VARCHAR(256),
@@ -156,7 +156,7 @@ COMMENT ON COLUMN dwh.dimension_users.valid_from IS 'Validity start (SCD2)';
 COMMENT ON COLUMN dwh.dimension_users.valid_to IS 'Validity end (SCD2)';
 COMMENT ON COLUMN dwh.dimension_users.is_current IS 'Current row flag (SCD2)';
 
-CREATE TABLE IF NOT EXISTS dwh.dimension_continents (
+CREATE TABLE dwh.dimension_continents (
  dimension_continent_id SERIAL,
  continent_name_es VARCHAR(32),
  continent_name_en VARCHAR(32)
@@ -168,7 +168,7 @@ COMMENT ON COLUMN dwh.dimension_continents.continent_name_es IS
 COMMENT ON COLUMN dwh.dimension_continents.continent_name_en IS
   'Continent name in English';
 
-CREATE TABLE IF NOT EXISTS dwh.dimension_regions (
+CREATE TABLE dwh.dimension_regions (
  dimension_region_id SERIAL,
  region_name_es VARCHAR(60),
  region_name_en VARCHAR(60),
@@ -183,7 +183,7 @@ COMMENT ON COLUMN dwh.dimension_regions.region_name_en IS
 COMMENT ON COLUMN dwh.dimension_regions.continent_id IS
   'Continent id';
 
-CREATE TABLE IF NOT EXISTS dwh.dimension_countries (
+CREATE TABLE dwh.dimension_countries (
  dimension_country_id SERIAL,
  country_id INTEGER NOT NULL,
  country_name VARCHAR(100),
@@ -208,7 +208,7 @@ COMMENT ON COLUMN dwh.dimension_countries.iso_alpha3 IS 'ISO 3166-1 alpha-3';
 COMMENT ON COLUMN dwh.dimension_countries.modified IS
  'Flag to mark countries that have note actions on them';
 
-CREATE TABLE IF NOT EXISTS dwh.dimension_days (
+CREATE TABLE dwh.dimension_days (
  dimension_day_id SERIAL,
  date_id DATE,
  year SMALLINT,
@@ -242,7 +242,7 @@ COMMENT ON COLUMN dwh.dimension_days.is_month_end IS 'Month-end flag';
 COMMENT ON COLUMN dwh.dimension_days.is_quarter_end IS 'Quarter-end flag';
 COMMENT ON COLUMN dwh.dimension_days.is_year_end IS 'Year-end flag';
 
-CREATE TABLE IF NOT EXISTS dwh.dimension_time_of_week (
+CREATE TABLE dwh.dimension_time_of_week (
  dimension_tow_id SMALLINT,
  day_of_week SMALLINT,
  hour_of_day SMALLINT,
@@ -262,7 +262,7 @@ COMMENT ON COLUMN dwh.dimension_time_of_week.hour_of_week IS
 COMMENT ON COLUMN dwh.dimension_time_of_week.period_of_day IS
   'Night/Morning/Afternoon/Evening';
 
-CREATE TABLE IF NOT EXISTS dwh.dimension_applications (
+CREATE TABLE dwh.dimension_applications (
  dimension_application_id SERIAL,
  application_name VARCHAR(64) NOT NULL,
  pattern VARCHAR(64),
@@ -288,7 +288,7 @@ COMMENT ON COLUMN dwh.dimension_applications.vendor IS 'Vendor/author';
 COMMENT ON COLUMN dwh.dimension_applications.category IS 'Category/type';
 COMMENT ON COLUMN dwh.dimension_applications.active IS 'Active flag';
 
-CREATE TABLE IF NOT EXISTS dwh.dimension_application_versions (
+CREATE TABLE dwh.dimension_application_versions (
  dimension_application_version_id SERIAL,
  dimension_application_id INTEGER NOT NULL,
  version VARCHAR(32) NOT NULL
@@ -298,7 +298,7 @@ COMMENT ON COLUMN dwh.dimension_application_versions.dimension_application_versi
 COMMENT ON COLUMN dwh.dimension_application_versions.dimension_application_id IS 'FK to application';
 COMMENT ON COLUMN dwh.dimension_application_versions.version IS 'Version string';
 
-CREATE TABLE IF NOT EXISTS dwh.dimension_hashtags (
+CREATE TABLE dwh.dimension_hashtags (
  dimension_hashtag_id SERIAL,
  description TEXT
 );
@@ -309,7 +309,7 @@ COMMENT ON COLUMN dwh.dimension_hashtags.dimension_hashtag_id IS
 COMMENT ON COLUMN dwh.dimension_hashtags.description IS
   'Description of the hashtag, only for popular ones';
 
-CREATE TABLE IF NOT EXISTS dwh.dimension_timezones (
+CREATE TABLE dwh.dimension_timezones (
  dimension_timezone_id SERIAL,
  tz_name VARCHAR(64) NOT NULL,
  utc_offset_minutes SMALLINT
@@ -318,7 +318,7 @@ COMMENT ON TABLE dwh.dimension_timezones IS 'Timezones';
 COMMENT ON COLUMN dwh.dimension_timezones.tz_name IS 'IANA tz name (e.g. UTC)';
 COMMENT ON COLUMN dwh.dimension_timezones.utc_offset_minutes IS 'UTC offset';
 
-CREATE TABLE IF NOT EXISTS dwh.dimension_seasons (
+CREATE TABLE dwh.dimension_seasons (
  dimension_season_id SMALLINT,
  season_name_en VARCHAR(16),
  season_name_es VARCHAR(16)
@@ -328,7 +328,7 @@ COMMENT ON COLUMN dwh.dimension_seasons.dimension_season_id IS 'Id';
 COMMENT ON COLUMN dwh.dimension_seasons.season_name_en IS 'Season (en)';
 COMMENT ON COLUMN dwh.dimension_seasons.season_name_es IS 'Season (es)';
 
-CREATE TABLE IF NOT EXISTS dwh.fact_hashtags (
+CREATE TABLE dwh.fact_hashtags (
  fact_id INTEGER NOT NULL,
  dimension_hashtag_id INTEGER NOT NULL,
  position SMALLINT,
@@ -342,7 +342,7 @@ COMMENT ON COLUMN dwh.fact_hashtags.used_in_action IS 'Action type where hashtag
 COMMENT ON COLUMN dwh.fact_hashtags.is_opening_hashtag IS 'True if hashtag was used in note opening';
 COMMENT ON COLUMN dwh.fact_hashtags.is_resolution_hashtag IS 'True if hashtag was used in note resolution/closure';
 
-CREATE TABLE IF NOT EXISTS dwh.properties (
+CREATE TABLE dwh.properties (
  key VARCHAR(16),
  value VARCHAR(26)
 );
