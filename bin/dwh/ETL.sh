@@ -96,7 +96,10 @@ source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/errorHandlingFunctions.sh"
 
 # Configure log file early if running from cron (not a terminal)
 # This prevents logger from writing to stdout which would be sent by email
+# Redirect stdout and stderr to log file immediately when running from cron
 if [[ ! -t 1 ]]; then
+ # Redirect all output to log file to prevent cron from sending emails
+ exec >> "${LOG_FILENAME}" 2>&1
  __set_log_file "${LOG_FILENAME}"
 fi
 
@@ -944,16 +947,18 @@ function main() {
 # Allows to other user read the directory.
 chmod go+x "${TMP_DIR}"
 
-# Logger already initialized at line 93, log file already set if running from cron
+# Logger already initialized, log file already set if running from cron
+# When running from cron, exec already redirected stdout/stderr to log file
 if [[ "${SKIP_MAIN:-}" != "true" ]]; then
  if [[ ! -t 1 ]]; then
-  # Log file already configured above, just redirect main output
-  main >> "${LOG_FILENAME}"
+  # Running from cron: output already redirected via exec, just call main
+  main
   if [[ -n "${CLEAN}" ]] && [[ "${CLEAN}" = true ]]; then
    mv "${LOG_FILENAME}" "/tmp/${BASENAME}_$(date +%Y-%m-%d_%H-%M-%S || true).log"
    rmdir "${TMP_DIR}" 2> /dev/null || rm -rf "${TMP_DIR}" 2> /dev/null || true
   fi
  else
+  # Running interactively: output to terminal
   main
  fi
 fi
