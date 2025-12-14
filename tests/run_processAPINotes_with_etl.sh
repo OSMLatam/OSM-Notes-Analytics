@@ -635,6 +635,20 @@ main() {
   exit 1
  fi
 
+ # Load DBNAME from ingestion properties to ensure we use the correct database
+ # shellcheck disable=SC1090
+ source "${INGESTION_ROOT}/etc/properties.sh"
+ local INGESTION_DBNAME="${DBNAME:-notes}"
+
+ # Clean DWH schema to start from scratch
+ log_info "Cleaning DWH schema to start from scratch..."
+ local PSQL_CMD="psql"
+ if [[ -n "${DB_HOST:-}" ]]; then
+  PSQL_CMD="${PSQL_CMD} -h ${DB_HOST} -p ${DB_PORT}"
+ fi
+ ${PSQL_CMD} -d "${INGESTION_DBNAME}" -c "DROP SCHEMA IF EXISTS dwh CASCADE;" > /dev/null 2>&1 || true
+ log_success "DWH schema cleaned (ready for fresh creation)"
+
  # Setup environment variables
  export LOG_LEVEL="${LOG_LEVEL:-INFO}"
  export CLEAN="${CLEAN:-false}"
