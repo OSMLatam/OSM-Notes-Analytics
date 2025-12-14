@@ -253,7 +253,11 @@ Or explicitly set variables in cron:
 DBHOST=localhost
 DBPORT=5432
 DBUSER=postgres
-DBNAME=osm_notes
+# Database configuration (recommended: use DBNAME_INGESTION and DBNAME_DWH)
+DBNAME_INGESTION=osm_notes
+DBNAME_DWH=osm_notes_dwh
+# Legacy/compatibility (use when both databases are the same):
+# DBNAME=osm_notes
 ```
 
 ### Issue: Lock File Never Released

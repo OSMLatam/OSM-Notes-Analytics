@@ -4,6 +4,8 @@
 
 This document describes how to implement atomic validation in the export process: generate files in a temporary location, validate them, and only move them to the final destination if validation passes.
 
+**Note:** Examples in this document use `DBNAME` for simplicity. For DWH operations, use `DBNAME_DWH` (or `DBNAME_INGESTION` for Ingestion tables). The `DBNAME` variable is maintained for backward compatibility when both databases are the same.
+
 ## Strategy: Atomic Write with Validation
 
 ### Problem Statement

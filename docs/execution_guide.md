@@ -85,12 +85,20 @@ export ETL_PARALLEL_ENABLED="true"
 # Batch size for processing
 export ETL_BATCH_SIZE="1000"
 
-# Database credentials (usually in etc/properties.sh)
-export DBNAME="osm_notes"
+# Database configuration (recommended: use DBNAME_INGESTION and DBNAME_DWH)
+# Option 1: Separate databases (recommended for production)
+export DBNAME_INGESTION="osm_notes"
+export DBNAME_DWH="osm_notes_dwh"
 export DBHOST="localhost"
 export DBPORT="5432"
 export DBUSER="postgres"
+
+# Option 2: Same database (DBNAME is legacy, but still supported for compatibility)
+# When DBNAME_INGESTION and DBNAME_DWH are not set, DBNAME is used for both
+export DBNAME="osm_notes"  # Legacy: used when both databases are the same
 ```
+
+**Note:** For DWH operations, use `DBNAME_INGESTION` and `DBNAME_DWH`. The `DBNAME` variable is maintained for backward compatibility when both Ingestion and Analytics use the same database.
 
 ### Monitoring ETL Progress
 
@@ -249,10 +257,14 @@ Use case: Fresh start or reset after schema changes.
 |----------|-------------|---------|---------|
 | `LOG_LEVEL` | Logging verbosity | `ERROR` | All scripts |
 | `CLEAN` | Clean temporary files | `true` | All scripts |
-| `DBNAME` | Database name | `osm_notes` | All scripts |
+| `DBNAME_INGESTION` | Ingestion database name | `osm_notes` | DWH scripts |
+| `DBNAME_DWH` | Analytics/DWH database name | `osm_notes_dwh` | DWH scripts |
+| `DBNAME` | Database name (legacy/compatibility) | `osm_notes` | All scripts (fallback) |
 | `DBHOST` | Database host | `localhost` | All scripts |
 | `DBPORT` | Database port | `5432` | All scripts |
 | `DBUSER` | Database user | `postgres` | All scripts |
+
+**Note:** `DBNAME_INGESTION` and `DBNAME_DWH` are the recommended variables for DWH operations. `DBNAME` is maintained for backward compatibility when both databases are the same. If `DBNAME_INGESTION` or `DBNAME_DWH` are not set, `DBNAME` is used as a fallback.
 
 ### ETL-Specific Variables
 

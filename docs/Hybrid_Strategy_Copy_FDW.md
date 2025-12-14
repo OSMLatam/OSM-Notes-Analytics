@@ -77,13 +77,18 @@ FDW_INGESTION_PASSWORD=""  # Use .pgpass or environment variable
 **Option 2: Same Database (FDW disabled automatically)**
 ```bash
 # Same database for both Ingestion and Analytics
+# Option 2a: Use recommended variables (set to same value)
+DBNAME_INGESTION="osm_notes"
+DBNAME_DWH="osm_notes"
+
+# Option 2b: Use legacy DBNAME (for backward compatibility)
 DBNAME="osm_notes"
-# DBNAME_INGESTION and DBNAME_DWH are not set, or set to the same value
+# When DBNAME_INGESTION and DBNAME_DWH are not set, DBNAME is used for both
 
 # FDW configuration is not needed (will be skipped automatically)
 ```
 
-**Note:** When `DBNAME_INGESTION` and `DBNAME_DWH` are the same (or both unset), the ETL automatically skips FDW setup since tables are directly accessible in the same database.
+**Note:** When `DBNAME_INGESTION` and `DBNAME_DWH` are the same (or both unset and `DBNAME` is used), the ETL automatically skips FDW setup since tables are directly accessible in the same database. The recommended approach is to use `DBNAME_INGESTION` and `DBNAME_DWH` even when they have the same value, for clarity and consistency.
 
 ### Create Read-Only User for FDW
 

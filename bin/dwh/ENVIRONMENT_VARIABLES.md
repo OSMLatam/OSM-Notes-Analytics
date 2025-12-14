@@ -40,17 +40,47 @@ These variables are used across **all scripts** and should be standardized:
   # Files will remain in /tmp/ETL_*/
   ```
 
-### `DBNAME`
+### Database Name Variables
 
-- **Purpose**: PostgreSQL database name
+#### `DBNAME_INGESTION` (Recommended)
+
+- **Purpose**: PostgreSQL database name for Ingestion system
+- **Values**: String (e.g., `osm_notes`, `osm_notes_ingestion`)
+- **Default**: `notes` (from `etc/properties.sh`, or `DBNAME` if not set)
+- **Usage**: Specify the Ingestion database when it differs from Analytics database
+- **Example**: 
+  ```bash
+  export DBNAME_INGESTION=osm_notes
+  export DBNAME_DWH=osm_notes_dwh
+  ./bin/dwh/ETL.sh
+  ```
+
+#### `DBNAME_DWH` (Recommended)
+
+- **Purpose**: PostgreSQL database name for Analytics/DWH system
+- **Values**: String (e.g., `osm_notes_dwh`, `osm_notes_analytics`)
+- **Default**: `notes` (from `etc/properties.sh`, or `DBNAME` if not set)
+- **Usage**: Specify the Analytics database when it differs from Ingestion database
+- **Example**: 
+  ```bash
+  export DBNAME_INGESTION=osm_notes
+  export DBNAME_DWH=osm_notes_dwh
+  ./bin/dwh/ETL.sh
+  ```
+
+#### `DBNAME` (Legacy/Compatibility)
+
+- **Purpose**: PostgreSQL database name (legacy variable for backward compatibility)
 - **Values**: String (e.g., `osm_notes`, `osm_notes_test`)
-- **Default**: `notes` (from `etc/properties.sh`, created from `etc/properties.sh.example`)
-- **Usage**: Change for test/production environments
+- **Default**: `notes` (from `etc/properties.sh`)
+- **Usage**: Use when both Ingestion and Analytics use the same database. This is a fallback if `DBNAME_INGESTION` or `DBNAME_DWH` are not set.
 - **Example**: 
   ```bash
   export DBNAME=osm_notes_test
   ./bin/dwh/ETL.sh
   ```
+
+**Note:** For DWH operations, `DBNAME_INGESTION` and `DBNAME_DWH` are recommended. The `DBNAME` variable is maintained for backward compatibility and is used as a fallback when the specific variables are not set.
 
 ### `DB_USER`
 

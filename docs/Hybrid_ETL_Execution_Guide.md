@@ -175,14 +175,22 @@ The scripts use and set these environment variables:
    - This ensures `processAPINotes.sh` uses the test database configuration
 
 2. **ETL Database Configuration:**
-   - Before running ETL, the script loads `DBNAME` from `INGESTION_ROOT/etc/properties.sh` (which is now the test properties)
-   - It exports `DBNAME` as an environment variable: `export DBNAME="${DBNAME:-notes}"`
+   - Before running ETL, the script loads database configuration from `INGESTION_ROOT/etc/properties.sh` (which is now the test properties)
+   - It exports database variables for the ETL:
+     ```bash
+     export DBNAME="${DBNAME:-notes}"           # Legacy: used when both DBs are same
+     export DBNAME_INGESTION="${DBNAME:-notes}"  # Ingestion database
+     export DBNAME_DWH="${DBNAME:-notes}"        # Analytics/DWH database
+     ```
+   - In hybrid test mode, both use the same database, so all three variables are set to the same value
    - This ensures the ETL uses the same database as the ingestion process
 
 3. **Configuration Priority:**
    - Environment variables have the highest priority (see `bin/dwh/ENVIRONMENT_VARIABLES.md`)
-   - The exported `DBNAME` will override any value in `ANALYTICS_ROOT/etc/properties.sh`
-   - This guarantees both processes use the same database
+   - The exported variables will override any values in `ANALYTICS_ROOT/etc/properties.sh`
+   - For DWH operations, `DBNAME_INGESTION` and `DBNAME_DWH` are used when set
+   - If `DBNAME_INGESTION` or `DBNAME_DWH` are not set, `DBNAME` is used as fallback
+   - This guarantees both processes use the same database in hybrid test mode
 
 4. **Automatic FDW Skip:**
    - When both processes use the same database, the ETL automatically detects this condition
@@ -193,12 +201,15 @@ The scripts use and set these environment variables:
 
 **Verification:**
 ```bash
-# The script logs the database being used:
+# The script logs the database configuration being used:
 log_info "ETL will use database: ${DBNAME}"
+log_info "Configuration: DBNAME_INGESTION='${DBNAME_INGESTION}', DBNAME_DWH='${DBNAME_DWH}'"
 ```
 
-**Potential Issue:**
-If `ANALYTICS_ROOT/etc/properties.sh` sets `DBNAME` using `declare` or without checking for existing value, it could override the environment variable. The current implementation exports `DBNAME` before calling ETL, which should take precedence according to the configuration priority order.
+**Database Variable Usage:**
+- **Recommended**: Use `DBNAME_INGESTION` and `DBNAME_DWH` for DWH operations
+- **Legacy/Compatibility**: `DBNAME` is maintained for backward compatibility when both databases are the same
+- **Priority**: `DBNAME_INGESTION`/`DBNAME_DWH` > `DBNAME` (fallback)
 
 **Current Implementation:**
 The `ANALYTICS_ROOT/etc/properties.sh.example` already uses the correct pattern:

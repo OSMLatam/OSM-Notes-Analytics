@@ -172,8 +172,13 @@ The script includes several safety mechanisms:
 The script uses database configuration from `etc/properties.sh`:
 
 ```bash
-# Database name
-DBNAME="notes"
+# Database configuration (recommended: use DBNAME_INGESTION and DBNAME_DWH)
+# Option 1: Separate databases
+DBNAME_INGESTION="notes"
+DBNAME_DWH="notes_dwh"
+
+# Option 2: Same database (legacy/compatibility)
+DBNAME="notes"  # Used when both databases are the same
 
 # Database user
 DB_USER="myuser"

@@ -2,6 +2,21 @@
 
 This comprehensive troubleshooting guide consolidates common problems and solutions for the OSM-Notes-Analytics system. Problems are organized by category for easy navigation.
 
+## Database Configuration
+
+**Note:** For DWH operations, use `DBNAME_INGESTION` and `DBNAME_DWH` variables. The examples in this guide use `${DBNAME:-osm_notes}` as a fallback for simplicity, but in production you should use the specific variables:
+
+```bash
+# Recommended configuration
+export DBNAME_INGESTION="osm_notes"
+export DBNAME_DWH="osm_notes_dwh"
+
+# For commands checking Ingestion tables, use DBNAME_INGESTION or DBNAME
+# For commands checking DWH tables, use DBNAME_DWH or DBNAME
+```
+
+The `DBNAME` variable is maintained for backward compatibility when both databases are the same.
+
 ## Table of Contents
 
 - [Quick Diagnostic Commands](#quick-diagnostic-commands)
