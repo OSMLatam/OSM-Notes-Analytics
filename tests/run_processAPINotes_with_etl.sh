@@ -373,6 +373,7 @@ run_processAPINotes() {
   # First execution: drop tables (will call processPlanetNotes.sh --base)
   log_info "=== EXECUTION #1: Setting up for processPlanetNotes.sh --base ==="
   drop_base_tables
+
   unset MOCK_NOTES_COUNT
   export MOCK_NOTES_COUNT=""
   log_info "Execution #1: Will load processPlanetNotes.sh --base (MOCK_NOTES_COUNT unset)"
@@ -412,14 +413,57 @@ run_processAPINotes() {
  # Change to ingestion root directory
  cd "${INGESTION_ROOT}"
 
- # Run the script
+ # Run the script and capture output
  log_info "Executing: ${PROCESS_API_SCRIPT}"
- if "${PROCESS_API_SCRIPT}" 2>&1; then
+ local output_file="/tmp/processAPINotes_output_${execution_number}_$$.log"
+ if "${PROCESS_API_SCRIPT}" > "${output_file}" 2>&1; then
   log_success "processAPINotes.sh completed successfully (execution #${execution_number})"
+  rm -f "${output_file}" 2>/dev/null || true
   return 0
  else
   local exit_code=$?
   log_error "processAPINotes.sh exited with code: ${exit_code} (execution #${execution_number})"
+
+  # Show error context based on exit code
+  case ${exit_code} in
+  248)
+   log_error "Error code 248: Error executing Planet dump (processPlanetNotes.sh --base failed)"
+   ;;
+  238)
+   log_error "Error code 238: Previous execution failed (check for /tmp/processAPINotes_failed_execution)"
+   ;;
+  241)
+   log_error "Error code 241: Library or utility missing"
+   ;;
+  245)
+   log_error "Error code 245: No last update (run processPlanetNotes.sh --base first)"
+   ;;
+  246)
+   log_error "Error code 246: Planet process is currently running"
+   ;;
+  esac
+
+  # Show last 50 lines of output for debugging
+  if [[ -f "${output_file}" ]]; then
+   log_error "Last 50 lines of processAPINotes.sh output:"
+   tail -50 "${output_file}" | while IFS= read -r line; do
+    log_error "  ${line}"
+   done
+
+   # Also check for log files
+   local latest_log_dir
+   latest_log_dir=$(find /tmp -maxdepth 1 -type d -name 'processAPINotes_*' -printf '%T@\t%p\n' 2>/dev/null | sort -n | tail -1 | cut -f2- || echo "")
+   if [[ -n "${latest_log_dir}" ]] && [[ -f "${latest_log_dir}/processAPINotes.log" ]]; then
+    log_error "Last 30 lines of processAPINotes.log:"
+    tail -30 "${latest_log_dir}/processAPINotes.log" | while IFS= read -r line; do
+     log_error "  ${line}"
+    done
+   fi
+
+   # Clean up temp file
+   rm -f "${output_file}" 2>/dev/null || true
+  fi
+
   return ${exit_code}
  fi
 }
@@ -434,14 +478,22 @@ run_etl() {
  cd "${ANALYTICS_ROOT}"
 
  # Load DBNAME from ingestion properties to ensure ETL uses the same database
+ # In hybrid test mode, both Ingestion and Analytics use the same database
  # shellcheck disable=SC1090
  source "${INGESTION_ROOT}/etc/properties.sh"
- export DBNAME="${DBNAME:-notes}"
+ local ingestion_dbname="${DBNAME:-notes}"
+
+ # Export database configuration for ETL
+ # In hybrid test mode, both databases are the same
+ export DBNAME="${ingestion_dbname}"
+ export DBNAME_INGESTION="${ingestion_dbname}"
+ export DBNAME_DWH="${ingestion_dbname}"
 
  # Set logging level if not already set
  export LOG_LEVEL="${LOG_LEVEL:-INFO}"
 
  log_info "ETL will use database: ${DBNAME}"
+ log_info "Configuration: DBNAME_INGESTION='${DBNAME_INGESTION}', DBNAME_DWH='${DBNAME_DWH}'"
 
  # Run ETL in incremental mode (it will auto-detect if it's first execution)
  log_info "Executing: ${ETL_SCRIPT}"
@@ -563,7 +615,15 @@ main() {
   if ! execute_processAPINotes_and_etl "${i}"; then
    log_error "Execution #${i} failed"
    exit_code=1
-   # Continue with next execution even if one fails
+   # Execution #1 (planet/base) is critical - stop if it fails
+   # Other executions can continue for testing purposes
+   if [[ ${i} -eq 1 ]]; then
+    log_error "Execution #1 (planet/base) failed - this is critical, stopping execution"
+    log_error "Subsequent executions depend on base data from execution #1"
+    break
+   else
+    log_error "Execution #${i} failed, but continuing with next execution..."
+   fi
   fi
  done
 
