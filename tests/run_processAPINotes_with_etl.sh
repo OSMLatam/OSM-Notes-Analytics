@@ -152,7 +152,7 @@ ensure_real_psql() {
  local CLEAN_PATH
  CLEAN_PATH=$(echo "${PATH}" | tr ':' '\n' | grep -v "${MOCK_COMMANDS_DIR}" | grep -v "mock_commands" | grep -v "^${REAL_PSQL_DIR}$" | tr '\n' ':' | sed 's/:$//')
 
- # Create a custom mock directory that only contains aria2c, wget, pgrep, ogr2ogr (not psql)
+ # Create a custom mock directory that only contains aria2c, wget, curl, pgrep, ogr2ogr (not psql)
  local HYBRID_MOCK_DIR_LOCAL
  HYBRID_MOCK_DIR_LOCAL="/tmp/hybrid_mock_commands_$$"
  mkdir -p "${HYBRID_MOCK_DIR_LOCAL}"
@@ -160,7 +160,7 @@ ensure_real_psql() {
  # Store the directory path for cleanup
  export HYBRID_MOCK_DIR="${HYBRID_MOCK_DIR_LOCAL}"
 
- # Copy only the mocks we want (aria2c, wget, pgrep, ogr2ogr)
+ # Copy only the mocks we want (aria2c, wget, curl, pgrep, ogr2ogr)
  if [[ -f "${MOCK_COMMANDS_DIR}/aria2c" ]]; then
   cp "${MOCK_COMMANDS_DIR}/aria2c" "${HYBRID_MOCK_DIR_LOCAL}/aria2c"
   chmod +x "${HYBRID_MOCK_DIR_LOCAL}/aria2c"
@@ -168,6 +168,10 @@ ensure_real_psql() {
  if [[ -f "${MOCK_COMMANDS_DIR}/wget" ]]; then
   cp "${MOCK_COMMANDS_DIR}/wget" "${HYBRID_MOCK_DIR_LOCAL}/wget"
   chmod +x "${HYBRID_MOCK_DIR_LOCAL}/wget"
+ fi
+ if [[ -f "${MOCK_COMMANDS_DIR}/curl" ]]; then
+  cp "${MOCK_COMMANDS_DIR}/curl" "${HYBRID_MOCK_DIR_LOCAL}/curl"
+  chmod +x "${HYBRID_MOCK_DIR_LOCAL}/curl"
  fi
  if [[ -f "${MOCK_COMMANDS_DIR}/pgrep" ]]; then
   cp "${MOCK_COMMANDS_DIR}/pgrep" "${HYBRID_MOCK_DIR_LOCAL}/pgrep"
@@ -179,7 +183,7 @@ ensure_real_psql() {
   chmod +x "${HYBRID_MOCK_DIR_LOCAL}/ogr2ogr"
  fi
 
- # Set PATH: hybrid mock dir first (for aria2c/wget/ogr2ogr), then real psql dir, then system paths for real commands (gdalinfo, etc), then rest
+ # Set PATH: hybrid mock dir first (for aria2c/wget/curl/ogr2ogr), then real psql dir, then system paths for real commands (gdalinfo, etc), then rest
  # Add /usr/bin and /usr/local/bin to ensure real commands like gdalinfo are available
  local SYSTEM_PATHS="/usr/bin:/usr/local/bin:/bin"
  export PATH="${HYBRID_MOCK_DIR_LOCAL}:${REAL_PSQL_DIR}:${SYSTEM_PATHS}:${CLEAN_PATH}"
@@ -209,6 +213,13 @@ ensure_real_psql() {
   log_success "Using mock aria2c from: ${CURRENT_ARIA2C}"
  fi
 
+ # Verify mock curl is being used (should be from hybrid_mock_dir)
+ local CURRENT_CURL
+ CURRENT_CURL=$(command -v curl 2> /dev/null || true)
+ if [[ -n "${CURRENT_CURL}" ]]; then
+  log_success "Using mock curl from: ${CURRENT_CURL}"
+ fi
+
  return 0
 }
 
@@ -230,13 +241,11 @@ setup_hybrid_environment() {
  source "${SETUP_HYBRID_SCRIPT}" 2> /dev/null || true
  set -eu
 
- # Create mock commands if they don't exist
+ # Always regenerate mock commands to ensure they are up-to-date with latest changes
+ # This ensures that any changes to the mock generator script are immediately reflected
  local MOCK_COMMANDS_DIR="${INGESTION_ROOT}/tests/mock_commands"
- if [[ ! -f "${MOCK_COMMANDS_DIR}/wget" ]] \
-  || [[ ! -f "${MOCK_COMMANDS_DIR}/aria2c" ]]; then
-  log_info "Creating mock commands..."
-  bash "${SETUP_HYBRID_SCRIPT}" setup
- fi
+ log_info "Regenerating mock commands to ensure they are up-to-date..."
+ bash "${SETUP_HYBRID_SCRIPT}" setup
 
  # Ensure real psql is used (not mock)
  if ! ensure_real_psql; then
