@@ -510,58 +510,58 @@ run_etl() {
 # Function to execute one processAPINotes run and then ETL
 # This function will be called 4 times with different configurations
 execute_processAPINotes_and_etl() {
- local execution_number="${1:-1}"
- local exit_code=0
+ local EXECUTION_NUMBER="${1:-1}"
+ local EXIT_CODE=0
 
  log_info ""
  log_info "=========================================="
- log_info "=== EXECUTION #${execution_number} ==="
+ log_info "=== EXECUTION #${EXECUTION_NUMBER} ==="
  log_info "=========================================="
  log_info ""
 
  # Determine source type
- local source_type
- if [[ ${execution_number} -eq 1 ]]; then
-  source_type="planet"
+ local SOURCE_TYPE
+ if [[ ${EXECUTION_NUMBER} -eq 1 ]]; then
+  SOURCE_TYPE="planet"
   log_info "Source: PLANET (processPlanetNotes.sh --base will be called)"
  else
-  source_type="api"
+  SOURCE_TYPE="api"
   log_info "Source: API (only processAPINotes.sh, no planet)"
  fi
 
  # Run processAPINotes
- log_info "--- Step 1: Running processAPINotes.sh (${source_type}) ---"
- if ! run_processAPINotes "${execution_number}"; then
-  log_error "processAPINotes (${source_type}) execution #${execution_number} failed"
+ log_info "--- Step 1: Running processAPINotes.sh (${SOURCE_TYPE}) ---"
+ if ! run_processAPINotes "${EXECUTION_NUMBER}"; then
+  log_error "processAPINotes (${SOURCE_TYPE}) execution #${EXECUTION_NUMBER} failed"
   return 1
  fi
 
- log_success "processAPINotes (${source_type}) execution #${execution_number} completed"
+ log_success "processAPINotes (${SOURCE_TYPE}) execution #${EXECUTION_NUMBER} completed"
 
  # Wait a moment before running ETL
  log_info "Waiting 2 seconds before running ETL..."
  sleep 2
 
  # Run ETL after processAPINotes
- log_info "--- Step 2: Running ETL after ${source_type} execution #${execution_number} ---"
- if ! run_etl "${execution_number}" "${source_type}"; then
-  log_error "ETL failed after ${source_type} execution #${execution_number}"
-  exit_code=1
+ log_info "--- Step 2: Running ETL after ${SOURCE_TYPE} execution #${EXECUTION_NUMBER} ---"
+ if ! run_etl "${EXECUTION_NUMBER}" "${SOURCE_TYPE}"; then
+  log_error "ETL failed after ${SOURCE_TYPE} execution #${EXECUTION_NUMBER}"
+  EXIT_CODE=1
  fi
 
- log_success "ETL completed after ${source_type} execution #${execution_number}"
+ log_success "ETL completed after ${SOURCE_TYPE} execution #${EXECUTION_NUMBER}"
 
  # Wait a moment before next execution
  log_info "Waiting 2 seconds before next execution..."
  sleep 2
  log_info ""
 
- return ${exit_code}
+ return ${EXIT_CODE}
 }
 
 # Main function
 main() {
- local exit_code=0
+ local EXIT_CODE=0
 
  # Parse arguments
  case "${1:-}" in
@@ -611,30 +611,30 @@ main() {
  export CLEAN="${CLEAN:-false}"
 
  # Execute 4 times: 1 planet + 3 API
- for i in 1 2 3 4; do
-  if ! execute_processAPINotes_and_etl "${i}"; then
-   log_error "Execution #${i} failed"
-   exit_code=1
+ for I in 1 2 3 4; do
+  if ! execute_processAPINotes_and_etl "${I}"; then
+   log_error "Execution #${I} failed"
+   EXIT_CODE=1
    # Execution #1 (planet/base) is critical - stop if it fails
    # Other executions can continue for testing purposes
-   if [[ ${i} -eq 1 ]]; then
+   if [[ ${I} -eq 1 ]]; then
     log_error "Execution #1 (planet/base) failed - this is critical, stopping execution"
     log_error "Subsequent executions depend on base data from execution #1"
     break
    else
-    log_error "Execution #${i} failed, but continuing with next execution..."
+    log_error "Execution #${I} failed, but continuing with next execution..."
    fi
   fi
  done
 
- if [[ ${exit_code} -eq 0 ]]; then
+ if [[ ${EXIT_CODE} -eq 0 ]]; then
   log_success "All executions completed successfully"
  else
   log_error "Some executions failed"
  fi
 
  # Cleanup will be done by trap
- exit ${exit_code}
+ exit ${EXIT_CODE}
 }
 
 # Run main function
