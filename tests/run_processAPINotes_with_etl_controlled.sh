@@ -491,7 +491,7 @@ run_etl() {
  # Load DBNAME from ingestion properties to ensure ETL uses the same database
  # shellcheck disable=SC1090
  source "${INGESTION_ROOT}/etc/properties.sh"
- export DBNAME="${DBNAME:-notes}"
+ export DBNAME="${DBNAME:-osm_notes}"
 
  # Set logging level if not already set
  export LOG_LEVEL="${LOG_LEVEL:-INFO}"

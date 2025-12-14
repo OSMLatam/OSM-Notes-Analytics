@@ -31,7 +31,7 @@ setup() {
 
  # Prefer existing DB configured by runner; avoid creating/dropping DBs
  if [[ -z "${TEST_DBNAME:-}" ]]; then
-  export TEST_DBNAME="${DBNAME:-notes}"
+  export TEST_DBNAME="${DBNAME:-osm_notes_test}"
  fi
 }
 

@@ -510,7 +510,7 @@ run_etl() {
  # In hybrid test mode, both Ingestion and Analytics use the same database
  # shellcheck disable=SC1090
  source "${INGESTION_ROOT}/etc/properties.sh"
- local INGESTION_DBNAME="${DBNAME:-notes}"
+ local INGESTION_DBNAME="${DBNAME:-osm_notes}"
 
  # Export database configuration for ETL
  # In hybrid test mode, both databases are the same
@@ -638,7 +638,7 @@ main() {
  # Load DBNAME from ingestion properties to ensure we use the correct database
  # shellcheck disable=SC1090
  source "${INGESTION_ROOT}/etc/properties.sh"
- local INGESTION_DBNAME="${DBNAME:-notes}"
+ local INGESTION_DBNAME="${DBNAME:-osm_notes}"
 
  # Clean DWH schema to start from scratch
  log_info "Cleaning DWH schema to start from scratch..."

@@ -178,9 +178,9 @@ The scripts use and set these environment variables:
    - Before running ETL, the script loads database configuration from `INGESTION_ROOT/etc/properties.sh` (which is now the test properties)
    - It exports database variables for the ETL:
      ```bash
-     export DBNAME="${DBNAME:-notes}"           # Legacy: used when both DBs are same
-     export DBNAME_INGESTION="${DBNAME:-notes}"  # Ingestion database
-     export DBNAME_DWH="${DBNAME:-notes}"        # Analytics/DWH database
+     export DBNAME="${DBNAME:-osm_notes}"           # Legacy: used when both DBs are same
+     export DBNAME_INGESTION="${DBNAME:-osm_notes}"  # Ingestion database
+     export DBNAME_DWH="${DBNAME:-osm_notes}"        # Analytics/DWH database
      ```
    - In hybrid test mode, both use the same database, so all three variables are set to the same value
    - This ensures the ETL uses the same database as the ingestion process
@@ -215,7 +215,7 @@ log_info "Configuration: DBNAME_INGESTION='${DBNAME_INGESTION}', DBNAME_DWH='${D
 The `ANALYTICS_ROOT/etc/properties.sh.example` already uses the correct pattern:
 ```bash
 if [[ -z "${DBNAME:-}" ]]; then
- declare -r DBNAME="${DBNAME:-notes}"
+ declare -r DBNAME="${DBNAME:-osm_notes}"
 fi
 ```
 

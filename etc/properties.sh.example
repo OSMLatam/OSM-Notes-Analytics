@@ -11,7 +11,7 @@
 # Database configuration.
 # shellcheck disable=SC2034
 if [[ -z "${DBNAME:-}" ]]; then
- declare -r DBNAME="${DBNAME:-notes}"
+ declare -r DBNAME="${DBNAME:-osm_notes}"
 fi
 # shellcheck disable=SC2034
 if [[ -z "${DB_USER:-}" ]]; then

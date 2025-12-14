@@ -174,11 +174,11 @@ The script uses database configuration from `etc/properties.sh`:
 ```bash
 # Database configuration (recommended: use DBNAME_INGESTION and DBNAME_DWH)
 # Option 1: Separate databases
-DBNAME_INGESTION="notes"
-DBNAME_DWH="notes_dwh"
+DBNAME_INGESTION="osm_notes"
+DBNAME_DWH="osm_notes_dwh"
 
 # Option 2: Same database (legacy/compatibility)
-DBNAME="notes"  # Used when both databases are the same
+DBNAME="osm_notes"  # Used when both databases are the same
 
 # Database user
 DB_USER="myuser"
@@ -240,7 +240,7 @@ ERROR: Permission denied for schema dwh
 
 #### Database Not Found
 ```
-ERROR: Database 'notes' does not exist
+ERROR: Database 'osm_notes' does not exist
 ```
 **Solution:** Check `etc/properties.sh` configuration
 

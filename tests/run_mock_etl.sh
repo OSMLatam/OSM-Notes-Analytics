@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 
 # Minimal mock ETL to prepare local test DB with required schemas/tables and sample data
-# Uses local peer authentication (no password). Target DB defaults to 'notes'.
+# Uses local peer authentication (no password). Target DB defaults to 'osm_notes'.
 
 set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-DBNAME="${TEST_DBNAME:-${DBNAME:-notes}}"
+DBNAME="${TEST_DBNAME:-${DBNAME:-osm_notes}}"
 
 echo "[MOCK-ETL] Using database: ${DBNAME}"
 
