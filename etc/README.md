@@ -60,7 +60,11 @@ Only the `.example` template files are versioned in the repository.
 
 ```bash
 # Database name (should match the ingestion system database)
-DBNAME="notes"
+# Recommended: Use DBNAME_INGESTION and DBNAME_DWH for clarity
+DBNAME_INGESTION="osm_notes"
+DBNAME_DWH="osm_notes_dwh"
+# Legacy/compatibility: Use DBNAME when both databases are the same
+DBNAME="osm_notes"
 
 # Database user with read/write access to DWH schema
 DB_USER="myuser"
@@ -386,7 +390,9 @@ Matches `XSLT_MAX_DEPTH` in `properties.sh`.
 1. **Set database credentials:**
 
    ```bash
-   DBNAME="your_database_name"
+   DBNAME_INGESTION="osm_notes"
+   DBNAME_DWH="osm_notes_dwh"
+   DBNAME="osm_notes"  # Use when both databases are the same
    DB_USER="your_username"
    ```
 
@@ -472,8 +478,11 @@ ETL_NOTIFICATION_EMAIL="admin@domain.com"
 Configuration can be overridden with environment variables:
 
 ```bash
-# Override database name
-export DBNAME="test_database"
+# Override database name (recommended: use DBNAME_INGESTION and DBNAME_DWH)
+export DBNAME_INGESTION="osm_notes"
+export DBNAME_DWH="osm_notes_dwh"
+# Or use DBNAME for same database (legacy/compatibility)
+export DBNAME="osm_notes_test"
 
 # Override log level
 export LOG_LEVEL="DEBUG"
