@@ -153,14 +153,21 @@ ensure_real_psql() {
  CLEAN_PATH=$(echo "${PATH}" | tr ':' '\n' | grep -v "${MOCK_COMMANDS_DIR}" | grep -v "mock_commands" | grep -v "^${REAL_PSQL_DIR}$" | tr '\n' ':' | sed 's/:$//')
 
  # Create a custom mock directory that only contains aria2c, wget, curl, pgrep, ogr2ogr (not psql)
+ # Use a stable directory name that persists across all executions in the same script run
+ # This directory is in /tmp and in .gitignore, so it's safe to keep it during execution
  local HYBRID_MOCK_DIR_LOCAL
  HYBRID_MOCK_DIR_LOCAL="/tmp/hybrid_mock_commands_$$"
- mkdir -p "${HYBRID_MOCK_DIR_LOCAL}"
 
- # Store the directory path for cleanup
+ # If directory already exists (from previous execution in same script run), reuse it
+ if [[ ! -d "${HYBRID_MOCK_DIR_LOCAL}" ]]; then
+  mkdir -p "${HYBRID_MOCK_DIR_LOCAL}"
+ fi
+
+ # Store the directory path for cleanup (only at script exit)
  export HYBRID_MOCK_DIR="${HYBRID_MOCK_DIR_LOCAL}"
 
  # Copy only the mocks we want (aria2c, wget, curl, pgrep, ogr2ogr)
+ # Always copy to ensure mocks are up-to-date (they may have been regenerated)
  if [[ -f "${MOCK_COMMANDS_DIR}/aria2c" ]]; then
   cp "${MOCK_COMMANDS_DIR}/aria2c" "${HYBRID_MOCK_DIR_LOCAL}/aria2c"
   chmod +x "${HYBRID_MOCK_DIR_LOCAL}/aria2c"
@@ -418,6 +425,19 @@ run_processAPINotes() {
  rm -f /tmp/processPlanetNotes_failed_execution
  rm -f /tmp/updateCountries.lock
  rm -f /tmp/updateCountries_failed_execution
+
+ # Ensure PATH still has hybrid mock directory (should persist, but verify)
+ if [[ -n "${HYBRID_MOCK_DIR:-}" ]] && [[ -d "${HYBRID_MOCK_DIR}" ]]; then
+  # Verify mock commands are still available
+  if [[ ! "${PATH}" == *"${HYBRID_MOCK_DIR}"* ]]; then
+   log_info "Restoring hybrid mock directory to PATH..."
+   local SYSTEM_PATHS="/usr/bin:/usr/local/bin:/bin"
+   local REAL_PSQL_DIR
+   REAL_PSQL_DIR=$(dirname "$(command -v psql)")
+   export PATH="${HYBRID_MOCK_DIR}:${REAL_PSQL_DIR}:${SYSTEM_PATHS}:${PATH}"
+   hash -r 2> /dev/null || true
+  fi
+ fi
 
  # Change to ingestion root directory
  cd "${INGESTION_ROOT}"
