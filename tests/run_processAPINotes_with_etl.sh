@@ -123,90 +123,90 @@ check_prerequisites() {
 ensure_real_psql() {
  log_info "Ensuring real PostgreSQL client is used..."
 
- local mock_commands_dir="${INGESTION_ROOT}/tests/mock_commands"
+ local MOCK_COMMANDS_DIR="${INGESTION_ROOT}/tests/mock_commands"
 
  # Remove mock commands directory from PATH temporarily to find real psql
- local temp_path
- temp_path=$(echo "${PATH}" | tr ':' '\n' | grep -v "${mock_commands_dir}" | tr '\n' ':' | sed 's/:$//')
+ local TEMP_PATH
+ TEMP_PATH=$(echo "${PATH}" | tr ':' '\n' | grep -v "${MOCK_COMMANDS_DIR}" | tr '\n' ':' | sed 's/:$//')
 
  # Find real psql path
- local real_psql_path
- real_psql_path=""
- while IFS= read -r dir; do
-  if [[ -f "${dir}/psql" ]] && [[ "${dir}" != "${mock_commands_dir}" ]]; then
-   real_psql_path="${dir}/psql"
+ local REAL_PSQL_PATH
+ REAL_PSQL_PATH=""
+ while IFS= read -r DIR; do
+  if [[ -f "${DIR}/psql" ]] && [[ "${DIR}" != "${MOCK_COMMANDS_DIR}" ]]; then
+   REAL_PSQL_PATH="${DIR}/psql"
    break
   fi
- done <<< "$(echo "${temp_path}" | tr ':' '\n')"
+ done <<< "$(echo "${TEMP_PATH}" | tr ':' '\n')"
 
- if [[ -z "${real_psql_path}" ]]; then
+ if [[ -z "${REAL_PSQL_PATH}" ]]; then
   log_error "Real psql command not found in PATH"
   return 1
  fi
 
  # Get real psql directory
- local real_psql_dir
- real_psql_dir=$(dirname "${real_psql_path}")
+ local REAL_PSQL_DIR
+ REAL_PSQL_DIR=$(dirname "${REAL_PSQL_PATH}")
 
  # Rebuild PATH: Remove ALL mock directories to ensure real commands are used
- local clean_path
- clean_path=$(echo "${PATH}" | tr ':' '\n' | grep -v "${mock_commands_dir}" | grep -v "mock_commands" | grep -v "^${real_psql_dir}$" | tr '\n' ':' | sed 's/:$//')
+ local CLEAN_PATH
+ CLEAN_PATH=$(echo "${PATH}" | tr ':' '\n' | grep -v "${MOCK_COMMANDS_DIR}" | grep -v "mock_commands" | grep -v "^${REAL_PSQL_DIR}$" | tr '\n' ':' | sed 's/:$//')
 
  # Create a custom mock directory that only contains aria2c, wget, pgrep, ogr2ogr (not psql)
- local hybrid_mock_dir
- hybrid_mock_dir="/tmp/hybrid_mock_commands_$$"
- mkdir -p "${hybrid_mock_dir}"
+ local HYBRID_MOCK_DIR_LOCAL
+ HYBRID_MOCK_DIR_LOCAL="/tmp/hybrid_mock_commands_$$"
+ mkdir -p "${HYBRID_MOCK_DIR_LOCAL}"
 
  # Store the directory path for cleanup
- export HYBRID_MOCK_DIR="${hybrid_mock_dir}"
+ export HYBRID_MOCK_DIR="${HYBRID_MOCK_DIR_LOCAL}"
 
  # Copy only the mocks we want (aria2c, wget, pgrep, ogr2ogr)
- if [[ -f "${mock_commands_dir}/aria2c" ]]; then
-  cp "${mock_commands_dir}/aria2c" "${hybrid_mock_dir}/aria2c"
-  chmod +x "${hybrid_mock_dir}/aria2c"
+ if [[ -f "${MOCK_COMMANDS_DIR}/aria2c" ]]; then
+  cp "${MOCK_COMMANDS_DIR}/aria2c" "${HYBRID_MOCK_DIR_LOCAL}/aria2c"
+  chmod +x "${HYBRID_MOCK_DIR_LOCAL}/aria2c"
  fi
- if [[ -f "${mock_commands_dir}/wget" ]]; then
-  cp "${mock_commands_dir}/wget" "${hybrid_mock_dir}/wget"
-  chmod +x "${hybrid_mock_dir}/wget"
+ if [[ -f "${MOCK_COMMANDS_DIR}/wget" ]]; then
+  cp "${MOCK_COMMANDS_DIR}/wget" "${HYBRID_MOCK_DIR_LOCAL}/wget"
+  chmod +x "${HYBRID_MOCK_DIR_LOCAL}/wget"
  fi
- if [[ -f "${mock_commands_dir}/pgrep" ]]; then
-  cp "${mock_commands_dir}/pgrep" "${hybrid_mock_dir}/pgrep"
-  chmod +x "${hybrid_mock_dir}/pgrep"
+ if [[ -f "${MOCK_COMMANDS_DIR}/pgrep" ]]; then
+  cp "${MOCK_COMMANDS_DIR}/pgrep" "${HYBRID_MOCK_DIR_LOCAL}/pgrep"
+  chmod +x "${HYBRID_MOCK_DIR_LOCAL}/pgrep"
  fi
  # Copy ogr2ogr mock if it exists
- if [[ -f "${mock_commands_dir}/ogr2ogr" ]]; then
-  cp "${mock_commands_dir}/ogr2ogr" "${hybrid_mock_dir}/ogr2ogr"
-  chmod +x "${hybrid_mock_dir}/ogr2ogr"
+ if [[ -f "${MOCK_COMMANDS_DIR}/ogr2ogr" ]]; then
+  cp "${MOCK_COMMANDS_DIR}/ogr2ogr" "${HYBRID_MOCK_DIR_LOCAL}/ogr2ogr"
+  chmod +x "${HYBRID_MOCK_DIR_LOCAL}/ogr2ogr"
  fi
 
  # Set PATH: hybrid mock dir first (for aria2c/wget/ogr2ogr), then real psql dir, then system paths for real commands (gdalinfo, etc), then rest
  # Add /usr/bin and /usr/local/bin to ensure real commands like gdalinfo are available
- local system_paths="/usr/bin:/usr/local/bin:/bin"
- export PATH="${hybrid_mock_dir}:${real_psql_dir}:${system_paths}:${clean_path}"
+ local SYSTEM_PATHS="/usr/bin:/usr/local/bin:/bin"
+ export PATH="${HYBRID_MOCK_DIR_LOCAL}:${REAL_PSQL_DIR}:${SYSTEM_PATHS}:${CLEAN_PATH}"
  hash -r 2> /dev/null || true
 
  # Export MOCK_COMMANDS_DIR so mock ogr2ogr can find real ogr2ogr if needed
- export MOCK_COMMANDS_DIR="${mock_commands_dir}"
+ export MOCK_COMMANDS_DIR="${MOCK_COMMANDS_DIR}"
 
  # Verify we're using real psql
- local current_psql
- current_psql=$(command -v psql)
- if [[ "${current_psql}" == "${mock_commands_dir}/psql" ]] || [[ "${current_psql}" == "${hybrid_mock_dir}/psql" ]]; then
+ local CURRENT_PSQL
+ CURRENT_PSQL=$(command -v psql)
+ if [[ "${CURRENT_PSQL}" == "${MOCK_COMMANDS_DIR}/psql" ]] || [[ "${CURRENT_PSQL}" == "${HYBRID_MOCK_DIR_LOCAL}/psql" ]]; then
   log_error "Mock psql is being used instead of real psql"
   return 1
  fi
- if [[ -z "${current_psql}" ]]; then
+ if [[ -z "${CURRENT_PSQL}" ]]; then
   log_error "psql not found in PATH"
   return 1
  fi
 
- log_success "Using real psql from: ${current_psql}"
+ log_success "Using real psql from: ${CURRENT_PSQL}"
 
  # Verify mock aria2c is being used (should be from hybrid_mock_dir)
- local current_aria2c
- current_aria2c=$(command -v aria2c 2> /dev/null || true)
- if [[ -n "${current_aria2c}" ]]; then
-  log_success "Using mock aria2c from: ${current_aria2c}"
+ local CURRENT_ARIA2C
+ CURRENT_ARIA2C=$(command -v aria2c 2> /dev/null || true)
+ if [[ -n "${CURRENT_ARIA2C}" ]]; then
+  log_success "Using mock aria2c from: ${CURRENT_ARIA2C}"
  fi
 
  return 0
@@ -216,10 +216,10 @@ ensure_real_psql() {
 setup_hybrid_environment() {
  log_info "Setting up hybrid environment..."
 
- local setup_hybrid_script="${INGESTION_ROOT}/tests/setup_hybrid_mock_environment.sh"
+ local SETUP_HYBRID_SCRIPT="${INGESTION_ROOT}/tests/setup_hybrid_mock_environment.sh"
 
- if [[ ! -f "${setup_hybrid_script}" ]]; then
-  log_error "Hybrid setup script not found: ${setup_hybrid_script}"
+ if [[ ! -f "${SETUP_HYBRID_SCRIPT}" ]]; then
+  log_error "Hybrid setup script not found: ${SETUP_HYBRID_SCRIPT}"
   return 1
  fi
 
@@ -227,15 +227,15 @@ setup_hybrid_environment() {
  # Temporarily disable set -e and set -u to avoid exiting on errors in sourced script
  set +eu
  # shellcheck disable=SC1090
- source "${setup_hybrid_script}" 2> /dev/null || true
+ source "${SETUP_HYBRID_SCRIPT}" 2> /dev/null || true
  set -eu
 
  # Create mock commands if they don't exist
- local mock_commands_dir="${INGESTION_ROOT}/tests/mock_commands"
- if [[ ! -f "${mock_commands_dir}/wget" ]] \
-  || [[ ! -f "${mock_commands_dir}/aria2c" ]]; then
+ local MOCK_COMMANDS_DIR="${INGESTION_ROOT}/tests/mock_commands"
+ if [[ ! -f "${MOCK_COMMANDS_DIR}/wget" ]] \
+  || [[ ! -f "${MOCK_COMMANDS_DIR}/aria2c" ]]; then
   log_info "Creating mock commands..."
-  bash "${setup_hybrid_script}" setup
+  bash "${SETUP_HYBRID_SCRIPT}" setup
  fi
 
  # Ensure real psql is used (not mock)
@@ -245,24 +245,24 @@ setup_hybrid_environment() {
  fi
 
  # Setup test properties (replace etc/properties.sh with properties_test.sh)
- local properties_file="${INGESTION_ROOT}/etc/properties.sh"
- local test_properties_file="${INGESTION_ROOT}/etc/properties_test.sh"
- local properties_backup="${INGESTION_ROOT}/etc/properties.sh.backup"
+ local PROPERTIES_FILE="${INGESTION_ROOT}/etc/properties.sh"
+ local TEST_PROPERTIES_FILE="${INGESTION_ROOT}/etc/properties_test.sh"
+ local PROPERTIES_BACKUP="${INGESTION_ROOT}/etc/properties.sh.backup"
 
- if [[ ! -f "${test_properties_file}" ]]; then
-  log_error "Test properties file not found: ${test_properties_file}"
+ if [[ ! -f "${TEST_PROPERTIES_FILE}" ]]; then
+  log_error "Test properties file not found: ${TEST_PROPERTIES_FILE}"
   return 1
  fi
 
  # Backup original properties file if it exists and backup doesn't exist
- if [[ -f "${properties_file}" ]] && [[ ! -f "${properties_backup}" ]]; then
+ if [[ -f "${PROPERTIES_FILE}" ]] && [[ ! -f "${PROPERTIES_BACKUP}" ]]; then
   log_info "Backing up original properties file..."
-  cp "${properties_file}" "${properties_backup}"
+  cp "${PROPERTIES_FILE}" "${PROPERTIES_BACKUP}"
  fi
 
  # Replace properties.sh with properties_test.sh
  log_info "Replacing properties.sh with test properties..."
- cp "${test_properties_file}" "${properties_file}"
+ cp "${TEST_PROPERTIES_FILE}" "${PROPERTIES_FILE}"
 
  # Setup environment variables
  export LOG_LEVEL="${LOG_LEVEL:-INFO}"
@@ -287,12 +287,12 @@ cleanup_environment() {
  log_info "Cleaning up environment..."
 
  # Restore original properties file
- local properties_file="${INGESTION_ROOT}/etc/properties.sh"
- local properties_backup="${INGESTION_ROOT}/etc/properties.sh.backup"
+ local PROPERTIES_FILE="${INGESTION_ROOT}/etc/properties.sh"
+ local PROPERTIES_BACKUP="${INGESTION_ROOT}/etc/properties.sh.backup"
 
- if [[ -f "${properties_backup}" ]]; then
+ if [[ -f "${PROPERTIES_BACKUP}" ]]; then
   log_info "Restoring original properties file..."
-  mv "${properties_backup}" "${properties_file}"
+  mv "${PROPERTIES_BACKUP}" "${PROPERTIES_FILE}"
   log_success "Original properties restored"
  fi
 
@@ -305,9 +305,9 @@ cleanup_environment() {
  rm -f /tmp/updateCountries_failed_execution
 
  # Remove mock commands from PATH
- local new_path
- new_path=$(echo "${PATH}" | tr ':' '\n' | grep -v "mock_commands" | grep -v "hybrid_mock_commands" | tr '\n' ':' | sed 's/:$//')
- export PATH="${new_path}"
+ local NEW_PATH
+ NEW_PATH=$(echo "${PATH}" | tr ':' '\n' | grep -v "mock_commands" | grep -v "hybrid_mock_commands" | tr '\n' ':' | sed 's/:$//')
+ export PATH="${NEW_PATH}"
  hash -r 2> /dev/null || true
 
  # Clean up hybrid mock directory if it exists
@@ -332,22 +332,22 @@ drop_base_tables() {
  # shellcheck disable=SC1090
  source "${INGESTION_ROOT}/etc/properties.sh"
 
- local psql_cmd="psql"
+ local PSQL_CMD="psql"
  if [[ -n "${DB_HOST:-}" ]]; then
-  psql_cmd="${psql_cmd} -h ${DB_HOST} -p ${DB_PORT}"
+  PSQL_CMD="${PSQL_CMD} -h ${DB_HOST} -p ${DB_PORT}"
  fi
 
  # Check if base tables exist
- local tables_exist
- tables_exist=$(${psql_cmd} -d "${DBNAME}" -tAqc \
+ local TABLES_EXIST
+ TABLES_EXIST=$(${PSQL_CMD} -d "${DBNAME}" -tAqc \
   "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('countries', 'notes', 'note_comments', 'logs', 'tries');" 2> /dev/null | grep -E '^[0-9]+$' | head -1 || echo "0")
 
- if [[ "${tables_exist}" -gt 0 ]]; then
+ if [[ "${TABLES_EXIST}" -gt 0 ]]; then
   log_info "Base tables exist, dropping them..."
   # Drop base tables
-  ${psql_cmd} -d "${DBNAME}" -f "${INGESTION_ROOT}/sql/process/processPlanetNotes_13_dropBaseTables.sql" > /dev/null 2>&1 || true
+  ${PSQL_CMD} -d "${DBNAME}" -f "${INGESTION_ROOT}/sql/process/processPlanetNotes_13_dropBaseTables.sql" > /dev/null 2>&1 || true
   # Drop country tables
-  ${psql_cmd} -d "${DBNAME}" -c "DROP TABLE IF EXISTS countries CASCADE;" > /dev/null 2>&1 || true
+  ${PSQL_CMD} -d "${DBNAME}" -c "DROP TABLE IF EXISTS countries CASCADE;" > /dev/null 2>&1 || true
   log_success "Base tables dropped"
  else
   log_info "Base tables don't exist (already clean)"
@@ -356,8 +356,8 @@ drop_base_tables() {
 
 # Function to run processAPINotes directly
 run_processAPINotes() {
- local execution_number="${1:-1}"
- log_info "Running processAPINotes.sh (execution #${execution_number})..."
+ local EXECUTION_NUMBER="${1:-1}"
+ log_info "Running processAPINotes.sh (execution #${EXECUTION_NUMBER})..."
 
  if [[ ! -f "${PROCESS_API_SCRIPT}" ]]; then
   log_error "processAPINotes.sh not found: ${PROCESS_API_SCRIPT}"
@@ -368,7 +368,7 @@ run_processAPINotes() {
  chmod +x "${PROCESS_API_SCRIPT}"
 
  # Set MOCK_NOTES_COUNT and prepare base tables based on execution number
- case "${execution_number}" in
+ case "${EXECUTION_NUMBER}" in
  1)
   # First execution: drop tables (will call processPlanetNotes.sh --base)
   log_info "=== EXECUTION #1: Setting up for processPlanetNotes.sh --base ==="
@@ -397,7 +397,7 @@ run_processAPINotes() {
   log_info "Execution #4: Using ${MOCK_NOTES_COUNT} notes (no new notes scenario)"
   ;;
  *)
-  log_error "Invalid execution number: ${execution_number}"
+  log_error "Invalid execution number: ${EXECUTION_NUMBER}"
   return 1
   ;;
  esac
@@ -415,17 +415,17 @@ run_processAPINotes() {
 
  # Run the script and capture output
  log_info "Executing: ${PROCESS_API_SCRIPT}"
- local output_file="/tmp/processAPINotes_output_${execution_number}_$$.log"
- if "${PROCESS_API_SCRIPT}" > "${output_file}" 2>&1; then
-  log_success "processAPINotes.sh completed successfully (execution #${execution_number})"
-  rm -f "${output_file}" 2>/dev/null || true
+ local OUTPUT_FILE="/tmp/processAPINotes_output_${EXECUTION_NUMBER}_$$.log"
+ if "${PROCESS_API_SCRIPT}" > "${OUTPUT_FILE}" 2>&1; then
+  log_success "processAPINotes.sh completed successfully (execution #${EXECUTION_NUMBER})"
+  rm -f "${OUTPUT_FILE}" 2> /dev/null || true
   return 0
  else
-  local exit_code=$?
-  log_error "processAPINotes.sh exited with code: ${exit_code} (execution #${execution_number})"
+  local EXIT_CODE=$?
+  log_error "processAPINotes.sh exited with code: ${EXIT_CODE} (execution #${EXECUTION_NUMBER})"
 
   # Show error context based on exit code
-  case ${exit_code} in
+  case ${EXIT_CODE} in
   248)
    log_error "Error code 248: Error executing Planet dump (processPlanetNotes.sh --base failed)"
    ;;
@@ -444,35 +444,35 @@ run_processAPINotes() {
   esac
 
   # Show last 50 lines of output for debugging
-  if [[ -f "${output_file}" ]]; then
+  if [[ -f "${OUTPUT_FILE}" ]]; then
    log_error "Last 50 lines of processAPINotes.sh output:"
-   tail -50 "${output_file}" | while IFS= read -r line; do
-    log_error "  ${line}"
+   tail -50 "${OUTPUT_FILE}" | while IFS= read -r LINE; do
+    log_error "  ${LINE}"
    done
 
    # Also check for log files
-   local latest_log_dir
-   latest_log_dir=$(find /tmp -maxdepth 1 -type d -name 'processAPINotes_*' -printf '%T@\t%p\n' 2>/dev/null | sort -n | tail -1 | cut -f2- || echo "")
-   if [[ -n "${latest_log_dir}" ]] && [[ -f "${latest_log_dir}/processAPINotes.log" ]]; then
+   local LATEST_LOG_DIR
+   LATEST_LOG_DIR=$(find /tmp -maxdepth 1 -type d -name 'processAPINotes_*' -printf '%T@\t%p\n' 2> /dev/null | sort -n | tail -1 | cut -f2- || echo "")
+   if [[ -n "${LATEST_LOG_DIR}" ]] && [[ -f "${LATEST_LOG_DIR}/processAPINotes.log" ]]; then
     log_error "Last 30 lines of processAPINotes.log:"
-    tail -30 "${latest_log_dir}/processAPINotes.log" | while IFS= read -r line; do
-     log_error "  ${line}"
+    tail -30 "${LATEST_LOG_DIR}/processAPINotes.log" | while IFS= read -r LINE; do
+     log_error "  ${LINE}"
     done
    fi
 
    # Clean up temp file
-   rm -f "${output_file}" 2>/dev/null || true
+   rm -f "${OUTPUT_FILE}" 2> /dev/null || true
   fi
 
-  return ${exit_code}
+  return ${EXIT_CODE}
  fi
 }
 
 # Function to run ETL
 run_etl() {
- local execution_number="${1:-1}"
- local source_type="${2:-unknown}"
- log_info "Running ETL after ${source_type} execution #${execution_number}..."
+ local EXECUTION_NUMBER="${1:-1}"
+ local SOURCE_TYPE="${2:-unknown}"
+ log_info "Running ETL after ${SOURCE_TYPE} execution #${EXECUTION_NUMBER}..."
 
  # Change to analytics root directory
  cd "${ANALYTICS_ROOT}"
@@ -481,13 +481,13 @@ run_etl() {
  # In hybrid test mode, both Ingestion and Analytics use the same database
  # shellcheck disable=SC1090
  source "${INGESTION_ROOT}/etc/properties.sh"
- local ingestion_dbname="${DBNAME:-notes}"
+ local INGESTION_DBNAME="${DBNAME:-notes}"
 
  # Export database configuration for ETL
  # In hybrid test mode, both databases are the same
- export DBNAME="${ingestion_dbname}"
- export DBNAME_INGESTION="${ingestion_dbname}"
- export DBNAME_DWH="${ingestion_dbname}"
+ export DBNAME="${INGESTION_DBNAME}"
+ export DBNAME_INGESTION="${INGESTION_DBNAME}"
+ export DBNAME_DWH="${INGESTION_DBNAME}"
 
  # Set logging level if not already set
  export LOG_LEVEL="${LOG_LEVEL:-INFO}"
@@ -498,12 +498,12 @@ run_etl() {
  # Run ETL in incremental mode (it will auto-detect if it's first execution)
  log_info "Executing: ${ETL_SCRIPT}"
  if "${ETL_SCRIPT}"; then
-  log_success "ETL completed successfully after ${source_type} execution #${execution_number}"
+  log_success "ETL completed successfully after ${SOURCE_TYPE} execution #${EXECUTION_NUMBER}"
   return 0
  else
-  local exit_code=$?
-  log_error "ETL failed with exit code: ${exit_code} after ${source_type} execution #${execution_number}"
-  return ${exit_code}
+  local EXIT_CODE=$?
+  log_error "ETL failed with exit code: ${EXIT_CODE} after ${SOURCE_TYPE} execution #${EXECUTION_NUMBER}"
+  return ${EXIT_CODE}
  fi
 }
 
