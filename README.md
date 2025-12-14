@@ -94,8 +94,8 @@ For complete navigation by role, see [docs/README.md](docs/README.md#recommended
 - **Star Schema Data Warehouse**: Comprehensive dimensional model for notes analysis (see [DWH Star Schema ERD](docs/DWH_Star_Schema_ERD.md))
 - **Enhanced ETL Process**: Robust ETL with recovery, validation, and monitoring
 - **Partitioned Facts Table**: Automatic partitioning by year (2013-2025+)
-- **Country Datamart**: Pre-computed analytics by country (70+ metrics)
-- **User Datamart**: Pre-computed analytics by user (70+ metrics)
+- **Country Datamart**: Pre-computed analytics by country (77+ metrics)
+- **User Datamart**: Pre-computed analytics by user (77+ metrics)
 - **Profile Generator**: Generate country and user profiles
 - **Advanced Dimensions**:
   - Timezones for local time analysis
@@ -411,7 +411,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM dwh.dimension_countries;
 
 **What this does:** Creates pre-computed analytics tables for fast querying.
 
-**Why this matters:** Datamarts contain pre-aggregated metrics (70+ per user/country) that enable instant profile generation without expensive queries.
+**Why this matters:** Datamarts contain pre-aggregated metrics (77+ per user/country) that enable instant profile generation without expensive queries.
 
 **✅ Datamarts are automatically updated during ETL execution. No manual step needed!**
 
@@ -815,7 +815,7 @@ Processes only new data since the last ETL run. Use this for scheduled updates.
 
 ### Datamart Tables
 
-- **`datamart_countries`**: Pre-computed country analytics (70+ metrics)
+- **`datamart_countries`**: Pre-computed country analytics (77+ metrics)
   - Historical metrics: notes opened/closed by country
   - Resolution metrics: avg/median days to resolution, resolution rate
   - Application statistics: mobile/desktop app usage, most used app
@@ -823,7 +823,7 @@ Processes only new data since the last ETL run. Use this for scheduled updates.
   - Community health: active notes, backlog size, age distribution
   - Hashtag analysis: top hashtags, usage patterns
   
-- **`datamart_users`**: Pre-computed user analytics (70+ metrics)
+- **`datamart_users`**: Pre-computed user analytics (77+ metrics)
   - Historical metrics: notes opened/closed by user
   - Resolution metrics: avg/median days to resolution, resolution rate
   - Application statistics: mobile/desktop app usage

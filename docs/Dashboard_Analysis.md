@@ -493,8 +493,22 @@ The following enhancements have been implemented in October 2025:
 - `notes_created_last_30_days` - Recent creation activity
 - `notes_resolved_last_30_days` - Recent resolution activity
 
+#### ✅ Phase 5: High Priority Metrics (Implemented - January 2025)
+**Application Trends:**
+- `application_usage_trends` - JSON array of application usage trends by year (countries & users)
+- `version_adoption_rates` - JSON array of version adoption rates by year (countries & users)
+
+**Community Health (Countries):**
+- `notes_health_score` - Overall notes health score (0-100) based on resolution rate, backlog, and activity
+- `new_vs_resolved_ratio` - Ratio of new notes created vs resolved notes (last 30 days)
+
+**User Behavior (Users):**
+- `user_response_time` - Average time in days from note open to first comment by user
+- `days_since_last_action` - Days since user last performed any action
+- `collaboration_patterns` - JSON object with collaboration metrics (mentions, replies, collaboration score)
+
 ### Testing Coverage
-- ✅ 168+ total tests
+- ✅ 191+ total tests (23 new tests for high priority metrics)
 - ✅ 90%+ ETL function coverage
 - ✅ All datamart calculations validated
 - ✅ Tests for all new metrics included
@@ -503,10 +517,10 @@ The following enhancements have been implemented in October 2025:
 
 **Total Metrics Available:**
 - Star Schema (dwh.facts): **~50 fields**
-- datamartCountries: **~70 fields**
-- datamartUsers: **~70 fields**
-- **Total unique metrics: ~150**
-- **Dashboard-ready: ~90 metrics**
+- datamartCountries: **~77 fields** (7 new high priority metrics)
+- datamartUsers: **~77 fields** (7 new high priority metrics)
+- **Total unique metrics: ~157**
+- **Dashboard-ready: ~97 metrics**
 - **Needs aggregation: ~60 metrics**
 
 

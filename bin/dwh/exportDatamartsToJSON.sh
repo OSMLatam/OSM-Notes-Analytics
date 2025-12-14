@@ -312,7 +312,11 @@ psql -d "${DBNAME_DWH}" -Atq -c "
       avg_days_to_resolution,
       resolution_rate,
       notes_resolved_count,
-      notes_still_open_count
+      notes_still_open_count,
+      user_response_time,
+      days_since_last_action,
+      notes_created_last_30_days,
+      notes_resolved_last_30_days
     FROM dwh.datamartusers
     WHERE user_id IS NOT NULL
     ORDER BY history_whole_open DESC NULLS LAST, history_whole_closed DESC NULLS LAST
@@ -401,7 +405,11 @@ psql -d "${DBNAME_DWH}" -Atq -c "
       avg_days_to_resolution,
       resolution_rate,
       notes_resolved_count,
-      notes_still_open_count
+      notes_still_open_count,
+      notes_health_score,
+      new_vs_resolved_ratio,
+      notes_created_last_30_days,
+      notes_resolved_last_30_days
     FROM dwh.datamartcountries
     WHERE country_id IS NOT NULL
     ORDER BY history_whole_open DESC NULLS LAST, history_whole_closed DESC NULLS LAST

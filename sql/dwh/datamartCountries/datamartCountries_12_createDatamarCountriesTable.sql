@@ -91,7 +91,11 @@ CREATE TABLE IF NOT EXISTS dwh.datamartCountries (
   top_opening_hashtag VARCHAR(50),
   top_resolution_hashtag VARCHAR(50),
   opening_hashtag_count INTEGER DEFAULT 0,
-  resolution_hashtag_count INTEGER DEFAULT 0
+  resolution_hashtag_count INTEGER DEFAULT 0,
+  application_usage_trends JSON,
+  version_adoption_rates JSON,
+  notes_health_score DECIMAL(5,2),
+  new_vs_resolved_ratio DECIMAL(5,2)
 );
 COMMENT ON TABLE dwh.datamartCountries IS
   'Contains all precalculated statistical values for countries';
@@ -255,6 +259,10 @@ COMMENT ON COLUMN dwh.datamartCountries.top_opening_hashtag IS 'Most frequently 
 COMMENT ON COLUMN dwh.datamartCountries.top_resolution_hashtag IS 'Most frequently used resolution hashtag';
 COMMENT ON COLUMN dwh.datamartCountries.opening_hashtag_count IS 'Total count of opening hashtags used';
 COMMENT ON COLUMN dwh.datamartCountries.resolution_hashtag_count IS 'Total count of resolution hashtags used';
+COMMENT ON COLUMN dwh.datamartCountries.application_usage_trends IS 'JSON array of application usage trends by year: [{year, app_id, app_name, count, pct}]';
+COMMENT ON COLUMN dwh.datamartCountries.version_adoption_rates IS 'JSON array of version adoption rates by year: [{year, version, count, adoption_rate}]';
+COMMENT ON COLUMN dwh.datamartCountries.notes_health_score IS 'Overall notes health score (0-100) based on resolution rate, backlog size, and age distribution';
+COMMENT ON COLUMN dwh.datamartCountries.new_vs_resolved_ratio IS 'Ratio of new notes created vs resolved notes (last 30 days)';
 
 CREATE TABLE IF NOT EXISTS dwh.max_date_countries_processed (
   date date NOT NULL

@@ -387,6 +387,12 @@ AS $proc$
   m_notes_resolved_last_30_days INTEGER;
   m_resolution_by_year JSON;
   m_resolution_by_month JSON;
+  m_application_usage_trends JSON;
+  m_version_adoption_rates JSON;
+  m_notes_health_score DECIMAL(5,2);
+  m_new_vs_resolved_ratio DECIMAL(5,2);
+  m_backlog_ratio DECIMAL(5,2);
+  m_recent_activity_score DECIMAL(5,2);
   BEGIN
   SELECT /* Notes-datamartCountries */ COUNT(1)
    INTO qty
@@ -1262,6 +1268,133 @@ AS $proc$
   LEFT JOIN opened_m o USING (y,m)
   LEFT JOIN closed_m c USING (y,m);
 
+  -- Application usage trends by year
+  SELECT /* Notes-datamartCountries */ COALESCE(json_agg(
+    json_build_object(
+      'year', y,
+      'applications', app_data
+    ) ORDER BY y
+  ), '[]'::json)
+  INTO m_application_usage_trends
+  FROM (
+    SELECT DISTINCT EXTRACT(YEAR FROM d.date_id)::INT AS y
+    FROM dwh.facts f
+    JOIN dwh.dimension_days d ON f.opened_dimension_id_date = d.dimension_day_id
+    WHERE f.dimension_id_country = m_dimension_id_country
+      AND f.action_comment = 'opened'
+  ) years
+  CROSS JOIN LATERAL (
+    SELECT json_agg(
+      json_build_object(
+        'app_id', app_id,
+        'app_name', app_name,
+        'count', app_count,
+        'pct', CASE WHEN total > 0 THEN ROUND((app_count::DECIMAL / total * 100), 2) ELSE 0 END
+      ) ORDER BY app_count DESC
+    ) as app_data
+    FROM (
+      SELECT
+        f.dimension_application_creation as app_id,
+        a.application_name as app_name,
+        COUNT(*) as app_count,
+        SUM(COUNT(*)) OVER () as total
+      FROM dwh.facts f
+      JOIN dwh.dimension_days d ON f.opened_dimension_id_date = d.dimension_day_id
+      JOIN dwh.dimension_applications a ON a.dimension_application_id = f.dimension_application_creation
+      WHERE f.dimension_id_country = m_dimension_id_country
+        AND f.action_comment = 'opened'
+        AND f.dimension_application_creation IS NOT NULL
+        AND EXTRACT(YEAR FROM d.date_id) = years.y
+      GROUP BY f.dimension_application_creation, a.application_name
+    ) app_stats
+  ) app_trends;
+
+  -- Version adoption rates by year
+  SELECT /* Notes-datamartCountries */ COALESCE(json_agg(
+    json_build_object(
+      'year', y,
+      'versions', version_data
+    ) ORDER BY y
+  ), '[]'::json)
+  INTO m_version_adoption_rates
+  FROM (
+    SELECT DISTINCT EXTRACT(YEAR FROM d.date_id)::INT AS y
+    FROM dwh.facts f
+    JOIN dwh.dimension_days d ON f.opened_dimension_id_date = d.dimension_day_id
+    WHERE f.dimension_id_country = m_dimension_id_country
+      AND f.action_comment = 'opened'
+      AND f.dimension_application_version IS NOT NULL
+  ) years
+  CROSS JOIN LATERAL (
+    SELECT json_agg(
+      json_build_object(
+        'version', version,
+        'count', version_count,
+        'adoption_rate', CASE WHEN total > 0 THEN ROUND((version_count::DECIMAL / total * 100), 2) ELSE 0 END
+      ) ORDER BY version_count DESC
+    ) as version_data
+    FROM (
+      SELECT
+        av.version as version,
+        COUNT(*) as version_count,
+        SUM(COUNT(*)) OVER () as total
+      FROM dwh.facts f
+      JOIN dwh.dimension_days d ON f.opened_dimension_id_date = d.dimension_day_id
+      JOIN dwh.dimension_application_versions av ON av.dimension_application_version_id = f.dimension_application_version
+      WHERE f.dimension_id_country = m_dimension_id_country
+        AND f.action_comment = 'opened'
+        AND f.dimension_application_version IS NOT NULL
+        AND EXTRACT(YEAR FROM d.date_id) = years.y
+      GROUP BY av.version
+    ) version_stats
+  ) version_trends;
+
+  -- Notes health score (0-100)
+  -- Based on: resolution_rate (40%), backlog_ratio (30%), recent_activity (30%)
+  -- Backlog ratio: notes_still_open / total_notes_opened
+  IF (m_history_whole_open > 0) THEN
+    m_backlog_ratio := (m_notes_still_open_count::DECIMAL / m_history_whole_open) * 100;
+  ELSE
+    m_backlog_ratio := 0;
+  END IF;
+
+  -- Recent activity score: based on notes created vs resolved in last 30 days
+  IF (m_notes_created_last_30_days > 0) THEN
+    -- If more resolved than created, score is high
+    IF (m_notes_resolved_last_30_days >= m_notes_created_last_30_days) THEN
+      m_recent_activity_score := 100;
+    ELSE
+      -- Score decreases if backlog is growing
+      m_recent_activity_score := (m_notes_resolved_last_30_days::DECIMAL / m_notes_created_last_30_days) * 100;
+    END IF;
+  ELSE
+    -- No recent activity, but if there's no backlog, still good
+    IF (m_notes_still_open_count = 0) THEN
+      m_recent_activity_score := 100;
+    ELSE
+      m_recent_activity_score := 0;
+    END IF;
+  END IF;
+
+  -- Calculate health score: weighted average
+  -- Resolution rate (40%) + (100 - backlog_ratio) (30%) + recent_activity (30%)
+  m_notes_health_score := (
+    (m_resolution_rate * 0.4) +
+    ((100 - LEAST(m_backlog_ratio, 100)) * 0.3) +
+    (m_recent_activity_score * 0.3)
+  );
+
+  -- New vs resolved ratio (last 30 days)
+  IF (m_notes_resolved_last_30_days > 0) THEN
+    m_new_vs_resolved_ratio := (m_notes_created_last_30_days::DECIMAL / m_notes_resolved_last_30_days);
+  ELSE
+    IF (m_notes_created_last_30_days > 0) THEN
+      m_new_vs_resolved_ratio := 999.99; -- Infinite ratio (no resolutions)
+    ELSE
+      m_new_vs_resolved_ratio := 0; -- No activity
+    END IF;
+  END IF;
+
   -- Updates country with new values.
   UPDATE dwh.datamartCountries
   SET
@@ -1323,6 +1456,10 @@ AS $proc$
    notes_resolved_last_30_days = m_notes_resolved_last_30_days
   , resolution_by_year = m_resolution_by_year
   , resolution_by_month = m_resolution_by_month
+  , application_usage_trends = m_application_usage_trends
+  , version_adoption_rates = m_version_adoption_rates
+  , notes_health_score = m_notes_health_score
+  , new_vs_resolved_ratio = m_new_vs_resolved_ratio
   WHERE dimension_country_id = m_dimension_id_country;
 
   -- Only update year-specific data for 2013 (currently the only year with dedicated columns)

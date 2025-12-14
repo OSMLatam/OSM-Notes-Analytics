@@ -1,6 +1,6 @@
 # Metric Definitions - Complete Reference
 
-This document provides comprehensive business definitions for all 70+ metrics available in the OSM-Notes-Analytics datamarts. Each metric includes business name, definition, calculation formula, unit, interpretation, and use cases.
+This document provides comprehensive business definitions for all 77+ metrics available in the OSM-Notes-Analytics datamarts. Each metric includes business name, definition, calculation formula, unit, interpretation, and use cases.
 
 ## Table of Contents
 
@@ -15,13 +15,14 @@ This document provides comprehensive business definitions for all 70+ metrics av
   - [5. Temporal Pattern Metrics](#5-temporal-pattern-metrics)
   - [6. Geographic Pattern Metrics](#6-geographic-pattern-metrics)
   - [7. Community Health Metrics](#7-community-health-metrics)
-  - [8. Hashtag Metrics](#8-hashtag-metrics)
-  - [9. First/Last Action Metrics](#9-firstlast-action-metrics)
-  - [10. Current Period Metrics](#10-current-period-metrics)
-  - [11. User Classification Metrics](#11-user-classification-metrics)
+  - [8. User Behavior Metrics](#8-user-behavior-metrics)
+  - [9. Hashtag Metrics](#9-hashtag-metrics)
+  - [10. First/Last Action Metrics](#10-firstlast-action-metrics)
+  - [11. Current Period Metrics](#11-current-period-metrics)
+  - [12. User Classification Metrics](#12-user-classification-metrics)
 - [Metric Summary Table](#metric-summary-table)
-  - [User Datamart Metrics (70+ metrics)](#user-datamart-metrics-70-metrics)
-  - [Country Datamart Metrics (70+ metrics)](#country-datamart-metrics-70-metrics)
+  - [User Datamart Metrics (77+ metrics)](#user-datamart-metrics-77-metrics)
+  - [Country Datamart Metrics (77+ metrics)](#country-datamart-metrics-77-metrics)
 - [Metric Calculation Details](#metric-calculation-details)
 - [Metric Interpretation Guide](#metric-interpretation-guide)
   - [Understanding Metric Values](#understanding-metric-values)
@@ -36,14 +37,15 @@ This document provides comprehensive business definitions for all 70+ metrics av
 The datamarts contain pre-computed metrics organized into categories:
 - **Historical Counts**: Activity counts by time period
 - **Resolution Metrics**: Time to resolution and resolution rates
-- **Application Statistics**: Tool usage patterns
+- **Application Statistics**: Tool usage patterns and trends
 - **Content Quality Metrics**: Comment analysis
 - **Temporal Patterns**: Time-based activity patterns
 - **Geographic Patterns**: Location-based metrics
 - **Community Health**: Backlog and activity indicators
+- **User Behavior**: User responsiveness and collaboration patterns
 - **Hashtag Metrics**: Campaign and organization tracking
 
-**Total Metrics**: 70+ per user/country
+**Total Metrics**: 77+ per user/country (7 new high priority metrics added January 2025)
 
 ---
 
@@ -407,6 +409,42 @@ Metrics related to applications and tools used to create notes.
 - Platform comparison: "Desktop users use more diverse tools than mobile users"
 - Tool adoption: "JOSM and iD are the most common desktop tools"
 - User preferences: "This user prefers desktop tools for note creation"
+
+**Available In**: `datamartusers`, `datamartcountries`
+
+---
+
+#### 3.5 `application_usage_trends`
+
+**Business Name**: Application Usage Trends by Year  
+**Definition**: JSON array containing application usage statistics grouped by year, showing how application usage has changed over time.  
+**Formula**: `json_agg(json_build_object('year', year, 'applications', app_data)) GROUP BY year`  
+**Unit**: JSON array  
+**Format**: `[{"year": 2023, "applications": [{"app_id": 1, "app_name": "iD", "count": 100, "pct": 45.5}, ...]}, ...]`  
+**Interpretation**: Shows how application preferences change over time
+
+**Use Cases**:
+- Trend analysis: "Mobile app usage increased from 20% (2020) to 60% (2024)"
+- Technology adoption: "iD usage peaked in 2022, then declined"
+- Platform shifts: "Desktop tools declining, mobile tools increasing"
+
+**Available In**: `datamartusers`, `datamartcountries`
+
+---
+
+#### 3.6 `version_adoption_rates`
+
+**Business Name**: Version Adoption Rates by Year  
+**Definition**: JSON array containing version adoption statistics grouped by year, showing which application versions are being used over time.  
+**Formula**: `json_agg(json_build_object('year', year, 'versions', version_data)) GROUP BY year`  
+**Unit**: JSON array  
+**Format**: `[{"year": 2023, "versions": [{"version": "2.20.0", "count": 50, "adoption_rate": 25.0}, ...]}, ...]`  
+**Interpretation**: Shows version adoption patterns and upgrade trends
+
+**Use Cases**:
+- Version tracking: "Version 2.20.0 adoption rate is 25% in 2023"
+- Upgrade patterns: "Users are slow to adopt new versions"
+- Technology trends: "Latest version adoption rate is increasing"
 
 **Available In**: `datamartusers`, `datamartcountries`
 
@@ -865,7 +903,116 @@ Metrics related to backlog, active notes, and community activity.
 
 ---
 
-### 8. Hashtag Metrics
+#### 7.6 `notes_health_score` (Countries only)
+
+**Business Name**: Overall Notes Health Score  
+**Definition**: Composite score (0-100) that measures the overall health of notes in a country, based on resolution rate, backlog size, and recent activity.  
+**Formula**: `(resolution_rate * 0.4) + ((100 - backlog_ratio) * 0.3) + (recent_activity_score * 0.3)`  
+**Unit**: Score (0-100, decimal)  
+**Interpretation**: 
+- **Excellent** (80-100): High resolution rate, low backlog, active community
+- **Good** (60-80): Decent resolution rate, manageable backlog
+- **Fair** (40-60): Moderate issues, some backlog
+- **Poor** (<40): Low resolution rate, high backlog, inactive community
+
+**Use Cases**:
+- Community health monitoring: "Country health score is 75 (good)"
+- Comparison: "Country A (85) is healthier than Country B (45)"
+- Trend analysis: "Health score improved from 50 to 75 this year"
+
+**Available In**: `datamartcountries` only
+
+---
+
+#### 7.7 `new_vs_resolved_ratio` (Countries only)
+
+**Business Name**: New vs Resolved Notes Ratio  
+**Definition**: Ratio of new notes created vs resolved notes in the last 30 days.  
+**Formula**: `notes_created_last_30_days / notes_resolved_last_30_days`  
+**Unit**: Ratio (decimal, can be 999.99 for infinite when no resolutions)  
+**Interpretation**: 
+- **< 1.0**: More notes resolved than created (backlog shrinking)
+- **= 1.0**: Balanced (same created as resolved)
+- **> 1.0**: More notes created than resolved (backlog growing)
+- **999.99**: No resolutions (infinite ratio)
+
+**Use Cases**:
+- Backlog trend: "Ratio is 0.8 (backlog shrinking)"
+- Problem identification: "Ratio is 2.5 (backlog growing rapidly)"
+- Community balance: "Ratio is 1.0 (balanced activity)"
+
+**Available In**: `datamartcountries` only
+
+---
+
+### 8. User Behavior Metrics
+
+Metrics related to user behavior patterns, responsiveness, and collaboration.
+
+#### 8.1 `user_response_time` (Users only)
+
+**Business Name**: Average User Response Time  
+**Definition**: Average time in days from when a user opens a note to when they add their first comment.  
+**Formula**: `AVG(EXTRACT(EPOCH FROM (first_comment_time - open_time)) / 86400.0)`  
+**Unit**: Days (decimal, e.g., 2.5 days)  
+**Interpretation**: 
+- **Low values** (<1 day): Very responsive user
+- **Medium values** (1-3 days): Responsive user
+- **High values** (>3 days): Less responsive user
+
+**Use Cases**:
+- User responsiveness: "This user responds within 1 day on average"
+- Community engagement: "Average response time is 2 days"
+- User comparison: "User A (0.5 days) is more responsive than User B (5 days)"
+
+**Available In**: `datamartusers` only
+
+---
+
+#### 8.2 `days_since_last_action` (Users only)
+
+**Business Name**: Days Since Last Action  
+**Definition**: Number of days since the user last performed any action (opened, commented, closed, or reopened a note).  
+**Formula**: `CURRENT_DATE - MAX(action_at)`  
+**Unit**: Days (integer)  
+**Interpretation**: 
+- **0-7 days**: Very active user
+- **8-30 days**: Active user
+- **31-90 days**: Inactive user
+- **90+ days**: Very inactive or retired user
+
+**Use Cases**:
+- User activity status: "This user was active 5 days ago"
+- Inactive user detection: "User hasn't been active in 120 days"
+- Community engagement: "Most users were active in the last 30 days"
+
+**Available In**: `datamartusers` only
+
+---
+
+#### 8.3 `collaboration_patterns` (Users only)
+
+**Business Name**: User Collaboration Patterns  
+**Definition**: JSON object containing metrics about user collaboration, including mentions given, mentions received, replies, and a collaboration score.  
+**Formula**: `json_build_object('mentions_given', mentions_given, 'mentions_received', mentions_received, 'replies_count', replies_count, 'collaboration_score', total_score)`  
+**Unit**: JSON object  
+**Format**: `{"mentions_given": 50, "mentions_received": 30, "replies_count": 25, "collaboration_score": 105}`  
+**Interpretation**: 
+- **High collaboration_score**: Very collaborative user
+- **High mentions_given**: User actively engages with others
+- **High mentions_received**: User is frequently mentioned by others
+- **High replies_count**: User actively responds to discussions
+
+**Use Cases**:
+- Collaboration measurement: "This user has a collaboration score of 105"
+- Community engagement: "User frequently mentions others (50 mentions given)"
+- Social patterns: "User is well-connected (30 mentions received)"
+
+**Available In**: `datamartusers` only
+
+---
+
+### 9. Hashtag Metrics
 
 Metrics related to hashtag usage in notes.
 
@@ -995,7 +1142,7 @@ Metrics related to hashtag usage in notes.
 
 ---
 
-### 9. First/Last Action Metrics
+### 10. First/Last Action Metrics
 
 Metrics tracking the first and most recent actions.
 
@@ -1087,7 +1234,7 @@ Metrics tracking the first and most recent actions.
 
 ---
 
-### 10. Current Period Metrics
+### 11. Current Period Metrics
 
 Metrics for current time periods (month, day).
 
@@ -1139,7 +1286,7 @@ Metrics for current time periods (month, day).
 
 ---
 
-### 11. User Classification Metrics
+### 12. User Classification Metrics
 
 #### 11.1 `id_contributor_type`
 
@@ -1188,7 +1335,7 @@ Metrics for current time periods (month, day).
 
 ## Metric Summary Table
 
-### User Datamart Metrics (70+ metrics)
+### User Datamart Metrics (77+ metrics)
 
 | Category | Metric Count | Examples |
 |----------|--------------|----------|
@@ -1203,9 +1350,9 @@ Metrics for current time periods (month, day).
 | First/Last Actions | 8 | `date_starting_creating_notes`, `first_open_note_id`, `lastest_open_note_id`, etc. |
 | User Classification | 1 | `id_contributor_type` |
 
-**Total**: 70+ metrics per user
+**Total**: 77+ metrics per user
 
-### Country Datamart Metrics (70+ metrics)
+### Country Datamart Metrics (77+ metrics)
 
 | Category | Metric Count | Examples |
 |----------|--------------|----------|
@@ -1219,7 +1366,7 @@ Metrics for current time periods (month, day).
 | Hashtag Metrics | 8 | Same as user datamart |
 | First/Last Actions | 8 | Same as user datamart |
 
-**Total**: 70+ metrics per country
+**Total**: 77+ metrics per country
 
 ---
 

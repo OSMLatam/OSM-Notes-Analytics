@@ -497,6 +497,11 @@ AS $proc$
   m_notes_resolved_last_30_days INTEGER;
   m_resolution_by_year JSON;
   m_resolution_by_month JSON;
+  m_application_usage_trends JSON;
+  m_version_adoption_rates JSON;
+  m_user_response_time DECIMAL(10,2);
+  m_days_since_last_action INTEGER;
+  m_collaboration_patterns JSON;
   BEGIN
   --m_start_time := CLOCK_TIMESTAMP();
   SELECT /* Notes-datamartUsers */ COUNT(1)
@@ -1378,6 +1383,170 @@ AS $proc$
   LEFT JOIN opened_m o USING (y,m)
   LEFT JOIN closed_m c USING (y,m);
 
+  -- Application usage trends by year
+  SELECT /* Notes-datamartUsers */ COALESCE(json_agg(
+    json_build_object(
+      'year', y,
+      'applications', app_data
+    ) ORDER BY y
+  ), '[]'::json)
+  INTO m_application_usage_trends
+  FROM (
+    SELECT DISTINCT EXTRACT(YEAR FROM d.date_id)::INT AS y
+    FROM dwh.facts f
+    JOIN dwh.dimension_days d ON f.opened_dimension_id_date = d.dimension_day_id
+    WHERE f.opened_dimension_id_user = m_dimension_user_id
+      AND f.action_comment = 'opened'
+  ) years
+  CROSS JOIN LATERAL (
+    SELECT json_agg(
+      json_build_object(
+        'app_id', app_id,
+        'app_name', app_name,
+        'count', app_count,
+        'pct', CASE WHEN total > 0 THEN ROUND((app_count::DECIMAL / total * 100), 2) ELSE 0 END
+      ) ORDER BY app_count DESC
+    ) as app_data
+    FROM (
+      SELECT
+        f.dimension_application_creation as app_id,
+        a.application_name as app_name,
+        COUNT(*) as app_count,
+        SUM(COUNT(*)) OVER () as total
+      FROM dwh.facts f
+      JOIN dwh.dimension_days d ON f.opened_dimension_id_date = d.dimension_day_id
+      JOIN dwh.dimension_applications a ON a.dimension_application_id = f.dimension_application_creation
+      WHERE f.opened_dimension_id_user = m_dimension_user_id
+        AND f.action_comment = 'opened'
+        AND f.dimension_application_creation IS NOT NULL
+        AND EXTRACT(YEAR FROM d.date_id) = years.y
+      GROUP BY f.dimension_application_creation, a.application_name
+    ) app_stats
+  ) app_trends;
+
+  -- Version adoption rates by year
+  SELECT /* Notes-datamartUsers */ COALESCE(json_agg(
+    json_build_object(
+      'year', y,
+      'versions', version_data
+    ) ORDER BY y
+  ), '[]'::json)
+  INTO m_version_adoption_rates
+  FROM (
+    SELECT DISTINCT EXTRACT(YEAR FROM d.date_id)::INT AS y
+    FROM dwh.facts f
+    JOIN dwh.dimension_days d ON f.opened_dimension_id_date = d.dimension_day_id
+    WHERE f.opened_dimension_id_user = m_dimension_user_id
+      AND f.action_comment = 'opened'
+      AND f.dimension_application_version IS NOT NULL
+  ) years
+  CROSS JOIN LATERAL (
+    SELECT json_agg(
+      json_build_object(
+        'version', version,
+        'count', version_count,
+        'adoption_rate', CASE WHEN total > 0 THEN ROUND((version_count::DECIMAL / total * 100), 2) ELSE 0 END
+      ) ORDER BY version_count DESC
+    ) as version_data
+    FROM (
+      SELECT
+        av.version as version,
+        COUNT(*) as version_count,
+        SUM(COUNT(*)) OVER () as total
+      FROM dwh.facts f
+      JOIN dwh.dimension_days d ON f.opened_dimension_id_date = d.dimension_day_id
+      JOIN dwh.dimension_application_versions av ON av.dimension_application_version_id = f.dimension_application_version
+      WHERE f.opened_dimension_id_user = m_dimension_user_id
+        AND f.action_comment = 'opened'
+        AND f.dimension_application_version IS NOT NULL
+        AND EXTRACT(YEAR FROM d.date_id) = years.y
+      GROUP BY av.version
+    ) version_stats
+  ) version_trends;
+
+  -- User response time: average time from note open to first comment by this user
+  SELECT /* Notes-datamartUsers */ COALESCE(AVG(
+    EXTRACT(EPOCH FROM (c.action_at - o.action_at)) / 86400.0
+  ), 0)
+  INTO m_user_response_time
+  FROM (
+    SELECT DISTINCT ON (f.id_note) f.id_note, f.action_at
+    FROM dwh.facts f
+    WHERE f.opened_dimension_id_user = m_dimension_user_id
+      AND f.action_comment = 'opened'
+    ORDER BY f.id_note, f.action_at ASC
+  ) o
+  JOIN (
+    SELECT DISTINCT ON (f.id_note) f.id_note, f.action_at
+    FROM dwh.facts f
+    WHERE f.action_dimension_id_user = m_dimension_user_id
+      AND f.action_comment = 'commented'
+    ORDER BY f.id_note, f.action_at ASC
+  ) c ON c.id_note = o.id_note
+  WHERE c.action_at > o.action_at;
+
+  -- Days since last action
+  SELECT /* Notes-datamartUsers */ COALESCE(
+    EXTRACT(DAY FROM (CURRENT_DATE - d.date_id)),
+    0
+  )::INTEGER
+  INTO m_days_since_last_action
+  FROM dwh.facts f
+  JOIN dwh.dimension_days d ON f.action_dimension_id_date = d.dimension_day_id
+  WHERE f.action_dimension_id_user = m_dimension_user_id
+  ORDER BY d.date_id DESC
+  LIMIT 1;
+  
+  -- If no actions found, set to NULL (will be 0 due to COALESCE above)
+  IF m_days_since_last_action IS NULL THEN
+    m_days_since_last_action := 0;
+  END IF;
+
+  -- Collaboration patterns
+  WITH mentions_given AS (
+    SELECT COUNT(*) as cnt
+    FROM dwh.facts
+    WHERE action_dimension_id_user = m_dimension_user_id
+      AND action_comment = 'commented'
+      AND has_mention = TRUE
+  ),
+  mentions_received AS (
+    SELECT COUNT(*) as cnt
+    FROM dwh.facts f1
+    WHERE f1.action_comment = 'commented'
+      AND f1.has_mention = TRUE
+      AND EXISTS (
+        SELECT 1
+        FROM dwh.facts f2
+        WHERE f2.id_note = f1.id_note
+          AND f2.opened_dimension_id_user = m_dimension_user_id
+          AND f2.action_comment = 'opened'
+      )
+  ),
+  replies_count AS (
+    SELECT COUNT(DISTINCT f1.id_note) as cnt
+    FROM dwh.facts f1
+    WHERE f1.action_dimension_id_user = m_dimension_user_id
+      AND f1.action_comment = 'commented'
+      AND EXISTS (
+        SELECT 1
+        FROM dwh.facts f2
+        WHERE f2.id_note = f1.id_note
+          AND f2.action_comment = 'commented'
+          AND f2.action_at < f1.action_at
+      )
+  )
+  SELECT /* Notes-datamartUsers */ COALESCE(json_build_object(
+    'mentions_given', COALESCE(mg.cnt, 0),
+    'mentions_received', COALESCE(mr.cnt, 0),
+    'replies_count', COALESCE(rc.cnt, 0),
+    'collaboration_score', COALESCE(mg.cnt, 0) + COALESCE(mr.cnt, 0) + COALESCE(rc.cnt, 0)
+  ), '{"mentions_given":0,"mentions_received":0,"replies_count":0,"collaboration_score":0}'::json)
+  INTO m_collaboration_patterns
+  FROM mentions_given mg
+  CROSS JOIN mentions_received mr
+  CROSS JOIN replies_count rc;
+
   -- Updates user with new values.
   UPDATE dwh.datamartUsers
   SET id_contributor_type = m_id_contributor_type,
@@ -1439,6 +1608,11 @@ AS $proc$
    notes_resolved_last_30_days = m_notes_resolved_last_30_days
   , resolution_by_year = m_resolution_by_year
   , resolution_by_month = m_resolution_by_month
+  , application_usage_trends = m_application_usage_trends
+  , version_adoption_rates = m_version_adoption_rates
+  , user_response_time = m_user_response_time
+  , days_since_last_action = m_days_since_last_action
+  , collaboration_patterns = m_collaboration_patterns
   WHERE dimension_user_id = m_dimension_user_id;
 
   -- Only update year activity if procedure exists and years columns exist

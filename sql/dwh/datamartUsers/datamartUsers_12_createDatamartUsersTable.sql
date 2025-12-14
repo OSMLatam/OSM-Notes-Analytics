@@ -89,8 +89,13 @@ CREATE TABLE IF NOT EXISTS dwh.datamartUsers (
  hashtags_comments JSON,
  favorite_opening_hashtag VARCHAR(50),
  favorite_resolution_hashtag VARCHAR(50),
- opening_hashtag_count INTEGER DEFAULT 0,
- resolution_hashtag_count INTEGER DEFAULT 0
+  opening_hashtag_count INTEGER DEFAULT 0,
+  resolution_hashtag_count INTEGER DEFAULT 0,
+  application_usage_trends JSON,
+  version_adoption_rates JSON,
+  user_response_time DECIMAL(10,2),
+  days_since_last_action INTEGER,
+  collaboration_patterns JSON
 );
 COMMENT ON TABLE dwh.datamartUsers IS
   'Contains all precalculated statistical values for users';
@@ -252,6 +257,11 @@ COMMENT ON COLUMN dwh.datamartUsers.favorite_opening_hashtag IS 'Most frequently
 COMMENT ON COLUMN dwh.datamartUsers.favorite_resolution_hashtag IS 'Most frequently used resolution hashtag';
 COMMENT ON COLUMN dwh.datamartUsers.opening_hashtag_count IS 'Total count of opening hashtags used';
 COMMENT ON COLUMN dwh.datamartUsers.resolution_hashtag_count IS 'Total count of resolution hashtags used';
+COMMENT ON COLUMN dwh.datamartUsers.application_usage_trends IS 'JSON array of application usage trends by year: [{year, app_id, app_name, count, pct}]';
+COMMENT ON COLUMN dwh.datamartUsers.version_adoption_rates IS 'JSON array of version adoption rates by year: [{year, version, count, adoption_rate}]';
+COMMENT ON COLUMN dwh.datamartUsers.user_response_time IS 'Average time in days from note open to first comment by this user';
+COMMENT ON COLUMN dwh.datamartUsers.days_since_last_action IS 'Days since user last performed any action (opened, commented, closed, reopened)';
+COMMENT ON COLUMN dwh.datamartUsers.collaboration_patterns IS 'JSON object with collaboration metrics: {mentions_given, mentions_received, replies_count, collaboration_score}';
 
 CREATE TABLE IF NOT EXISTS dwh.badges (
  badge_id SERIAL,

@@ -2,6 +2,66 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2025-01-21] - High Priority Metrics Implementation
+
+### Added
+
+- **Application Usage Trends**: New metrics to track application usage patterns over time
+  - `application_usage_trends` (JSON): Application usage trends by year for countries and users
+  - `version_adoption_rates` (JSON): Version adoption rates by year for countries and users
+- **Community Health Metrics** (Countries):
+  - `notes_health_score` (DECIMAL): Overall notes health score (0-100) based on resolution rate, backlog size, and recent activity
+  - `new_vs_resolved_ratio` (DECIMAL): Ratio of new notes created vs resolved notes (last 30 days)
+- **User Behavior Metrics** (Users):
+  - `user_response_time` (DECIMAL): Average time in days from note open to first comment by user
+  - `days_since_last_action` (INTEGER): Days since user last performed any action
+  - `collaboration_patterns` (JSON): Collaboration metrics including mentions given/received, replies count, and collaboration score
+
+### Changed
+
+- Updated `datamartCountries` table: Added 4 new columns (77+ total metrics)
+- Updated `datamartUsers` table: Added 5 new columns (77+ total metrics)
+- Updated datamart procedures to calculate new metrics automatically
+- Updated documentation: `docs/Dashboard_Analysis.md`, `docs/Metric_Definitions.md`, `README.md`
+- Updated metric counts: 70+ → 77+ metrics per user/country
+
+### Testing
+
+- Added comprehensive test suite: `tests/unit/bash/datamart_high_priority_metrics.test.bats`
+- 23 new tests covering all new metrics
+- Tests validate column existence, data types, ranges, and JSON structure
+- Total test count: 168+ → 191+ tests
+
+### Technical Details
+
+- All new metrics are calculated during datamart update procedures
+- JSON metrics (`application_usage_trends`, `version_adoption_rates`, `collaboration_patterns`) use PostgreSQL JSON aggregation
+- Health score uses weighted formula: resolution_rate (40%) + backlog_ratio (30%) + recent_activity (30%)
+- New metrics are automatically exported to JSON (schemas have `additionalProperties: true`)
+- Schema hash detection will automatically detect changes for versioning
+
+### Documentation
+
+- Added complete metric definitions in `docs/Metric_Definitions.md`:
+  - Section 3.5: `application_usage_trends`
+  - Section 3.6: `version_adoption_rates`
+  - Section 7.6: `notes_health_score`
+  - Section 7.7: `new_vs_resolved_ratio`
+  - Section 8: User Behavior Metrics (3 new metrics)
+- Updated `docs/Dashboard_Analysis.md` with implementation status
+- Updated `README.md` with new metric counts
+
+### Files Modified
+
+- `sql/dwh/datamartCountries/datamartCountries_12_createDatamarCountriesTable.sql`
+- `sql/dwh/datamartCountries/datamartCountries_13_createProcedure.sql`
+- `sql/dwh/datamartUsers/datamartUsers_12_createDatamartUsersTable.sql`
+- `sql/dwh/datamartUsers/datamartUsers_13_createProcedure.sql`
+- `tests/unit/bash/datamart_high_priority_metrics.test.bats` (new)
+- `docs/Dashboard_Analysis.md`
+- `docs/Metric_Definitions.md`
+- `README.md`
+
 ## [2025-12-13] - Hybrid Strategy Improvements and Bug Fixes
 
 ### Fixed
