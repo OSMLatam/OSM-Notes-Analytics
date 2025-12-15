@@ -58,8 +58,8 @@ awk '
 # Execute SQL, ignoring errors about existing objects (tables may already exist from previous runs)
 "${psql_cmd[@]}" -f "${TMP_DDL}" 2>&1 | grep -vE "(already exists|NOTICE)" || true
 rm -f "${TMP_DDL}"
-HAS_PKS=$(psql -d "${DBNAME}" -tAc "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema='dwh' AND constraint_name='pk_users_dim')")
-HAS_FKS=$(psql -d "${DBNAME}" -tAc "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema='dwh' AND constraint_name='fk_region')")
+HAS_PKS=$("${psql_cmd[@]}" -tAc "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema='dwh' AND constraint_name='pk_users_dim')" 2>/dev/null || echo "f")
+HAS_FKS=$("${psql_cmd[@]}" -tAc "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema='dwh' AND constraint_name='fk_region')" 2>/dev/null || echo "f")
 
 MODE="ALL"
 if [[ "${HAS_PKS}" == "t" && "${HAS_FKS}" == "t" ]]; then
@@ -101,8 +101,8 @@ else
  "${psql_cmd[@]}" -f "${TMP_FUNCS_DDL}"
  rm -f "${TMP_FUNCS_DDL}"
 fi
-HAS_FACT_FK=$(psql -d "${DBNAME}" -tAc "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema='dwh' AND table_name='facts' AND constraint_name='fk_country')")
-HAS_FACT_IDX=$(psql -d "${DBNAME}" -tAc "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='dwh' AND indexname='facts_action_date')")
+HAS_FACT_FK=$("${psql_cmd[@]}" -tAc "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema='dwh' AND table_name='facts' AND constraint_name='fk_country')" 2>/dev/null || echo "f")
+HAS_FACT_IDX=$("${psql_cmd[@]}" -tAc "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='dwh' AND indexname='facts_action_date')" 2>/dev/null || echo "f")
 if [[ "${HAS_FACT_FK}" == "t" || "${HAS_FACT_IDX}" == "t" ]]; then
  TMP_41_DDL="$(mktemp)"
  awk -v skip_fk="${HAS_FACT_FK}" -v skip_idx="${HAS_FACT_IDX}" '
@@ -125,7 +125,7 @@ fi
 
 echo "[MOCK-ETL] Creating datamart tables..."
 # datamartCountries: skip PK if it already exists
-HAS_PK_DC=$(psql -d "${DBNAME}" -tAc "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema='dwh' AND table_name='datamartcountries' AND constraint_type='PRIMARY KEY')")
+HAS_PK_DC=$("${psql_cmd[@]}" -tAc "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema='dwh' AND table_name='datamartcountries' AND constraint_type='PRIMARY KEY')" 2>/dev/null || echo "f")
 if [[ "${HAS_PK_DC}" == "t" ]]; then
  TMP_DC12_DDL="$(mktemp)"
  awk '
@@ -142,10 +142,10 @@ else
 fi
 
 # datamartUsers: skip PK blocks that already exist
-HAS_PK_DU=$(psql -d "${DBNAME}" -tAc "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema='dwh' AND table_name='datamartusers' AND constraint_type='PRIMARY KEY')")
-HAS_PK_BADGES=$(psql -d "${DBNAME}" -tAc "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema='dwh' AND table_name='badges' AND constraint_type='PRIMARY KEY')")
-HAS_PK_BADGE_USERS=$(psql -d "${DBNAME}" -tAc "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema='dwh' AND table_name='badges_per_users' AND constraint_type='PRIMARY KEY')")
-HAS_PK_CONTR_TYPES=$(psql -d "${DBNAME}" -tAc "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema='dwh' AND table_name='contributor_types' AND constraint_type='PRIMARY KEY')")
+HAS_PK_DU=$("${psql_cmd[@]}" -tAc "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema='dwh' AND table_name='datamartusers' AND constraint_type='PRIMARY KEY')" 2>/dev/null || echo "f")
+HAS_PK_BADGES=$("${psql_cmd[@]}" -tAc "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema='dwh' AND table_name='badges' AND constraint_type='PRIMARY KEY')" 2>/dev/null || echo "f")
+HAS_PK_BADGE_USERS=$("${psql_cmd[@]}" -tAc "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema='dwh' AND table_name='badges_per_users' AND constraint_type='PRIMARY KEY')" 2>/dev/null || echo "f")
+HAS_PK_CONTR_TYPES=$("${psql_cmd[@]}" -tAc "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema='dwh' AND table_name='contributor_types' AND constraint_type='PRIMARY KEY')" 2>/dev/null || echo "f")
 if [[ "${HAS_PK_DU}" == "t" || "${HAS_PK_BADGES}" == "t" || "${HAS_PK_BADGE_USERS}" == "t" || "${HAS_PK_CONTR_TYPES}" == "t" ]]; then
  TMP_DU12_DDL="$(mktemp)"
  awk -v pk_du="${HAS_PK_DU}" -v pk_b="${HAS_PK_BADGES}" -v pk_bu="${HAS_PK_BADGE_USERS}" -v pk_ct="${HAS_PK_CONTR_TYPES}" '
