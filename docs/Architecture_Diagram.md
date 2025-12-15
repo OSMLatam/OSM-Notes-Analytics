@@ -329,7 +329,7 @@ sequenceDiagram
     SQL->>DM: Create datamartusers table
     Script->>SQL: Execute datamartUsers_32_populateDatamartUsersTable.sql
     SQL->>DWH: Read facts + dimensions
-    SQL->>SQL: Aggregate by user (70+ metrics)
+    SQL->>SQL: Aggregate by user (78+ metrics)
     SQL->>DM: Write aggregated data
     Script->>DM: Verify row counts
 ```

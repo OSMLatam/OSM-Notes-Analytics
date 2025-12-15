@@ -95,7 +95,7 @@ testing strategies, and development workflows.
 - Understanding core business concepts
 - Getting overview of available metrics
 - Communicating with non-technical stakeholders
-- See also: [Metric Definitions](Metric_Definitions.md) for complete 70+ metrics reference
+- See also: [Metric Definitions](Metric_Definitions.md) for complete 77+ (countries) and 78+ (users) metrics reference
 
 ---
 
@@ -103,7 +103,7 @@ testing strategies, and development workflows.
 
 **Metric Definitions - Complete Reference**
 
-- Comprehensive definitions for all 70+ metrics in datamarts
+- Comprehensive definitions for all 77+ (countries) and 78+ (users) metrics in datamarts
 - Detailed business definitions, formulas, and interpretations
 - Organized by category (Historical, Resolution, Applications, Content, Temporal, Geographic, etc.)
 - Metric summary tables
@@ -286,8 +286,9 @@ testing strategies, and development workflows.
    - `dimension_experience_levels` - User experience classification (newcomer to legend)
 
 3. **Datamart Tables:**
-   - `dwh.datamartCountries` - Country analytics
-   - `dwh.datamartUsers` - User analytics
+   - `dwh.datamartCountries` - Country analytics (77+ metrics)
+   - `dwh.datamartUsers` - User analytics (78+ metrics)
+   - `dwh.datamartGlobal` - Global statistics
 
 4. **Control Tables:**
    - `dwh.properties` - ETL metadata

@@ -336,7 +336,7 @@ flowchart TD
 - **Purpose**: Pre-compute aggregations
 - **Input**: data warehouse (facts + dimensions)
 - **Output**: Datamart tables
-- **Metrics**: 70+ metrics per user/country
+- **Metrics**: 77+ metrics per country, 78+ metrics per user
 - **Scripts**: `bin/dwh/datamartUsers/datamartUsers.sh`, `bin/dwh/datamartCountries/datamartCountries.sh`
 
 ### Process 7: Export to JSON

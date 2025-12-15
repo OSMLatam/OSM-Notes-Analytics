@@ -135,8 +135,8 @@ JSON Export → OSM-Notes-Viewer (Web Application)
    - **Partitioning**: Facts table partitioned by year for optimal performance - see [Partitioning Strategy](partitioning_strategy.md)
 
 3. **Datamarts**: Pre-computed aggregations:
-   - `dwh.datamartUsers` - One row per user with 70+ metrics
-   - `dwh.datamartCountries` - One row per country with 70+ metrics
+   - `dwh.datamartUsers` - One row per user with 78+ metrics
+   - `dwh.datamartCountries` - One row per country with 77+ metrics
    - `dwh.datamartGlobal` - Global statistics
 
 4. **Export**: Datamarts exported to JSON for web viewer consumption

@@ -280,3 +280,96 @@ Used internally by ETL orchestration.
 |--------|-------------|------|---------|-----|-------------|
 | key    | VARCHAR(16) | Y    |         |     | Property name |
 | value  | VARCHAR(26) | Y    |         |     | Property value |
+
+---
+
+## Datamarts
+
+The data warehouse includes pre-computed datamarts that aggregate metrics from the star schema for fast analytics queries. These datamarts are updated incrementally and provide ready-to-use metrics for dashboards and reports.
+
+### Table: dwh.datamartCountries
+
+Pre-computed analytics aggregated by country. Contains **77+ metrics** covering:
+- Historical counts (whole history, by year, by month)
+- Resolution metrics (average/median days to resolution, resolution rates)
+- Application statistics (usage patterns, mobile vs desktop)
+- Content quality metrics (comment length, URLs, mentions)
+- Community health metrics (backlog, health score, activity trends)
+- Temporal patterns (hour-of-week, day-of-week distributions)
+- Geographic patterns
+- Hashtag metrics
+
+**Key Columns:**
+- `dimension_country_id` (PK): Reference to country dimension
+- `country_name`, `country_name_en`, `country_name_es`: Country names
+- `iso_alpha2`, `iso_alpha3`: ISO codes
+- **77+ metric columns**: See [Metric Definitions](Metric_Definitions.md) for complete list
+
+**Update Procedure:** `dwh.update_datamart_country(dimension_country_id)`
+
+**Full Documentation:** See [Metric Definitions](Metric_Definitions.md#country-datamart-metrics-77-metrics)
+
+### Table: dwh.datamartUsers
+
+Pre-computed analytics aggregated by user. Contains **78+ metrics** covering:
+- Historical counts (whole history, by year, by month)
+- Resolution metrics (average/median days to resolution, resolution rates)
+- Application statistics (usage patterns, trends)
+- Content quality metrics (comment length, URLs, mentions)
+- User behavior patterns (response time, collaboration, activity)
+- Temporal patterns (hour-of-week, day-of-week distributions)
+- Geographic patterns
+- Hashtag metrics
+- User classification (experience level)
+
+**Key Columns:**
+- `dimension_user_id` (PK): Reference to user dimension
+- `user_id`: OSM user ID
+- `username`: Most recent username
+- **78+ metric columns**: See [Metric Definitions](Metric_Definitions.md) for complete list
+
+**Update Procedure:** `dwh.update_datamart_user(dimension_user_id)`
+
+**Full Documentation:** See [Metric Definitions](Metric_Definitions.md#user-datamart-metrics-78-metrics)
+
+### Table: dwh.datamartGlobal
+
+Pre-computed global statistics aggregating all countries and users.
+
+**Key Metrics:**
+- Total notes globally
+- Active countries/users
+- Global resolution rates
+- Global activity trends
+
+**Update Procedure:** `dwh.update_datamart_global()`
+
+---
+
+## Metric Categories
+
+The datamarts organize metrics into the following categories:
+
+1. **Historical Count Metrics**: Activity counts by time period (whole history, by year, by month)
+2. **Resolution Metrics**: Time to resolution, resolution rates, resolution trends
+3. **Application Statistics**: Tool usage patterns, version adoption, mobile vs desktop
+4. **Content Quality Metrics**: Comment analysis, URL usage, mentions
+5. **Temporal Pattern Metrics**: Hour-of-week, day-of-week distributions
+6. **Geographic Pattern Metrics**: Country-level aggregations
+7. **Community Health Metrics**: Backlog size, health score, activity trends
+8. **User Behavior Metrics**: Response time, collaboration patterns, activity levels
+9. **Hashtag Metrics**: Hashtag usage and trends
+10. **First/Last Action Metrics**: Temporal boundaries of activity
+11. **Current Period Metrics**: Recent activity (last 30 days, etc.)
+12. **User Classification Metrics**: Experience levels, activity classifications
+
+For complete metric definitions, formulas, and use cases, see [Metric Definitions](Metric_Definitions.md).
+
+---
+
+## Related Documentation
+
+- **Complete Metric Reference**: [Metric Definitions](Metric_Definitions.md) - Business definitions for all 77+ (countries) and 78+ (users) metrics
+- **Dashboard Analysis**: [Dashboard Analysis](Dashboard_Analysis.md) - Implementation status and recommendations
+- **Data Flow**: [Data Flow Diagrams](Data_Flow_Diagrams.md) - How data flows from base tables to datamarts
+- **Improvements History**: [DWH Improvements History](DWH_Improvements_History.md) - Evolution of the data warehouse
