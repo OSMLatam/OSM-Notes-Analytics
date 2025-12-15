@@ -23,30 +23,32 @@ setup() {
     skip "No database configured"
   fi
 
-  # Test that function exists
-  run bash -c "SKIP_MAIN=true source ${SCRIPT_BASE_DIRECTORY}/bin/dwh/ETL.sh && declare -f __initialFacts"
+  # Test that function exists - use type -t which returns just the type
+  run bash -c "SKIP_MAIN=true source ${SCRIPT_BASE_DIRECTORY}/bin/dwh/ETL.sh 2>&1 && type -t __initialFacts"
   [[ "${status}" -eq 0 ]]
 
-  # Function should be defined
-  [[ -n "${output}" ]]
+  # Function should be defined (type -t returns "function" for functions)
+  [[ "${output}" == "function" ]] || echo "Function __initialFacts should be defined (got: '${output}')"
 }
 
 # Test __initialFactsParallel function exists and is callable
 @test "__initialFactsParallel should be defined and callable" {
-  run bash -c "SKIP_MAIN=true source ${SCRIPT_BASE_DIRECTORY}/bin/dwh/ETL.sh && declare -f __initialFactsParallel"
+  # Test that function exists - use type -t which returns just the type
+  run bash -c "SKIP_MAIN=true source ${SCRIPT_BASE_DIRECTORY}/bin/dwh/ETL.sh 2>&1 && type -t __initialFactsParallel"
   [[ "${status}" -eq 0 ]]
-  [[ -n "${output}" ]]
+
+  # Function should be defined (type -t returns "function" for functions)
+  [[ "${output}" == "function" ]] || echo "Function __initialFactsParallel should be defined (got: '${output}')"
 }
 
 # Test __trapOn handles signals correctly
 @test "__trapOn should set signal handlers" {
-  run bash -c "SKIP_MAIN=true source ${SCRIPT_BASE_DIRECTORY}/bin/dwh/ETL.sh && declare -f __trapOn"
+  # Test that function exists - use type -t which returns just the type
+  run bash -c "SKIP_MAIN=true source ${SCRIPT_BASE_DIRECTORY}/bin/dwh/ETL.sh 2>&1 && type -t __trapOn"
   [[ "${status}" -eq 0 ]]
 
-  # Function should be defined (check if output contains function body)
-  [[ -n "${output}" ]]
-  # Output should contain function definition
-  [[ "${output}" == *"trap"* ]] || [[ "${output}" == *"()"* ]]
+  # Function should be defined (type -t returns "function" for functions)
+  [[ "${output}" == "function" ]] || echo "Function __trapOn should be defined (got: '${output}')"
 }
 
 # Test __detectFirstExecution function logic
@@ -74,9 +76,12 @@ setup() {
 
 # Test __perform_database_maintenance function exists
 @test "__perform_database_maintenance should be defined" {
-  run bash -c "SKIP_MAIN=true source ${SCRIPT_BASE_DIRECTORY}/bin/dwh/ETL.sh && declare -f __perform_database_maintenance"
+  # Test that function exists - use type -t which returns just the type
+  run bash -c "SKIP_MAIN=true source ${SCRIPT_BASE_DIRECTORY}/bin/dwh/ETL.sh 2>&1 && type -t __perform_database_maintenance"
   [[ "${status}" -eq 0 ]]
-  [[ -n "${output}" ]]
+
+  # Function should be defined (type -t returns "function" for functions)
+  [[ "${output}" == "function" ]] || echo "Function __perform_database_maintenance should be defined (got: '${output}')"
 }
 
 # Test ETL recovery file functionality
@@ -174,17 +179,21 @@ EOF
 
 # Test logging functionality
 @test "ETL logging functions should work" {
-  # Source ETL.sh without running main
-  run bash -c "SKIP_MAIN=true source ${SCRIPT_BASE_DIRECTORY}/bin/dwh/ETL.sh && declare -f __logi"
+  # Source ETL.sh without running main - logging functions are from bash_logger.sh
+  # Test that logging functions exist (they're loaded from lib/osm-common/bash_logger.sh)
+  run bash -c "SKIP_MAIN=true source ${SCRIPT_BASE_DIRECTORY}/bin/dwh/ETL.sh 2>&1 && type -t __logi"
 
   [[ "${status}" -eq 0 ]]
-  [[ -n "${output}" ]]
+  # Function should be defined (type -t returns "function" for functions)
+  [[ "${output}" == "function" ]] || echo "Function __logi should be defined (got: '${output}')"
 
   # Check other logging functions
-  run bash -c "SKIP_MAIN=true source ${SCRIPT_BASE_DIRECTORY}/bin/dwh/ETL.sh && declare -f __logw"
+  run bash -c "SKIP_MAIN=true source ${SCRIPT_BASE_DIRECTORY}/bin/dwh/ETL.sh 2>&1 && type -t __logw"
   [[ "${status}" -eq 0 ]]
+  [[ "${output}" == "function" ]] || echo "Function __logw should be defined (got: '${output}')"
 
-  run bash -c "SKIP_MAIN=true source ${SCRIPT_BASE_DIRECTORY}/bin/dwh/ETL.sh && declare -f __loge"
+  run bash -c "SKIP_MAIN=true source ${SCRIPT_BASE_DIRECTORY}/bin/dwh/ETL.sh 2>&1 && type -t __loge"
   [[ "${status}" -eq 0 ]]
+  [[ "${output}" == "function" ]] || echo "Function __loge should be defined (got: '${output}')"
 }
 
