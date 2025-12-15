@@ -8,7 +8,25 @@ set -euo pipefail
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DBNAME="${TEST_DBNAME:-${DBNAME:-osm_notes}}"
 
+# Configure PostgreSQL connection parameters from environment variables
+# This allows the script to work in both local (peer auth) and CI/CD (password auth) environments
+if [[ -n "${TEST_DBHOST:-}" ]]; then
+ export PGHOST="${TEST_DBHOST}"
+fi
+if [[ -n "${TEST_DBPORT:-}" ]]; then
+ export PGPORT="${TEST_DBPORT}"
+fi
+if [[ -n "${TEST_DBUSER:-}" ]]; then
+ export PGUSER="${TEST_DBUSER}"
+fi
+if [[ -n "${TEST_DBPASSWORD:-}" ]]; then
+ export PGPASSWORD="${TEST_DBPASSWORD}"
+fi
+
 echo "[MOCK-ETL] Using database: ${DBNAME}"
+if [[ -n "${PGHOST:-}" ]]; then
+ echo "[MOCK-ETL] Connection: ${PGUSER:-$(whoami)}@${PGHOST}:${PGPORT:-5432}/${DBNAME}"
+fi
 
 psql_cmd=(psql -d "${DBNAME}" -v ON_ERROR_STOP=1)
 
