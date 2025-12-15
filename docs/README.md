@@ -133,6 +133,113 @@ testing strategies, and development workflows.
 
 ---
 
+#### [Dashboard_Analysis.md](Dashboard_Analysis.md)
+
+**Dashboard Analysis - Data Availability and Recommendations**
+
+- Analysis of data available in star schema vs datamarts
+- Dashboard implementation recommendations
+- Gap analysis and enhancement suggestions
+- Recent enhancements documentation
+
+**Contents:**
+- Star schema data availability
+- Datamart metrics overview (77+ for countries, 78+ for users)
+- Dashboard-ready data analysis
+- Implementation phases and recommendations
+- Completeness checklist
+
+**Audience:** Dashboard developers, data analysts, product managers
+
+**When to read:**
+- Planning dashboard implementation
+- Understanding available metrics
+- Identifying data gaps
+- See also: [Dashboard Implementation Guide](Dashboard_Implementation_Guide.md) for implementation details
+
+---
+
+#### [Dashboard_Implementation_Guide.md](Dashboard_Implementation_Guide.md)
+
+**Dashboard Implementation Guide - Step-by-Step Instructions**
+
+- Complete guide for building dashboards
+- SQL queries and frontend integration examples
+- Performance optimization tips
+- Best practices and troubleshooting
+
+**Contents:**
+- 8 dashboard types with complete examples
+- SQL queries for each dashboard type
+- JavaScript/frontend integration code
+- Performance optimization strategies
+- Error handling and best practices
+
+**Audience:** Frontend developers, dashboard builders, full-stack developers
+
+**When to read:**
+- Building dashboards from scratch
+- Integrating with frontend applications
+- Optimizing dashboard performance
+- See also: [Dashboard Analysis](Dashboard_Analysis.md) for data availability
+
+---
+
+#### [Use_Cases_and_Personas.md](Use_Cases_and_Personas.md)
+
+**User Personas and Use Cases - User-Centered Design**
+
+- 6 detailed user personas with backgrounds and goals
+- 18+ specific use cases organized by persona
+- Query patterns and dashboard recommendations
+- Common workflows and best practices
+
+**Contents:**
+- Individual Contributor persona
+- Community Leader persona
+- Data Analyst persona
+- Campaign Organizer persona
+- Researcher persona
+- System Administrator persona
+- Use cases for each persona
+- Query patterns and recommendations
+
+**Audience:** Product managers, UX designers, developers, stakeholders
+
+**When to read:**
+- Understanding user needs
+- Designing features and dashboards
+- Prioritizing development work
+- See also: [Dashboard Implementation Guide](Dashboard_Implementation_Guide.md) for implementation
+
+---
+
+#### [PERFORMANCE_BASELINES.md](PERFORMANCE_BASELINES.md)
+
+**Query Performance Baselines - Performance Expectations**
+
+- Expected query times for common operations
+- Performance optimization tips and strategies
+- When to use datamarts vs facts table
+- Troubleshooting slow queries
+
+**Contents:**
+- 8 categories of common queries
+- Expected execution times for each query type
+- Performance optimization strategies
+- Monitoring and troubleshooting guide
+- Best practices for query performance
+
+**Audience:** Developers, data analysts, system administrators
+
+**When to read:**
+- Understanding query performance expectations
+- Optimizing dashboard queries
+- Troubleshooting slow queries
+- See also: [Dashboard Implementation Guide](Dashboard_Implementation_Guide.md) for query examples
+
+---
+
 #### [Architecture_Diagram.md](Architecture_Diagram.md)
 
 **Architecture Diagrams - System Structure**
@@ -641,12 +748,20 @@ For detailed navigation paths by role, see [Recommended Reading Paths by Role](#
   - Country profiles
   - Statistics
 
-**Step 3: Advanced Topics** (15 min)
-- **[Dashboard_Analysis.md](./Dashboard_Analysis.md)** - Available metrics
+**Step 3: Advanced Topics** (45 min)
+- **[Dashboard_Analysis.md](./Dashboard_Analysis.md)** (15 min) - Available metrics
   - Resolution metrics
   - Application statistics
   - Content quality metrics
   - Community health indicators
+- **[Dashboard_Implementation_Guide.md](./Dashboard_Implementation_Guide.md)** (15 min) - Building dashboards
+  - SQL query examples
+  - Frontend integration
+  - Performance optimization
+- **[Use_Cases_and_Personas.md](./Use_Cases_and_Personas.md)** (15 min) - User needs
+  - User personas
+  - Use cases
+  - Query patterns
 
 ### For DevOps/SRE (~2.5 hours total)
 
@@ -665,11 +780,17 @@ For detailed navigation paths by role, see [Recommended Reading Paths by Role](#
   - Backup strategies
   - Performance optimization
 
-**Step 3: Monitoring and Troubleshooting** (45 min)
+**Step 3: Monitoring and Troubleshooting** (60 min)
 - **[Troubleshooting_Guide.md](./Troubleshooting_Guide.md)** (30 min) - Problem resolution
   - Common issues
   - Diagnostic commands
   - Recovery procedures
+- **[PERFORMANCE_BASELINES.md](./PERFORMANCE_BASELINES.md)** (15 min) - Query performance expectations
+  - Performance baselines
+  - Optimization tips
+- **[sql/dwh/datamartPerformance/README.md](../sql/dwh/datamartPerformance/README.md)** (15 min) - Performance monitoring
+  - Datamart update timing
+  - Performance analysis queries
 - **[CI_CD_Guide.md](./CI_CD_Guide.md)** (15 min) - CI/CD pipelines
 
 ### For System Administrators (~2 hours total)
@@ -888,6 +1009,10 @@ This documentation structure was established: 2025-10-14
 
 **Major Updates:**
 
+- 2025-12-14: Added Dashboard Implementation Guide, Use Cases and Personas, Performance Baselines
+- 2025-12-14: Added Performance Monitoring system documentation
+- 2025-12-14: Updated metric counts (77+ for countries, 78+ for users)
+- 2025-12-14: Updated test counts (197+ tests)
 - 2025-10-14: Initial comprehensive documentation structure
 - 2025-10-13: Added CI/CD Guide
 - 2025-10-12: Enhanced testing documentation

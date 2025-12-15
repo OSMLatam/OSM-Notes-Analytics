@@ -1,6 +1,6 @@
 # Metric Definitions - Complete Reference
 
-This document provides comprehensive business definitions for all 77+ metrics available in the OSM-Notes-Analytics datamarts. Each metric includes business name, definition, calculation formula, unit, interpretation, and use cases.
+This document provides comprehensive business definitions for all metrics available in the OSM-Notes-Analytics datamarts (77+ metrics for countries, 78+ metrics for users). Each metric includes business name, definition, calculation formula, unit, interpretation, and use cases.
 
 ## Table of Contents
 
@@ -21,7 +21,7 @@ This document provides comprehensive business definitions for all 77+ metrics av
   - [11. Current Period Metrics](#11-current-period-metrics)
   - [12. User Classification Metrics](#12-user-classification-metrics)
 - [Metric Summary Table](#metric-summary-table)
-  - [User Datamart Metrics (77+ metrics)](#user-datamart-metrics-77-metrics)
+  - [User Datamart Metrics (78+ metrics)](#user-datamart-metrics-78-metrics)
   - [Country Datamart Metrics (77+ metrics)](#country-datamart-metrics-77-metrics)
 - [Metric Calculation Details](#metric-calculation-details)
 - [Metric Interpretation Guide](#metric-interpretation-guide)
@@ -45,7 +45,9 @@ The datamarts contain pre-computed metrics organized into categories:
 - **User Behavior**: User responsiveness and collaboration patterns
 - **Hashtag Metrics**: Campaign and organization tracking
 
-**Total Metrics**: 78+ per user/country (8 metrics including notes_opened_but_not_closed_by_user added December 2025)
+**Total Metrics**: 
+- **77+ metrics** per country
+- **78+ metrics** per user (includes `notes_opened_but_not_closed_by_user` added December 2025)
 
 ---
 
@@ -1361,7 +1363,7 @@ Metrics for current time periods (month, day).
 
 ## Metric Summary Table
 
-### User Datamart Metrics (77+ metrics)
+### User Datamart Metrics (78+ metrics)
 
 | Category | Metric Count | Examples |
 |----------|--------------|----------|
@@ -1376,7 +1378,7 @@ Metrics for current time periods (month, day).
 | First/Last Actions | 8 | `date_starting_creating_notes`, `first_open_note_id`, `lastest_open_note_id`, etc. |
 | User Classification | 1 | `id_contributor_type` |
 
-**Total**: 77+ metrics per user
+**Total**: 78+ metrics per user (includes `notes_opened_but_not_closed_by_user`)
 
 ### Country Datamart Metrics (77+ metrics)
 

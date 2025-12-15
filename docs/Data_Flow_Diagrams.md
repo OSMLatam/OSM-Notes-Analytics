@@ -237,8 +237,8 @@ flowchart TD
 ### data warehouse (dwh schema)
 - **dwh.facts**: Central fact table (partitioned by year)
 - **dwh.dimension_***: Dimension tables (users, countries, days, etc.)
-- **dwh.datamartusers**: User analytics (70+ metrics)
-- **dwh.datamartcountries**: Country analytics (70+ metrics)
+- **dwh.datamartusers**: User analytics (78+ metrics)
+- **dwh.datamartcountries**: Country analytics (77+ metrics)
 - **dwh.datamartglobal**: Global statistics
 
 ### Export Files
@@ -278,7 +278,7 @@ flowchart TD
 ### Flow 6: data warehouse → Datamarts
 - **Content**: Aggregated metrics
 - **Transformation**: Group by user, country, or global
-- **Output**: Pre-computed analytics (70+ metrics per entity)
+- **Output**: Pre-computed analytics (77+ metrics per country, 78+ metrics per user)
 
 ### Flow 7: Datamarts → JSON Export
 - **Content**: Datamart rows converted to JSON

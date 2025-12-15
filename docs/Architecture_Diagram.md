@@ -196,7 +196,7 @@ graph TB
         USER_DATAMART[datamartUsers.sh<br/>Bash Script]
         COUNTRY_DATAMART[datamartCountries.sh<br/>Bash Script]
         GLOBAL_DATAMART[datamartGlobal.sh<br/>Bash Script]
-        AGGREGATION_SQL[Aggregation SQL<br/>70+ Metrics]
+        AGGREGATION_SQL[Aggregation SQL<br/>77+ (countries)<br/>78+ (users)]
     end
     
     subgraph Datamart_Storage["Datamart Storage"]

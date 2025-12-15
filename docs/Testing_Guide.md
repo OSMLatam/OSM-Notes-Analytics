@@ -2,11 +2,11 @@
 
 ## Overview
 
-This comprehensive guide covers all aspects of testing in the OSM-Notes-Analytics project. The test suite includes **170+ tests** organized into unit tests, integration tests, and quality validation tests.
+This comprehensive guide covers all aspects of testing in the OSM-Notes-Analytics project. The test suite includes **197+ tests** organized into unit tests, integration tests, and quality validation tests.
 
 **Last Updated**: 2025-12-14  
 **Test Framework**: BATS (Bash Automated Testing System)  
-**Total Tests**: 170+ tests across 17 test files
+**Total Tests**: 197+ tests across 18 test files (includes new performance monitoring tests)
 
 ---
 
@@ -70,7 +70,7 @@ bats tests/unit/bash/datamart_high_priority_metrics.test.bats
 ```
 tests/
 ├── unit/                          # Unit tests
-│   ├── bash/                      # Bash script unit tests (14 files)
+│   ├── bash/                      # Bash script unit tests (15 files)
 │   │   ├── ETL_enhanced.test.bats
 │   │   ├── ETL_integration.test.bats
 │   │   ├── ETL_internal_functions.test.bats
@@ -114,7 +114,7 @@ tests/
 
 **Purpose**: Test individual components in isolation
 
-**Bash Unit Tests** (14 files, ~140+ tests):
+**Bash Unit Tests** (15 files, ~180+ tests):
 - **ETL Tests**: `ETL_enhanced.test.bats`, `ETL_integration.test.bats`, `ETL_internal_functions.test.bats`
   - ETL script functions
   - ETL database integration
@@ -202,7 +202,7 @@ export DBNAME="osm_notes_test"
 **What it does**:
 1. Sets up test database with mock data (`run_mock_etl.sh`)
 2. Executes all BATS test files:
-   - `tests/unit/bash/*.test.bats` (14 files)
+   - `tests/unit/bash/*.test.bats` (15 files, includes performance monitoring tests)
    - `tests/integration/*.test.bats` (3 files)
 3. Shows test results and summary
 
@@ -707,9 +707,9 @@ See [tests/performance/README.md](../tests/performance/README.md) for details.
 
 ## Summary
 
-The OSM-Notes-Analytics test suite provides comprehensive coverage with **170+ tests** across:
+The OSM-Notes-Analytics test suite provides comprehensive coverage with **197+ tests** across:
 
-- ✅ **14 Bash unit test files** (~140+ tests)
+- ✅ **15 Bash unit test files** (~180+ tests)
 - ✅ **3 Integration test files** (~20+ tests)
 - ✅ **3 SQL unit test files** (~10+ tests)
 - ✅ **Quality validation** (syntax, formatting, structure)
