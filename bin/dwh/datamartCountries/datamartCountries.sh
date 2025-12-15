@@ -121,6 +121,15 @@ function __show_help {
  exit "${ERROR_HELP_MESSAGE}"
 }
 
+# Wrapper for psql that sets application_name for better process identification
+# Usage: __psql_with_appname [appname] [psql_args...]
+# If appname is not provided, uses BASENAME (script name without .sh)
+function __psql_with_appname {
+ local appname="${1:-${BASENAME}}"
+ shift
+ PGAPPNAME="${appname}" psql "$@"
+}
+
 # Checks prerequisites to run the script.
 function __checkPrereqs {
  __log_start
@@ -161,7 +170,7 @@ function __checkPrereqs {
 # Creates base tables that hold the whole history.
 function __createBaseTables {
  __log_start
- psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -f "${CREATE_TABLES_FILE}"
+ __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -f "${CREATE_TABLES_FILE}"
  __log_finish
 }
 
@@ -169,7 +178,7 @@ function __createBaseTables {
 function __checkBaseTables {
  __log_start
  set +e
- psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -f "${CHECK_OBJECTS_FILE}"
+ __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -f "${CHECK_OBJECTS_FILE}"
  RET=${?}
  set -e
  if [[ "${RET}" -ne 0 ]]; then
@@ -180,14 +189,14 @@ function __checkBaseTables {
   RET=0
  fi
  set +e
- psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -f "${CREATE_PROCEDURES_FILE}"
+ __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -f "${CREATE_PROCEDURES_FILE}"
  local proc_ret=${?}
  set -e
  if [[ "${proc_ret}" -ne 0 ]]; then
   __loge "Failed to create procedures, but continuing..."
  fi
  set +e
- psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -f "${LAST_YEAR_ACTITIES_SCRIPT}"
+ __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -f "${LAST_YEAR_ACTITIES_SCRIPT}"
  local last_year_ret=${?}
  set -e
  if [[ "${last_year_ret}" -ne 0 ]]; then
@@ -207,7 +216,7 @@ function __addYears {
   export YEAR
   set +e
   # shellcheck disable=SC2016
-  psql -d "${DBNAME_DWH}" -c "$(envsubst '$YEAR' < "${ADD_YEARS_SCRIPT}" \
+  __psql_with_appname -d "${DBNAME_DWH}" -c "$(envsubst '$YEAR' < "${ADD_YEARS_SCRIPT}" \
    || true)" 2>&1
   set -e
  done
@@ -217,7 +226,7 @@ function __addYears {
 # Processes the notes and comments.
 function __processNotesCountries {
  __log_start
- psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -f "${POPULATE_FILE}" 2>&1
+ __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -f "${POPULATE_FILE}" 2>&1
  __log_finish
 }
 

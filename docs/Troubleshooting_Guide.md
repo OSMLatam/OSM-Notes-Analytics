@@ -176,7 +176,15 @@ free -h
 df -h
 
 # Check database activity
-psql -d "${DBNAME:-osm_notes}" -c "SELECT pid, state, query FROM pg_stat_activity WHERE application_name LIKE '%ETL%';"
+# All scripts now use descriptive application names for better identification
+# This makes it easy to identify which script is running each query
+psql -d "${DBNAME:-osm_notes}" -c "SELECT pid, application_name, state, query FROM pg_stat_activity WHERE application_name IN ('ETL', 'datamartUsers', 'datamartCountries', 'datamartGlobal') OR application_name LIKE 'ETL-year-%' OR application_name LIKE 'datamartUsers-%';"
+
+# Monitor specific ETL year processes
+psql -d "${DBNAME:-osm_notes}" -c "SELECT pid, application_name, state, now() - state_change AS duration, query FROM pg_stat_activity WHERE application_name LIKE 'ETL-year-%' ORDER BY application_name;"
+
+# Monitor datamart user processing
+psql -d "${DBNAME:-osm_notes}" -c "SELECT pid, application_name, state, now() - state_change AS duration, query FROM pg_stat_activity WHERE application_name LIKE 'datamartUsers-%' ORDER BY application_name;"
 ```
 
 **Solutions:**

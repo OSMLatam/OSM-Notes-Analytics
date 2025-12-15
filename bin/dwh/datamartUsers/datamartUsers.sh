@@ -125,6 +125,15 @@ function __show_help {
  exit "${ERROR_HELP_MESSAGE}"
 }
 
+# Wrapper for psql that sets application_name for better process identification
+# Usage: __psql_with_appname [appname] [psql_args...]
+# If appname is not provided, uses BASENAME (script name without .sh)
+function __psql_with_appname {
+ local appname="${1:-${BASENAME}}"
+ shift
+ PGAPPNAME="${appname}" psql "$@"
+}
+
 # Checks prerequisites to run the script.
 function __checkPrereqs {
  __log_start
@@ -167,7 +176,7 @@ function __checkPrereqs {
 # Creates base tables that hold the whole history.
 function __createBaseTables {
  __log_start
- psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -f "${POSTGRES_12_CREATE_TABLES_FILE}"
+ __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -f "${POSTGRES_12_CREATE_TABLES_FILE}"
  PROCESS_OLD_USERS=yes
  __log_finish
 }
@@ -176,7 +185,7 @@ function __createBaseTables {
 function __checkBaseTables {
  __log_start
  set +e
- psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -f "${POSTGRES_11_CHECK_OBJECTS_FILE}"
+ __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -f "${POSTGRES_11_CHECK_OBJECTS_FILE}"
  RET=${?}
  set -e
  if [[ "${RET}" -ne 0 ]]; then
@@ -187,7 +196,7 @@ function __checkBaseTables {
   RET=0
  fi
  set +e
- psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
+ __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_13_CREATE_PROCEDURES_FILE}"
  local proc_ret=${?}
  set -e
@@ -195,7 +204,7 @@ function __checkBaseTables {
   __loge "Failed to create procedures, but continuing..."
  fi
  set +e
- psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
+ __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_14_LAST_YEAR_ACTITIES_SCRIPT}"
  local last_year_ret=${?}
  set -e
@@ -216,7 +225,7 @@ function __addYears {
   export YEAR
   set +e
   # shellcheck disable=SC2016
-  psql -d "${DBNAME_DWH}" -c "$(envsubst '$YEAR' \
+  __psql_with_appname -d "${DBNAME_DWH}" -c "$(envsubst '$YEAR' \
    < "${POSTGRES_21_ADD_YEARS_SCRIPT}" || true)" 2>&1
   set -e
  done
@@ -226,7 +235,7 @@ function __addYears {
 # Processes initial batch of users.
 function __processOldUsers {
  __log_start
- MAX_USER_ID=$(psql -d "${DBNAME_DWH}" -Atq \
+ MAX_USER_ID=$(__psql_with_appname -d "${DBNAME_DWH}" -Atq \
   -c "SELECT MAX(user_id) FROM dwh.dimension_users" -v ON_ERROR_STOP=1)
  MAX_USER_ID=$(("MAX_USER_ID" + 1))
 
@@ -252,7 +261,7 @@ function __processOldUsers {
    export HIGH_VALUE
    set +e
    # shellcheck disable=SC2016
-   psql -d "${DBNAME_DWH}" -c "$(envsubst '$LOWER_VALUE,$HIGH_VALUE' \
+   __psql_with_appname "datamartUsers-batch-${LOWER_VALUE}-${HIGH_VALUE}" -d "${DBNAME_DWH}" -c "$(envsubst '$LOWER_VALUE,$HIGH_VALUE' \
     < "${POSTGRES_31_POPULATE_OLD_USERS_FILE}" || true)" \
     >> "${LOG_FILENAME}.${BASHPID}" 2>&1
    set -e
@@ -289,7 +298,7 @@ function __processNotesUser {
 
  # Get list of modified users to process
  local user_ids
- user_ids=$(psql -d "${DBNAME_DWH}" -Atq -c "
+ user_ids=$(__psql_with_appname -d "${DBNAME_DWH}" -Atq -c "
   SELECT DISTINCT f.action_dimension_id_user
   FROM dwh.facts f
    JOIN dwh.dimension_users u
@@ -306,8 +315,8 @@ function __processNotesUser {
   if [[ -n "${user_id}" ]]; then
    (
     __logi "Processing user ${user_id} (PID: $$)"
-    psql -d "${DBNAME_DWH}" -c "CALL dwh.update_datamart_user(${user_id});" 2>&1
-    psql -d "${DBNAME_DWH}" -c "UPDATE dwh.dimension_users SET modified = FALSE WHERE dimension_user_id = ${user_id};" 2>&1
+    __psql_with_appname "datamartUsers-user-${user_id}" -d "${DBNAME_DWH}" -c "CALL dwh.update_datamart_user(${user_id});" 2>&1
+    __psql_with_appname "datamartUsers-user-${user_id}" -d "${DBNAME_DWH}" -c "UPDATE dwh.dimension_users SET modified = FALSE WHERE dimension_user_id = ${user_id};" 2>&1
     __logi "Finished user ${user_id} (PID: $$)"
    ) &
    pids+=($!)

@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2025-12-15] - PostgreSQL Process Identification Enhancement
+
+### Changed
+
+- **PostgreSQL Application Name**: All scripts now set `PGAPPNAME` to display script names instead of "psql" in `pg_stat_activity`
+  - `ETL.sh` processes show as `ETL` instead of `psql`
+  - Parallel year loads show as `ETL-year-2017`, `ETL-year-2018`, etc. for better identification
+  - `datamartUsers.sh` shows as `datamartUsers` with specific names for parallel batches (`datamartUsers-batch-1-1000`, `datamartUsers-user-123`)
+  - `datamartCountries.sh` shows as `datamartCountries`
+  - `datamartGlobal.sh` shows as `datamartGlobal`
+- Improved process monitoring: All PostgreSQL connections now use descriptive application names for easier identification in `pg_stat_activity`
+
+### Technical Details
+
+- Added `__psql_with_appname()` helper function to all main scripts
+- Function sets `PGAPPNAME` environment variable before executing `psql`
+- Defaults to script basename (without `.sh` extension) if no custom name provided
+- Parallel processes use descriptive names (e.g., `ETL-year-2017`, `datamartUsers-batch-1-1000`)
+
+### Files Modified
+
+- `bin/dwh/ETL.sh`: Added helper function and updated all `psql` calls
+- `bin/dwh/datamartUsers/datamartUsers.sh`: Added helper function and updated all `psql` calls
+- `bin/dwh/datamartCountries/datamartCountries.sh`: Added helper function and updated all `psql` calls
+- `bin/dwh/datamartGlobal/datamartGlobal.sh`: Added helper function and updated all `psql` calls
+
+### Documentation
+
+- Updated `docs/Troubleshooting_Guide.md`: Enhanced monitoring queries to use new application names
+
+---
+
 ## [2025-12-14] - User Behavior Metric Completion
 
 ### Added
