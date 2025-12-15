@@ -8,8 +8,8 @@
 load "../../test_helper.bash"
 
 # Test configuration
-TEST_INGESTION_DB="osm_notes_test_ingestion"
-TEST_ANALYTICS_DB="osm_notes_test_analytics"
+TEST_INGESTION_DB="osm_notes_dwh_test1"
+TEST_ANALYTICS_DB="osm_notes_dwh_test2"
 
 # Helper: Wait for database to be ready
 wait_for_db() {
@@ -138,10 +138,15 @@ EOF
 
 # Test: copyBaseTables.sh copies all tables correctly
 @test "copyBaseTables.sh copies all base tables" {
+ # Ensure databases are ready
+ wait_for_db "${TEST_INGESTION_DB}" || skip "Ingestion DB not ready"
+ wait_for_db "${TEST_ANALYTICS_DB}" || skip "Analytics DB not ready"
+
  # Set environment variables for script
  export DBNAME_INGESTION="${TEST_INGESTION_DB}"
  export DBNAME_DWH="${TEST_ANALYTICS_DB}"
  # Don't set DB_USER_* to use peer authentication in tests
+ # Unset before running script to override defaults from etc/properties.sh
  unset DB_USER_INGESTION DB_USER_DWH DB_USER
 
  # Run copy script

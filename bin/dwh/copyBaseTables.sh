@@ -20,6 +20,17 @@ readonly SCRIPT_BASE_DIRECTORY
 # shellcheck disable=SC1091
 source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/bash_logger.sh"
 
+# Save original state of user variables before loading properties
+# This allows tests to unset them for peer authentication
+USER_INGESTION_WAS_UNSET=false
+USER_DWH_WAS_UNSET=false
+if [[ -z "${DB_USER_INGESTION+x}" ]]; then
+ USER_INGESTION_WAS_UNSET=true
+fi
+if [[ -z "${DB_USER_DWH+x}" ]]; then
+ USER_DWH_WAS_UNSET=true
+fi
+
 # Load properties
 # shellcheck disable=SC1091
 source "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh"
@@ -35,8 +46,17 @@ fi
 INGESTION_DB="${DBNAME_INGESTION:-osm_notes}"
 ANALYTICS_DB="${DBNAME_DWH:-osm_notes}"
 # Only set user if explicitly provided (allows peer authentication when not set)
-INGESTION_USER="${DB_USER_INGESTION:-}"
-ANALYTICS_USER="${DB_USER_DWH:-}"
+# If variables were unset before loading properties, restore empty state for peer auth
+if [[ "${USER_INGESTION_WAS_UNSET}" == "true" ]]; then
+ INGESTION_USER=""
+else
+ INGESTION_USER="${DB_USER_INGESTION:-}"
+fi
+if [[ "${USER_DWH_WAS_UNSET}" == "true" ]]; then
+ ANALYTICS_USER=""
+else
+ ANALYTICS_USER="${DB_USER_DWH:-}"
+fi
 
 # Tables to copy (in order of dependencies)
 TABLES=("countries" "users" "notes" "note_comments" "note_comments_text")

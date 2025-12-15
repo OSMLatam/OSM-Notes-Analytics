@@ -30,9 +30,45 @@ setup() {
  fi
 
  # Prefer existing DB configured by runner; avoid creating/dropping DBs
+ # Use DBNAME from test environment (set by test runner) or default to 'dwh'
  if [[ -z "${TEST_DBNAME:-}" ]]; then
-  export TEST_DBNAME="${DBNAME:-osm_notes_test}"
+  export TEST_DBNAME="${DBNAME:-dwh}"
  fi
+
+ # Setup database: create schema and tables if needed
+ local dbname="${TEST_DBNAME:-${DBNAME:-dwh}}"
+ 
+ # Create dwh schema if it doesn't exist
+ psql -d "${dbname}" -c "CREATE SCHEMA IF NOT EXISTS dwh;" > /dev/null 2>&1 || true
+
+ # Create datamartGlobal table if it doesn't exist
+ if ! psql -d "${dbname}" -tAc "SELECT 1 FROM information_schema.tables WHERE table_schema='dwh' AND table_name='datamartglobal';" | grep -q 1; then
+  psql -d "${dbname}" -f "${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartGlobal/datamartGlobal_12_createTable.sql" > /dev/null 2>&1 || true
+ fi
+
+ # Ensure max_date_global_processed table exists
+ if ! psql -d "${dbname}" -tAc "SELECT 1 FROM information_schema.tables WHERE table_schema='dwh' AND table_name='max_date_global_processed';" | grep -q 1; then
+  psql -d "${dbname}" -c "
+   CREATE TABLE IF NOT EXISTS dwh.max_date_global_processed (
+     date DATE NOT NULL DEFAULT CURRENT_DATE
+   );
+   COMMENT ON TABLE dwh.max_date_global_processed IS 'Max date for global processed, to move the activities';
+  " > /dev/null 2>&1 || true
+ fi
+
+ # Ensure initial record exists in datamartGlobal
+ psql -d "${dbname}" -c "
+  INSERT INTO dwh.datamartGlobal (dimension_global_id)
+  SELECT 1
+  WHERE NOT EXISTS (SELECT 1 FROM dwh.datamartGlobal WHERE dimension_global_id = 1);
+ " > /dev/null 2>&1 || true
+
+ # Ensure initial record exists in max_date_global_processed
+ psql -d "${dbname}" -c "
+  INSERT INTO dwh.max_date_global_processed (date)
+  SELECT CURRENT_DATE
+  WHERE NOT EXISTS (SELECT 1 FROM dwh.max_date_global_processed);
+ " > /dev/null 2>&1 || true
 }
 
 teardown() {
