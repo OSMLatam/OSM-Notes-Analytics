@@ -39,6 +39,15 @@ The JSON export system provides:
 - **Reduced database load**: No queries from web viewers
 - **Incremental processing**: Only exports modified entities (90-99% faster for updates)
 
+### Complete Metrics Export
+
+**Important**: The profile files (`users/{user_id}.json`, `countries/{country_id}.json`, `global_stats.json`) contain **ALL metrics** from the datamart tables. The export script uses `SELECT row_to_json(t)` which automatically includes every column in the table, ensuring that:
+- ✅ **All 78+ user metrics** are exported in user profile files
+- ✅ **All 77+ country metrics** are exported in country profile files
+- ✅ **All global metrics** are exported in global_stats.json
+
+**Index files** (`indexes/users.json`, `indexes/countries.json`, `global_stats_summary.json`) contain only a **subset of key metrics** optimized for browsing and quick lookups. For complete data, always use the profile files.
+
 ### Export Process
 
 1. **Incremental Detection**: Only exports entities marked as modified (`json_exported = FALSE`)
@@ -86,44 +95,56 @@ output/json/
 
 ### 1. User Profile Files (`users/{user_id}.json`)
 
-**Purpose**: Complete user profile with all 78+ metrics  
+**Purpose**: Complete user profile with **ALL 78+ metrics**  
 **Schema**: `lib/osm-common/schemas/user-profile.schema.json`  
 **Size**: ~5-50 KB per file (depends on activity)  
-**Update Frequency**: Only when user data changes
+**Update Frequency**: Only when user data changes  
+**Export Method**: Uses `SELECT row_to_json(t) FROM dwh.datamartusers t` which includes **ALL columns** from the table  
+**Note**: Contains every metric available in the datamart, including all historical counts, resolution metrics, application statistics, content quality, user behavior, temporal patterns, geographic patterns, and hashtag metrics
 
 ### 2. Country Profile Files (`countries/{country_id}.json`)
 
-**Purpose**: Complete country profile with all 77+ metrics  
+**Purpose**: Complete country profile with **ALL 77+ metrics**  
 **Schema**: `lib/osm-common/schemas/country-profile.schema.json`  
 **Size**: ~5-50 KB per file (depends on activity)  
-**Update Frequency**: Only when country data changes
+**Update Frequency**: Only when country data changes  
+**Export Method**: Uses `SELECT row_to_json(t) FROM dwh.datamartcountries t` which includes **ALL columns** from the table  
+**Note**: Contains every metric available in the datamart, including all historical counts, resolution metrics, application statistics, content quality, community health, temporal patterns, user patterns, and hashtag metrics
 
 ### 3. User Index (`indexes/users.json`)
 
-**Purpose**: Quick lookup of all users with key metrics  
+**Purpose**: Quick lookup of all users with **key metrics only** (subset for performance)  
 **Schema**: `lib/osm-common/schemas/user-index.schema.json`  
 **Size**: ~100-500 KB (all users)  
-**Update Frequency**: Every export (always regenerated)
+**Update Frequency**: Every export (always regenerated)  
+**Export Method**: Uses explicit `SELECT` with 18 key fields (not all metrics)  
+**Note**: This is a **subset** of metrics optimized for browsing and search. For complete profile, load `users/{user_id}.json` instead.
 
 ### 4. Country Index (`indexes/countries.json`)
 
-**Purpose**: Quick lookup of all countries with key metrics  
+**Purpose**: Quick lookup of all countries with **key metrics only** (subset for performance)  
 **Schema**: `lib/osm-common/schemas/country-index.schema.json`  
 **Size**: ~50-200 KB (all countries)  
-**Update Frequency**: Every export (always regenerated)
+**Update Frequency**: Every export (always regenerated)  
+**Export Method**: Uses explicit `SELECT` with 18 key fields (not all metrics)  
+**Note**: This is a **subset** of metrics optimized for browsing and search. For complete profile, load `countries/{country_id}.json` instead.
 
 ### 5. Global Statistics (`global_stats.json`)
 
-**Purpose**: Worldwide aggregated statistics  
+**Purpose**: Worldwide aggregated statistics with **ALL global metrics**  
 **Schema**: `lib/osm-common/schemas/global-stats.schema.json`  
 **Size**: ~2-5 KB  
-**Update Frequency**: Every export
+**Update Frequency**: Every export  
+**Export Method**: Uses `SELECT row_to_json(t) FROM dwh.datamartglobal t` which includes **ALL columns** from the table  
+**Note**: Contains every metric available in the global datamart
 
 ### 6. Global Statistics Summary (`global_stats_summary.json`)
 
-**Purpose**: Simplified global statistics for quick loading  
+**Purpose**: Simplified global statistics for quick loading (subset for performance)  
 **Size**: ~1-2 KB  
-**Update Frequency**: Every export
+**Update Frequency**: Every export  
+**Export Method**: Uses explicit `SELECT` with 14 key fields (not all metrics)  
+**Note**: This is a **subset** of metrics optimized for quick loading. For complete statistics, load `global_stats.json` instead.
 
 ### 7. Metadata (`metadata.json`)
 
