@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS dwh.datamartUsers (
  median_days_to_resolution DECIMAL(10,2),
  notes_resolved_count INTEGER,
  notes_still_open_count INTEGER,
+ notes_opened_but_not_closed_by_user INTEGER,
  resolution_rate DECIMAL(5,2),
  applications_used JSON,
  most_used_application_id INTEGER,
@@ -214,6 +215,8 @@ COMMENT ON COLUMN dwh.datamartUsers.notes_resolved_count IS
   'Number of notes that have been closed by this user';
 COMMENT ON COLUMN dwh.datamartUsers.notes_still_open_count IS
   'Number of notes opened by this user but never closed';
+COMMENT ON COLUMN dwh.datamartUsers.notes_opened_but_not_closed_by_user IS
+  'Number of notes opened by this user but never closed by this same user (closed by others or still open)';
 COMMENT ON COLUMN dwh.datamartUsers.resolution_rate IS
   'Percentage of notes resolved by this user (closed/total opened)';
 COMMENT ON COLUMN dwh.datamartUsers.applications_used IS

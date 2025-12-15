@@ -56,60 +56,71 @@ Status: Testing and Refinement Phase
 Based on analysis in `docs/DASHBOARD_ANALYSIS.md`, these metrics are MISSING from datamarts:
 
 #### Resolution Time Analytics
-- [ ] **Metrics #1**: Add resolution time aggregates to datamarts
-  - **Missing**:
-    - Average resolution time by country
-    - Median resolution time by country
-    - Resolution time by year/month
-    - Notes resolution rate (resolved/total opened)
-    - Notes still open (tracking active issues)
+- [✅] **Metrics #1**: Add resolution time aggregates to datamarts - COMPLETED
+  - **Implemented**:
+    - ✅ Average resolution time by country (`avg_days_to_resolution`)
+    - ✅ Median resolution time by country (`median_days_to_resolution`)
+    - ✅ Resolution time by year/month (`resolution_by_year`, `resolution_by_month` JSON)
+    - ✅ Notes resolution rate (`resolution_rate` - resolved/total opened)
+    - ✅ Notes still open (`notes_still_open_count` - tracking active issues)
   - **Impact**: ⭐⭐⭐⭐⭐ Critical for problem notes analysis
   - **Files**: `sql/dwh/datamartCountries/`, `sql/dwh/datamartUsers/`
-  - **Priority**: Data available in facts, needs aggregation
+  - **Status**: COMPLETED - All metrics implemented in both datamarts with proper calculations
+  - **Verification Date**: 2025-12-14
 
 #### Application Statistics
-- [ ] **Metrics #2**: Add application breakdown to datamarts
-  - **Missing**:
-    - Application usage by country
-    - Application trends over time
-    - Version adoption rates
-    - Mobile vs desktop usage
+- [✅] **Metrics #2**: Add application breakdown to datamarts - COMPLETED
+  - **Implemented**:
+    - ✅ Application usage by country (`applications_used` JSON array)
+    - ✅ Application trends over time (included in Phase 5: `application_usage_trends`)
+    - ✅ Version adoption rates (included in Phase 5: `version_adoption_rates`)
+    - ✅ Mobile vs desktop usage (`mobile_apps_count`, `desktop_apps_count`)
+    - ✅ Most used application (`most_used_application_id`)
   - **Impact**: ⭐⭐⭐⭐ High value for understanding user behavior
   - **Files**: `sql/dwh/datamartCountries/`, `sql/dwh/datamartUsers/`
-  - **Priority**: Important but not blocking
+  - **Status**: COMPLETED - All metrics implemented in both datamarts
+  - **Verification Date**: 2025-12-14
 
 #### Content Quality Metrics
-- [ ] **Metrics #3**: Add content quality aggregates to datamarts
-  - **Missing** (Available in facts but not aggregated):
-    - Average comment length by country/user
-    - Percentage of comments with URLs
-    - Percentage of comments with mentions
-    - Engagement rate (comments/note)
+- [✅] **Metrics #3**: Add content quality aggregates to datamarts - COMPLETED
+  - **Implemented**:
+    - ✅ Average comment length by country/user (`avg_comment_length`)
+    - ✅ Percentage of comments with URLs (`comments_with_url_pct`)
+    - ✅ Percentage of comments with mentions (`comments_with_mention_pct`)
+    - ✅ Count of comments with URLs (`comments_with_url_count`)
+    - ✅ Count of comments with mentions (`comments_with_mention_count`)
+    - ✅ Average comments per note (`avg_comments_per_note` - Phase 4)
   - **Impact**: ⭐⭐⭐⭐ Medium-high value
-  - **Data**: Already calculated in `facts.comment_length`, `facts.has_url`, `facts.has_mention`
+  - **Data**: Aggregated from `facts.comment_length`, `facts.has_url`, `facts.has_mention`
   - **Files**: `sql/dwh/datamartCountries/`, `sql/dwh/datamartUsers/`
-  - **Effort**: Low (columns exist, need aggregation)
+  - **Status**: COMPLETED - All metrics implemented in both datamarts with proper calculations
+  - **Verification Date**: 2025-12-14
 
 #### User Behavior Patterns
-- [ ] **Metrics #4**: Add user behavior analysis to datamartUsers
-  - **Missing**:
-    - Notes opened but never closed by user
-    - User response time (time to first comment)
-    - Active vs inactive users (time since last action)
-    - User collaboration patterns
+- [🔄] **Metrics #4**: Add user behavior analysis to datamartUsers - PARTIALLY COMPLETED
+  - **Implemented** (Phase 5):
+    - ✅ User response time (`user_response_time` - time to first comment)
+    - ✅ Active vs inactive users (`days_since_last_action`)
+    - ✅ User collaboration patterns (`collaboration_patterns` JSON)
+  - **Still Missing**:
+    - Notes opened but never closed by user (can be calculated from existing data)
   - **Impact**: ⭐⭐⭐⭐ High value for community analysis
   - **Files**: `sql/dwh/datamartUsers/datamartUsers_13_createProcedure.sql`
+  - **Status**: Mostly complete - Phase 5 implemented key metrics
 
 #### Community Health Metrics
-- [ ] **Metrics #5**: Add community health indicators
-  - **Missing**:
-    - Overall notes health score
-    - Backlog size (unresolved notes)
-    - New vs resolved notes ratio
-    - Notes age distribution
+- [✅] **Metrics #5**: Add community health indicators - COMPLETED
+  - **Implemented** (Phase 4 & 5):
+    - ✅ Overall notes health score (`notes_health_score` - Phase 5)
+    - ✅ Backlog size (`notes_backlog_size` - Phase 4)
+    - ✅ New vs resolved notes ratio (`new_vs_resolved_ratio` - Phase 5)
+    - ✅ Notes age distribution (`notes_age_distribution` JSON - Phase 4)
+    - ✅ Active notes count (`active_notes_count` - Phase 4)
+    - ✅ Recent activity (`notes_created_last_30_days`, `notes_resolved_last_30_days` - Phase 4)
   - **Impact**: ⭐⭐⭐⭐⭐ Critical for monitoring
   - **Files**: `sql/dwh/datamartCountries/`
-  - **Priority**: High - needed for operational dashboards
+  - **Status**: COMPLETED - All metrics implemented across Phase 4 and Phase 5
+  - **Verification Date**: 2025-12-14
 
 ---
 
@@ -182,11 +193,12 @@ Based on analysis in `docs/DASHBOARD_ANALYSIS.md`, these metrics are MISSING fro
 ## 📊 Progress Summary
 
 ### Statistics
-- **Total Items**: TBD (assessing current state)
-- **Critical**: 2 active
-- **High**: 5 active
-- **Medium**: 5 active
-- **Low**: 6 active
+- **Total Items**: 18
+- **Critical**: 2 completed, 0 remaining
+- **High**: 3 completed, 2 remaining
+- **Medium**: 0 completed, 5 remaining
+- **Low**: 0 completed, 6 remaining
+- **Overall Progress**: 28% (5/18 tasks completed)
 
 ### Completed Tasks
 - ✅ TASK 1: Partitioning implemented

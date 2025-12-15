@@ -95,7 +95,7 @@ For complete navigation by role, see [docs/README.md](docs/README.md#recommended
 - **Enhanced ETL Process**: Robust ETL with recovery, validation, and monitoring
 - **Partitioned Facts Table**: Automatic partitioning by year (2013-2025+)
 - **Country Datamart**: Pre-computed analytics by country (77+ metrics)
-- **User Datamart**: Pre-computed analytics by user (77+ metrics)
+- **User Datamart**: Pre-computed analytics by user (78+ metrics)
 - **Profile Generator**: Generate country and user profiles
 - **Advanced Dimensions**:
   - Timezones for local time analysis
@@ -823,7 +823,7 @@ Processes only new data since the last ETL run. Use this for scheduled updates.
   - Community health: active notes, backlog size, age distribution
   - Hashtag analysis: top hashtags, usage patterns
   
-- **`datamart_users`**: Pre-computed user analytics (77+ metrics)
+- **`datamart_users`**: Pre-computed user analytics (78+ metrics)
   - Historical metrics: notes opened/closed by user
   - Resolution metrics: avg/median days to resolution, resolution rate
   - Application statistics: mobile/desktop app usage

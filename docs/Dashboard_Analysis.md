@@ -518,9 +518,9 @@ The following enhancements have been implemented in October 2025:
 **Total Metrics Available:**
 - Star Schema (dwh.facts): **~50 fields**
 - datamartCountries: **~77 fields** (7 new high priority metrics)
-- datamartUsers: **~77 fields** (7 new high priority metrics)
-- **Total unique metrics: ~157**
-- **Dashboard-ready: ~97 metrics**
+- datamartUsers: **~78 fields** (8 metrics including notes_opened_but_not_closed_by_user)
+- **Total unique metrics: ~158**
+- **Dashboard-ready: ~98 metrics**
 - **Needs aggregation: ~60 metrics**
 
 

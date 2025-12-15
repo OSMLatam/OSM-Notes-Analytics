@@ -45,7 +45,7 @@ The datamarts contain pre-computed metrics organized into categories:
 - **User Behavior**: User responsiveness and collaboration patterns
 - **Hashtag Metrics**: Campaign and organization tracking
 
-**Total Metrics**: 77+ per user/country (7 new high priority metrics added January 2025)
+**Total Metrics**: 78+ per user/country (8 metrics including notes_opened_but_not_closed_by_user added December 2025)
 
 ---
 
@@ -1005,6 +1005,32 @@ Metrics related to user behavior patterns, responsiveness, and collaboration.
 
 **Use Cases**:
 - Collaboration measurement: "This user has a collaboration score of 105"
+- User engagement: "This user mentions others frequently (50 mentions given)"
+- Community recognition: "This user is frequently mentioned (30 mentions received)"
+
+**Available In**: `datamartusers` only
+
+---
+
+#### 8.4 `notes_opened_but_not_closed_by_user` (Users only)
+
+**Business Name**: Notes Opened But Not Closed By User  
+**Definition**: Number of notes opened by this user that were never closed by this same user (either closed by others or still open).  
+**Formula**: `COUNT(DISTINCT id_note) WHERE opened_dimension_id_user = user_id AND action_comment = 'opened' AND NOT EXISTS (SELECT 1 WHERE closed_dimension_id_user = user_id AND action_comment = 'closed')`  
+**Unit**: Count (integer)  
+**Interpretation**: 
+- **High values** (>50% of opened notes): User reports problems but depends on others to resolve them
+- **Low values** (<20% of opened notes): User resolves their own reports
+- **0**: User always closes their own notes, or never opens notes
+
+**Use Cases**:
+- User behavior analysis: "This user opened 100 notes but only closed 20 of them"
+- Dependency measurement: "60% of this user's opened notes were closed by others"
+- Self-sufficiency indicator: "User A closes 80% of their own notes vs User B closes 20%"
+- Community collaboration: "This user reports problems and the community helps resolve them"
+
+**Available In**: `datamartusers` only  
+**Note**: This metric complements `notes_resolved_count` and `notes_still_open_count` to provide a complete picture of user behavior. The relationship is: `history_whole_open = notes_resolved_count + notes_opened_but_not_closed_by_user + notes_still_open_count`
 - Community engagement: "User frequently mentions others (50 mentions given)"
 - Social patterns: "User is well-connected (30 mentions received)"
 

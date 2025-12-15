@@ -477,6 +477,7 @@ AS $proc$
   m_median_days_to_resolution DECIMAL(10,2);
   m_notes_resolved_count INTEGER;
   m_notes_still_open_count INTEGER;
+  m_notes_opened_but_not_closed_by_user INTEGER;
   m_resolution_rate DECIMAL(5,2);
 
   m_applications_used JSON;
@@ -1095,6 +1096,21 @@ AS $proc$
         AND f3.closed_dimension_id_user = f2.opened_dimension_id_user
     );
 
+  -- Count notes opened by user but never closed by same user
+  -- (includes notes closed by others and notes still open)
+  SELECT COUNT(DISTINCT f4.id_note)
+   INTO m_notes_opened_but_not_closed_by_user
+  FROM dwh.facts f4
+  WHERE f4.opened_dimension_id_user = m_dimension_user_id
+    AND f4.action_comment = 'opened'
+    AND NOT EXISTS (
+      SELECT 1
+      FROM dwh.facts f5
+      WHERE f5.id_note = f4.id_note
+        AND f5.closed_dimension_id_user = m_dimension_user_id
+        AND f5.action_comment = 'closed'
+    );
+
   -- Calculate resolution rate
   IF (m_notes_resolved_count + m_notes_still_open_count) > 0 THEN
     m_resolution_rate := (m_notes_resolved_count::DECIMAL / (m_notes_resolved_count + m_notes_still_open_count)) * 100;
@@ -1590,6 +1606,7 @@ AS $proc$
    median_days_to_resolution = m_median_days_to_resolution,
    notes_resolved_count = m_notes_resolved_count,
    notes_still_open_count = m_notes_still_open_count,
+   notes_opened_but_not_closed_by_user = m_notes_opened_but_not_closed_by_user,
    resolution_rate = m_resolution_rate,
    applications_used = m_applications_used,
    most_used_application_id = m_most_used_application_id,
