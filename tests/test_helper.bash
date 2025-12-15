@@ -9,7 +9,13 @@ setup_test_database() {
   local dbname="${DBNAME:-dwh}"
   echo "Setting up test database: ${dbname}" >&2
 
-  # Run setup SQL if it exists
+  # Load base tables data first (required for ETL to work)
+  if [[ -f "${TEST_BASE_DIR}/tests/sql/setup_base_tables_data.sql" ]]; then
+    echo "Loading base tables test data from setup_base_tables_data.sql" >&2
+    psql -d "${dbname}" -f "${TEST_BASE_DIR}/tests/sql/setup_base_tables_data.sql" > /dev/null 2>&1 || true
+  fi
+
+  # Run setup SQL if it exists (for star schema data)
   if [[ -f "${TEST_BASE_DIR}/tests/sql/setup_test_data.sql" ]]; then
     echo "Loading test data from setup_test_data.sql" >&2
     psql -d "${dbname}" -f "${TEST_BASE_DIR}/tests/sql/setup_test_data.sql" > /dev/null 2>&1 || true
