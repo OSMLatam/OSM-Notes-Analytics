@@ -18,6 +18,9 @@ readonly SCRIPT_BASE_DIRECTORY
 # shellcheck disable=SC1091
 source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/bash_logger.sh"
 
+# Save state of DB_USER_DWH before loading properties (to detect if it was explicitly set)
+DB_USER_DWH_WAS_SET="${DB_USER_DWH+x}"
+
 # Load properties
 # shellcheck disable=SC1091
 source "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh"
@@ -30,18 +33,34 @@ fi
 
 # Database configuration
 ANALYTICS_DB="${DBNAME_DWH:-osm_notes}"
-# Only set user if explicitly provided (allows peer authentication when not set)
-ANALYTICS_USER="${DB_USER_DWH:-}"
+# Only set user if explicitly provided via environment variable (allows peer authentication when not set)
+# If DB_USER_DWH was not explicitly set before loading properties, ignore the value from properties.sh
+if [[ -z "${DB_USER_DWH_WAS_SET}" ]]; then
+ # Variable was not set in environment - use peer authentication (ignore value from properties.sh)
+ ANALYTICS_USER=""
+elif [[ -z "${DB_USER_DWH:-}" ]]; then
+ # Variable was explicitly set but is empty - use peer authentication
+ ANALYTICS_USER=""
+else
+ # Variable was explicitly set with a value - use it
+ ANALYTICS_USER="${DB_USER_DWH}"
+fi
 
 # Tables to drop (in reverse order of dependencies)
 TABLES=("note_comments_text" "note_comments" "notes" "users" "countries")
 
 __log_start
 __logi "=== DROPPING COPIED BASE TABLES ==="
-__logi "Target DB: ${ANALYTICS_DB} (user: ${ANALYTICS_USER})"
+__logi "Target DB: ${ANALYTICS_DB} (user: ${ANALYTICS_USER:-$(whoami)})"
+
+# Build psql command array
+PSQL_CMD_ARGS=(-d "${ANALYTICS_DB}")
+if [[ -n "${ANALYTICS_USER:-}" ]]; then
+ PSQL_CMD_ARGS+=(-U "${ANALYTICS_USER}")
+fi
 
 # Validate database connection
-if ! psql -d "${ANALYTICS_DB}" ${ANALYTICS_USER:+-U "${ANALYTICS_USER}"} -c "SELECT 1;" > /dev/null 2>&1; then
+if ! psql "${PSQL_CMD_ARGS[@]}" -c "SELECT 1;" > /dev/null 2>&1; then
  __loge "ERROR: Cannot connect to database ${ANALYTICS_DB}"
  exit 1
 fi
@@ -51,17 +70,16 @@ for table in "${TABLES[@]}"; do
  __logi "Dropping table: ${table}"
 
  # Check if table exists
- if psql -d "${ANALYTICS_DB}" ${ANALYTICS_USER:+-U "${ANALYTICS_USER}"} -t -c \
+ if psql "${PSQL_CMD_ARGS[@]}" -t -c \
   "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '${table}';" \
   | grep -q 1; then
 
   # Get row count before dropping (for logging)
-  local_row_count=$(psql -d "${ANALYTICS_DB}" ${ANALYTICS_USER:+-U "${ANALYTICS_USER}"} -t -c "SELECT COUNT(*) FROM public.${table};" 2> /dev/null | tr -d ' ' || echo "0")
+  local_row_count=$(psql "${PSQL_CMD_ARGS[@]}" -t -c "SELECT COUNT(*) FROM public.${table};" 2> /dev/null | tr -d ' ' || echo "0")
   __logi "Dropping ${table} (${local_row_count} rows)"
 
   # Drop table
-  if psql -d "${ANALYTICS_DB}" ${ANALYTICS_USER:+-U "${ANALYTICS_USER}"} \
-   -c "DROP TABLE IF EXISTS public.${table} CASCADE;" > /dev/null 2>&1; then
+  if psql "${PSQL_CMD_ARGS[@]}" -c "DROP TABLE IF EXISTS public.${table} CASCADE;" > /dev/null 2>&1; then
    __logi "Table ${table} dropped successfully"
   else
    __logw "Warning: Failed to drop table ${table}, continuing..."

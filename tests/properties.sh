@@ -78,7 +78,8 @@ fi
 # Variables are already set above in the if/elif/else block
 # Only set defaults here if they weren't set (for CI environments)
 # This allows tests to skip when no DB is configured
-if [[ -z "${TEST_DBUSER:-}" ]]; then
+# Note: For local peer authentication, TEST_DBUSER should remain unset
+if [[ -z "${TEST_DBUSER:-}" ]] && [[ "${CI:-}" == "true" ]] || [[ "${GITHUB_ACTIONS:-}" == "true" ]]; then
  export TEST_DBUSER="${TEST_DBUSER:-postgres}"
 fi
 if [[ -z "${TEST_DBPASSWORD:-}" ]]; then

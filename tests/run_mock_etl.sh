@@ -41,10 +41,13 @@ END
 $$;
 SQL
 
-echo "[MOCK-ETL] Applying base DWH DDL (stripping enum CREATE for compatibility)..."
+echo "[MOCK-ETL] Applying base DWH DDL (stripping enum CREATE and DO blocks for compatibility)..."
 TMP_DDL="$(mktemp)"
 awk '
-  BEGIN {skip=0; skip1=0}
+  BEGIN {skip=0; skip1=0; skip_do=0}
+  /^DO[[:space:]]+\$\$$/ {skip_do=1; next}
+  skip_do && /^\$\$;/ {skip_do=0; next}
+  skip_do {next}
   /CREATE[[:space:]]+TYPE[[:space:]]+(IF[[:space:]]+NOT[[:space:]]+EXISTS[[:space:]]+)?note_event_enum[[:space:]]+AS[[:space:]]+ENUM[[:space:]]*\(/ {skip=1; next}
   skip && /^\);/ {skip=0; next}
   skip {next}
@@ -52,7 +55,8 @@ awk '
   skip1 {skip1=0; next}
   {print}
 ' "${PROJECT_ROOT}/sql/dwh/ETL_22_createDWHTables.sql" > "${TMP_DDL}"
-"${psql_cmd[@]}" -f "${TMP_DDL}"
+# Execute SQL, ignoring errors about existing objects (tables may already exist from previous runs)
+"${psql_cmd[@]}" -f "${TMP_DDL}" 2>&1 | grep -vE "(already exists|NOTICE)" || true
 rm -f "${TMP_DDL}"
 HAS_PKS=$(psql -d "${DBNAME}" -tAc "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema='dwh' AND constraint_name='pk_users_dim')")
 HAS_FKS=$(psql -d "${DBNAME}" -tAc "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema='dwh' AND constraint_name='fk_region')")
