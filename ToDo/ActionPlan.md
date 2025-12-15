@@ -168,11 +168,19 @@ Based on analysis in `docs/DASHBOARD_ANALYSIS.md`, these metrics are MISSING fro
 
 ### Performance Optimizations
 
-- [ ] **PERF #1**: Monitor and optimize datamart update times
+- [✅] **PERF #1**: Monitor and optimize datamart update times - COMPLETED
   - **Action**: Analyze incremental update performance
   - **Tool**: Add timing logs to datamart procedures
-  - **Files**: `sql/dwh/datamartCountries/`, `sql/dwh/datamartUsers/`
+  - **Files**: `sql/dwh/datamartCountries/`, `sql/dwh/datamartUsers/`, `sql/dwh/datamartPerformance/`
   - **Priority**: Monitor in production
+  - **Status**: COMPLETED - Performance monitoring system implemented (2025-12-14)
+  - **Changes**:
+    - Created `dwh.datamart_performance_log` table for storing timing information
+    - Added timing logs to `update_datamart_country()` procedure
+    - Added timing logs to `update_datamart_user()` procedure
+    - Created performance analysis queries for monitoring and optimization
+    - Added setup script and documentation
+    - Logs capture: start time, end time, duration, facts count, and status
 
 - [✅] **PERF #2**: Add query performance baselines - COMPLETED
   - **Action**: Document expected query times for common queries
@@ -249,9 +257,9 @@ Based on analysis in `docs/DASHBOARD_ANALYSIS.md`, these metrics are MISSING fro
 - **Total Items**: 18
 - **Critical**: 2 completed, 0 remaining
 - **High**: 4 completed, 0 remaining (User Behavior Patterns now complete)
-- **Medium**: 4 completed, 1 remaining
+- **Medium**: 5 completed, 0 remaining
 - **Low**: 3 completed, 3 remaining
-- **Overall Progress**: 72% (13/18 tasks completed)
+- **Overall Progress**: 78% (14/18 tasks completed)
 
 ### Completed Tasks
 - ✅ TASK 1: Partitioning implemented
@@ -276,6 +284,7 @@ Based on analysis in `docs/DASHBOARD_ANALYSIS.md`, these metrics are MISSING fro
 - ✅ PERF #2: Add query performance baselines - Completed 2025-12-14
 - ✅ DOC #1: Create dashboard implementation guide - Completed 2025-12-14
 - ✅ DOC #3: Create user personas and use cases - Completed 2025-12-14
+- ✅ PERF #1: Monitor datamart update times - Completed 2025-12-14
 
 ### Cancelled Tasks
 - ❌ TASK 3: dimension_note_status (no benefit over enum)

@@ -35,6 +35,7 @@ BEGIN
  LOOP
   RAISE NOTICE 'Processing country % - %.', r.dimension_id_country,
    CLOCK_TIMESTAMP();
+  -- Timing is handled inside update_datamart_country procedure
   CALL dwh.update_datamart_country(r.dimension_id_country);
 
   UPDATE /* Notes-ETL */ dwh.dimension_countries

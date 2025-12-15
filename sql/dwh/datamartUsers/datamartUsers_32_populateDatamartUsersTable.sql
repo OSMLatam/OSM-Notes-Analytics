@@ -52,6 +52,7 @@ BEGIN
   LIMIT 500
  LOOP
   RAISE NOTICE 'Processing user %.', r.dimension_user_id;
+  -- Timing is handled inside update_datamart_user procedure
   CALL dwh.update_datamart_user(r.dimension_user_id);
 
   UPDATE dwh.dimension_users

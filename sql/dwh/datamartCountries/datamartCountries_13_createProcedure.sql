@@ -393,7 +393,13 @@ AS $proc$
   m_new_vs_resolved_ratio DECIMAL(5,2);
   m_backlog_ratio DECIMAL(5,2);
   m_recent_activity_score DECIMAL(5,2);
+  m_start_time TIMESTAMP;
+  m_end_time TIMESTAMP;
+  m_duration_seconds DECIMAL(10,3);
+  m_facts_count INTEGER;
   BEGIN
+  -- Start timing
+  m_start_time := CLOCK_TIMESTAMP();
   SELECT /* Notes-datamartCountries */ COUNT(1)
    INTO qty
    FROM dwh.datamartCountries
@@ -1469,6 +1475,42 @@ AS $proc$
   IF m_year <= m_current_year THEN
    CALL dwh.update_datamart_country_activity_year(m_dimension_id_country, m_year);
   END IF;
+
+  -- End timing and log performance
+  m_end_time := CLOCK_TIMESTAMP();
+  m_duration_seconds := EXTRACT(EPOCH FROM (m_end_time - m_start_time));
+  
+  -- Get facts count for context
+  SELECT COUNT(*)
+   INTO m_facts_count
+  FROM dwh.facts
+  WHERE dimension_id_country = m_dimension_id_country;
+  
+  -- Log performance
+  INSERT INTO dwh.datamart_performance_log (
+    datamart_type,
+    entity_id,
+    start_time,
+    end_time,
+    duration_seconds,
+    records_processed,
+    facts_count,
+    status
+  ) VALUES (
+    'country',
+    m_dimension_id_country,
+    m_start_time,
+    m_end_time,
+    m_duration_seconds,
+    1,
+    m_facts_count,
+    'success'
+  );
+  
+  RAISE NOTICE 'Country % processed in %.3f seconds (%, facts)', 
+    m_dimension_id_country, 
+    m_duration_seconds,
+    m_facts_count;
  END
 $proc$;
 COMMENT ON PROCEDURE dwh.update_datamart_country IS

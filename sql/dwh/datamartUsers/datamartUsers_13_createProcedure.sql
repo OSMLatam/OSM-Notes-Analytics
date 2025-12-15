@@ -428,6 +428,8 @@ AS $proc$
   qty SMALLINT;
   m_start_time TIMESTAMP;
   m_end_time TIMESTAMP;
+  m_duration_seconds DECIMAL(10,3);
+  m_facts_count INTEGER;
   m_id_contributor_type SMALLINT;
   m_todays_activity INTEGER;
   m_last_year_activity CHAR(371);
@@ -504,7 +506,8 @@ AS $proc$
   m_days_since_last_action INTEGER;
   m_collaboration_patterns JSON;
   BEGIN
-  --m_start_time := CLOCK_TIMESTAMP();
+  -- Start timing
+  m_start_time := CLOCK_TIMESTAMP();
   SELECT /* Notes-datamartUsers */ COUNT(1)
    INTO qty
   FROM dwh.datamartUsers
@@ -1646,8 +1649,41 @@ AS $proc$
       NULL;
     END;
   END IF;
- --m_end_time := CLOCK_TIMESTAMP();
- --RAISE NOTICE 'Duration  %.', m_end_time - m_start_time;
+  -- End timing and log performance
+  m_end_time := CLOCK_TIMESTAMP();
+  m_duration_seconds := EXTRACT(EPOCH FROM (m_end_time - m_start_time));
+  
+  -- Get facts count for context
+  SELECT COUNT(*)
+   INTO m_facts_count
+  FROM dwh.facts
+  WHERE action_dimension_id_user = m_dimension_user_id;
+  
+  -- Log performance
+  INSERT INTO dwh.datamart_performance_log (
+    datamart_type,
+    entity_id,
+    start_time,
+    end_time,
+    duration_seconds,
+    records_processed,
+    facts_count,
+    status
+  ) VALUES (
+    'user',
+    m_dimension_user_id,
+    m_start_time,
+    m_end_time,
+    m_duration_seconds,
+    1,
+    m_facts_count,
+    'success'
+  );
+  
+  RAISE NOTICE 'User % processed in %.3f seconds (%, facts)', 
+    m_dimension_user_id, 
+    m_duration_seconds,
+    m_facts_count;
 END
 $proc$;
 COMMENT ON PROCEDURE dwh.update_datamart_user IS
