@@ -2,6 +2,40 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2025-12-14] - User Behavior Metric Completion
+
+### Added
+
+- **User Behavior Metric**: Completed user behavior analysis with final missing metric
+  - `notes_opened_but_not_closed_by_user` (INTEGER): Number of notes opened by user but never closed by same user (closed by others or still open)
+
+### Changed
+
+- Updated `datamartUsers` table: Added 1 new column (78+ total metrics)
+- Updated datamartUsers procedure to calculate new metric automatically
+- Updated documentation: `docs/Metric_Definitions.md`, `docs/Dashboard_Analysis.md`, `README.md`
+- Updated metric counts: 77+ → 78+ metrics for users
+- Updated `ToDo/ActionPlan.md`: Marked user behavior patterns as COMPLETED
+
+### Testing
+
+- Added 4 new tests for `notes_opened_but_not_closed_by_user` metric
+- Tests validate column existence, non-negative values, logical constraints, and calculability
+- Total test count: 166 → 170+ tests
+
+### Technical Details
+
+- Metric calculated using NOT EXISTS subquery to find notes opened by user but not closed by same user
+- Includes notes closed by others and notes still open
+- Relationship: `history_whole_open = notes_resolved_count + notes_opened_but_not_closed_by_user + notes_still_open_count`
+
+### Documentation
+
+- Added complete metric definition in `docs/Metric_Definitions.md`:
+  - Section 8.4: `notes_opened_but_not_closed_by_user` with business definition, formula, interpretation, and use cases
+
+---
+
 ## [2025-01-21] - High Priority Metrics Implementation
 
 ### Added

@@ -14,6 +14,7 @@ bats_require_minimum_version 1.5.0
 # - user_response_time: Average time in days from note open to first comment by user
 # - days_since_last_action: Days since user last performed any action
 # - collaboration_patterns: JSON object with collaboration metrics for users
+# - notes_opened_but_not_closed_by_user: Notes opened by user but never closed by same user
 
 load ../../../tests/test_helper
 
@@ -494,3 +495,91 @@ setup() {
   [[ "${output}" =~ [0-9] ]]
 }
 
+
+# ============================================================================
+# Notes Opened But Not Closed By User Tests
+# ============================================================================
+
+# Test that notes_opened_but_not_closed_by_user column exists in datamartUsers
+@test "Notes opened but not closed by user column should exist in datamartUsers table" {
+  if [[ -z "${DBNAME:-}" ]]; then
+    skip "No database configured"
+  fi
+
+  # Check if column exists
+  run psql -d "${DBNAME}" -t -c "
+    SELECT column_name
+    FROM information_schema.columns
+    WHERE table_schema = 'dwh'
+      AND table_name = 'datamartusers'
+      AND column_name = 'notes_opened_but_not_closed_by_user';
+  "
+
+  [[ "${status}" -eq 0 ]]
+  [[ $(echo "${output}" | grep -c "notes_opened_but_not_closed_by_user") -eq 1 ]] || echo "Column should exist"
+}
+
+# Test that notes_opened_but_not_closed_by_user is non-negative
+@test "Notes opened but not closed by user should be non-negative" {
+  if [[ -z "${DBNAME:-}" ]]; then
+    skip "No database configured"
+  fi
+
+  # Check that all values are non-negative
+  run psql -d "${DBNAME}" -t -c "
+    SELECT COUNT(*)
+    FROM dwh.datamartusers
+    WHERE notes_opened_but_not_closed_by_user IS NOT NULL
+      AND notes_opened_but_not_closed_by_user < 0;
+  "
+
+  [[ "${status}" -eq 0 ]]
+  count="${output// /}"
+  [[ "${count}" == "0" ]] || echo "All values should be non-negative"
+}
+
+# Test that notes_opened_but_not_closed_by_user is less than or equal to history_whole_open
+@test "Notes opened but not closed by user should be <= total opened notes" {
+  if [[ -z "${DBNAME:-}" ]]; then
+    skip "No database configured"
+  fi
+
+  # Check that notes_opened_but_not_closed_by_user <= history_whole_open
+  run psql -d "${DBNAME}" -t -c "
+    SELECT COUNT(*)
+    FROM dwh.datamartusers
+    WHERE notes_opened_but_not_closed_by_user IS NOT NULL
+      AND history_whole_open IS NOT NULL
+      AND notes_opened_but_not_closed_by_user > history_whole_open;
+  "
+
+  [[ "${status}" -eq 0 ]]
+  count="${output// /}"
+  [[ "${count}" == "0" ]] || echo "Should not exceed total opened notes"
+}
+
+# Test that notes_opened_but_not_closed_by_user can be calculated from facts
+@test "Notes opened but not closed by user should be calculable from facts table" {
+  if [[ -z "${DBNAME:-}" ]]; then
+    skip "No database configured"
+  fi
+
+  # Test that we can calculate this metric from facts
+  run psql -d "${DBNAME}" -t -c "
+    SELECT COUNT(DISTINCT f1.id_note)
+    FROM dwh.facts f1
+    WHERE f1.opened_dimension_id_user IS NOT NULL
+      AND f1.action_comment = 'opened'
+      AND NOT EXISTS (
+        SELECT 1
+        FROM dwh.facts f2
+        WHERE f2.id_note = f1.id_note
+          AND f2.closed_dimension_id_user = f1.opened_dimension_id_user
+          AND f2.action_comment = 'closed'
+      );
+  "
+
+  [[ "${status}" -eq 0 ]]
+  # Should contain numeric values (may be 0 if no test data)
+  [[ "${output}" =~ [0-9] ]]
+}

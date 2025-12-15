@@ -97,16 +97,16 @@ Based on analysis in `docs/DASHBOARD_ANALYSIS.md`, these metrics are MISSING fro
   - **Verification Date**: 2025-12-14
 
 #### User Behavior Patterns
-- [🔄] **Metrics #4**: Add user behavior analysis to datamartUsers - PARTIALLY COMPLETED
-  - **Implemented** (Phase 5):
+- [✅] **Metrics #4**: Add user behavior analysis to datamartUsers - COMPLETED
+  - **Implemented** (Phase 5 & December 2025):
     - ✅ User response time (`user_response_time` - time to first comment)
     - ✅ Active vs inactive users (`days_since_last_action`)
     - ✅ User collaboration patterns (`collaboration_patterns` JSON)
-  - **Still Missing**:
-    - Notes opened but never closed by user (can be calculated from existing data)
+    - ✅ Notes opened but never closed by user (`notes_opened_but_not_closed_by_user` - December 2025)
   - **Impact**: ⭐⭐⭐⭐ High value for community analysis
   - **Files**: `sql/dwh/datamartUsers/datamartUsers_13_createProcedure.sql`
-  - **Status**: Mostly complete - Phase 5 implemented key metrics
+  - **Status**: COMPLETED - All user behavior metrics implemented
+  - **Verification Date**: 2025-12-14
 
 #### Community Health Metrics
 - [✅] **Metrics #5**: Add community health indicators - COMPLETED
