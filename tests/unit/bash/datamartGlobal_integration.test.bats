@@ -37,7 +37,7 @@ setup() {
 
  # Setup database: create schema and tables if needed
  local dbname="${TEST_DBNAME:-${DBNAME:-dwh}}"
- 
+
  # Create dwh schema if it doesn't exist
  psql -d "${dbname}" -c "CREATE SCHEMA IF NOT EXISTS dwh;" > /dev/null 2>&1 || true
 
