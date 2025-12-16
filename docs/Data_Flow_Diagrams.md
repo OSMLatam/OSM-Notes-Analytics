@@ -253,7 +253,7 @@ flowchart TD
 - **Source**: `public.notes`, `public.note_comments`
 - **Content**: Raw note actions with timestamps, user IDs, note IDs
 - **Volume**: Millions of rows (depends on ingestion)
-- **Frequency**: Incremental (hourly) or full (initial load)
+- **Frequency**: Incremental (every 15 minutes) or full (initial load)
 
 ### Flow 2: Extract → Staging
 - **Content**: Filtered note actions by date range
@@ -372,7 +372,7 @@ flowchart TD
 
 | Flow | From | To | Content | Frequency |
 |------|------|-----|---------|-----------|
-| Base Data | Base Tables | Extract | Note actions | Incremental (hourly) |
+| Base Data | Base Tables | Extract | Note actions | Incremental (every 15 minutes) |
 | Staged Data | Extract | Staging | Filtered actions | Per ETL run |
 | Dimension Keys | Staging | Dimensions | Resolved keys | Per ETL run |
 | Fact Rows | Staging | Facts | Fact rows with metrics | Per ETL run |

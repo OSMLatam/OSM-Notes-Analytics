@@ -166,7 +166,7 @@ JSON Export → OSM-Notes-Viewer (Web Application)
 - **Efficiency**: Only process new data since last run
 - **Speed**: Incremental updates take 5-15 minutes vs 30 hours for full load
 - **Resource Usage**: Lower memory and CPU requirements
-- **Real-time**: Can run frequently (every hour) for near real-time analytics
+- **Real-time**: Runs every 15 minutes for near real-time analytics
 
 #### Pre-computed Datamarts
 

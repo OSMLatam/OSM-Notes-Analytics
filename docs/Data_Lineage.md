@@ -631,17 +631,17 @@ Similar to User Datamart but:
 
 | Source | Last Updated | Update Frequency | Volume |
 |--------|--------------|------------------|--------|
-| OSM Notes API | Real-time | Every 15 minutes | ~10K notes/day |
+| OSM Notes API | Real-time | Every minute (daemon) | ~10K notes/day |
 | OSM Planet | Daily | Daily | Full history |
-| public.notes | Incremental | Hourly | ~20M+ rows |
-| public.note_comments | Incremental | Hourly | ~50M+ rows |
+| public.notes | Incremental | Every minute (via daemon) | ~20M+ rows |
+| public.note_comments | Incremental | Every minute (via daemon) | ~50M+ rows |
 
 ### Transformation Metadata
 
 | Process | Execution Time | Frequency | Dependencies |
 |---------|----------------|----------|--------------|
 | ETL (Full) | ~30 hours | Initial load | Base tables |
-| ETL (Incremental) | 5-15 minutes | Hourly | Base tables |
+| ETL (Incremental) | 5-15 minutes | Every 15 minutes | Base tables |
 | User Datamart | ~20 minutes | Daily | Facts + Dimensions |
 | Country Datamart | ~5 minutes | Daily | Facts + Dimensions |
 | JSON Export | ~10 minutes | Every 15 minutes | Datamarts |
@@ -650,7 +650,7 @@ Similar to User Datamart but:
 
 | Destination | Update Frequency | Format | Size |
 |-------------|-------------------|--------|------|
-| dwh.facts | Hourly (incremental) | PostgreSQL table | ~20M+ rows |
+| dwh.facts | Every 15 minutes (incremental) | PostgreSQL table | ~20M+ rows |
 | dwh.datamartusers | Daily | PostgreSQL table | ~500K rows |
 | dwh.datamartcountries | Daily | PostgreSQL table | ~200 rows |
 | output/json/users/ | Every 15 minutes | JSON files | ~500K files |

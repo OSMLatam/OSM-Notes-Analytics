@@ -420,7 +420,7 @@ graph TB
     subgraph Server["Application Server"]
         subgraph Processes["Running Processes"]
             CRON[Cron Jobs<br/>Scheduled ETL]
-            ETL_PROC[ETL Process<br/>Hourly/On-Demand]
+            ETL_PROC[ETL Process<br/>Every 15 min/On-Demand]
             DATAMART_PROC[Datamart Process<br/>Daily]
             EXPORT_PROC[Export Process<br/>Every 15 min]
         end
