@@ -132,16 +132,19 @@ function __show_help {
  echo "  --remove-all-data   Remove DWH schema, tables, functions, and data (DESTRUCTIVE)"
  echo "  --remove-temp-files Remove only temporary files from /tmp (SAFE)"
  echo "  --dry-run           Show what would be done without executing (SAFE)"
+ echo "  --all, -a           Full cleanup - REMOVES ALL DATA! (same as default)"
  echo "  --help, -h          Show this help"
  echo
  echo "Examples:"
  echo "  ${0}                           # Full cleanup - REMOVES ALL DATA!"
+ echo "  ${0} --all                     # Full cleanup - REMOVES ALL DATA!"
+ echo "  ${0} -a                        # Full cleanup - REMOVES ALL DATA!"
  echo "  ${0} --remove-all-data         # Remove DWH schema and data only"
  echo "  ${0} --remove-temp-files       # Remove temp files only (safe)"
  echo "  ${0} --dry-run                 # Show what would be done (safe)"
  echo
  echo "Database configuration from etc/properties.sh:"
- echo "  Database: ${DBNAME_DWH:-not set}"
+ echo "  Database: ${DBNAME_DWH:-${DBNAME:-not set}}"
  echo "  User: ${DB_USER:-not set}"
  echo
  echo "WARNING: Default behavior removes ALL data warehouse data AND temporary files!"
@@ -392,7 +395,8 @@ function main() {
  __checkPrereqs
 
  # Parse mode from CLEANUP_MODE (first argument)
- local TARGET_DB="${DBNAME_DWH}"
+ # Use DBNAME_DWH if set, otherwise fallback to DBNAME
+ local TARGET_DB="${DBNAME_DWH:-${DBNAME:-osm_notes}}"
  local MODE="all"
 
  if [[ "${CLEANUP_MODE}" == "--dry-run" ]]; then
@@ -401,11 +405,11 @@ function main() {
   MODE="dwh"
  elif [[ "${CLEANUP_MODE}" == "--remove-temp-files" ]]; then
   MODE="temp"
- elif [[ "${CLEANUP_MODE}" == "--all" ]] || [[ "${CLEANUP_MODE}" == "all" ]]; then
+ elif [[ "${CLEANUP_MODE}" == "--all" ]] || [[ "${CLEANUP_MODE}" == "all" ]] || [[ "${CLEANUP_MODE}" == "-a" ]]; then
   MODE="all"
  elif [[ "${CLEANUP_MODE}" != "" ]]; then
   echo "ERROR: Invalid parameter: ${CLEANUP_MODE}"
-  echo "Valid options: --remove-all-data, --remove-temp-files, --dry-run, --help"
+  echo "Valid options: --remove-all-data, --remove-temp-files, --dry-run, --all, -a, --help"
   exit "${ERROR_INVALID_ARGUMENT}"
  fi
 
