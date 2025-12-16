@@ -102,8 +102,13 @@ echo "===================="
 # Run mock ETL to populate test database
 if [[ -f "${SCRIPT_DIR}/run_mock_etl.sh" ]]; then
  log_info "Populating test database with mock data..."
- bash "${SCRIPT_DIR}/run_mock_etl.sh"
- log_success "Test database populated"
+ if bash "${SCRIPT_DIR}/run_mock_etl.sh"; then
+  log_success "Test database populated"
+ else
+  log_error "Failed to populate test database with mock data"
+  log_error "Exit code: $?"
+  exit 1
+ fi
 else
  log_warning "Mock ETL script not found, skipping data setup"
 fi

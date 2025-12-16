@@ -26,6 +26,19 @@ fi
 echo "[MOCK-ETL] Using database: ${DBNAME}"
 if [[ -n "${PGHOST:-}" ]]; then
  echo "[MOCK-ETL] Connection: ${PGUSER:-$(whoami)}@${PGHOST}:${PGPORT:-5432}/${DBNAME}"
+else
+ echo "[MOCK-ETL] Connection: ${PGUSER:-$(whoami)}@localhost/${DBNAME}"
+fi
+
+# Verify database connection before proceeding
+if ! psql -d "${DBNAME}" -c "SELECT 1;" > /dev/null 2>&1; then
+ echo "[MOCK-ETL] ERROR: Cannot connect to database ${DBNAME}" >&2
+ echo "[MOCK-ETL] Please verify database connection settings:" >&2
+ echo "[MOCK-ETL]   TEST_DBNAME=${TEST_DBNAME:-}" >&2
+ echo "[MOCK-ETL]   TEST_DBHOST=${TEST_DBHOST:-}" >&2
+ echo "[MOCK-ETL]   TEST_DBPORT=${TEST_DBPORT:-}" >&2
+ echo "[MOCK-ETL]   TEST_DBUSER=${TEST_DBUSER:-}" >&2
+ exit 1
 fi
 
 psql_cmd=(psql -d "${DBNAME}" -v ON_ERROR_STOP=1)
@@ -56,7 +69,16 @@ awk '
   {print}
 ' "${PROJECT_ROOT}/sql/dwh/ETL_22_createDWHTables.sql" > "${TMP_DDL}"
 # Execute SQL, ignoring errors about existing objects (tables may already exist from previous runs)
-"${psql_cmd[@]}" -f "${TMP_DDL}" 2>&1 | grep -vE "(already exists|NOTICE)" || true
+if ! "${psql_cmd[@]}" -f "${TMP_DDL}" 2>&1 | grep -vE "(already exists|NOTICE)"; then
+ # If psql failed, check if it was just due to existing objects
+ # If the exit code is non-zero and it's not about existing objects, fail
+ if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
+  echo "[MOCK-ETL] ERROR: Failed to apply base DWH DDL" >&2
+  echo "[MOCK-ETL] Check the SQL file: ${PROJECT_ROOT}/sql/dwh/ETL_22_createDWHTables.sql" >&2
+  rm -f "${TMP_DDL}"
+  exit 1
+ fi
+fi
 rm -f "${TMP_DDL}"
 HAS_PKS=$("${psql_cmd[@]}" -tAc "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema='dwh' AND constraint_name='pk_users_dim')" 2> /dev/null || echo "f")
 HAS_FKS=$("${psql_cmd[@]}" -tAc "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema='dwh' AND constraint_name='fk_region')" 2> /dev/null || echo "f")

@@ -83,6 +83,8 @@ jobs:
         psql -c "CREATE EXTENSION IF NOT EXISTS postgis;"
         psql -c "CREATE EXTENSION IF NOT EXISTS btree_gist;"
         psql -c "SELECT version();"
+        # Verify database is accessible
+        psql -c "SELECT current_database(), current_user;"
 
     - name: Run DWH Tests
       env:
@@ -92,7 +94,13 @@ jobs:
         TEST_DBUSER: postgres
         TEST_DBPASSWORD: postgres
         PGPASSWORD: postgres
+        PGHOST: localhost
+        PGPORT: 5432
+        PGUSER: postgres
+        PGDATABASE: dwh
       run: |
+        # Verify database connection before running tests
+        psql -c "SELECT current_database(), current_user;" || exit 1
         ./tests/run_dwh_tests.sh
 
     - name: Run Hybrid ETL Integration Test
