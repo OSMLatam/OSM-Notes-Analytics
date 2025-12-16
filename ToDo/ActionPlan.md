@@ -259,9 +259,19 @@ Based on analysis in `docs/DASHBOARD_ANALYSIS.md`, these metrics are MISSING fro
   - **Files**: `sql/dwh/ml/`, `docs/ML_Implementation_Plan.md`, `docs/Note_Categorization.md`, `docs/External_Classification_Strategies.md`
 
 - [ ] **FUTURE #2**: Real-time streaming analytics
-  - **Description**: Process notes as they arrive
+  - **Description**: Process notes as they arrive using PostgreSQL LISTEN/NOTIFY
   - **Effort**: Very High (20+ hours)
-  - **Dependencies**: API integration with Ingestion system
+  - **Dependencies**: Integration with Ingestion system (trigger setup)
+  - **Status**: Design and implementation plan documented
+  - **Documentation**: `docs/Streaming_Analytics_Implementation.md` (created 2025-01-21)
+  - **Approach**: 
+    - Use PostgreSQL LISTEN/NOTIFY for event-driven processing
+    - Database trigger in Ingestion sends NOTIFY on note insert
+    - Streaming processor LISTENs and processes notifications in real-time
+    - Micro-ETL processes single notes with minimal latency
+  - **Benefits**: Reduce latency from 15 minutes to seconds
+  - **Priority**: LOW (current 15-minute latency acceptable for most use cases)
+  - **Files**: `docs/Streaming_Analytics_Implementation.md`
 
 ---
 

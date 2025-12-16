@@ -252,6 +252,55 @@ testing strategies, and development workflows.
 
 ---
 
+#### [Streaming_Analytics_Implementation.md](Streaming_Analytics_Implementation.md)
+
+**Real-Time Streaming Analytics Implementation Plan - Future Enhancement**
+
+- Complete plan for implementing real-time note processing using PostgreSQL LISTEN/NOTIFY
+- Event-driven architecture for near-instantaneous analytics
+- Reduces latency from 15 minutes to seconds
+
+**Contents:**
+- Architecture using PostgreSQL LISTEN/NOTIFY mechanism
+- Database trigger setup in Ingestion system
+- Streaming processor implementation (Python + Bash)
+- Micro-ETL for single-note processing
+- Batch processing and error handling
+- Performance considerations and scalability
+- Monitoring and observability
+- Migration strategy and testing approach
+- Cost-benefit analysis
+
+**Audience:** System architects, database administrators, DevOps engineers, project managers
+
+**When to read:**
+- Planning real-time analytics implementation
+- Understanding event-driven architecture
+- Evaluating LISTEN/NOTIFY approach
+- Designing streaming data pipelines
+- Estimating effort and resources
+
+**Status:** Future enhancement (not yet implemented, LOW priority)
+
+**Key Features:**
+- Native PostgreSQL solution (no external message queue)
+- Event-driven processing
+- Automatic reconnection and error handling
+- Batch processing for efficiency
+- Works alongside existing batch ETL
+
+**Current State:**
+- Ingestion: Every 1 minute
+- ETL: Every 15 minutes
+- Latency: ~15 minutes maximum
+
+**Proposed State:**
+- Streaming: Real-time (seconds)
+- Batch ETL: Continues as safety net
+- Latency: Seconds to minutes
+
+---
+
 #### [External_Classification_Strategies.md](External_Classification_Strategies.md)
 
 **External Note Classification Strategies - Research and Analysis**
