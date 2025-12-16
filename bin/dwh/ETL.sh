@@ -272,6 +272,40 @@ function __psql_with_appname {
  PGAPPNAME="${appname}" psql "$@"
 }
 
+# Check if a PostgreSQL function exists in a schema
+# Usage: __function_exists "schema" "function_name" "database"
+# Returns: 0 if exists, 1 if not
+function __function_exists {
+ local schema="${1}"
+ local function_name="${2}"
+ local dbname="${3:-${DBNAME_DWH}}"
+
+ local result
+ result=$(__psql_with_appname -d "${dbname}" -t -c \
+  "SELECT COUNT(*) FROM information_schema.routines
+   WHERE routine_schema = '${schema}'
+   AND routine_name = '${function_name}';" 2> /dev/null | tr -d ' ')
+
+ if [[ "${result}" == "1" ]]; then
+  return 0
+ else
+  return 1
+ fi
+}
+
+# Safely disable note activity metrics trigger (only if function exists)
+# Usage: __safe_disable_note_activity_metrics_trigger
+# This function checks if the trigger function exists before attempting to disable it,
+# avoiding error messages during first execution when the trigger hasn't been created yet.
+function __safe_disable_note_activity_metrics_trigger {
+ if __function_exists "dwh" "disable_note_activity_metrics_trigger" "${DBNAME_DWH}"; then
+  __logi "Disabling note activity metrics trigger for bulk load performance..."
+  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
+   -c "SELECT dwh.disable_note_activity_metrics_trigger();" 2>&1
+ fi
+ # If function doesn't exist, silently skip (expected behavior during first execution)
+}
+
 # Checks prerequisites to run the script.
 function __checkPrereqs {
  __log_start
@@ -561,12 +595,8 @@ function __initialFactsParallel {
 
  # Disable note activity metrics trigger for performance during bulk load
  # This improves ETL speed by 5-15% during initial load
- # Note: Trigger may not exist yet, so we'll handle the error gracefully
- __logi "Disabling note activity metrics trigger for bulk load performance..."
- __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=0 \
-  -c "SELECT dwh.disable_note_activity_metrics_trigger();" 2>&1 || {
-  __logw "Note: Trigger may not exist yet (will be created later). Continuing..."
- }
+ # Note: Function checks if trigger exists before attempting to disable
+ __safe_disable_note_activity_metrics_trigger
 
  # Phase 1: Parallel load by year
  __logi "Phase 1: Starting parallel load by year..."
@@ -615,11 +645,8 @@ function __initialFactsParallel {
 
  # Disable note activity metrics trigger for performance during bulk load
  # This improves ETL speed by 5-15% during initial load
- __logi "Disabling note activity metrics trigger for bulk load performance..."
- __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
-  -c "SELECT dwh.disable_note_activity_metrics_trigger();" 2>&1 || {
-  __logw "Note: Trigger may not exist yet (will be created later). Continuing..."
- }
+ # Note: Function checks if trigger exists before attempting to disable
+ __safe_disable_note_activity_metrics_trigger
 
  # Execute parallel load for each year
  year="${start_year}"
@@ -723,12 +750,8 @@ function __initialFacts {
 
  # Disable note activity metrics trigger for performance during bulk load
  # This improves ETL speed by 5-15% during initial load
- # Note: Trigger may not exist yet, so we'll handle the error gracefully
- __logi "Disabling note activity metrics trigger for bulk load performance..."
- __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=0 \
-  -c "SELECT dwh.disable_note_activity_metrics_trigger();" 2>&1 || {
-  __logw "Note: Trigger may not exist yet (will be created later). Continuing..."
- }
+ # Note: Function checks if trigger exists before attempting to disable
+ __safe_disable_note_activity_metrics_trigger
 
  # Skip year-specific load creation for simple initial load
  # __logi "Creating initial facts load."
@@ -925,6 +948,32 @@ function main() {
   __initialFactsParallel # Use parallel version
   __logi "Finished calling __initialFactsParallel"
   __perform_database_maintenance
+
+  # Setup FDW after initial load (needed for datamart scripts that access note_comments)
+  # Foreign tables provide access to base tables after dropCopiedBaseTables
+  __logi "Setting up Foreign Data Wrappers for datamart processing..."
+  if [[ "${DBNAME_INGESTION}" != "${DBNAME_DWH}" ]]; then
+   __logi "Databases are different, setting up FDW for datamart access"
+   if [[ -f "${POSTGRES_60_SETUP_FDW}" ]]; then
+    export FDW_INGESTION_HOST="${FDW_INGESTION_HOST:-localhost}"
+    export FDW_INGESTION_DBNAME="${DBNAME_INGESTION}"
+    export FDW_INGESTION_PORT="${FDW_INGESTION_PORT:-5432}"
+    export FDW_INGESTION_USER="${FDW_INGESTION_USER:-analytics_readonly}"
+    export FDW_INGESTION_PASSWORD="${FDW_INGESTION_PASSWORD:-}"
+    envsubst < "${POSTGRES_60_SETUP_FDW}" \
+     | __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 2>&1 || {
+     __loge "ERROR: Failed to setup Foreign Data Wrappers for datamart processing"
+     exit 1
+    }
+    __logi "Foreign Data Wrappers setup completed for datamart processing"
+   else
+    __loge "ERROR: FDW setup script not found: ${POSTGRES_60_SETUP_FDW}"
+    exit 1
+   fi
+  else
+   __logi "Ingestion and Analytics use same database (${DBNAME_DWH}), tables are directly accessible"
+  fi
+
   set +e
   "${DATAMART_COUNTRIES_SCRIPT}" "" || true
   "${DATAMART_USERS_SCRIPT}" "" || true
