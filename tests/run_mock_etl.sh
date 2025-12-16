@@ -69,15 +69,22 @@ awk '
   {print}
 ' "${PROJECT_ROOT}/sql/dwh/ETL_22_createDWHTables.sql" > "${TMP_DDL}"
 # Execute SQL, ignoring errors about existing objects (tables may already exist from previous runs)
-if ! "${psql_cmd[@]}" -f "${TMP_DDL}" 2>&1 | grep -vE "(already exists|NOTICE)"; then
- # If psql failed, check if it was just due to existing objects
- # If the exit code is non-zero and it's not about existing objects, fail
- if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
+set +e
+SQL_OUTPUT=$("${psql_cmd[@]}" -f "${TMP_DDL}" 2>&1)
+SQL_EXIT_CODE=$?
+set -e
+if [[ ${SQL_EXIT_CODE} -ne 0 ]]; then
+ # Filter out expected messages about existing objects
+ FILTERED_OUTPUT=$(echo "${SQL_OUTPUT}" | grep -vE "(already exists|NOTICE)" || true)
+ # If there's still output after filtering, it's a real error
+ if [[ -n "${FILTERED_OUTPUT}" ]]; then
   echo "[MOCK-ETL] ERROR: Failed to apply base DWH DDL" >&2
   echo "[MOCK-ETL] Check the SQL file: ${PROJECT_ROOT}/sql/dwh/ETL_22_createDWHTables.sql" >&2
+  echo "${FILTERED_OUTPUT}" >&2
   rm -f "${TMP_DDL}"
   exit 1
  fi
+ # If no filtered output, it was just expected warnings - continue
 fi
 rm -f "${TMP_DDL}"
 HAS_PKS=$("${psql_cmd[@]}" -tAc "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema='dwh' AND constraint_name='pk_users_dim')" 2> /dev/null || echo "f")
