@@ -13,6 +13,17 @@
 if [[ -z "${DBNAME:-}" ]]; then
  declare -r DBNAME="${DBNAME:-osm_notes}"
 fi
+# Database name variables for DWH operations (recommended)
+# DBNAME_DWH and DBNAME_INGESTION are recommended for DWH operations
+# DBNAME is maintained for backward compatibility when both databases are the same
+# shellcheck disable=SC2034
+if [[ -z "${DBNAME_DWH:-}" ]]; then
+ DBNAME_DWH="${DBNAME:-osm_notes}"
+fi
+# shellcheck disable=SC2034
+if [[ -z "${DBNAME_INGESTION:-}" ]]; then
+ DBNAME_INGESTION="${DBNAME:-osm_notes}"
+fi
 # shellcheck disable=SC2034
 if [[ -z "${DB_USER:-}" ]]; then
  declare -r DB_USER="${DB_USER:-myuser}"

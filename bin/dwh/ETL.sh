@@ -52,6 +52,11 @@ if [[ -f "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh.local" ]]; then
  source "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh.local"
 fi
 
+# Export database name variables to make them available to subprocesses
+# These variables are initialized in etc/properties.sh
+export DBNAME_DWH
+export DBNAME_INGESTION
+
 declare BASENAME
 BASENAME=$(basename -s .sh "${0}")
 readonly BASENAME
