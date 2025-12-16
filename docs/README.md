@@ -214,6 +214,106 @@ testing strategies, and development workflows.
 
 ---
 
+#### [ML_Implementation_Plan.md](ML_Implementation_Plan.md)
+
+**Machine Learning Implementation Plan - Future Enhancement**
+
+- Complete plan for implementing ML capabilities
+- Use cases: resolution time prediction, note classification, at-risk detection
+- Architecture and technical requirements
+- Step-by-step implementation guide
+- Data requirements and model specifications
+
+**Contents:**
+- 3 main use cases (resolution prediction, classification, risk detection)
+- Available data for training (facts table + datamarts)
+- Model architecture (regression, classification, binary classification)
+- Implementation architecture (Python ML service + PostgreSQL)
+- File structure and integration points
+- Training data requirements
+- 5-phase implementation plan (8-12 hours)
+- Technical requirements and dependencies
+- Expected outcomes and performance metrics
+- Maintenance and monitoring guidelines
+
+**Audience:** Data scientists, ML engineers, system architects, project managers
+
+**When to read:**
+- Planning ML implementation
+- Understanding ML requirements
+- Evaluating feasibility
+- Designing ML architecture
+- Estimating effort and resources
+
+**Status:** Future enhancement (not yet implemented)
+
+**Related Resources:**
+- [External Classification Strategies](External_Classification_Strategies.md) - Analysis of external tools and keyword-based approaches
+
+---
+
+#### [External_Classification_Strategies.md](External_Classification_Strategies.md)
+
+**External Note Classification Strategies - Research and Analysis**
+
+- Analysis of external tools for note classification
+- Keyword-based classification strategies
+- Hashtag-based classification approaches
+- Integration opportunities with our ML system
+
+**Contents:**
+- DE:Notes Map v2.5 analysis (keyword and hashtag-based classification)
+- How external strategies could enhance our ML system
+- Keyword lists for feature engineering
+- Hybrid classification approaches (rule-based + ML)
+- Recommendations for integration
+
+**Audience:** ML engineers, data scientists, system architects
+
+**When to read:**
+- Researching classification strategies
+- Enhancing ML feature engineering
+- Understanding keyword-based approaches
+- Planning hybrid classification systems
+
+---
+
+#### [Note_Categorization.md](Note_Categorization.md)
+
+**Note Categorization and Classification - Note Type System**
+
+- Comprehensive guide to note classification system
+- Based on AngocA's diary article on note types
+- How analytics help categorize notes
+- SQL queries for identifying note types
+- Use cases for mappers, community leaders, and analysts
+
+**Contents:**
+- Two main note categories (contribute vs don't contribute with change)
+- 18+ detailed note subtypes with examples
+- Available metrics for categorization
+- Classification SQL queries
+- Use cases for different user types
+- Related resources and articles
+
+**Audience:** Mappers, community leaders, data analysts, note resolution campaign organizers
+
+**When to read:**
+- Understanding note classification system
+- Planning note resolution campaigns
+- Analyzing note patterns
+- Identifying priority notes
+- Learning about note types and characteristics
+
+**Related Articles:**
+- [Tipos de notas](https://www.openstreetmap.org/user/AngocA/diary/398472) - Comprehensive note type classification
+- [Manipulación de notas](https://www.openstreetmap.org/user/AngocA/diary/397284) - Note workflows
+- [Análisis de notas](https://www.openstreetmap.org/user/AngocA/diary/397548) - Analysis techniques
+- [Técnicas de creación y resolución de notas](https://www.openstreetmap.org/user/AngocA/diary/398514) - Best practices
+- [Proyecto de resolución de notas](https://wiki.openstreetmap.org/wiki/ES:LatAm/Proyectos/Resoluci%C3%B3n_de_notas/Preparaci%C3%B3n_premios) - Campaign documentation
+
+---
+
 #### [PERFORMANCE_BASELINES.md](PERFORMANCE_BASELINES.md)
 
 **Query Performance Baselines - Performance Expectations**
@@ -1009,6 +1109,7 @@ This documentation structure was established: 2025-10-14
 
 **Major Updates:**
 
+- 2025-01-21: Added Machine Learning Implementation Plan
 - 2025-12-14: Added Dashboard Implementation Guide, Use Cases and Personas, Performance Baselines
 - 2025-12-14: Added Performance Monitoring system documentation
 - 2025-12-14: Updated metric counts (77+ for countries, 78+ for users)
