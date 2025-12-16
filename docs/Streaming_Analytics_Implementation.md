@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-This document outlines a plan to implement real-time streaming analytics for the OSM Notes Analytics system using PostgreSQL's **LISTEN/NOTIFY** mechanism. This would enable near-instantaneous processing of notes as they arrive, reducing latency from the current 15 minutes to seconds.
+This document outlines a plan to implement real-time streaming analytics for the OSM Notes Analytics system using a **pure Bash approach with event queue table**. This would enable near-instantaneous processing of notes as they arrive, reducing latency from the current 15 minutes to seconds.
 
 **Current State**: 
 - Ingestion: Daemon runs every minute
@@ -17,9 +17,9 @@ This document outlines a plan to implement real-time streaming analytics for the
 - **Latency**: ~15 minutes maximum
 
 **Proposed State**:
-- Ingestion: Daemon runs every minute + sends NOTIFY on insert
-- Streaming Processor: LISTENs for notifications and processes immediately
-- **Latency**: Seconds to minutes
+- Ingestion: Daemon runs every minute + trigger writes to event queue
+- Streaming Processor: Polls event queue and processes immediately (pure Bash)
+- **Latency**: 2-5 seconds (polling interval)
 
 ---
 
@@ -27,7 +27,7 @@ This document outlines a plan to implement real-time streaming analytics for the
 
 1. [Overview](#overview)
 2. [Architecture](#architecture)
-3. [PostgreSQL LISTEN/NOTIFY Mechanism](#postgresql-listennotify-mechanism)
+3. [Event Queue Mechanism](#event-queue-mechanism)
 4. [Implementation Details](#implementation-details)
 5. [Code Examples](#code-examples)
 6. [Integration Points](#integration-points)
@@ -53,14 +53,14 @@ OSM API → Ingestion Daemon (every 1 min) → Base Tables → ETL (every 15 min
 ### Proposed Architecture
 
 ```
-OSM API → Ingestion Daemon (every 1 min) → Base Tables → NOTIFY
-                                              ↓
-                                    Streaming Processor (LISTEN)
-                                              ↓
-                                            DWH (real-time)
+OSM API → Ingestion Daemon (every 1 min) → Base Tables → Trigger → Event Queue
+                                                                    ↓
+                                              Streaming Processor (Polling, Bash)
+                                                                    ↓
+                                                                  DWH (real-time)
 ```
 
-**Latency**: Seconds to minutes from note creation to DWH availability
+**Latency**: 2-5 seconds from note creation to DWH availability (polling interval)
 
 ### Key Benefits
 
@@ -93,11 +93,11 @@ graph TB
     
     subgraph "PostgreSQL"
         TRIGGER[Database Trigger<br/>AFTER INSERT]
-        NOTIFY[NOTIFY Channel<br/>'note_inserted']
+        QUEUE[Event Queue Table<br/>dwh.note_event_queue]
     end
     
     subgraph "OSM-Notes-Analytics"
-        LISTENER[Streaming Processor<br/>LISTEN daemon]
+        POLLER[Streaming Processor<br/>Polling daemon (Bash)]
         ETL[Micro-ETL<br/>Process single note]
         DWH[DWH Schema<br/>dwh.facts]
         DATAMART[Datamarts<br/>Incremental update]
@@ -106,9 +106,9 @@ graph TB
     API --> DAEMON
     DAEMON --> BASE
     BASE --> TRIGGER
-    TRIGGER --> NOTIFY
-    NOTIFY --> LISTENER
-    LISTENER --> ETL
+    TRIGGER --> QUEUE
+    QUEUE --> POLLER
+    POLLER --> ETL
     ETL --> DWH
     DWH --> DATAMART
 ```
@@ -117,18 +117,28 @@ graph TB
 
 #### 1. Database Trigger (Ingestion Side)
 
-A PostgreSQL trigger that fires `NOTIFY` when new notes or comments are inserted:
+A PostgreSQL trigger that writes events to the queue table when new notes or comments are inserted:
 
 ```sql
 CREATE OR REPLACE FUNCTION notify_note_insert()
 RETURNS TRIGGER AS $$
 BEGIN
-    PERFORM pg_notify('note_inserted', json_build_object(
-        'note_id', NEW.note_id,
-        'sequence_action', NEW.sequence_action,
-        'event', NEW.event,
-        'created_at', NEW.created_at
-    )::text);
+    INSERT INTO dwh.note_event_queue (
+        note_id, sequence_action, event_type, payload, status
+    ) VALUES (
+        NEW.note_id,
+        NEW.sequence_action,
+        NEW.event,
+        jsonb_build_object(
+            'note_id', NEW.note_id,
+            'sequence_action', NEW.sequence_action,
+            'event', NEW.event,
+            'created_at', NEW.created_at
+        ),
+        'pending'
+    )
+    ON CONFLICT (note_id, sequence_action, status) DO NOTHING;
+    
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -141,11 +151,11 @@ CREATE TRIGGER note_insert_notify
 
 #### 2. Streaming Processor (Analytics Side)
 
-A daemon process that:
-- Maintains a persistent connection to PostgreSQL
-- LISTENs to the `note_inserted` channel
-- Processes notifications as they arrive
-- Handles errors and reconnection
+A pure Bash daemon process that:
+- Polls the event queue table periodically (every 2-5 seconds)
+- Processes pending events in batches
+- Marks events as processed or failed
+- Handles errors and retries
 
 #### 3. Micro-ETL
 
@@ -157,29 +167,57 @@ A lightweight ETL process that:
 
 ---
 
-## PostgreSQL LISTEN/NOTIFY Mechanism
+## PostgreSQL Event Queue Mechanism
 
-### How It Works
+### Approach: Event Table + Polling (Pure Bash)
 
-PostgreSQL's LISTEN/NOTIFY is a built-in pub/sub mechanism:
+Since the project uses primarily Bash and we want to avoid Python dependencies, we'll use a **hybrid approach**:
 
-1. **LISTEN**: A client subscribes to a channel
-2. **NOTIFY**: A process sends a message to a channel
-3. **Notification**: All LISTENing clients receive the message
+1. **Event Table**: Database trigger writes events to a queue table
+2. **Polling**: Bash script polls the table periodically
+3. **Processing**: Process events and mark them as processed
 
 ### Advantages
 
-- **Native**: Built into PostgreSQL, no external dependencies
-- **Efficient**: Low overhead, uses existing database connection
-- **Reliable**: Transactions ensure notifications are delivered
-- **Simple**: No message queue infrastructure needed
+- **Pure Bash**: No external dependencies (Python, etc.)
+- **Simple**: Easy to understand and maintain
+- **Reliable**: Events are persisted in database
+- **Resilient**: Can recover from failures (events remain in queue)
+- **Acknowledgment**: Built-in delivery confirmation via status column
 
-### Limitations
+### Trade-offs
 
-- **Payload Size**: Limited to 8000 bytes (use JSON for structured data)
-- **No Persistence**: Notifications are lost if no listeners are active
-- **No Acknowledgment**: No built-in delivery confirmation
-- **Connection Required**: Requires persistent database connection
+- **Latency**: Slight delay due to polling interval (1-5 seconds)
+- **Polling Overhead**: Periodic database queries
+- **Still Real-time**: For practical purposes, 1-5 second latency is near real-time
+
+### Alternative: LISTEN/NOTIFY with psql (Possible but Complex)
+
+PostgreSQL's LISTEN/NOTIFY **does NOT require Python** - it's a native PostgreSQL feature. However, using it from Bash is complex:
+
+**Option 1: LISTEN/NOTIFY with psql (Complex)**
+```bash
+# This is possible but requires:
+# 1. Running psql in background
+# 2. Parsing psql output for notifications
+# 3. Complex signal/process handling
+# 4. Less reliable (notifications can be lost)
+
+psql -d "${DBNAME}" <<EOF &
+LISTEN note_inserted;
+\watch 1
+EOF
+
+# Parse output for notifications - complex!
+```
+
+**Option 2: Event Table (Recommended)**
+- Simpler implementation
+- More reliable (events persist)
+- Easier to debug
+- Better error handling
+
+**Recommendation**: Use event table approach for simplicity and reliability, even though LISTEN/NOTIFY is technically possible in Bash.
 
 ### Channel Design
 
@@ -278,15 +316,113 @@ SHOW max_listener_connections;
 -- ALTER SYSTEM SET max_listener_connections = 100;
 ```
 
-### Phase 2: Streaming Processor (Analytics Side)
+### Phase 2: Event Queue Table Setup
 
-#### Step 2.1: Create Streaming Processor Script
+#### Step 2.1: Create Event Queue Table
+
+```sql
+-- File: sql/dwh/streaming/create_event_queue.sql
+
+-- Create event queue table for streaming processing
+CREATE TABLE IF NOT EXISTS dwh.note_event_queue (
+    event_id BIGSERIAL PRIMARY KEY,
+    note_id BIGINT NOT NULL,
+    sequence_action INTEGER NOT NULL,
+    event_type TEXT NOT NULL,
+    payload JSONB,
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    processed_at TIMESTAMP WITH TIME ZONE,
+    error_message TEXT,
+    retry_count INTEGER NOT NULL DEFAULT 0,
+    UNIQUE (note_id, sequence_action, status)
+);
+
+-- Index for efficient polling
+CREATE INDEX IF NOT EXISTS idx_note_event_queue_status_created 
+    ON dwh.note_event_queue(status, created_at)
+    WHERE status = 'pending';
+
+-- Index for cleanup
+CREATE INDEX IF NOT EXISTS idx_note_event_queue_processed 
+    ON dwh.note_event_queue(processed_at)
+    WHERE status = 'processed';
+
+COMMENT ON TABLE dwh.note_event_queue IS
+    'Queue table for streaming note processing. Events are inserted by trigger and processed by streaming processor.';
+
+COMMENT ON COLUMN dwh.note_event_queue.status IS
+    'Status: pending, processing, processed, failed';
+```
+
+#### Step 2.2: Update Trigger to Write to Queue
+
+```sql
+-- File: sql/ingestion/create_note_notify_trigger.sql
+-- Updated to write to event queue instead of NOTIFY
+
+CREATE OR REPLACE FUNCTION public.notify_note_insert()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_payload JSONB;
+BEGIN
+    -- Build notification payload
+    v_payload := jsonb_build_object(
+        'note_id', NEW.note_id,
+        'sequence_action', NEW.sequence_action,
+        'event', NEW.event,
+        'created_at', NEW.created_at::text,
+        'id_user', NEW.id_user,
+        'table_name', TG_TABLE_NAME
+    );
+    
+    -- Insert into event queue (if analytics DB is accessible)
+    -- This requires dblink or FDW to access analytics DB
+    -- Alternative: Write to local table, streaming processor reads via FDW
+    
+    -- For same database, direct insert:
+    INSERT INTO dwh.note_event_queue (
+        note_id,
+        sequence_action,
+        event_type,
+        payload,
+        status
+    ) VALUES (
+        NEW.note_id,
+        NEW.sequence_action,
+        NEW.event,
+        v_payload,
+        'pending'
+    )
+    ON CONFLICT (note_id, sequence_action, status) 
+    DO UPDATE SET
+        payload = EXCLUDED.payload,
+        created_at = EXCLUDED.created_at,
+        retry_count = 0;
+    
+    -- Also send NOTIFY for optional real-time listeners
+    PERFORM pg_notify('note_inserted', v_payload::text);
+    
+    RETURN NEW;
+EXCEPTION
+    WHEN OTHERS THEN
+        -- If analytics schema doesn't exist, just send NOTIFY
+        PERFORM pg_notify('note_inserted', v_payload::text);
+        RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### Phase 3: Streaming Processor (Pure Bash)
+
+#### Step 3.1: Create Streaming Processor Script (Pure Bash)
 
 ```bash
 #!/bin/bash
 # File: bin/dwh/streaming_processor.sh
 
-# Streaming processor for real-time note processing using LISTEN/NOTIFY
+# Streaming processor for real-time note processing using event queue polling
+# Pure Bash implementation - no Python dependencies
 
 set -euo pipefail
 
@@ -296,11 +432,10 @@ source "${SCRIPT_DIR}/../../etc/properties.sh" || exit 1
 source "${SCRIPT_DIR}/../../lib/osm-common/logging.sh" || exit 1
 
 # Configuration
-CHANNEL="note_inserted"
-RECONNECT_DELAY=5
-MAX_RECONNECT_ATTEMPTS=10
+POLL_INTERVAL=2  # seconds between polls
 BATCH_SIZE=10
-BATCH_TIMEOUT=5  # seconds
+MAX_RETRIES=3
+PROCESSING_TIMEOUT=300  # 5 minutes per event
 
 # Logging
 LOG_DIR="${LOG_DIR:-/tmp/streaming_processor}"
@@ -308,268 +443,229 @@ mkdir -p "${LOG_DIR}"
 LOG_FILE="${LOG_DIR}/streaming_processor_$(date +%Y%m%d_%H%M%S).log"
 
 __log_start() {
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] Starting streaming processor..." | tee -a "${LOG_FILE}"
+    __logi "Starting streaming processor..."
+    __logi "Poll interval: ${POLL_INTERVAL}s, Batch size: ${BATCH_SIZE}"
 }
 
-__log_notification() {
-    local note_id=$1
-    local payload=$2
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] Received notification: note_id=${note_id}" | tee -a "${LOG_FILE}"
+__log_event() {
+    local event_id=$1
+    local note_id=$2
+    __logi "Processing event_id=${event_id}, note_id=${note_id}"
 }
 
 __log_error() {
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] ERROR: $1" | tee -a "${LOG_FILE}" >&2
+    __loge "$1"
 }
 
 __log_finish() {
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] Streaming processor stopped." | tee -a "${LOG_FILE}"
+    __logi "Streaming processor stopped."
 }
 
-# Process a single notification
-process_notification() {
-    local payload=$1
-    local note_id=$(echo "${payload}" | jq -r '.note_id')
-    local sequence_action=$(echo "${payload}" | jq -r '.sequence_action')
+# Mark event as processing
+mark_event_processing() {
+    local event_id=$1
+    psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -t -A <<EOF
+        UPDATE dwh.note_event_queue
+        SET status = 'processing',
+            processed_at = NOW()
+        WHERE event_id = ${event_id}
+          AND status = 'pending'
+        RETURNING event_id;
+EOF
+}
+
+# Mark event as processed
+mark_event_processed() {
+    local event_id=$1
+    psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -t -A <<EOF
+        UPDATE dwh.note_event_queue
+        SET status = 'processed',
+            processed_at = NOW()
+        WHERE event_id = ${event_id};
+EOF
+}
+
+# Mark event as failed
+mark_event_failed() {
+    local event_id=$1
+    local error_msg=$2
+    psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -t -A <<EOF
+        UPDATE dwh.note_event_queue
+        SET status = 'failed',
+            error_message = '${error_msg}',
+            retry_count = retry_count + 1,
+            processed_at = NOW()
+        WHERE event_id = ${event_id};
+EOF
+}
+
+# Process a single event
+process_event() {
+    local event_id=$1
+    local note_id=$2
+    local sequence_action=$3
+    local event_type=$4
     
-    __log_notification "${note_id}" "${payload}"
+    __log_event "${event_id}" "${note_id}"
     
     # Call micro-ETL to process this note
-    "${SCRIPT_DIR}/micro_etl.sh" \
+    if "${SCRIPT_DIR}/micro_etl.sh" \
         --note-id "${note_id}" \
         --sequence-action "${sequence_action}" \
-        2>&1 | tee -a "${LOG_FILE}"
-    
-    return $?
+        --event-type "${event_type}" \
+        2>&1 | tee -a "${LOG_FILE}"; then
+        mark_event_processed "${event_id}"
+        return 0
+    else
+        local error_msg="Processing failed for note_id=${note_id}, sequence=${sequence_action}"
+        mark_event_failed "${event_id}" "${error_msg}"
+        return 1
+    fi
 }
 
-# Main LISTEN loop
-listen_loop() {
-    local reconnect_count=0
+# Get pending events
+get_pending_events() {
+    psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -t -A -F'|' <<EOF
+        SELECT 
+            event_id,
+            note_id,
+            sequence_action,
+            event_type,
+            payload::text
+        FROM dwh.note_event_queue
+        WHERE status = 'pending'
+        ORDER BY created_at ASC
+        LIMIT ${BATCH_SIZE}
+        FOR UPDATE SKIP LOCKED;
+EOF
+}
+
+# Reset stuck events (processing for too long)
+reset_stuck_events() {
+    psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 <<EOF
+        UPDATE dwh.note_event_queue
+        SET status = 'pending',
+            processed_at = NULL
+        WHERE status = 'processing'
+          AND processed_at < NOW() - INTERVAL '${PROCESSING_TIMEOUT} seconds'
+          AND retry_count < ${MAX_RETRIES};
+EOF
+}
+
+# Main polling loop
+poll_loop() {
+    __log_start
     
     while true; do
-        __log_start
+        # Reset stuck events
+        reset_stuck_events
         
-        # Connect and LISTEN
-        psql -d "${DBNAME_DWH}" \
-            -c "LISTEN ${CHANNEL};" \
-            -c "SELECT pg_notify('test', 'Streaming processor connected');" \
-            || {
-                __log_error "Failed to connect to database"
-                reconnect_count=$((reconnect_count + 1))
-                if [ ${reconnect_count} -ge ${MAX_RECONNECT_ATTEMPTS} ]; then
-                    __log_error "Max reconnection attempts reached. Exiting."
-                    exit 1
+        # Get pending events
+        local events
+        events=$(get_pending_events) || {
+            __log_error "Failed to get pending events"
+            sleep ${POLL_INTERVAL}
+            continue
+        }
+        
+        # Process events if any
+        if [ -n "${events}" ]; then
+            local processed_count=0
+            local failed_count=0
+            
+            while IFS='|' read -r event_id note_id sequence_action event_type payload; do
+                # Mark as processing
+                if mark_event_processing "${event_id}" > /dev/null 2>&1; then
+                    # Process event
+                    if process_event "${event_id}" "${note_id}" "${sequence_action}" "${event_type}"; then
+                        ((processed_count++))
+                    else
+                        ((failed_count++))
+                    fi
                 fi
-                sleep ${RECONNECT_DELAY}
-                continue
-            }
+            done <<< "${events}"
+            
+            if [ ${processed_count} -gt 0 ] || [ ${failed_count} -gt 0 ]; then
+                __logi "Processed: ${processed_count}, Failed: ${failed_count}"
+            fi
+        fi
         
-        # Reset reconnect count on successful connection
-        reconnect_count=0
-        
-        # Use pg_notify_listen or similar tool to receive notifications
-        # For bash, we'll use a Python helper script
-        "${SCRIPT_DIR}/listen_helper.py" \
-            --dbname "${DBNAME_DWH}" \
-            --channel "${CHANNEL}" \
-            --batch-size "${BATCH_SIZE}" \
-            --batch-timeout "${BATCH_TIMEOUT}" \
-            --callback "${SCRIPT_DIR}/process_batch.sh" \
-            2>&1 | tee -a "${LOG_FILE}"
-        
-        # If we get here, the listener exited (error or shutdown)
-        __log_error "Listener exited. Reconnecting in ${RECONNECT_DELAY} seconds..."
-        sleep ${RECONNECT_DELAY}
+        # Sleep before next poll
+        sleep ${POLL_INTERVAL}
     done
 }
 
 # Signal handling
 trap '__log_finish; exit 0' SIGTERM SIGINT
 
-# Start listening
-listen_loop
+# Start polling
+poll_loop
 ```
 
-#### Step 2.2: Python LISTEN Helper
-
-```python
-#!/usr/bin/env python3
-# File: bin/dwh/listen_helper.py
-
-"""
-PostgreSQL LISTEN helper for receiving notifications.
-
-This script maintains a persistent connection and listens for NOTIFY events,
-batching them for efficient processing.
-"""
-
-import argparse
-import json
-import psycopg2
-import psycopg2.extensions
-import select
-import subprocess
-import sys
-import time
-from datetime import datetime
-from typing import List, Dict
-
-def log(message: str):
-    """Log with timestamp."""
-    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {message}", flush=True)
-
-def process_notifications(
-    conn: psycopg2.extensions.connection,
-    channel: str,
-    batch_size: int,
-    batch_timeout: float,
-    callback_script: str
-):
-    """Listen for notifications and process them in batches."""
-    
-    # Set up connection for async notifications
-    conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
-    
-    # Create cursor
-    cur = conn.cursor()
-    
-    # Listen to channel
-    cur.execute(f"LISTEN {channel};")
-    log(f"Listening on channel: {channel}")
-    
-    # Notification buffer
-    notifications: List[Dict] = []
-    last_batch_time = time.time()
-    
-    while True:
-        # Check for notifications
-        if select.select([conn], [], [], batch_timeout)[0]:
-            conn.poll()
-            
-            while conn.notifies:
-                notify = conn.notifies.pop(0)
-                
-                try:
-                    payload = json.loads(notify.payload)
-                    notifications.append({
-                        'channel': notify.channel,
-                        'payload': notify.payload,
-                        'pid': notify.pid,
-                        'data': payload
-                    })
-                    
-                    log(f"Received notification: note_id={payload.get('note_id', 'unknown')}")
-                    
-                except json.JSONDecodeError as e:
-                    log(f"ERROR: Failed to parse notification payload: {e}")
-                    continue
-        
-        # Process batch if ready
-        current_time = time.time()
-        should_process = (
-            len(notifications) >= batch_size or
-            (len(notifications) > 0 and (current_time - last_batch_time) >= batch_timeout)
-        )
-        
-        if should_process:
-            if notifications:
-                log(f"Processing batch of {len(notifications)} notifications")
-                
-                # Call callback script with batch
-                try:
-                    result = subprocess.run(
-                        [callback_script],
-                        input=json.dumps(notifications),
-                        text=True,
-                        capture_output=True,
-                        timeout=300  # 5 minute timeout per batch
-                    )
-                    
-                    if result.returncode != 0:
-                        log(f"ERROR: Callback script failed: {result.stderr}")
-                    else:
-                        log(f"Successfully processed {len(notifications)} notifications")
-                        
-                except subprocess.TimeoutExpired:
-                    log(f"ERROR: Callback script timed out after 5 minutes")
-                except Exception as e:
-                    log(f"ERROR: Failed to execute callback: {e}")
-                
-                # Clear buffer
-                notifications = []
-                last_batch_time = current_time
-
-def main():
-    parser = argparse.ArgumentParser(description='PostgreSQL LISTEN helper')
-    parser.add_argument('--dbname', required=True, help='Database name')
-    parser.add_argument('--channel', required=True, help='Channel to listen on')
-    parser.add_argument('--batch-size', type=int, default=10, help='Batch size')
-    parser.add_argument('--batch-timeout', type=float, default=5.0, help='Batch timeout in seconds')
-    parser.add_argument('--callback', required=True, help='Callback script to process batches')
-    
-    args = parser.parse_args()
-    
-    # Connect to database
-    try:
-        conn = psycopg2.connect(
-            dbname=args.dbname,
-            user=os.getenv('DB_USER', 'postgres'),
-            password=os.getenv('DB_PASSWORD', ''),
-            host=os.getenv('DB_HOST', 'localhost'),
-            port=os.getenv('DB_PORT', '5432')
-        )
-        log("Connected to database")
-    except Exception as e:
-        log(f"ERROR: Failed to connect to database: {e}")
-        sys.exit(1)
-    
-    try:
-        process_notifications(
-            conn,
-            args.channel,
-            args.batch_size,
-            args.batch_timeout,
-            args.callback
-        )
-    except KeyboardInterrupt:
-        log("Interrupted by user")
-    except Exception as e:
-        log(f"ERROR: {e}")
-        sys.exit(1)
-    finally:
-        conn.close()
-        log("Connection closed")
-
-if __name__ == '__main__':
-    import os
-    main()
-```
-
-#### Step 2.3: Batch Processing Script
+#### Step 3.2: Cleanup Old Events (Optional)
 
 ```bash
 #!/bin/bash
-# File: bin/dwh/process_batch.sh
+# File: bin/dwh/cleanup_event_queue.sh
 
-# Process a batch of notifications
+# Cleanup old processed events from queue table
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../../etc/properties.sh" || exit 1
 
-# Read batch from stdin (JSON array)
-BATCH_JSON=$(cat)
+# Keep events for 7 days
+RETENTION_DAYS=7
 
-# Parse and process each notification
-echo "${BATCH_JSON}" | jq -c '.[]' | while read -r notification; do
-    note_id=$(echo "${notification}" | jq -r '.data.note_id')
-    sequence_action=$(echo "${notification}" | jq -r '.data.sequence_action')
+psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 <<EOF
+    DELETE FROM dwh.note_event_queue
+    WHERE status = 'processed'
+      AND processed_at < NOW() - INTERVAL '${RETENTION_DAYS} days';
     
-    # Process this notification
-    "${SCRIPT_DIR}/micro_etl.sh" \
-        --note-id "${note_id}" \
-        --sequence-action "${sequence_action}"
+    -- Also cleanup old failed events (keep for 30 days)
+    DELETE FROM dwh.note_event_queue
+    WHERE status = 'failed'
+      AND processed_at < NOW() - INTERVAL '30 days';
+EOF
+
+echo "Event queue cleanup completed"
+```
+
+#### Step 3.3: Batch Processing Script (Optional - for efficiency)
+
+```bash
+#!/bin/bash
+# File: bin/dwh/process_batch.sh
+
+# Process a batch of events (optional - for batch processing mode)
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../../etc/properties.sh" || exit 1
+
+# Get batch of events from queue
+BATCH_SIZE="${1:-10}"
+
+psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -t -A -F'|' <<EOF | while IFS='|' read -r event_id note_id sequence_action event_type; do
+    SELECT 
+        event_id,
+        note_id,
+        sequence_action,
+        event_type
+    FROM dwh.note_event_queue
+    WHERE status = 'pending'
+    ORDER BY created_at ASC
+    LIMIT ${BATCH_SIZE}
+    FOR UPDATE SKIP LOCKED;
+EOF
+    if [ -n "${event_id}" ]; then
+        "${SCRIPT_DIR}/micro_etl.sh" \
+            --note-id "${note_id}" \
+            --sequence-action "${sequence_action}" \
+            --event-type "${event_type}"
+    fi
 done
 ```
 
@@ -814,21 +910,34 @@ The trigger should be added to the OSM-Notes-Ingestion project:
 
 ### Example Error Handling
 
-```python
-# In listen_helper.py
+```bash
+# In streaming_processor.sh
 
-def process_notification_with_retry(payload, max_retries=3):
-    for attempt in range(max_retries):
-        try:
-            process_notification(payload)
-            return True
-        except Exception as e:
-            if attempt == max_retries - 1:
-                # Log to dead letter queue
-                log_to_dlq(payload, str(e))
-                return False
-            time.sleep(2 ** attempt)  # Exponential backoff
-    return False
+# Process event with retry logic
+process_event_with_retry() {
+    local event_id=$1
+    local note_id=$2
+    local sequence_action=$3
+    local max_retries=3
+    local attempt=0
+    
+    while [ ${attempt} -lt ${max_retries} ]; do
+        if process_event "${event_id}" "${note_id}" "${sequence_action}"; then
+            return 0
+        fi
+        
+        attempt=$((attempt + 1))
+        if [ ${attempt} -lt ${max_retries} ]; then
+            local backoff=$((2 ** attempt))
+            __logi "Retrying event_id=${event_id} in ${backoff} seconds (attempt ${attempt}/${max_retries})"
+            sleep ${backoff}
+        fi
+    done
+    
+    # Max retries reached, mark as failed
+    mark_event_failed "${event_id}" "Max retries (${max_retries}) exceeded"
+    return 1
+}
 ```
 
 ---
@@ -859,32 +968,47 @@ def process_notification_with_retry(payload, max_retries=3):
 # Check if streaming processor is healthy
 
 DBNAME="${DBNAME_DWH}"
-CHANNEL="note_inserted"
 
-# Check if processor is listening
-psql -d "${DBNAME}" -c "
-    SELECT count(*) as listener_count
-    FROM pg_stat_activity
-    WHERE state = 'active'
-      AND query LIKE '%LISTEN ${CHANNEL}%';
+# Check pending events count
+psql -d "${DBNAME}" -t -A -c "
+    SELECT COUNT(*) as pending_events
+    FROM dwh.note_event_queue
+    WHERE status = 'pending';
 "
 
-# Check recent processing
-psql -d "${DBNAME}" -c "
+# Check processing events (should be low)
+psql -d "${DBNAME}" -t -A -c "
+    SELECT COUNT(*) as processing_events
+    FROM dwh.note_event_queue
+    WHERE status = 'processing';
+"
+
+# Check recent processing rate
+psql -d "${DBNAME}" -t -A -c "
     SELECT 
-        COUNT(*) as recent_facts,
-        MAX(action_at) as latest_fact
-    FROM dwh.facts
-    WHERE action_at > NOW() - INTERVAL '5 minutes';
+        COUNT(*) as processed_last_5min,
+        MAX(processed_at) as last_processed
+    FROM dwh.note_event_queue
+    WHERE status = 'processed'
+      AND processed_at > NOW() - INTERVAL '5 minutes';
+"
+
+# Check for stuck events
+psql -d "${DBNAME}" -t -A -c "
+    SELECT COUNT(*) as stuck_events
+    FROM dwh.note_event_queue
+    WHERE status = 'processing'
+      AND processed_at < NOW() - INTERVAL '10 minutes';
 "
 ```
 
 ### Alerting
 
-- **Connection Lost**: Alert if no connection for > 1 minute
-- **High Error Rate**: Alert if error rate > 5%
-- **Processing Lag**: Alert if latency > 1 minute
-- **Queue Backlog**: Alert if unprocessed notifications > 100
+- **Queue Backlog**: Alert if pending events > 100
+- **High Error Rate**: Alert if failed events > 5% of processed
+- **Processing Lag**: Alert if oldest pending event > 5 minutes
+- **Stuck Events**: Alert if processing events > 10
+- **Processor Down**: Alert if no events processed in last 10 minutes
 
 ---
 
