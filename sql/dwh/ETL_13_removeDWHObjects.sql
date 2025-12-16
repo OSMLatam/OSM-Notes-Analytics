@@ -53,6 +53,10 @@ DROP TABLE IF EXISTS dwh.dimension_timezones CASCADE;
 
 DROP TABLE IF EXISTS dwh.dimension_seasons CASCADE;
 
+DROP TABLE IF EXISTS dwh.dimension_automation_level CASCADE;
+
+DROP TABLE IF EXISTS dwh.dimension_experience_levels CASCADE;
+
 DROP TABLE IF EXISTS dwh.iso_country_codes;
 
 DROP SCHEMA IF EXISTS dwh CASCADE;
