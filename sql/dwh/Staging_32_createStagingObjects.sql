@@ -181,10 +181,14 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
     );
    END IF;
 --RAISE NOTICE 'Flag 11: %', CLOCK_TIMESTAMP();
+   -- Handle case where we can't find opening date (fallback to opened_dimension_id_date)
+   -- This can happen when processing a note for the first time in incremental mode
    IF (m_recent_opened_dimension_id_date IS NULL) THEN
-    RAISE NOTICE '% - Error when getting the open date - note_id %, sequence %',
+    RAISE NOTICE '% - Warning: Could not find opening date for note_id %, sequence % - using opened_dimension_id_date as fallback',
       CLOCK_TIMESTAMP(), rec_note_action.id_note,
       rec_note_action.sequence_action;
+    -- Use opened_dimension_id_date as fallback (always available for any note)
+    m_recent_opened_dimension_id_date := m_opened_id_date;
    END IF;
 --RAISE NOTICE 'Flag 12: %', CLOCK_TIMESTAMP();
 
