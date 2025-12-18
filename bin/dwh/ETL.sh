@@ -555,6 +555,16 @@ function __processNotesETL {
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_53B_CREATE_HASHTAG_INDEXES}" 2>&1
 
+ # Ensure automation detection system exists (needed for update procedures).
+ __logi "Ensuring automation detection system exists."
+ __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
+  -f "${POSTGRES_50_CREATE_AUTOMATION_DETECTION}" 2>&1
+
+ # Ensure experience levels system exists (needed for update procedures).
+ __logi "Ensuring experience levels system exists."
+ __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
+  -f "${POSTGRES_51_CREATE_EXPERIENCE_LEVELS}" 2>&1
+
  # Update automation levels for modified users.
  __logi "Updating automation levels for modified users."
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
