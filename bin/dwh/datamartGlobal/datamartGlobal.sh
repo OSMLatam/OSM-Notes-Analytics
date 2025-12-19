@@ -111,9 +111,17 @@ function __show_help {
 # Wrapper for psql that sets application_name for better process identification
 # Usage: __psql_with_appname [appname] [psql_args...]
 # If appname is not provided, uses BASENAME (script name without .sh)
+# If first argument starts with '-', it's a psql option, not an appname
 function __psql_with_appname {
- local appname="${1:-${BASENAME}}"
- shift
+ local appname
+ if [[ "${1:-}" =~ ^- ]]; then
+  # First argument is a psql option, use default appname
+  appname="${BASENAME}"
+ else
+  # First argument is an appname
+  appname="${1}"
+  shift
+ fi
  PGAPPNAME="${appname}" psql "$@"
 }
 
