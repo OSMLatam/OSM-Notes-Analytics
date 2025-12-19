@@ -180,8 +180,17 @@ function __checkBaseTables {
 # Processes the global statistics.
 function __processGlobalStats {
  __log_start
- __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -f "${POPULATE_FILE}" 2>&1
- __log_finish
+ if __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -f "${POPULATE_FILE}" 2>&1; then
+  __logi "SUCCESS: Datamart global population completed successfully"
+  __log_finish
+  return 0
+ else
+  local exit_code=$?
+  __loge "ERROR: Datamart global population failed with exit code ${exit_code}"
+  __loge "Check the SQL errors above for details"
+  __log_finish
+  return ${exit_code}
+ fi
 }
 
 # Function that activates the error trap.

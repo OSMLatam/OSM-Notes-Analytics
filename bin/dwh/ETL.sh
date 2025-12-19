@@ -984,10 +984,26 @@ function main() {
    __logi "Ingestion and Analytics use same database (${DBNAME_DWH}), tables are directly accessible"
   fi
 
+  __logi "Executing datamart scripts..."
   set +e
-  "${DATAMART_COUNTRIES_SCRIPT}" "" || true
-  "${DATAMART_USERS_SCRIPT}" "" || true
-  "${DATAMART_GLOBAL_SCRIPT}" "" || true
+  if "${DATAMART_COUNTRIES_SCRIPT}" ""; then
+   __logi "SUCCESS: datamartCountries completed successfully"
+  else
+   __loge "ERROR: datamartCountries failed with exit code $?"
+   __loge "Check log file: $(find /tmp -maxdepth 1 -type d -name 'datamartCountries_*' -printf '%T@ %p\n' 2>/dev/null | sort -n | tail -1 | cut -d' ' -f2-)/datamartCountries.log"
+  fi
+  if "${DATAMART_USERS_SCRIPT}" ""; then
+   __logi "SUCCESS: datamartUsers completed successfully"
+  else
+   __loge "ERROR: datamartUsers failed with exit code $?"
+   __loge "Check log file: $(find /tmp -maxdepth 1 -type d -name 'datamartUsers_*' -printf '%T@ %p\n' 2>/dev/null | sort -n | tail -1 | cut -d' ' -f2-)/datamartUsers.log"
+  fi
+  if "${DATAMART_GLOBAL_SCRIPT}" ""; then
+   __logi "SUCCESS: datamartGlobal completed successfully"
+  else
+   __loge "ERROR: datamartGlobal failed with exit code $?"
+   __loge "Check log file: $(find /tmp -maxdepth 1 -type d -name 'datamartGlobal_*' -printf '%T@ %p\n' 2>/dev/null | sort -n | tail -1 | cut -d' ' -f2-)/datamartGlobal.log"
+  fi
   set -e
  else
   __logi "AUTO-DETECTED INCREMENTAL EXECUTION - Processing only new data"
@@ -1006,10 +1022,26 @@ function main() {
   __processNotesETL
   __logi "Finished calling __processNotesETL"
   __perform_database_maintenance
+  __logi "Executing datamart scripts..."
   set +e
-  "${DATAMART_COUNTRIES_SCRIPT}" "" || true
-  "${DATAMART_USERS_SCRIPT}" "" || true
-  "${DATAMART_GLOBAL_SCRIPT}" "" || true
+  if "${DATAMART_COUNTRIES_SCRIPT}" ""; then
+   __logi "SUCCESS: datamartCountries completed successfully"
+  else
+   __loge "ERROR: datamartCountries failed with exit code $?"
+   __loge "Check log file: $(find /tmp -maxdepth 1 -type d -name 'datamartCountries_*' -printf '%T@ %p\n' 2>/dev/null | sort -n | tail -1 | cut -d' ' -f2-)/datamartCountries.log"
+  fi
+  if "${DATAMART_USERS_SCRIPT}" ""; then
+   __logi "SUCCESS: datamartUsers completed successfully"
+  else
+   __loge "ERROR: datamartUsers failed with exit code $?"
+   __loge "Check log file: $(find /tmp -maxdepth 1 -type d -name 'datamartUsers_*' -printf '%T@ %p\n' 2>/dev/null | sort -n | tail -1 | cut -d' ' -f2-)/datamartUsers.log"
+  fi
+  if "${DATAMART_GLOBAL_SCRIPT}" ""; then
+   __logi "SUCCESS: datamartGlobal completed successfully"
+  else
+   __loge "ERROR: datamartGlobal failed with exit code $?"
+   __loge "Check log file: $(find /tmp -maxdepth 1 -type d -name 'datamartGlobal_*' -printf '%T@ %p\n' 2>/dev/null | sort -n | tail -1 | cut -d' ' -f2-)/datamartGlobal.log"
+  fi
   set -e
  fi
 

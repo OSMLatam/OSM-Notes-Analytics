@@ -275,10 +275,25 @@ function __processOldUsers {
   sleep 5
  done
 
- wait
+ local failed_jobs=0
+ for pid in $(jobs -p); do
+  if ! wait "${pid}"; then
+   failed_jobs=$((failed_jobs + 1))
+  fi
+ done
+
+ if [[ ${failed_jobs} -eq 0 ]]; then
+  __logi "SUCCESS: All old user batches processed successfully"
+ else
+  __loge "ERROR: ${failed_jobs} old user batch(es) failed. Check individual log files for details."
+ fi
  __logw "Waited for all jobs, restarting in main thread."
 
  __log_finish
+ if [[ ${failed_jobs} -gt 0 ]]; then
+  return 1
+ fi
+ return 0
 }
 # Processes the notes and comments.
 function __processNotesUser {
@@ -330,14 +345,27 @@ function __processNotesUser {
   fi
  done
 
- # Wait for remaining processes
+ # Wait for remaining processes and check for errors
  __logi "Waiting for all user processing to complete..."
+ local failed_count=0
  for pid in "${pids[@]}"; do
-  wait "${pid}"
+  if ! wait "${pid}"; then
+   failed_count=$((failed_count + 1))
+  fi
  done
 
- __logi "Processed ${count} users in parallel"
+ if [[ ${failed_count} -eq 0 ]]; then
+  __logi "SUCCESS: Datamart users population completed successfully"
+  __logi "Processed ${count} users in parallel"
+ else
+  __loge "ERROR: Datamart users population had ${failed_count} failed processes out of ${count} total"
+  __loge "Check the log file for details on failed user processing"
+ fi
  __log_finish
+ if [[ ${failed_count} -gt 0 ]]; then
+  return 1
+ fi
+ return 0
 }
 
 # Function that activates the error trap.
@@ -445,7 +473,13 @@ function main() {
  # Add new columns for years after 2013.
  __addYears
  set -E
- __processNotesUser
+ if __processNotesUser; then
+  __logi "SUCCESS: Datamart users processing completed successfully"
+ else
+  __loge "ERROR: Datamart users processing failed"
+  __loge "Check log file: ${LOG_FILENAME}"
+  exit 1
+ fi
 
  __logw "Ending process."
  __log_finish
