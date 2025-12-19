@@ -116,9 +116,9 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
     FROM countries c
     WHERE c.country_id = rec_note_action.id_country
      AND c.country_id NOT IN (SELECT country_id FROM dwh.dimension_countries)
-    ON CONFLICT DO NOTHING
+    ON CONFLICT (country_id) DO NOTHING
     RETURNING dimension_country_id INTO m_dimension_country_id;
-    
+
     -- If still NULL (country not in base table or insert failed), use fallback
     IF (m_dimension_country_id IS NULL) THEN
      -- Use fallback country (dimension_country_id = 1, country_id = -1)
@@ -126,13 +126,21 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
       INTO m_dimension_country_id
      FROM dwh.dimension_countries
      WHERE country_id = -1;
-     -- If fallback doesn't exist, create it
+     -- If fallback doesn't exist, create it (with ON CONFLICT to handle parallel inserts)
      IF (m_dimension_country_id IS NULL) THEN
       INSERT INTO dwh.dimension_countries
        (country_id, country_name, country_name_es, country_name_en)
       VALUES (-1, 'Unknown - International waters',
        'Desconocido - Aguas internacionales', 'Unknown - International waters')
+      ON CONFLICT (country_id) DO NOTHING
       RETURNING dimension_country_id INTO m_dimension_country_id;
+      -- If still NULL after conflict, select it
+      IF (m_dimension_country_id IS NULL) THEN
+       SELECT /* Notes-staging */ dimension_country_id
+        INTO m_dimension_country_id
+       FROM dwh.dimension_countries
+       WHERE country_id = -1;
+      END IF;
      END IF;
     END IF;
    END IF;
