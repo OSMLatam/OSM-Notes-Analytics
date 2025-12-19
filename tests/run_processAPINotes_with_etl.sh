@@ -289,6 +289,7 @@ setup_hybrid_environment() {
  export SCRIPT_BASE_DIRECTORY="${INGESTION_ROOT}"
  export MOCK_FIXTURES_DIR="${INGESTION_ROOT}/tests/fixtures/command/extra"
  export SKIP_XML_VALIDATION="${SKIP_XML_VALIDATION:-true}"
+ export FORCE_SWAP_ON_WARNING="${FORCE_SWAP_ON_WARNING:-true}"
 
  log_success "Hybrid environment activated"
  return 0
