@@ -69,7 +69,32 @@ BEGIN
    FROM dwh.dimension_countries
    WHERE country_id = rec_note_action.id_country;
    IF (m_dimension_country_id IS NULL) THEN
-    m_dimension_country_id := 1;
+    -- Try to insert the country if it exists in base table
+    INSERT INTO dwh.dimension_countries
+     (country_id, country_name, country_name_es, country_name_en)
+    SELECT /* Notes-staging */ c.country_id, c.country_name, c.country_name_es, c.country_name_en
+    FROM countries c
+    WHERE c.country_id = rec_note_action.id_country
+     AND c.country_id NOT IN (SELECT country_id FROM dwh.dimension_countries)
+    ON CONFLICT DO NOTHING
+    RETURNING dimension_country_id INTO m_dimension_country_id;
+    
+    -- If still NULL (country not in base table or insert failed), use fallback
+    IF (m_dimension_country_id IS NULL) THEN
+     -- Use fallback country (dimension_country_id = 1, country_id = -1)
+     SELECT /* Notes-staging */ dimension_country_id
+      INTO m_dimension_country_id
+     FROM dwh.dimension_countries
+     WHERE country_id = -1;
+     -- If fallback doesn't exist, create it
+     IF (m_dimension_country_id IS NULL) THEN
+      INSERT INTO dwh.dimension_countries
+       (country_id, country_name, country_name_es, country_name_en)
+      VALUES (-1, 'Unknown - International waters',
+       'Desconocido - Aguas internacionales', 'Unknown - International waters')
+      RETURNING dimension_country_id INTO m_dimension_country_id;
+     END IF;
+    END IF;
    END IF;
 
    -- Get user dimensions
