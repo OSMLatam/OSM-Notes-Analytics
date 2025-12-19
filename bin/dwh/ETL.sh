@@ -645,18 +645,114 @@ function __initialFactsParallel {
  local pids=()
 
  # Create procedures for each year
+ local failed_procedures=0
  while [[ ${year} -le ${current_year} ]]; do
   __logi "Creating procedure for year ${year}..."
+  set +e
   YEAR=${year} envsubst < "${POSTGRES_34_INITIAL_FACTS_LOAD_PARALLEL}" \
    | __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 2>&1
+  local proc_create_exit_code=$?
+  set -e
+
+  if [[ ${proc_create_exit_code} -ne 0 ]]; then
+   __loge "ERROR: Failed to create procedure for year ${year} (exit code: ${proc_create_exit_code})"
+   failed_procedures=$((failed_procedures + 1))
+  else
+   __logd "Successfully created procedure for year ${year}"
+  fi
 
   year=$((year + 1))
  done
+
+ if [[ ${failed_procedures} -gt 0 ]]; then
+  __loge "ERROR: Failed to create ${failed_procedures} procedure(s) out of $((current_year - start_year + 1)) total"
+  __loge "Cannot proceed with parallel execution. Please check the errors above."
+  exit 1
+ fi
 
  # Disable note activity metrics trigger for performance during bulk load
  # This improves ETL speed by 5-15% during initial load
  # Note: Function checks if trigger exists before attempting to disable
  __safe_disable_note_activity_metrics_trigger
+
+ # Verify critical objects exist before parallel execution
+ # This ensures all schemas, functions, and procedures are visible to parallel connections
+ __logi "Verifying critical objects exist before parallel execution..."
+ local verification_retries=0
+ local max_retries=5
+ local verification_success=false
+
+ while [[ ${verification_retries} -lt ${max_retries} ]] && [[ "${verification_success}" == "false" ]]; do
+  set +e
+  __psql_with_appname -d "${DBNAME_DWH}" -c "
+   DO \$\$
+   DECLARE
+    schema_exists BOOLEAN;
+    function_exists BOOLEAN;
+   BEGIN
+    -- Check staging schema exists
+    SELECT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname = 'staging') INTO schema_exists;
+    IF NOT schema_exists THEN
+     RAISE EXCEPTION 'staging schema does not exist';
+    END IF;
+
+    -- Check dwh.get_date_id function exists
+    SELECT EXISTS(
+     SELECT 1 FROM pg_proc p
+     JOIN pg_namespace n ON p.pronamespace = n.oid
+     WHERE n.nspname = 'dwh' AND p.proname = 'get_date_id'
+    ) INTO function_exists;
+    IF NOT function_exists THEN
+     RAISE EXCEPTION 'dwh.get_date_id function does not exist';
+    END IF;
+
+    -- Check at least one procedure exists
+    IF NOT EXISTS(
+     SELECT 1 FROM pg_proc p
+     JOIN pg_namespace n ON p.pronamespace = n.oid
+     WHERE n.nspname = 'staging' AND p.proname LIKE 'process_initial_load_by_year_%'
+    ) THEN
+     RAISE EXCEPTION 'No staging procedures found';
+    END IF;
+   END \$\$;
+  " > /dev/null 2>&1
+  local verify_exit_code=$?
+  set -e
+
+  if [[ ${verify_exit_code} -eq 0 ]]; then
+   verification_success=true
+   __logi "Critical objects verified successfully"
+  else
+   verification_retries=$((verification_retries + 1))
+   if [[ ${verification_retries} -lt ${max_retries} ]]; then
+    __logw "Verification failed (attempt ${verification_retries}/${max_retries}), retrying in 1 second..."
+    sleep 1
+   else
+    __loge "ERROR: Failed to verify critical objects after ${max_retries} attempts"
+    __loge "This may indicate a problem with object creation or visibility"
+    __loge "Attempting to show current state of objects..."
+    {
+     __psql_with_appname -d "${DBNAME_DWH}" -c "
+      SELECT 'Schemas:' as info;
+      SELECT nspname FROM pg_namespace WHERE nspname IN ('dwh', 'staging');
+      SELECT 'Functions:' as info;
+      SELECT n.nspname, p.proname FROM pg_proc p
+      JOIN pg_namespace n ON p.pronamespace = n.oid
+      WHERE n.nspname = 'dwh' AND p.proname = 'get_date_id';
+      SELECT 'Procedures:' as info;
+      SELECT n.nspname, p.proname FROM pg_proc p
+      JOIN pg_namespace n ON p.pronamespace = n.oid
+      WHERE n.nspname = 'staging' AND p.proname LIKE 'process_initial_load_by_year_%'
+      LIMIT 5;
+     "
+    } 2>&1 || true
+    exit 1
+   fi
+  fi
+ done
+
+ # Verification ensures all objects exist before parallel execution
+ # PostgreSQL commits are immediately visible, no delay needed
 
  # Execute parallel load for each year
  year="${start_year}"
