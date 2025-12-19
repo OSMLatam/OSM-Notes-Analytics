@@ -58,7 +58,7 @@ ALTER TABLE dwh.dimension_users
   ADD COLUMN IF NOT EXISTS total_notes_opened INTEGER DEFAULT 0,
   ADD COLUMN IF NOT EXISTS total_notes_closed INTEGER DEFAULT 0,
   ADD COLUMN IF NOT EXISTS days_active INTEGER DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS resolution_ratio DECIMAL(4,2),
+  ADD COLUMN IF NOT EXISTS resolution_ratio DECIMAL(5,2),
   ADD COLUMN IF NOT EXISTS last_activity_date DATE,
   ADD COLUMN IF NOT EXISTS experience_calculated_at TIMESTAMP;
 
@@ -112,7 +112,7 @@ DECLARE
   v_notes_closed INTEGER;
   v_days_active INTEGER;
   v_experience_id SMALLINT;
-  v_resolution_ratio DECIMAL(4,2);
+  v_resolution_ratio DECIMAL(5,2);
   v_last_activity_date DATE;
 BEGIN
   -- Calculate user metrics
@@ -127,7 +127,8 @@ BEGIN
 
   -- Calculate resolution ratio
   IF v_notes_opened > 0 THEN
-    v_resolution_ratio := ROUND((v_notes_closed::DECIMAL / v_notes_opened * 100), 2);
+    -- Calculate ratio and cap at 100 (users can close more notes than they opened)
+    v_resolution_ratio := LEAST(ROUND((v_notes_closed::DECIMAL / v_notes_opened * 100), 2), 100.00);
   ELSE
     v_resolution_ratio := 0;
   END IF;
