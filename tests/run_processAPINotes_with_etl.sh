@@ -647,7 +647,36 @@ main() {
  if [[ -n "${DB_HOST:-}" ]]; then
   PSQL_CMD="${PSQL_CMD} -h ${DB_HOST} -p ${DB_PORT}"
  fi
- ${PSQL_CMD} -d "${INGESTION_DBNAME}" -c "DROP SCHEMA IF EXISTS dwh CASCADE;" > /dev/null 2>&1 || true
+
+ # Force disconnect any active connections to the dwh schema
+ # This ensures DROP SCHEMA can complete successfully
+ log_info "Terminating active connections to dwh schema..."
+ ${PSQL_CMD} -d "${INGESTION_DBNAME}" -c "
+  SELECT pg_terminate_backend(pg_stat_activity.pid)
+  FROM pg_stat_activity
+  WHERE pg_stat_activity.datname = '${INGESTION_DBNAME}'
+   AND pid <> pg_backend_pid()
+   AND state = 'active';
+ " > /dev/null 2>&1 || true
+
+ # Drop the schema
+ log_info "Dropping dwh schema..."
+ if ! ${PSQL_CMD} -d "${INGESTION_DBNAME}" -c "DROP SCHEMA IF EXISTS dwh CASCADE;" 2>&1; then
+  log_error "Failed to drop dwh schema"
+  exit 1
+ fi
+
+ # Verify the schema was actually dropped
+ local SCHEMA_EXISTS
+ SCHEMA_EXISTS=$(${PSQL_CMD} -d "${INGESTION_DBNAME}" -tAqc "
+  SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = 'dwh';
+ " 2> /dev/null || echo "1")
+
+ if [[ "${SCHEMA_EXISTS}" != "0" ]]; then
+  log_error "dwh schema still exists after DROP - cleanup failed"
+  exit 1
+ fi
+
  log_success "DWH schema cleaned (ready for fresh creation)"
 
  # Setup environment variables
