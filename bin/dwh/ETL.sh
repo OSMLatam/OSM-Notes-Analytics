@@ -66,6 +66,12 @@ declare MAIN_SCRIPT_NAME
 MAIN_SCRIPT_NAME=$(basename "${0}" .sh)
 readonly MAIN_SCRIPT_NAME
 
+# Original process start time and PID (to preserve in lock file).
+declare PROCESS_START_TIME
+PROCESS_START_TIME=$(date '+%Y-%m-%d %H:%M:%S')
+readonly PROCESS_START_TIME
+declare -r ORIGINAL_PID=$$
+
 # Temporary directory for all files.
 declare TMP_DIR
 TMP_DIR=$(mktemp -d "/tmp/${BASENAME}_XXXXXX")
@@ -78,8 +84,9 @@ LOG_FILENAME="${TMP_DIR}/${BASENAME}.log"
 readonly LOG_FILENAME
 
 # Lock file for single execution.
+# Use fixed location in /tmp/ to ensure all executions share the same lock
 declare LOCK
-LOCK="${TMP_DIR}/${BASENAME}.lock"
+LOCK="/tmp/${BASENAME}.lock"
 readonly LOCK
 
 # Type of process to run in the script.
@@ -985,6 +992,36 @@ function __perform_database_maintenance {
  __log_finish
 }
 
+# Sets up the lock file for single execution.
+# Creates lock file descriptor and writes lock file content.
+function __setupLockFile {
+ __log_start
+ __logw "Validating single execution."
+ exec 7> "${LOCK}"
+ export ONLY_EXECUTION="no"
+ if ! flock -n 7; then
+  __loge "Another instance of ${BASENAME} is already running."
+  __loge "Lock file: ${LOCK}"
+  if [[ -f "${LOCK}" ]]; then
+   __loge "Lock file contents:"
+   cat "${LOCK}" >&2 || true
+  fi
+  exit 1
+ fi
+ export ONLY_EXECUTION="yes"
+
+ cat > "${LOCK}" << EOF
+PID: ${ORIGINAL_PID}
+Process: ${BASENAME}
+Started: ${PROCESS_START_TIME}
+Temporary directory: ${TMP_DIR}
+Process type: ${PROCESS_TYPE}
+Main script: ${0}
+EOF
+ __logd "Lock file content written to: ${LOCK}"
+ __log_finish
+}
+
 # Function that activates the error trap.
 function __trapOn() {
  __log_start
@@ -998,12 +1035,16 @@ function __trapOn() {
   if [[ "${ERROR_EXIT_CODE}" -ne 0 ]]; then
    printf "%s ERROR: The script %s did not finish correctly. Temporary directory: ${TMP_DIR:-} - Line number: %d.\n" "$(date +%Y%m%d_%H:%M:%S)" "${MAIN_SCRIPT_NAME}" "${ERROR_LINE}";
    printf "ERROR: Failed command: %s (exit code: %d)\n" "${ERROR_COMMAND}" "${ERROR_EXIT_CODE}";
+   # Remove lock file on error
+   rm -f "${LOCK:-}" 2> /dev/null || true
    exit "${ERROR_EXIT_CODE}";
   fi;
  }' ERR
  # shellcheck disable=SC2154  # variables inside trap are defined dynamically by Bash
  trap '{
   printf "%s WARN: The script %s was terminated. Temporary directory: ${TMP_DIR:-}\n" "$(date +%Y%m%d_%H:%M:%S)" "${MAIN_SCRIPT_NAME}";
+  # Remove lock file on termination
+  rm -f "${LOCK:-}" 2> /dev/null || true
   exit ${ERROR_GENERAL};
  }' SIGINT SIGTERM
  __log_finish
@@ -1020,12 +1061,7 @@ function main() {
 
  # Sets the trap in case of any signal.
  __trapOn
- exec 7> "${LOCK}"
- # shellcheck disable=SC2034
- ONLY_EXECUTION="no"
- flock -n 7
- # shellcheck disable=SC2034
- ONLY_EXECUTION="yes"
+ __setupLockFile
 
  __checkPrereqs
 
@@ -1150,6 +1186,10 @@ function main() {
  fi
 
  __logw "Ending process."
+
+ # Remove lock file on successful completion
+ rm -f "${LOCK}"
+
  __log_finish
 }
 
