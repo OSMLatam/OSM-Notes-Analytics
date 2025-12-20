@@ -2,7 +2,6 @@
 
 # Tests for enhanced ETL functionality
 # Author: Andres Gomez (AngocA)
-# Version: 2025-01-27
 
 load "${BATS_TEST_DIRNAME}/../../test_helper"
 

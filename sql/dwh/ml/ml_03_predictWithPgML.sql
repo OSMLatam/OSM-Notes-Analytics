@@ -2,14 +2,14 @@
 -- This script demonstrates how to use trained models for classification
 --
 -- Author: OSM Notes Analytics Project
--- Date: 2025-01-21
+-- Date: 2025-12-20
 -- Purpose: Predict note classifications using pgml models
 
 -- ============================================================================
 -- 1. Predict Main Category (Level 1)
 -- ============================================================================
 
-SELECT 
+SELECT
   id_note,
   opened_dimension_id_date,
   pgml.predict(
@@ -50,7 +50,7 @@ LIMIT 100;
 -- 2. Predict Specific Type (Level 2)
 -- ============================================================================
 
-SELECT 
+SELECT
   id_note,
   opened_dimension_id_date,
   pgml.predict(
@@ -91,7 +91,7 @@ LIMIT 100;
 -- 3. Predict Action Recommendation (Level 3)
 -- ============================================================================
 
-SELECT 
+SELECT
   id_note,
   opened_dimension_id_date,
   pgml.predict(
@@ -148,7 +148,7 @@ INSERT INTO dwh.note_type_classifications (
   classification_version,
   classification_timestamp
 )
-SELECT 
+SELECT
   pf.id_note,
   -- Level 1: Main Category
   pgml.predict(
@@ -181,7 +181,7 @@ SELECT
   )::VARCHAR as main_category,
   0.8 as category_confidence,  -- Can be enhanced with probability scores
   'ml_based' as category_method,
-  
+
   -- Level 2: Specific Type
   pgml.predict(
     'note_classification_specific_type',
@@ -213,7 +213,7 @@ SELECT
   )::VARCHAR as specific_type,
   0.75 as type_confidence,
   'ml_based' as type_method,
-  
+
   -- Level 3: Action Recommendation
   pgml.predict(
     'note_classification_action',
@@ -245,7 +245,7 @@ SELECT
   )::VARCHAR as recommended_action,
   0.8 as action_confidence,
   'ml_based' as action_method,
-  
+
   -- Priority Score (1-10, based on category and action)
   CASE
     WHEN pgml.predict('note_classification_main_category', ...) = 'contributes_with_change'
@@ -257,10 +257,10 @@ SELECT
     THEN 3
     ELSE 5
   END as priority_score,
-  
+
   'pgml_v1.0' as classification_version,
   CURRENT_TIMESTAMP as classification_timestamp
-  
+
 FROM dwh.v_note_ml_prediction_features pf
 WHERE pf.id_note NOT IN (
   SELECT id_note FROM dwh.note_type_classifications
@@ -272,7 +272,7 @@ LIMIT 1000;  -- Process in batches
 -- ============================================================================
 -- Note: pgml.predict_proba() returns probabilities for all classes
 
-SELECT 
+SELECT
   id_note,
   pgml.predict_proba(
     'note_classification_main_category',
@@ -326,7 +326,7 @@ BEGIN
   -- Implementation would call pgml.predict() for each note
   -- and insert into dwh.note_type_classifications
   -- This is a placeholder - full implementation would be more complex
-  
+
   RETURN QUERY SELECT v_processed, v_high_confidence;
 END;
 $$;

@@ -16,8 +16,8 @@
 # * shfmt -w -i 1 -sr -bn datamartGlobal.sh
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2025-01-20
-VERSION="2025-01-20"
+# Version: 2025-12-20
+VERSION="2025-12-20"
 
 #set -xv
 # Fails when a variable is not initialized.

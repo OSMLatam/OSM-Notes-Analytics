@@ -438,7 +438,6 @@ GROUP BY algorithm;
 
 ---
 
-**Last Updated**: 2025-01-21  
 **Status**: Implementation Ready  
 **Dependencies**: pgml extension, training data, feature views
 

@@ -4,7 +4,7 @@
 # Monitor ETL execution status and recent activity
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2025-01-24
+# Version: 2025-12-20
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"

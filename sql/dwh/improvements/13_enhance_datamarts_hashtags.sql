@@ -1,7 +1,7 @@
 -- Enhance Datamarts with Specific Hashtag Metrics
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2025-01-24
+-- Version: 2025-12-20
 --
 -- This script enhances the existing datamarts with specific hashtag metrics
 -- by action type (opening, resolution, comments)

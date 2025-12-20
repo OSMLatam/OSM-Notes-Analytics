@@ -1,7 +1,7 @@
 -- Create Specialized Indexes for Hashtag Analytics
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2025-01-24
+-- Version: 2025-12-20
 --
 -- This script creates specialized indexes to optimize hashtag analytics queries
 -- by action type (opening, resolution, comments)

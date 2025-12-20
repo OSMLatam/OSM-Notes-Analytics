@@ -14,7 +14,7 @@
 # 3. After EACH execution, runs ETL to test data warehouse update
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2025-01-24
+# Version: 2025-12-20
 
 set -euo pipefail
 

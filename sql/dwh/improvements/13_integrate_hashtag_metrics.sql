@@ -1,7 +1,7 @@
 -- Integration Script for Hashtag Metrics Enhancement
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2025-01-24
+-- Version: 2025-12-20
 --
 -- This script integrates all hashtag metrics enhancements into the DWH
 -- Run this after the basic DWH is set up

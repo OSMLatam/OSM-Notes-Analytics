@@ -2,7 +2,6 @@
 
 # Tests for internal ETL functions
 # Author: Andres Gomez (AngocA)
-# Date: 2025-01-27
 
 load ../../../tests/test_helper
 

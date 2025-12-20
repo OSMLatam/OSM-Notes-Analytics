@@ -1,5 +1,5 @@
 -- Test for DWH cleanup script
--- Version: 2025-01-08
+-- Version: 2025-12-20
 
 \echo 'Testing DWH cleanup script...'
 
@@ -21,7 +21,7 @@ CREATE TABLE dwh.facts (id INT);
 \i sql/dwh/ETL_13_removeDWHObjects.sql
 
 -- Verify the schema was dropped
-SELECT CASE 
+SELECT CASE
   WHEN EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'dwh')
   THEN 'FAIL: Schema dwh still exists'
   ELSE 'PASS: Schema dwh was dropped successfully'

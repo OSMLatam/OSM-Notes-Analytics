@@ -593,9 +593,4 @@ These scripts are designed to be used in CI/CD pipelines:
 - [Troubleshooting Guide](Troubleshooting_Guide.md) - Common issues and solutions
 - [Execution Guide](execution_guide.md) - General execution documentation
 
-## Version History
-
-- **2025-01-24:** Initial version with automatic and controlled execution modes
-- **2025-01-24:** Added step-by-step controlled execution mode
-
 

@@ -2,7 +2,7 @@
 -- This script trains hierarchical classification models using pgml
 --
 -- Author: OSM Notes Analytics Project
--- Date: 2025-01-21
+-- Date: 2025-12-20
 -- Purpose: Train ML models for note classification
 
 -- ============================================================================
@@ -33,7 +33,7 @@ SELECT * FROM pgml.train(
 );
 
 -- Check training results
-SELECT 
+SELECT
   project_name,
   algorithm,
   status,
@@ -66,7 +66,7 @@ SELECT * FROM pgml.train(
 );
 
 -- Check training results
-SELECT 
+SELECT
   project_name,
   algorithm,
   status,
@@ -98,7 +98,7 @@ SELECT * FROM pgml.train(
 );
 
 -- Check training results
-SELECT 
+SELECT
   project_name,
   algorithm,
   status,
@@ -113,7 +113,7 @@ LIMIT 1;
 -- 4. View All Trained Models
 -- ============================================================================
 
-SELECT 
+SELECT
   project_name,
   algorithm,
   status,
@@ -131,7 +131,7 @@ ORDER BY created_at DESC;
 -- ============================================================================
 
 WITH model_metrics AS (
-  SELECT 
+  SELECT
     project_name,
     algorithm,
     created_at,
@@ -142,7 +142,7 @@ WITH model_metrics AS (
   FROM pgml.deployed_models
   WHERE project_name LIKE 'note_classification%'
 )
-SELECT 
+SELECT
   project_name,
   ROUND((accuracy::numeric) * 100, 2) as accuracy_pct,
   ROUND((f1_score::numeric) * 100, 2) as f1_pct,

@@ -1,7 +1,7 @@
 -- Create Hashtag Analysis Views
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2025-01-24
+-- Version: 2025-12-20
 --
 -- Views for analyzing hashtag usage patterns by action type
 

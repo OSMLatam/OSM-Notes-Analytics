@@ -2,7 +2,7 @@
 -- This script shows practical examples of using trained models
 --
 -- Author: OSM Notes Analytics Project
--- Date: 2025-01-21
+-- Date: 2025-12-20
 -- Purpose: Demonstrate how to use pgml models in production
 
 -- ============================================================================
@@ -10,7 +10,7 @@
 -- ============================================================================
 -- Get classification for a specific note
 
-SELECT 
+SELECT
   id_note,
   opened_dimension_id_date,
   -- Level 1: Main Category
@@ -78,7 +78,7 @@ WHERE id_note = 12345;  -- Replace with actual note ID
 -- ============================================================================
 -- Classify all new notes (not yet classified)
 
-SELECT 
+SELECT
   id_note,
   opened_dimension_id_date,
   pgml.predict(
@@ -131,7 +131,7 @@ LIMIT 1000;
 -- ============================================================================
 -- Get prediction probabilities for confidence assessment
 
-SELECT 
+SELECT
   id_note,
   -- Prediction
   pgml.predict(
@@ -165,12 +165,12 @@ FROM dwh.v_note_ml_prediction_features
 WHERE id_note = 12345;
 
 -- Extract confidence from probabilities
-SELECT 
+SELECT
   id_note,
   predicted_category,
   (category_probabilities->>predicted_category)::numeric as confidence_score
 FROM (
-  SELECT 
+  SELECT
     id_note,
     pgml.predict(...)::VARCHAR as predicted_category,
     pgml.predict_proba(...) as category_probabilities
@@ -183,7 +183,7 @@ FROM (
 -- ============================================================================
 -- Get notes that need processing (high priority)
 
-SELECT 
+SELECT
   f.id_note,
   f.opened_dimension_id_date,
   d.date_id as opened_date,
@@ -282,11 +282,11 @@ BEGIN
   SELECT * INTO v_features
   FROM dwh.v_note_ml_prediction_features
   WHERE id_note = p_note_id;
-  
+
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Note % not found in prediction features', p_note_id;
   END IF;
-  
+
   -- Make predictions
   v_category := pgml.predict(
     'note_classification_main_category',
@@ -304,7 +304,7 @@ BEGIN
       v_features.month, v_features.days_open
     ]
   )::VARCHAR;
-  
+
   v_type := pgml.predict(
     'note_classification_specific_type',
     ARRAY[
@@ -321,7 +321,7 @@ BEGIN
       v_features.month, v_features.days_open
     ]
   )::VARCHAR;
-  
+
   v_action := pgml.predict(
     'note_classification_action',
     ARRAY[
@@ -338,7 +338,7 @@ BEGIN
       v_features.month, v_features.days_open
     ]
   )::VARCHAR;
-  
+
   -- Get probabilities for confidence scores
   v_category_proba := pgml.predict_proba(
     'note_classification_main_category',
@@ -356,7 +356,7 @@ BEGIN
       v_features.month, v_features.days_open
     ]
   );
-  
+
   -- Return results
   RETURN QUERY SELECT
     p_note_id,
@@ -404,7 +404,7 @@ BEGIN
     classification_version,
     classification_timestamp
   )
-  SELECT 
+  SELECT
     pf.id_note,
     pgml.predict(
       'note_classification_main_category',
@@ -468,9 +468,9 @@ BEGIN
     SELECT id_note FROM dwh.note_type_classifications
   )
   LIMIT p_batch_size;
-  
+
   GET DIAGNOSTICS v_processed = ROW_COUNT;
-  
+
   RAISE NOTICE 'Classified % notes', v_processed;
 END;
 $$;

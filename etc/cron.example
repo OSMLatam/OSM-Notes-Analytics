@@ -10,7 +10,6 @@
 #   4. Verify: crontab -l
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2025-01-24
 
 # Set environment variables
 SHELL=/bin/bash

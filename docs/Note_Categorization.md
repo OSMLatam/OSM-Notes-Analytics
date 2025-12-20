@@ -1,7 +1,6 @@
 # Note Categorization and Classification
 
 **Status**: Documentation  
-**Last Updated**: 2025-01-21  
 **Related Articles**: [AngocA's Diary - Note Types](https://www.openstreetmap.org/user/AngocA/diary/398472)
 
 ---
@@ -358,7 +357,6 @@ Future metrics could include:
 
 ---
 
-**Last Updated**: 2025-01-21  
 **Maintained By**: OSM Notes Analytics Project  
 **Contributions**: Based on AngocA's comprehensive note classification system
 

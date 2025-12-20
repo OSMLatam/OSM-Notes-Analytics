@@ -1,7 +1,7 @@
 -- Creates datamart for global statistics.
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2025-01-20
+-- Version: 2025-12-20
 
 CREATE TABLE IF NOT EXISTS dwh.datamartGlobal (
  -- Static values

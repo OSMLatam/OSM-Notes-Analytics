@@ -1,7 +1,6 @@
 # External Note Classification Strategies
 
 **Status**: Research and Analysis  
-**Last Updated**: 2025-01-21  
 **Purpose**: Analyze external tools and strategies for note classification
 
 ---
@@ -357,7 +356,6 @@ SELECT * FROM keyword_labels;
 
 ---
 
-**Last Updated**: 2025-01-21  
 **Status**: Research Phase  
 **Next Review**: After keyword extraction and hashtag analysis
 

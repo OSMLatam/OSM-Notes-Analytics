@@ -18,7 +18,7 @@
 #   all - Run all steps sequentially
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2025-01-24
+# Version: 2025-12-20
 
 set -euo pipefail
 

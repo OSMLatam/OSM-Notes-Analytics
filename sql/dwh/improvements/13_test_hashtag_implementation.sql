@@ -1,7 +1,7 @@
 -- Test and Validation Script for Hashtag Metrics Implementation
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2025-01-24
+-- Version: 2025-12-20
 --
 -- This script validates the hashtag metrics implementation
 
