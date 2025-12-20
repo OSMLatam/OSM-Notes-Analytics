@@ -1,7 +1,5 @@
 # ToDo Directory
 
-Version: 2025-01-21
-
 This directory contains all TODO items, action plans, and progress tracking for the OSM-Notes-Analytics project.
 
 ---
@@ -217,7 +215,6 @@ If you discover new bugs or have feature ideas:
 
 ---
 
-**Last Updated**: 2025-01-21  
 **Maintained By**: Project contributors
 
 
