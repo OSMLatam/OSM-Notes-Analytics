@@ -214,6 +214,9 @@ AS $proc$
     AND EXTRACT(YEAR FROM d.date_id) = m_year;
 
    -- history_year_closed_with_comment
+   -- Note: This SELECT reads from ingestion tables (note_comments, note_comments_text)
+   -- and should ideally be executed in READ ONLY mode for better concurrency, but this
+   -- procedure also performs writes, so READ ONLY cannot be applied to the entire transaction.
    SELECT /* Notes-datamartCountries */ COUNT(1)
     INTO m_history_year_closed_with_comment
    FROM dwh.facts f

@@ -51,6 +51,9 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
 --  RAISE NOTICE 'Day % started.', max_processed_timestamp;
 
 --RAISE NOTICE 'Flag 1: %', CLOCK_TIMESTAMP();
+  -- Note: The cursor queries below read from ingestion tables (note_comments, notes, note_comments_text)
+  -- and should ideally be executed in READ ONLY mode for better concurrency, but this procedure also
+  -- performs writes, so READ ONLY cannot be applied to the entire transaction.
   IF (m_equals) THEN
 --RAISE NOTICE 'Processing equals';
    OPEN notes_on_day FOR EXECUTE('
@@ -110,6 +113,9 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
    WHERE country_id = rec_note_action.id_country;
    IF (m_dimension_country_id IS NULL) THEN
     -- Try to insert the country if it exists in base table
+    -- Note: This SELECT reads from ingestion table (countries) and should ideally
+    -- be executed in READ ONLY mode for better concurrency, but this procedure also
+    -- performs writes, so READ ONLY cannot be applied to the entire transaction.
     INSERT INTO dwh.dimension_countries
      (country_id, country_name, country_name_es, country_name_en)
     SELECT /* Notes-staging */ c.country_id, c.country_name, c.country_name_es, c.country_name_en
@@ -249,6 +255,9 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
 --RAISE NOTICE 'Flag 22: %', CLOCK_TIMESTAMP();
 
    -- Prepare local/timezone/season using note position
+   -- Note: This SELECT reads from ingestion table (notes) and should ideally
+   -- be executed in READ ONLY mode for better concurrency, but this procedure also
+   -- performs writes, so READ ONLY cannot be applied to the entire transaction.
    SELECT n.latitude, n.longitude INTO m_latitude, m_longitude
    FROM notes n WHERE n.note_id = rec_note_action.id_note;
    m_timezone_id := dwh.get_timezone_id_by_lonlat(m_longitude, m_latitude);
@@ -382,6 +391,9 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
 
   -- Recursive case, when there is at least a day already processed.
   -- Gets the date of the most recent note action from base tables.
+  -- Note: This SELECT reads from ingestion table (note_comments) and should ideally
+  -- be executed in READ ONLY mode for better concurrency, but this procedure also
+  -- performs writes, so READ ONLY cannot be applied to the entire transaction.
   SELECT /* Notes-staging */ MAX(DATE(created_at))
    INTO max_note_action_date
   FROM note_comments;

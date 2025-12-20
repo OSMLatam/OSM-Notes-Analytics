@@ -274,6 +274,7 @@ function __show_help {
 # Usage: __psql_with_appname [appname] [psql_args...]
 # If appname is not provided, uses BASENAME (script name without .sh)
 # If first argument starts with '-', it's a psql option, not an appname
+# Also configures timeouts from properties.sh if available
 function __psql_with_appname {
  local appname
  if [[ "${1:-}" =~ ^- ]]; then
@@ -284,7 +285,70 @@ function __psql_with_appname {
   appname="${1}"
   shift
  fi
- PGAPPNAME="${appname}" psql "$@"
+
+ # Build timeout SQL commands if configured
+ local timeout_sql=""
+ if [[ -n "${PSQL_STATEMENT_TIMEOUT:-}" ]]; then
+  timeout_sql="${timeout_sql}SET statement_timeout = '${PSQL_STATEMENT_TIMEOUT}'; "
+ fi
+ if [[ -n "${PSQL_LOCK_TIMEOUT:-}" ]]; then
+  timeout_sql="${timeout_sql}SET lock_timeout = '${PSQL_LOCK_TIMEOUT}'; "
+ fi
+ if [[ -n "${PSQL_IDLE_IN_TRANSACTION_TIMEOUT:-}" ]]; then
+  timeout_sql="${timeout_sql}SET idle_in_transaction_session_timeout = '${PSQL_IDLE_IN_TRANSACTION_TIMEOUT}'; "
+ fi
+
+ # Execute psql with appname and all arguments
+ # If timeouts are configured, prepend them to SQL files or commands
+ if [[ -n "${timeout_sql}" ]]; then
+  # Check if we're executing a file (-f) or command (-c)
+  local args=("$@")
+  local i=0
+  local modified=false
+  local new_args=()
+  local temp_files=()
+
+  while [[ $i -lt ${#args[@]} ]]; do
+   if [[ "${args[$i]}" == "-f" ]] && [[ $((i + 1)) -lt ${#args[@]} ]]; then
+    # Found -f, create temp file with timeouts + original file
+    local original_file="${args[$((i + 1))]}"
+    local temp_sql
+    temp_sql=$(mktemp)
+    {
+     echo "${timeout_sql}"
+     cat "${original_file}"
+    } > "${temp_sql}"
+    new_args+=("-f" "${temp_sql}")
+    temp_files+=("${temp_sql}")
+    modified=true
+    ((i += 2))
+   elif [[ "${args[$i]}" == "-c" ]] && [[ $((i + 1)) -lt ${#args[@]} ]]; then
+    # Found -c, prepend timeouts to command
+    new_args+=("-c" "${timeout_sql}${args[$((i + 1))]}")
+    modified=true
+    ((i += 2))
+   else
+    new_args+=("${args[$i]}")
+    ((i++))
+   fi
+  done
+
+  if [[ "${modified}" == "true" ]]; then
+   local exit_code=0
+   PGAPPNAME="${appname}" psql "${new_args[@]}" || exit_code=$?
+   # Clean up temp files
+   for temp_file in "${temp_files[@]}"; do
+    rm -f "${temp_file}"
+   done
+   return ${exit_code}
+  else
+   # No -f or -c found, set timeouts in a separate command
+   PGAPPNAME="${appname}" psql -c "${timeout_sql}" "$@"
+  fi
+ else
+  # No timeouts configured, execute normally
+  PGAPPNAME="${appname}" psql "$@"
+ fi
 }
 
 # Check if a PostgreSQL function exists in a schema
