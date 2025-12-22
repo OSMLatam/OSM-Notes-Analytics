@@ -41,16 +41,24 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
    m_fact_id INTEGER;
    m_latitude DECIMAL;
    m_longitude DECIMAL;
-   m_comment_length INTEGER;
-   m_has_url BOOLEAN;
-   m_has_mention BOOLEAN;
+  m_comment_length INTEGER;
+  m_has_url BOOLEAN;
+  m_has_mention BOOLEAN;
   rec_note_action RECORD;
   notes_on_day REFCURSOR;
+  index_exists BOOLEAN;
 
  BEGIN
 --  RAISE NOTICE 'Day % started.', max_processed_timestamp;
 
 --RAISE NOTICE 'Flag 1: %', CLOCK_TIMESTAMP();
+  -- Note: For partitioned tables, ON CONFLICT doesn't work with indexes on the main table
+  -- We need indexes on each partition. Since this is complex and the unique index
+  -- will prevent duplicates at the database level, we'll insert without ON CONFLICT
+  -- and let the database enforce uniqueness. If a duplicate is attempted, it will fail
+  -- and we can handle it gracefully.
+  -- The unique index facts_unique_note_action exists and will prevent duplicates.
+
   -- Note: The cursor queries below read from ingestion tables (note_comments, notes, note_comments_text)
   -- and should ideally be executed in READ ONLY mode for better concurrency, but this procedure also
   -- performs writes, so READ ONLY cannot be applied to the entire transaction.
@@ -271,7 +279,11 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
    m_has_mention := rec_note_action.body ~ '@\w+';
 
    -- Insert the fact.
-   INSERT INTO dwh.facts (
+   -- Note: For partitioned tables, ON CONFLICT doesn't work reliably
+   -- The unique index facts_unique_note_action will prevent duplicates at the database level
+   -- If a duplicate is attempted, PostgreSQL will raise an error which we can handle
+   BEGIN
+    INSERT INTO dwh.facts (
      id_note, dimension_id_country,
      action_at, action_comment, action_dimension_id_date,
      action_dimension_id_hour_of_week, action_dimension_id_user,
@@ -295,7 +307,14 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
       m_timezone_id, m_local_action_id_date, m_local_action_id_hour_of_week,
       m_season_id,
       m_comment_length, m_has_url, m_has_mention
-    ) RETURNING fact_id INTO m_fact_id;
+    )
+    RETURNING fact_id INTO m_fact_id;
+   EXCEPTION
+    WHEN unique_violation THEN
+     -- Duplicate fact, skip it (idempotent operation)
+     -- This can happen if the same comment is processed multiple times
+     m_fact_id := NULL;
+   END;
 --RAISE NOTICE 'Flag 23: %', CLOCK_TIMESTAMP();
 
    -- Populate bridge table for hashtags (ALL hashtags - unlimited)
@@ -372,49 +391,98 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
   max_note_action_date DATE;
   max_note_on_dwh_timestamp TIMESTAMP;
   max_processed_date DATE;
+  initial_load_flag TEXT;
+  use_equals BOOLEAN;
+  start_of_day TIMESTAMP;
  BEGIN
   -- Base case, when at least the first day of notes is processed.
   -- There are 231 note actions this day: 2013-04-24 (Epoch's OSM notes).
 --RAISE NOTICE '1Flag 1: %', CLOCK_TIMESTAMP();
+  -- Check if initial load flag exists in properties FIRST
+  -- This is more reliable than counting facts, as the flag indicates the state
+  -- The flag can be 'true' (set during table creation) or 'completed' (set after initial load)
+  SELECT /* Notes-staging */ value
+   INTO initial_load_flag
+  FROM dwh.properties
+  WHERE key = 'initial load';
+
+  -- Check if there are any facts in DWH
   SELECT /* Notes-staging */ COUNT(1)
    INTO qty_dwh_notes
   FROM dwh.facts;
-  IF (qty_dwh_notes = 0) THEN
+
+  -- Only do initial load if:
+  -- 1. Initial load flag is NULL or 'true' (not 'completed')
+  -- 2. AND there are NO facts
+  -- If flag is 'completed', skip initial load even if qty_dwh_notes is 0 (may be a visibility issue)
+  -- IMPORTANT: Use IS NOT DISTINCT FROM to handle NULL correctly
+  IF (initial_load_flag IS NOT DISTINCT FROM 'completed') THEN
+   -- Initial load was already completed, skip it and proceed to incremental
+   NULL; -- Do nothing, continue to incremental logic below
+  ELSIF (qty_dwh_notes = 0 AND (initial_load_flag IS NULL OR initial_load_flag = 'true')) THEN
    RAISE NOTICE 'INITIAL LOAD DETECTED - Processing all historical data from 2013-04-24';
    RAISE NOTICE 'This may take several hours for the complete dataset.';
    CALL staging.process_notes_at_date('2013-04-24 00:00:00.000000+00',
      qty_dwh_notes, TRUE);
    RAISE NOTICE 'INITIAL LOAD COMPLETED - % facts processed', qty_dwh_notes;
+
+   -- Set initial load flag to prevent re-running initial load
+   -- Use INSERT ... ON CONFLICT since key is now PRIMARY KEY
+   BEGIN
+    INSERT INTO dwh.properties (key, value)
+     VALUES ('initial load', 'completed');
+   EXCEPTION
+    WHEN unique_violation THEN
+     UPDATE dwh.properties SET value = 'completed' WHERE key = 'initial load';
+   END;
+
    RETURN; -- Exit procedure after initial load
   END IF;
 --RAISE NOTICE '1Flag 2: %', CLOCK_TIMESTAMP();
 
-  -- Recursive case, when there is at least a day already processed.
-  -- Gets the date of the most recent note action from base tables.
-  -- Note: This SELECT reads from ingestion table (note_comments) and should ideally
-  -- be executed in READ ONLY mode for better concurrency, but this procedure also
-  -- performs writes, so READ ONLY cannot be applied to the entire transaction.
+  -- Incremental case: process only NEW comments since last ETL execution
+  -- Get the most recent timestamp processed in DWH (not just the date)
+  SELECT /* Notes-staging */ MAX(action_at)
+   INTO max_note_on_dwh_timestamp
+  FROM dwh.facts;
+--RAISE NOTICE 'Max timestamp processed in DWH: %', max_note_on_dwh_timestamp;
+--RAISE NOTICE '1Flag 3: %', CLOCK_TIMESTAMP();
+
+  -- If no facts exist, this should have been caught by initial load check above
+  -- But handle it gracefully just in case
+  IF (max_note_on_dwh_timestamp IS NULL) THEN
+   RAISE EXCEPTION 'No facts found in DWH but initial load was not executed. This should not happen.';
+  END IF;
+
+  -- Get the date of the most recent note action from base tables
   SELECT /* Notes-staging */ MAX(DATE(created_at))
    INTO max_note_action_date
   FROM note_comments;
---RAISE NOTICE 'recursive case %.', max_note_action_date;
---RAISE NOTICE '1Flag 3: %', CLOCK_TIMESTAMP();
+--RAISE NOTICE 'Max date with comments in base tables: %', max_note_action_date;
+--RAISE NOTICE '1Flag 4: %', CLOCK_TIMESTAMP();
 
-  -- Gets the date of the most recent note processed on the DWH.
+  -- Get the date of the most recent note processed on the DWH
   SELECT /* Notes-staging */ MAX(date_id)
    INTO max_processed_date
   FROM dwh.facts f
    JOIN dwh.dimension_days d
    ON (f.action_dimension_id_date = d.dimension_day_id);
---RAISE NOTICE 'get max processed date from facts %.', max_processed_date;
---RAISE NOTICE '1Flag 4: %', CLOCK_TIMESTAMP();
+--RAISE NOTICE 'Max date processed in DWH: %', max_processed_date;
+--RAISE NOTICE '1Flag 5: %', CLOCK_TIMESTAMP();
 
+  -- Validation: DWH should not have more recent data than base tables
   IF (max_note_action_date < max_processed_date) THEN
    RAISE EXCEPTION 'DWH has more recent notes than received on base tables.';
   END IF;
 
-  -- Processes notes while the max note received is equal to the most recent
-  -- note processed.
+  -- If all comments are already processed, exit early
+  IF (max_processed_date > max_note_action_date) THEN
+   RAISE NOTICE 'All comments already processed. No new data to process.';
+   RETURN;
+  END IF;
+
+  -- Process comments incrementally: only process dates that have NEW comments
+  -- Start from the date after the last processed date, or the last processed date if it has new comments
   WHILE (max_processed_date <= max_note_action_date) LOOP
 --RAISE NOTICE '1Flag 5: %', CLOCK_TIMESTAMP();
 --RAISE NOTICE 'test % < %.', max_processed_date, max_note_action_date;
@@ -442,11 +510,49 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
 --qty_notes_on_date;
 --RAISE NOTICE '1Flag 7: %', CLOCK_TIMESTAMP();
 
-   -- If there are 0 notes to process, then increase one day.
+   -- If there are 0 notes to process, then skip to next date that has comments
+   -- OPTIMIZATION: Instead of incrementing day by day, jump directly to next date with comments
    IF (qty_notes_on_date = 0) THEN
-    max_processed_date := max_processed_date + 1;
---RAISE NOTICE 'Increasing 1 day, processing facts for %.',
---max_processed_date;
+    -- Find next date that actually has comments (skip empty days)
+    -- We only need to check if the date is greater, not the timestamp
+    SELECT /* Notes-staging */ MIN(DATE(created_at))
+     INTO max_processed_date
+    FROM note_comments
+    WHERE DATE(created_at) > max_processed_date;
+
+    -- If no more dates with comments, exit loop
+    IF (max_processed_date IS NULL OR max_processed_date > max_note_action_date) THEN
+     EXIT;
+    END IF;
+
+    -- Get the max timestamp processed for the new date (if any facts exist for this date)
+    -- This ensures we don't reprocess comments that were already processed
+    SELECT /* Notes-staging */ MAX(action_at)
+     INTO max_note_on_dwh_timestamp
+    FROM dwh.facts
+    WHERE DATE(action_at) = max_processed_date;
+
+    -- Determine if we should use m_equals = TRUE or FALSE
+    -- Use TRUE (>=) if:
+    --  1. No facts exist for this date (max_note_on_dwh_timestamp IS NULL) - process all comments from start of day
+    --  2. The timestamp is at the start of the day (00:00:00) - ensure we catch all comments
+    -- Use FALSE (>) if:
+    --  - Facts exist and timestamp is not at start of day - only process new comments after the last processed
+    start_of_day := max_processed_date::TIMESTAMP;
+
+    IF (max_note_on_dwh_timestamp IS NULL) THEN
+     -- No facts for this date, start from beginning of day
+     max_note_on_dwh_timestamp := start_of_day;
+     use_equals := TRUE; -- Process all comments from start of day (>=)
+    ELSIF (max_note_on_dwh_timestamp = start_of_day) THEN
+     -- Timestamp is at start of day, use >= to catch all comments
+     use_equals := TRUE;
+    ELSE
+     -- Timestamp is later in the day, only process new comments after it
+     use_equals := FALSE;
+    END IF;
+
+--RAISE NOTICE 'Skipped to next date with comments: %.', max_processed_date;
 
    -- Gets the number of notes that have not being processed on the new date
    -- being processed.
@@ -459,9 +565,9 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
 --qty_notes_on_date;
 --RAISE NOTICE '1Flag 8: %', CLOCK_TIMESTAMP();
 
-    -- Not necessary to process more notes on the same date.
+    -- Process notes for the new date with appropriate m_equals value
     CALL staging.process_notes_at_date(max_note_on_dwh_timestamp,
-      qty_dwh_notes, FALSE);
+      qty_dwh_notes, use_equals);
 --RAISE NOTICE '1Flag 9: %', CLOCK_TIMESTAMP();
    ELSE
     -- There are comments not processed on the DHW for the currently processing

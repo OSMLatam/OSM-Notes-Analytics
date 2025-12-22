@@ -102,6 +102,35 @@ ALTER TABLE dwh.facts
 SELECT /* Notes-ETL */ clock_timestamp() AS Processing,
  'Creating indexes' AS Task;
 
+-- Unique constraint to prevent duplicate facts
+-- A fact is uniquely identified by (id_note, action_at)
+-- Note: sequence_action can be NULL, so we use action_at instead
+-- First, remove any duplicate facts (keep the one with the lowest fact_id)
+DO $$
+DECLARE
+  duplicates_count INTEGER;
+BEGIN
+  -- Delete duplicate facts, keeping only the one with the lowest fact_id
+  WITH duplicates AS (
+    SELECT fact_id, ROW_NUMBER() OVER (PARTITION BY id_note, action_at ORDER BY fact_id) as rn
+    FROM dwh.facts
+  )
+  DELETE FROM dwh.facts
+  WHERE fact_id IN (
+    SELECT fact_id FROM duplicates WHERE rn > 1
+  );
+  
+  GET DIAGNOSTICS duplicates_count = ROW_COUNT;
+  IF duplicates_count > 0 THEN
+    RAISE NOTICE 'Removed % duplicate facts before creating unique index', duplicates_count;
+  END IF;
+END $$;
+
+CREATE UNIQUE INDEX IF NOT EXISTS facts_unique_note_action
+ ON dwh.facts (id_note, action_at);
+COMMENT ON INDEX dwh.facts_unique_note_action IS
+  'Prevents duplicate facts: one fact per note action timestamp';
+
 -- Unique keys
 
 CREATE INDEX IF NOT EXISTS facts_action_date ON dwh.facts (action_at);

@@ -343,10 +343,10 @@ COMMENT ON COLUMN dwh.fact_hashtags.is_opening_hashtag IS 'True if hashtag was u
 COMMENT ON COLUMN dwh.fact_hashtags.is_resolution_hashtag IS 'True if hashtag was used in note resolution/closure';
 
 CREATE TABLE dwh.properties (
- key VARCHAR(16),
+ key VARCHAR(16) PRIMARY KEY,
  value VARCHAR(26)
 );
 COMMENT ON TABLE dwh.properties IS 'Properties table for ETL';
-COMMENT ON COLUMN dwh.properties.key IS 'Property name';
+COMMENT ON COLUMN dwh.properties.key IS 'Property name (PRIMARY KEY)';
 COMMENT ON COLUMN dwh.properties.value IS 'Property value';
 

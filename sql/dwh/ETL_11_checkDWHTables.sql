@@ -109,14 +109,16 @@
     RAISE EXCEPTION 'Tables are missing: dwh.properties.';
    END IF;
 
+   -- Check if initial load flag exists and is either 'true' (in progress) or 'completed' (finished)
    SELECT /* Notes-ETL */ COUNT(1)
     INTO qty
    FROM dwh.properties
    WHERE key = 'initial load'
-   AND value = 'true'
+   AND value IN ('true', 'completed')
    ;
    IF (qty <> 1) THEN
-    RAISE EXCEPTION 'Previous initial load was not completed correctly.';
+    RAISE EXCEPTION 'Previous initial load was not completed correctly. Expected flag with value ''true'' or ''completed'', but found: %', 
+     (SELECT value FROM dwh.properties WHERE key = 'initial load' LIMIT 1);
    END IF;
   END;
   $$;

@@ -354,21 +354,42 @@ drop_base_tables() {
   PSQL_CMD="${PSQL_CMD} -h ${DB_HOST} -p ${DB_PORT}"
  fi
 
- # Check if base tables exist
- local TABLES_EXIST
- TABLES_EXIST=$(${PSQL_CMD} -d "${DBNAME}" -tAqc \
-  "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('countries', 'notes', 'note_comments', 'logs', 'tries');" 2> /dev/null | grep -E '^[0-9]+$' | head -1 || echo "0")
+ # Always drop base tables to ensure clean state
+ # This prevents duplicate key errors from residual data
+ log_info "Dropping base tables to ensure clean state..."
+ # Drop base tables
+ ${PSQL_CMD} -d "${DBNAME}" -f "${INGESTION_ROOT}/sql/process/processPlanetNotes_13_dropBaseTables.sql" > /dev/null 2>&1 || true
+ # Drop country tables
+ ${PSQL_CMD} -d "${DBNAME}" -c "DROP TABLE IF EXISTS countries CASCADE;" > /dev/null 2>&1 || true
+ # Drop any remaining ingestion-related tables
+ ${PSQL_CMD} -d "${DBNAME}" -c "DROP TABLE IF EXISTS note_comments_api CASCADE;" > /dev/null 2>&1 || true
+ ${PSQL_CMD} -d "${DBNAME}" -c "DROP TABLE IF EXISTS notes_api CASCADE;" > /dev/null 2>&1 || true
+ ${PSQL_CMD} -d "${DBNAME}" -c "DROP TABLE IF EXISTS note_comments_text_api CASCADE;" > /dev/null 2>&1 || true
 
- if [[ "${TABLES_EXIST}" -gt 0 ]]; then
-  log_info "Base tables exist, dropping them..."
-  # Drop base tables
-  ${PSQL_CMD} -d "${DBNAME}" -f "${INGESTION_ROOT}/sql/process/processPlanetNotes_13_dropBaseTables.sql" > /dev/null 2>&1 || true
-  # Drop country tables
-  ${PSQL_CMD} -d "${DBNAME}" -c "DROP TABLE IF EXISTS countries CASCADE;" > /dev/null 2>&1 || true
-  log_success "Base tables dropped"
- else
-  log_info "Base tables don't exist (already clean)"
- fi
+ # Reset sequences to prevent ID conflicts
+ # This prevents duplicate key errors when processPlanetNotes.sh inserts data
+ log_info "Resetting sequences to prevent ID conflicts..."
+ ${PSQL_CMD} -d "${DBNAME}" -c "
+  DO \$\$
+  BEGIN
+   -- Reset note_comments sequence
+   IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'note_comments_id_seq') THEN
+    PERFORM setval('note_comments_id_seq', 1, false);
+   END IF;
+   
+   -- Reset notes sequence
+   IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'notes_id_seq') THEN
+    PERFORM setval('notes_id_seq', 1, false);
+   END IF;
+   
+   -- Reset note_comments_text sequence
+   IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'note_comments_text_id_seq') THEN
+    PERFORM setval('note_comments_text_id_seq', 1, false);
+   END IF;
+  END \$\$;
+ " > /dev/null 2>&1 || true
+
+ log_success "Base tables and sequences cleaned"
 }
 
 # Function to run processAPINotes directly
@@ -412,6 +433,8 @@ run_processAPINotes() {
   log_info "=== EXECUTION #4: API with 0 notes (no new notes scenario) ==="
   export MOCK_NOTES_COUNT="0"
   log_info "Execution #4: Using ${MOCK_NOTES_COUNT} notes (no new notes scenario)"
+  # Verify MOCK_NOTES_COUNT is set correctly before execution
+  log_info "Verifying MOCK_NOTES_COUNT=${MOCK_NOTES_COUNT} is exported correctly"
   ;;
  *)
   log_error "Invalid execution number: ${EXECUTION_NUMBER}"
@@ -427,6 +450,55 @@ run_processAPINotes() {
  rm -f /tmp/updateCountries.lock
  rm -f /tmp/updateCountries_failed_execution
 
+ # For Execution #1 (planet mode), ensure tables are completely empty
+ # This prevents duplicate key errors from residual data
+ if [[ ${EXECUTION_NUMBER} -eq 1 ]]; then
+  log_info "Ensuring base tables are completely empty before planet load..."
+  # Load DBNAME from properties file
+  # shellcheck disable=SC1090
+  source "${INGESTION_ROOT}/etc/properties.sh"
+  local PSQL_CMD="psql"
+  if [[ -n "${DB_HOST:-}" ]]; then
+   PSQL_CMD="${PSQL_CMD} -h ${DB_HOST} -p ${DB_PORT}"
+  fi
+
+  # Truncate tables if they exist (more aggressive than DROP)
+  ${PSQL_CMD} -d "${DBNAME}" -c "
+   TRUNCATE TABLE IF EXISTS note_comments CASCADE;
+   TRUNCATE TABLE IF EXISTS note_comments_text CASCADE;
+   TRUNCATE TABLE IF EXISTS notes CASCADE;
+   TRUNCATE TABLE IF EXISTS note_comments_api CASCADE;
+   TRUNCATE TABLE IF EXISTS notes_api CASCADE;
+   TRUNCATE TABLE IF EXISTS note_comments_text_api CASCADE;
+  " > /dev/null 2>&1 || true
+
+  # Reset sequences after truncate
+  ${PSQL_CMD} -d "${DBNAME}" -c "
+   DO \$\$
+   BEGIN
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'note_comments_id_seq') THEN
+     PERFORM setval('note_comments_id_seq', 1, false);
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'notes_id_seq') THEN
+     PERFORM setval('notes_id_seq', 1, false);
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'note_comments_text_id_seq') THEN
+     PERFORM setval('note_comments_text_id_seq', 1, false);
+    END IF;
+   END \$\$;
+  " > /dev/null 2>&1 || true
+
+  log_success "Base tables truncated and sequences reset"
+ fi
+
+ # Cleanup any residual XML files from previous executions (especially for execution #4 with 0 notes)
+ # This prevents counting stale notes from previous API calls
+ if [[ ${EXECUTION_NUMBER} -eq 4 ]] && [[ "${MOCK_NOTES_COUNT:-}" == "0" ]]; then
+  log_info "Cleaning up residual XML files before execution #4 (0 notes scenario)..."
+  find /tmp -maxdepth 2 -name "OSM-notes-API.xml" -type f -mmin +5 -delete 2> /dev/null || true
+  find /tmp -maxdepth 2 -type d -name "processAPINotes_*" -mmin +5 -exec rm -rf {} \; 2> /dev/null || true
+ fi
+
  # Ensure PATH still has hybrid mock directory (should persist, but verify)
  if [[ -n "${HYBRID_MOCK_DIR:-}" ]] && [[ -d "${HYBRID_MOCK_DIR}" ]]; then
   # Verify mock commands are still available
@@ -438,6 +510,13 @@ run_processAPINotes() {
    export PATH="${HYBRID_MOCK_DIR}:${REAL_PSQL_DIR}:${SYSTEM_PATHS}:${PATH}"
    hash -r 2> /dev/null || true
   fi
+ fi
+
+ # Debug: Verify MOCK_NOTES_COUNT is available to child processes
+ if [[ -n "${MOCK_NOTES_COUNT:-}" ]]; then
+  log_info "DEBUG: MOCK_NOTES_COUNT=${MOCK_NOTES_COUNT} will be passed to processAPINotes.sh"
+ else
+  log_info "DEBUG: MOCK_NOTES_COUNT is not set (will use default behavior)"
  fi
 
  # Change to ingestion root directory
@@ -474,25 +553,45 @@ run_processAPINotes() {
   esac
 
   # Show last 50 lines of output for debugging
-  if [[ -f "${OUTPUT_FILE}" ]]; then
+  if [[ -f "${OUTPUT_FILE}" ]] && [[ -s "${OUTPUT_FILE}" ]]; then
    log_error "Last 50 lines of processAPINotes.sh output:"
    tail -50 "${OUTPUT_FILE}" | while IFS= read -r LINE; do
     log_error "  ${LINE}"
    done
+  fi
 
-   # Also check for log files
+  # Also check for log files in multiple locations
+  local PROCESS_API_LOG=""
+
+  # Check in ingestion logs directory
+  if [[ -f "/tmp/osm-notes-ingestion/logs/processing/processAPINotes.log" ]]; then
+   PROCESS_API_LOG="/tmp/osm-notes-ingestion/logs/processing/processAPINotes.log"
+  fi
+
+  # Check in latest processAPINotes directory
+  if [[ -z "${PROCESS_API_LOG}" ]]; then
    local LATEST_LOG_DIR
    LATEST_LOG_DIR=$(find /tmp -maxdepth 1 -type d -name 'processAPINotes_*' -printf '%T@\t%p\n' 2> /dev/null | sort -n | tail -1 | cut -f2- || echo "")
    if [[ -n "${LATEST_LOG_DIR}" ]] && [[ -f "${LATEST_LOG_DIR}/processAPINotes.log" ]]; then
-    log_error "Last 30 lines of processAPINotes.log:"
-    tail -30 "${LATEST_LOG_DIR}/processAPINotes.log" | while IFS= read -r LINE; do
-     log_error "  ${LINE}"
-    done
+    PROCESS_API_LOG="${LATEST_LOG_DIR}/processAPINotes.log"
    fi
-
-   # Clean up temp file
-   rm -f "${OUTPUT_FILE}" 2> /dev/null || true
   fi
+
+  if [[ -n "${PROCESS_API_LOG}" ]] && [[ -f "${PROCESS_API_LOG}" ]]; then
+   log_error "Last 50 lines of processAPINotes.log (${PROCESS_API_LOG}):"
+   tail -50 "${PROCESS_API_LOG}" | while IFS= read -r LINE; do
+    log_error "  ${LINE}"
+   done
+
+   # Also show errors specifically
+   log_error "Errors and warnings from processAPINotes.log:"
+   grep -iE "error|fatal|failed|exit code" "${PROCESS_API_LOG}" | tail -20 | while IFS= read -r LINE; do
+    log_error "  ${LINE}"
+   done || true
+  fi
+
+  # Clean up temp file
+  rm -f "${OUTPUT_FILE}" 2> /dev/null || true
 
   return ${EXIT_CODE}
  fi
@@ -678,6 +777,11 @@ main() {
  fi
 
  log_success "DWH schema cleaned (ready for fresh creation)"
+
+ # Clean ingestion base tables to start from scratch
+ # This ensures no residual data from previous failed executions
+ log_info "Cleaning ingestion base tables to start from scratch..."
+ drop_base_tables
 
  # Setup environment variables
  export LOG_LEVEL="${LOG_LEVEL:-INFO}"

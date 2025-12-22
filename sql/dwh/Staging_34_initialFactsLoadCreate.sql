@@ -426,11 +426,25 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_staging_${YEAR} (
 --qty_notes_on_date;
 --RAISE NOTICE '1Flag 7: %', CLOCK_TIMESTAMP();
 
-   -- If there are 0 notes to process, then increase one day.
+   -- If there are 0 notes to process, then skip to next date that has comments
+   -- OPTIMIZATION: Instead of incrementing day by day, jump directly to next date with comments
    IF (qty_notes_on_date = 0) THEN
-    max_processed_date := max_processed_date + 1;
---RAISE NOTICE 'Increasing 1 day, processing facts for %.',
---max_processed_date;
+    -- Find next date that actually has comments (skip empty days) for this year
+    SELECT /* Notes-staging */ MIN(DATE(created_at))
+     INTO max_processed_date
+    FROM note_comments
+    WHERE DATE(created_at) > max_processed_date
+     AND EXTRACT(YEAR FROM created_at) = ${YEAR};
+    
+    -- If no more dates with comments, exit loop
+    IF (max_processed_date IS NULL OR max_processed_date > max_note_action_date) THEN
+     EXIT;
+    END IF;
+    
+    -- Reset timestamp for new date to start of day
+    max_note_on_dwh_timestamp := max_processed_date::TIMESTAMP;
+    
+--RAISE NOTICE 'Skipped to next date with comments: %.', max_processed_date;
 
    -- Gets the number of notes that have not being processed on the new date
    -- being processed.

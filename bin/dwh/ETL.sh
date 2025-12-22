@@ -335,10 +335,13 @@ function __psql_with_appname {
 
   if [[ "${modified}" == "true" ]]; then
    local exit_code=0
+   # Execute psql and capture exit code
+   set +e
    PGAPPNAME="${appname}" psql "${new_args[@]}" || exit_code=$?
-   # Clean up temp files
+   set -e
+   # Clean up temp files (always clean up, even on error)
    for temp_file in "${temp_files[@]}"; do
-    rm -f "${temp_file}"
+    rm -f "${temp_file}" 2> /dev/null || true
    done
    return ${exit_code}
   else
@@ -513,43 +516,149 @@ function __createBaseTables {
  __log_start
  __logi "=== CREATING DWH TABLES ==="
  __logi "Dropping any existing DWH objects."
- __psql_with_appname -d "${DBNAME_DWH}" -f "${POSTGRES_12_DROP_DATAMART_OBJECTS}" 2>&1
- __psql_with_appname -d "${DBNAME_DWH}" -f "${POSTGRES_13_DROP_DWH_OBJECTS}" 2>&1
+ __logi "Executing: ${POSTGRES_12_DROP_DATAMART_OBJECTS}"
+ __psql_with_appname -d "${DBNAME_DWH}" -f "${POSTGRES_12_DROP_DATAMART_OBJECTS}" 2>&1 || true
+ __logi "First DROP command completed"
+ __logi "Executing: ${POSTGRES_13_DROP_DWH_OBJECTS}"
+ __psql_with_appname -d "${DBNAME_DWH}" -f "${POSTGRES_13_DROP_DWH_OBJECTS}" 2>&1 || true
+ __logi "Second DROP command completed"
 
  __logi "Creating tables for star model if they do not exist."
+ __logi "Executing: ${POSTGRES_22_CREATE_DWH_TABLES}"
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_22_CREATE_DWH_TABLES}" 2>&1
+ local create_exit_code=$?
+ set -e
+ if [[ ${create_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to create DWH tables (exit code: ${create_exit_code})"
+  __log_finish
+  return 1
+ fi
+ __logi "CREATE DWH TABLES command completed"
  __logi "Creating partitions for facts table."
+ __logi "Executing: ${POSTGRES_22A_CREATE_FACT_PARTITIONS}"
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_22A_CREATE_FACT_PARTITIONS}" 2>&1
+ local partitions_exit_code=$?
+ set -e
+ if [[ ${partitions_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to create fact partitions (exit code: ${partitions_exit_code})"
+  __log_finish
+  return 1
+ fi
+ __logi "CREATE FACT PARTITIONS command completed"
+
  __logi "Regions for countries."
+ __logi "Executing: ${POSTGRES_23_GET_WORLD_REGIONS}"
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -f "${POSTGRES_23_GET_WORLD_REGIONS}" 2>&1
+ local regions_exit_code=$?
+ set -e
+ if [[ ${regions_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to get world regions (exit code: ${regions_exit_code})"
+  __log_finish
+  return 1
+ fi
+ __logi "GET WORLD REGIONS command completed"
+
  __logi "Adding functions."
+ __logi "Executing: ${POSTGRES_24_ADD_FUNCTIONS}"
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_24_ADD_FUNCTIONS}" 2>&1
+ local functions_exit_code=$?
+ set -e
+ if [[ ${functions_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to add functions (exit code: ${functions_exit_code})"
+  __log_finish
+  return 1
+ fi
+ __logi "ADD FUNCTIONS command completed"
 
  __logi "Populating ISO country codes reference table."
+ __logi "Executing: ${POSTGRES_24A_POPULATE_ISO_CODES}"
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_24A_POPULATE_ISO_CODES}" 2>&1
+ local iso_codes_exit_code=$?
+ set -e
+ if [[ ${iso_codes_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to populate ISO codes (exit code: ${iso_codes_exit_code})"
+  __log_finish
+  return 1
+ fi
+ __logi "POPULATE ISO CODES command completed"
 
  __logi "Initial dimension population."
+ __logi "Executing: ${POSTGRES_25_POPULATE_DIMENSIONS}"
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_25_POPULATE_DIMENSIONS}" 2>&1
+ local dimensions_exit_code=$?
+ set -e
+ if [[ ${dimensions_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to populate dimensions (exit code: ${dimensions_exit_code})"
+  __log_finish
+  return 1
+ fi
+ __logi "POPULATE DIMENSIONS command completed"
 
  __logi "Initial user dimension population."
+ __logi "Executing: ${POSTGRES_26_UPDATE_DIMENSIONS}"
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_26_UPDATE_DIMENSIONS}" 2>&1
+ local update_dimensions_exit_code=$?
+ set -e
+ if [[ ${update_dimensions_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to update dimensions (exit code: ${update_dimensions_exit_code})"
+  __log_finish
+  return 1
+ fi
+ __logi "UPDATE DIMENSIONS command completed"
 
  __logi "Creating base staging objects."
+ __logi "Executing: ${POSTGRES_31_CREATE_BASE_STAGING_OBJECTS}"
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_31_CREATE_BASE_STAGING_OBJECTS}" 2>&1
+ local base_staging_exit_code=$?
+ set -e
+ if [[ ${base_staging_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to create base staging objects (exit code: ${base_staging_exit_code})"
+  __log_finish
+  return 1
+ fi
+ __logi "CREATE BASE STAGING OBJECTS command completed"
 
  __logi "Creating staging objects."
+ __logi "Executing: ${POSTGRES_32_CREATE_STAGING_OBJECTS}"
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_32_CREATE_STAGING_OBJECTS}" 2>&1
+ local staging_exit_code=$?
+ set -e
+ if [[ ${staging_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to create staging objects (exit code: ${staging_exit_code})"
+  __log_finish
+  return 1
+ fi
+ __logi "CREATE STAGING OBJECTS command completed"
 
+ __logi "Inserting initial load flag into dwh.properties"
+ set +e
  echo "INSERT INTO dwh.properties VALUES ('initial load', 'true')" \
   | __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 2>&1
+ local properties_exit_code=$?
+ set -e
+ if [[ ${properties_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to insert initial load flag (exit code: ${properties_exit_code})"
+  __log_finish
+  return 1
+ fi
+ __logi "Initial load flag inserted successfully"
 
  # Note: __initialFacts is called separately by the caller
  # (either __initialFacts or __initialFactsParallel)
@@ -574,11 +683,14 @@ function __processNotesETL {
   __logi "Step 1: Setting up Foreign Data Wrappers for incremental processing (different databases)..."
   if [[ -f "${POSTGRES_60_SETUP_FDW}" ]]; then
    # Export FDW configuration variables if not set (required for envsubst)
-   export FDW_INGESTION_HOST="${FDW_INGESTION_HOST:-localhost}"
-   export FDW_INGESTION_DBNAME="${DBNAME_INGESTION}"
-   export FDW_INGESTION_PORT="${FDW_INGESTION_PORT:-5432}"
-   export FDW_INGESTION_USER="${FDW_INGESTION_USER:-analytics_readonly}"
-   export FDW_INGESTION_PASSWORD="${FDW_INGESTION_PASSWORD:-}"
+   # Temporarily disable exit on error to handle readonly variables gracefully
+   set +e
+   export FDW_INGESTION_HOST="${FDW_INGESTION_HOST:-localhost}" 2> /dev/null || true
+   export FDW_INGESTION_DBNAME="${DBNAME_INGESTION}" 2> /dev/null || true
+   export FDW_INGESTION_PORT="${FDW_INGESTION_PORT:-5432}" 2> /dev/null || true
+   export FDW_INGESTION_USER="${FDW_INGESTION_USER:-analytics_readonly}" 2> /dev/null || true
+   export FDW_INGESTION_PASSWORD="${FDW_INGESTION_PASSWORD:-}" 2> /dev/null || true
+   set -e
 
    # Use envsubst to replace variables in SQL file
    envsubst < "${POSTGRES_60_SETUP_FDW}" \
@@ -598,26 +710,70 @@ function __processNotesETL {
 
  # Load notes into staging.
  __logi "Step 2: Loading notes into staging."
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_61_LOAD_NOTES_STAGING}" 2>&1
+ local load_staging_exit_code=$?
+ set -e
+ if [[ ${load_staging_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to load notes into staging (exit code: ${load_staging_exit_code})"
+  __log_finish
+  return 1
+ fi
+ __logi "Notes loaded into staging successfully"
 
  # Create note activity metrics trigger (before processing to ensure metrics are calculated).
  __logi "Creating note activity metrics trigger."
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_52_CREATE_NOTE_ACTIVITY_METRICS}" 2>&1
+ local create_trigger_exit_code=$?
+ set -e
+ if [[ ${create_trigger_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to create note activity metrics trigger (exit code: ${create_trigger_exit_code})"
+  __log_finish
+  return 1
+ fi
 
  # Ensure trigger is enabled for incremental loads (needed for metrics calculation)
  __logi "Ensuring note activity metrics trigger is enabled for incremental processing..."
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -c "SELECT dwh.enable_note_activity_metrics_trigger();" 2>&1
+ local enable_trigger_exit_code=$?
+ set -e
+ if [[ ${enable_trigger_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to enable note activity metrics trigger (exit code: ${enable_trigger_exit_code})"
+  __log_finish
+  return 1
+ fi
+ __logi "Note activity metrics trigger enabled successfully"
 
  # Process notes actions into DWH.
  __logi "Processing notes actions into DWH."
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -c "CALL staging.process_notes_actions_into_dwh();" 2>&1
+ local process_actions_exit_code=$?
+ set -e
+ if [[ ${process_actions_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to process notes actions into DWH (exit code: ${process_actions_exit_code})"
+  __log_finish
+  return 1
+ fi
+ __logi "Notes actions processed into DWH successfully"
 
  # Unify facts, by computing dates between years.
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -f "${POSTGRES_54_UNIFY_FACTS}" 2>&1
+ local unify_facts_exit_code=$?
+ set -e
+ if [[ ${unify_facts_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to unify facts (exit code: ${unify_facts_exit_code})"
+  __log_finish
+  return 1
+ fi
+ __logi "Facts unified successfully"
 
  # Create hashtag analysis views.
  __logi "Creating hashtag analysis views."
@@ -679,13 +835,25 @@ function __initialFactsParallel {
 
  # Create initial facts base objects.
  __logi "Step 2: Creating initial facts base objects."
+ __logi "Executing: ${POSTGRES_33_CREATE_FACTS_BASE_OBJECTS_SIMPLE}"
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_33_CREATE_FACTS_BASE_OBJECTS_SIMPLE}" 2>&1
+ local facts_base_exit_code=$?
+ set -e
+ if [[ ${facts_base_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to create initial facts base objects (exit code: ${facts_base_exit_code})"
+  __log_finish
+  return 1
+ fi
+ __logi "CREATE INITIAL FACTS BASE OBJECTS command completed"
 
  # Disable note activity metrics trigger for performance during bulk load
  # This improves ETL speed by 5-15% during initial load
  # Note: Function checks if trigger exists before attempting to disable
+ __logi "Disabling note activity metrics trigger for performance..."
  __safe_disable_note_activity_metrics_trigger
+ __logi "Note activity metrics trigger disabled"
 
  # Phase 1: Parallel load by year
  __logi "Phase 1: Starting parallel load by year..."
@@ -839,8 +1007,15 @@ function __initialFactsParallel {
 
  while [[ ${year} -le ${current_year} ]]; do
   (
+   set +e
    __logi "Starting year ${year} load (PID: $$)..."
    __psql_with_appname "ETL-year-${year}" -d "${DBNAME_DWH}" -c "CALL staging.process_initial_load_by_year_${year}();" 2>&1
+   local year_exit_code=$?
+   set -e
+   if [[ ${year_exit_code} -ne 0 ]]; then
+    __loge "ERROR: Failed to load year ${year} (exit code: ${year_exit_code})"
+    exit ${year_exit_code}
+   fi
    __logi "Finished year ${year} load (PID: $$)."
   ) &
   pids+=($!)
@@ -855,70 +1030,179 @@ function __initialFactsParallel {
 
  # Wait for all remaining processes
  __logi "Waiting for all year loads to complete..."
+ local failed_years=0
  for pid in "${pids[@]}"; do
-  wait "${pid}"
+  if ! wait "${pid}"; then
+   __loge "ERROR: Parallel load failed for PID ${pid}"
+   ((failed_years++)) || true
+  fi
  done
+ if [[ ${failed_years} -gt 0 ]]; then
+  __loge "ERROR: ${failed_years} year load(s) failed"
+  __log_finish
+  return 1
+ fi
  __logi "Phase 1: All parallel loads completed."
 
  # Phase 2: Update recent_opened_dimension_id_date for all facts
  __logi "Phase 2: Updating recent_opened_dimension_id_date for all facts..."
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_35_EXECUTE_FACTS_YEAR_LOAD_PHASE2}" 2>&1
+ local phase2_exit_code=$?
+ set -e
+ if [[ ${phase2_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Phase 2 failed (exit code: ${phase2_exit_code})"
+  __log_finish
+  return 1
+ fi
  __logi "Phase 2: Update completed."
 
  # Add constraints, indexes and triggers.
  __logi "Adding constraints, indexes and triggers."
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_41_ADD_CONSTRAINTS_INDEXES_TRIGGERS}" 2>&1
+ local constraints_exit_code=$?
+ set -e
+ if [[ ${constraints_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to add constraints, indexes and triggers (exit code: ${constraints_exit_code})"
+  __log_finish
+  return 1
+ fi
 
  # Create automation detection system.
  __logi "Creating automation detection system."
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_50_CREATE_AUTOMATION_DETECTION}" 2>&1
+ local automation_exit_code=$?
+ set -e
+ if [[ ${automation_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to create automation detection system (exit code: ${automation_exit_code})"
+  __log_finish
+  return 1
+ fi
 
  # Create experience levels system.
  __logi "Creating experience levels system."
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_51_CREATE_EXPERIENCE_LEVELS}" 2>&1
+ local experience_exit_code=$?
+ set -e
+ if [[ ${experience_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to create experience levels system (exit code: ${experience_exit_code})"
+  __log_finish
+  return 1
+ fi
 
  # Create note activity metrics trigger.
  __logi "Creating note activity metrics trigger."
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_52_CREATE_NOTE_ACTIVITY_METRICS}" 2>&1
+ local metrics_exit_code=$?
+ set -e
+ if [[ ${metrics_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to create note activity metrics trigger (exit code: ${metrics_exit_code})"
+  __log_finish
+  return 1
+ fi
 
  # Enable note activity metrics trigger after creation
  # (It was disabled before bulk load for performance)
  __logi "Enabling note activity metrics trigger for future incremental loads..."
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -c "SELECT dwh.enable_note_activity_metrics_trigger();" 2>&1
+ local enable_trigger_exit_code=$?
+ set -e
+ if [[ ${enable_trigger_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to enable note activity metrics trigger (exit code: ${enable_trigger_exit_code})"
+  __log_finish
+  return 1
+ fi
 
  # Step N: Drop copied base tables after DWH population (hybrid strategy)
  # This frees disk space and ensures incremental uses FDW
- __logi "Step N: Dropping copied base tables after DWH population..."
- if [[ -f "${DROP_COPIED_BASE_TABLES_SCRIPT}" ]]; then
-  if bash "${DROP_COPIED_BASE_TABLES_SCRIPT}"; then
-   __logi "Copied base tables dropped successfully"
+ # IMPORTANT: Only drop if Ingestion and Analytics are in DIFFERENT databases
+ # If they are the same database (hybrid test mode), we must keep the tables
+ # because datamarts and other processes need access to note_comments_text
+ __logi "Step N: Checking if base tables should be dropped..."
+ __logi "Checking database configuration: DBNAME_INGESTION='${DBNAME_INGESTION}', DBNAME_DWH='${DBNAME_DWH}'"
+
+ if [[ "${DBNAME_INGESTION}" != "${DBNAME_DWH}" ]]; then
+  # Different databases: tables were copied, safe to drop them
+  __logi "Databases are different - dropping copied base tables (were copied for initial load)"
+  if [[ -f "${DROP_COPIED_BASE_TABLES_SCRIPT}" ]]; then
+   if bash "${DROP_COPIED_BASE_TABLES_SCRIPT}"; then
+    __logi "Copied base tables dropped successfully"
+   else
+    __logw "Warning: Failed to drop copied base tables (non-critical, continuing...)"
+   fi
   else
-   __logw "Warning: Failed to drop copied base tables (non-critical, continuing...)"
+   __logw "Warning: Drop copied base tables script not found: ${DROP_COPIED_BASE_TABLES_SCRIPT}"
   fi
  else
-  __logw "Warning: Drop copied base tables script not found: ${DROP_COPIED_BASE_TABLES_SCRIPT}"
+  # Same database: tables are NOT copies, they are the original tables
+  # DO NOT drop them - datamarts and other processes need them
+  __logi "Ingestion and Analytics use same database (${DBNAME_DWH})"
+  __logi "Base tables are NOT copies - keeping them for datamart access"
+  __logi "Skipping drop operation (datamarts need access to note_comments and note_comments_text)"
  fi
 
  # Create hashtag analysis views.
  __logi "Creating hashtag analysis views."
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_53_CREATE_HASHTAG_VIEWS}" 2>&1
+ local hashtag_views_exit_code=$?
+ set -e
+ if [[ ${hashtag_views_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to create hashtag analysis views (exit code: ${hashtag_views_exit_code})"
+  __log_finish
+  return 1
+ fi
 
  # Enhance datamarts with hashtag metrics.
  __logi "Enhancing datamarts with hashtag metrics."
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_53A_ENHANCE_DATAMARTS_HASHTAGS}" 2>&1
+ local enhance_hashtags_exit_code=$?
+ set -e
+ if [[ ${enhance_hashtags_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to enhance datamarts with hashtag metrics (exit code: ${enhance_hashtags_exit_code})"
+  __log_finish
+  return 1
+ fi
 
  # Create specialized hashtag indexes.
  __logi "Creating specialized hashtag indexes."
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_53B_CREATE_HASHTAG_INDEXES}" 2>&1
+ local hashtag_indexes_exit_code=$?
+ set -e
+ if [[ ${hashtag_indexes_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to create specialized hashtag indexes (exit code: ${hashtag_indexes_exit_code})"
+  __log_finish
+  return 1
+ fi
+
+ # Update initial load flag to 'completed' after successful parallel load
+ __logi "Updating initial load flag to 'completed'..."
+ set +e
+ echo "INSERT INTO dwh.properties (key, value) VALUES ('initial load', 'completed') ON CONFLICT (key) DO UPDATE SET value = 'completed';" \
+  | __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 2>&1
+ local update_flag_exit_code=$?
+ set -e
+ if [[ ${update_flag_exit_code} -ne 0 ]]; then
+  __logw "Warning: Failed to update initial load flag (non-critical, continuing...)"
+ else
+  __logi "Initial load flag updated to 'completed'"
+ fi
 
  __log_finish
 }
@@ -1044,12 +1328,34 @@ function __perform_database_maintenance {
 
  if [[ "${ETL_VACUUM_AFTER_LOAD}" == "true" ]]; then
   __logi "Running VACUUM ANALYZE on fact table"
-  __psql_with_appname -d "${DBNAME_DWH}" -c "VACUUM ANALYZE dwh.facts;" 2>&1
+  set +e
+  # VACUUM cannot run inside a transaction, so use psql directly without __psql_with_appname
+  # which may add timeout settings that create a transaction block
+  PGAPPNAME="${BASENAME}" psql -d "${DBNAME_DWH}" -c "VACUUM ANALYZE dwh.facts;" 2>&1
+  local vacuum_exit_code=$?
+  set -e
+  if [[ ${vacuum_exit_code} -ne 0 ]]; then
+   __logw "WARNING: VACUUM ANALYZE on fact table returned exit code ${vacuum_exit_code} (non-critical, continuing...)"
+  else
+   __logi "VACUUM ANALYZE on fact table completed successfully"
+  fi
+ else
+  __logi "ETL_VACUUM_AFTER_LOAD is not set to 'true', skipping VACUUM ANALYZE"
  fi
 
  if [[ "${ETL_ANALYZE_AFTER_LOAD}" == "true" ]]; then
   __logi "Running ANALYZE on dimension tables"
+  set +e
   __psql_with_appname -d "${DBNAME_DWH}" -c "ANALYZE dwh.dimension_users, dwh.dimension_countries, dwh.dimension_regions, dwh.dimension_continents, dwh.dimension_days, dwh.dimension_time_of_week, dwh.dimension_applications, dwh.dimension_application_versions, dwh.dimension_hashtags, dwh.dimension_timezones, dwh.dimension_seasons;" 2>&1
+  local analyze_exit_code=$?
+  set -e
+  if [[ ${analyze_exit_code} -ne 0 ]]; then
+   __logw "WARNING: ANALYZE on dimension tables returned exit code ${analyze_exit_code} (non-critical, continuing...)"
+  else
+   __logi "ANALYZE on dimension tables completed successfully"
+  fi
+ else
+  __logi "ETL_ANALYZE_AFTER_LOAD is not set to 'true', skipping ANALYZE"
  fi
 
  __logi "=== DATABASE MAINTENANCE COMPLETED ==="
@@ -1169,11 +1475,15 @@ function main() {
   if [[ "${DBNAME_INGESTION}" != "${DBNAME_DWH}" ]]; then
    __logi "Databases are different, setting up FDW for datamart access"
    if [[ -f "${POSTGRES_60_SETUP_FDW}" ]]; then
-    export FDW_INGESTION_HOST="${FDW_INGESTION_HOST:-localhost}"
-    export FDW_INGESTION_DBNAME="${DBNAME_INGESTION}"
-    export FDW_INGESTION_PORT="${FDW_INGESTION_PORT:-5432}"
-    export FDW_INGESTION_USER="${FDW_INGESTION_USER:-analytics_readonly}"
-    export FDW_INGESTION_PASSWORD="${FDW_INGESTION_PASSWORD:-}"
+    # Export FDW configuration variables if not set (required for envsubst)
+    # Temporarily disable exit on error to handle readonly variables gracefully
+    set +e
+    export FDW_INGESTION_HOST="${FDW_INGESTION_HOST:-localhost}" 2> /dev/null || true
+    export FDW_INGESTION_DBNAME="${DBNAME_INGESTION}" 2> /dev/null || true
+    export FDW_INGESTION_PORT="${FDW_INGESTION_PORT:-5432}" 2> /dev/null || true
+    export FDW_INGESTION_USER="${FDW_INGESTION_USER:-analytics_readonly}" 2> /dev/null || true
+    export FDW_INGESTION_PASSWORD="${FDW_INGESTION_PASSWORD:-}" 2> /dev/null || true
+    set -e
     envsubst < "${POSTGRES_60_SETUP_FDW}" \
      | __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 2>&1 || {
      __loge "ERROR: Failed to setup Foreign Data Wrappers for datamart processing"
