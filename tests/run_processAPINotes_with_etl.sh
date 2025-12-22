@@ -376,12 +376,12 @@ drop_base_tables() {
    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'note_comments_id_seq') THEN
     PERFORM setval('note_comments_id_seq', 1, false);
    END IF;
-   
+
    -- Reset notes sequence
    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'notes_id_seq') THEN
     PERFORM setval('notes_id_seq', 1, false);
    END IF;
-   
+
    -- Reset note_comments_text sequence
    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'note_comments_text_id_seq') THEN
     PERFORM setval('note_comments_text_id_seq', 1, false);
