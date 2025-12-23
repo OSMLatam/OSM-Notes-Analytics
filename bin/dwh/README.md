@@ -97,7 +97,8 @@ Key scripts:
 
 The `exportDatamartsToJSON.sh` script exports datamart data to JSON files
 for consumption by the web viewer. For automated deployment to GitHub Pages,
-use `exportAndPushToGitHub.sh` instead. It provides:
+use `exportAndPushToGitHub.sh` instead. The export script also automatically
+copies JSON schemas to the data repository for frontend consumption. It provides:
 
 ### Features
 
@@ -135,6 +136,13 @@ output/json/
 ├── metadata.json
 └── global_stats.json
 ```
+
+**Note:** When using `exportAndPushToGitHub.sh`, JSON schemas are also copied to
+`OSM-Notes-Data/schemas/` for frontend consumption. Schemas are available at:
+- GitHub Pages: `https://osmlatam.github.io/OSM-Notes-Data/schemas/`
+- Local: `OSM-Notes-Data/schemas/` (when repository is cloned)
+
+For complete schema location documentation, see [JSON Schema Location](../../docs/JSON_Schema_Location.md).
 
 The `global_stats.json` file contains aggregated statistics for the entire system:
 - Total notes opened/closed/commented

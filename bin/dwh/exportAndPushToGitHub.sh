@@ -3,8 +3,14 @@
 # Exports JSON and pushes to GitHub Pages data repository
 # Usage: ./bin/dwh/exportAndPushToGitHub.sh
 #
+# This script:
+# 1. Exports datamarts to JSON files
+# 2. Copies JSON files to OSM-Notes-Data/data/
+# 3. Copies JSON schemas to OSM-Notes-Data/schemas/
+# 4. Commits and pushes to GitHub
+#
 # Author: Andres Gomez (AngocA)
-# Version: 2025-10-25
+# Version: 2025-12-22
 
 set -euo pipefail
 
@@ -76,6 +82,27 @@ rsync -av --delete "${ANALYTICS_DIR}/output/json/" "${DATA_REPO_DIR}/data/"
 
 print_success "Files copied to data repository"
 
+# Step 2.5: Copy JSON schemas to data repository
+print_info "Step 2.5: Copying JSON schemas to data repository..."
+SCHEMA_SOURCE_DIR="${ANALYTICS_DIR}/lib/osm-common/schemas"
+SCHEMA_TARGET_DIR="${DATA_REPO_DIR}/schemas"
+
+if [[ ! -d "${SCHEMA_SOURCE_DIR}" ]]; then
+ print_error "Schema directory not found: ${SCHEMA_SOURCE_DIR}"
+ exit 1
+fi
+
+# Create schemas directory in data repository
+mkdir -p "${SCHEMA_TARGET_DIR}"
+
+# Copy all JSON schema files
+if ! rsync -av --include="*.json" --include="README.md" --exclude="*" "${SCHEMA_SOURCE_DIR}/" "${SCHEMA_TARGET_DIR}/"; then
+ print_error "Failed to copy schemas"
+ exit 1
+fi
+
+print_success "Schemas copied to data repository"
+
 # Step 3: Git commit and push
 print_info "Step 3: Pushing to GitHub..."
 
@@ -89,11 +116,16 @@ fi
 
 # Get file count for commit message
 FILE_COUNT=$(find data/ -name "*.json" | wc -l)
+SCHEMA_COUNT=$(find schemas/ -name "*.json" 2> /dev/null | wc -l || echo "0")
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
-# Commit changes
-git add data/
-git commit -m "Auto-update: ${FILE_COUNT} JSON files exported from Analytics - ${TIMESTAMP}"
+# Commit changes (data and schemas)
+git add data/ schemas/
+if [[ ${SCHEMA_COUNT} -gt 0 ]]; then
+ git commit -m "Auto-update: ${FILE_COUNT} JSON files and ${SCHEMA_COUNT} schemas exported from Analytics - ${TIMESTAMP}"
+else
+ git commit -m "Auto-update: ${FILE_COUNT} JSON files exported from Analytics - ${TIMESTAMP}"
+fi
 
 # Push to GitHub
 if git push origin main; then
@@ -112,5 +144,6 @@ else
 fi
 
 echo ""
-print_success "Done! Data updated in GitHub Pages"
+print_success "Done! Data and schemas updated in GitHub Pages"
 print_info "Allow 1-2 minutes for GitHub Pages to update"
+print_info "Schemas available at: https://osmlatam.github.io/OSM-Notes-Data/schemas/"

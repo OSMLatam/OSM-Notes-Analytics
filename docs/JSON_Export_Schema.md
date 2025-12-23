@@ -948,7 +948,27 @@ function isCompatible(metadata, minVersion) {
 
 ## Schema Files Location
 
-All JSON Schema files are located in:
+### For Frontend/Consumer Applications
+
+**Primary location (recommended):** Schemas are automatically copied to the data repository:
+```
+OSM-Notes-Data/schemas/
+├── user-profile.schema.json
+├── country-profile.schema.json
+├── user-index.schema.json
+├── country-index.schema.json
+├── metadata.schema.json
+└── global-stats.schema.json
+```
+
+**Available via GitHub Pages:**
+- `https://osmlatam.github.io/OSM-Notes-Data/schemas/`
+
+This is the recommended location for frontend applications as schemas are versioned together with the data.
+
+### For Development/Validation
+
+**Source location:** Schemas are maintained in:
 ```
 lib/osm-common/schemas/
 ├── user-profile.schema.json
@@ -958,6 +978,11 @@ lib/osm-common/schemas/
 ├── metadata.schema.json
 └── global-stats.schema.json
 ```
+
+Schemas are automatically synced to the data repository during each export via `exportAndPushToGitHub.sh`.
+
+**For complete documentation on schema location and usage, see:**
+- **[JSON Schema Location](JSON_Schema_Location.md)**: Complete guide on where to find schemas and how to use them
 
 ---
 
