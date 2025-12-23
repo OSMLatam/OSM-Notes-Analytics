@@ -6,8 +6,8 @@ This directory contains all TODO items, action plans, and progress tracking for 
 
 ## Files Overview
 
-### 📋 ActionPlan.md
-**Purpose**: Comprehensive action plan with all identified tasks  
+### 📋 TODO_LIST.md
+**Purpose**: Consolidated TODO list with all identified tasks  
 **Use for**: 
 - Current tasks and priorities
 - Task status tracking
@@ -53,7 +53,7 @@ This directory contains all TODO items, action plans, and progress tracking for 
 
 ### Starting a New Sprint
 
-1. Review `ActionPlan.md` for next priority items
+1. Review `TODO_LIST.md` for next priority items
 2. Update `ProgressTracker.md` with sprint goals
 3. Create GitHub issues for major tasks (optional)
 4. Mark items as [🔄] in progress
@@ -62,7 +62,7 @@ This directory contains all TODO items, action plans, and progress tracking for 
 
 1. Work on tasks from current sprint
 2. Update `ProgressTracker.md` with daily progress
-3. Mark completed items [✅] in `ActionPlan.md`
+3. Mark completed items [✅] in `TODO_LIST.md`
 4. Document blockers in `ProgressTracker.md`
 
 ### Sprint Review
@@ -74,7 +74,7 @@ This directory contains all TODO items, action plans, and progress tracking for 
 
 ### Adding New Tasks
 
-1. Add to appropriate section in `ActionPlan.md`
+1. Add to appropriate section in `TODO_LIST.md`
 2. Assign priority level
 3. Update statistics
 4. Consider adding to current sprint if critical
@@ -124,7 +124,7 @@ This directory contains all TODO items, action plans, and progress tracking for 
 
 ### Git Workflow
 
-When working on tasks from ActionPlan:
+When working on tasks from TODO_LIST:
 
 ```bash
 # Create branch for task
@@ -136,14 +136,14 @@ git checkout -b fix/test-failures-datamarts
 # Commit with reference
 git commit -m "Fix: datamart calculation tests
 
-Resolves ActionPlan Test #1
+Resolves TODO_LIST Test #1
 Fixes failing tests in resolution metrics
 Updates test expectations to match actual data
 
 Related files:
 - tests/unit/bash/datamart_resolution_metrics.test.bats"
 
-# Update ActionPlan.md
+# Update TODO_LIST.md
 # Mark [✅] Test #1
 # Update ProgressTracker.md
 ```
@@ -155,7 +155,7 @@ For major tasks, create GitHub issues:
 ```markdown
 Title: Add resolution time aggregates to datamarts
 
-**Reference**: ActionPlan.md - Metrics #1  
+**Reference**: TODO_LIST.md - Metrics #1  
 **Priority**: 🟡 High
 
 **Description**:
@@ -209,7 +209,7 @@ Based on analysis in `docs/DASHBOARD_ANALYSIS.md`:
 If you discover new bugs or have feature ideas:
 
 1. Add to appropriate file in this directory
-2. Create entry in `ActionPlan.md` with priority
+2. Create entry in `TODO_LIST.md` with priority
 3. Update statistics
 4. Consider creating GitHub issue for visibility
 
