@@ -135,22 +135,30 @@ Todas las tareas de alta prioridad han sido completadas.
 
 ### Exportación y Publicación
 
-- [🔄] **EXP-001**: Exportar la DB en formato CSV para publicación ⭐ **EN PROGRESO**
+- [✅] **EXP-001**: Exportar la DB en formato CSV para publicación - COMPLETADO
   - Exportar datos de notas cerradas
   - Información: comentario inicial, comentario de cierre, usuario que abrió, usuario que cerró, país
   - Un archivo por país
   - Propósito: Dar contexto a AI para saber cómo cerrar notas
-  - **Status**: Script y query SQL creados, pendiente de probar con datos reales
+  - **Status**: ✅ Scripts creados y documentados
   - Archivos: 
-    - `bin/dwh/exportNotesToCSV.sh` ✅ (creado)
+    - `bin/dwh/exportAndPushCSVToGitHub.sh` ✅ (creado - script único que hace todo)
     - `sql/dwh/export/exportClosedNotesByCountry.sql` ✅ (creado)
+  - **Features**:
+    - ✅ Limpieza de comentarios (múltiples líneas, comillas, límite 2000 chars)
+    - ✅ Estructura optimizada para AI
+    - ✅ Campos adicionales (total_comments, was_reopened)
+    - ✅ Exportación y publicación a GitHub
+    - ✅ Configuración de cron mensual
   - **Next Steps**:
     - ⏳ Probar exportación con datos reales
-    - ⏳ Agregar mecanismo de exportación periódica (cron)
 
-- [ ] **EXP-002**: Mecanismo que exporte periódicamente y publique
-  - Integrar con cron
-  - Archivos: `bin/dwh/exportNotesToCSV.sh`, `etc/cron.example`
+- [✅] **EXP-002**: Mecanismo que exporte periódicamente y publique - COMPLETADO
+  - ✅ Integrado con cron (mensual, 1er día del mes)
+  - ✅ Script de publicación a GitHub creado
+  - Archivos: 
+    - `bin/dwh/exportAndPushCSVToGitHub.sh` ✅ (creado)
+    - `etc/cron.example` ✅ (actualizado)
 
 ### Machine Learning
 

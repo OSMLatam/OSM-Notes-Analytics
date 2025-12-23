@@ -44,7 +44,7 @@ cd bin/dwh
 Automatically export and deploy to GitHub Pages:
 
 ```bash
-./bin/dwh/exportAndPushToGitHub.sh
+./bin/dwh/exportAndPushJSONToGitHub.sh
 ```
 
 This script:
@@ -289,14 +289,14 @@ Add JSON export to your ETL pipeline:
 
 ### Automated GitHub Pages Deployment
 
-The `exportAndPushToGitHub.sh` script automates the entire workflow:
+The `exportAndPushJSONToGitHub.sh` script automates the entire workflow:
 
 ```bash
 # Manual execution
-./bin/dwh/exportAndPushToGitHub.sh
+./bin/dwh/exportAndPushJSONToGitHub.sh
 
 # Or add to cron for automatic updates
-0 * * * * cd /path/to/OSM-Notes-Analytics && ./bin/dwh/exportAndPushToGitHub.sh >> /tmp/github-push.log 2>&1
+0 * * * * cd /path/to/OSM-Notes-Analytics && ./bin/dwh/exportAndPushJSONToGitHub.sh >> /tmp/github-push.log 2>&1
 ```
 
 This ensures your GitHub Pages data repository is always up-to-date with the latest Analytics data.

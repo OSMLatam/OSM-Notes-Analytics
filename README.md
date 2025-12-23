@@ -676,7 +676,7 @@ For automated analytics updates:
 
 # Export to JSON and push to GitHub Pages (every 15 minutes, after datamarts update)
 # This script exports JSON files and automatically deploys them to GitHub Pages
-45 2 * * * ~/OSM-Notes-Analytics/bin/dwh/exportAndPushToGitHub.sh
+45 2 * * * ~/OSM-Notes-Analytics/bin/dwh/exportAndPushJSONToGitHub.sh
 ```
 
 ### Complete Workflow with JSON Export
@@ -697,7 +697,7 @@ cd /opt/osm-analytics/OSM-Notes-Analytics
 
 # Export to JSON and push to GitHub Pages
 # The script exports JSON files and automatically deploys them to GitHub Pages
-./bin/dwh/exportAndPushToGitHub.sh || exit 1
+./bin/dwh/exportAndPushJSONToGitHub.sh || exit 1
 
 # If we get here, all files are valid and exported
 echo "SUCCESS: All exports validated and moved to destination"

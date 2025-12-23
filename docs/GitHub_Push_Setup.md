@@ -4,7 +4,7 @@ This document explains how to configure automated git pushes to GitHub from prod
 
 ## Overview
 
-The export scripts (`exportAndPushToGitHub.sh`, `exportAndPushCSVToGitHub.sh`) need to push changes to the `OSM-Notes-Data` repository. In production, this typically runs as the `notes` user via cron, which requires special configuration.
+The export scripts (`exportAndPushJSONToGitHub.sh`, `exportAndPushCSVToGitHub.sh`) need to push changes to the `OSM-Notes-Data` repository. In production, this typically runs as the `notes` user via cron, which requires special configuration.
 
 ## Option 1: SSH Keys (Recommended)
 

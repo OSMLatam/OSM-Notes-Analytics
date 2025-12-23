@@ -125,8 +125,8 @@ These are the **only scripts** that should be executed directly:
      ./bin/dwh/exportDatamartsToJSON.sh
      ```
 
-7. **`bin/dwh/exportAndPushToGitHub.sh`** - Export and push to GitHub Pages
-   - **Usage**: `./bin/dwh/exportAndPushToGitHub.sh`
+7. **`bin/dwh/exportAndPushJSONToGitHub.sh`** - Export and push to GitHub Pages
+   - **Usage**: `./bin/dwh/exportAndPushJSONToGitHub.sh`
    - **Purpose**: Exports JSON files and automatically deploys them to GitHub Pages for OSM-Notes-Viewer (sister project)
    - **When**: After datamarts are updated (typically scheduled)
    - **Prerequisites**: 
@@ -136,7 +136,7 @@ These are the **only scripts** that should be executed directly:
    - **Consumer**: OSM-Notes-Viewer (sister project) reads these JSON files
    - **Example**:
      ```bash
-     ./bin/dwh/exportAndPushToGitHub.sh
+     ./bin/dwh/exportAndPushJSONToGitHub.sh
      ```
 
 ### Maintenance Scripts
@@ -254,7 +254,7 @@ psql -d osm_notes -c "SELECT COUNT(*) FROM dwh.datamartusers;"
 ./bin/dwh/ETL.sh
 
 # 2. Export to JSON and push to GitHub (optional)
-./bin/dwh/exportAndPushToGitHub.sh
+./bin/dwh/exportAndPushJSONToGitHub.sh
 ```
 
 ### Manual Datamart Updates

@@ -344,16 +344,16 @@ ls -lh ./output/json/countries/ | head -10
 
 **See also:** [JSON Export Documentation](dwh/export_json_readme.md)
 
-### 8. exportAndPushToGitHub.sh - Export and Deploy
+### 8. exportAndPushJSONToGitHub.sh - Export and Deploy
 
-**Location:** `bin/dwh/exportAndPushToGitHub.sh`
+**Location:** `bin/dwh/exportAndPushJSONToGitHub.sh`
 
 **Purpose:** Exports JSON files and automatically deploys them to GitHub Pages.
 
 **Usage:**
 
 ```bash
-./bin/dwh/exportAndPushToGitHub.sh
+./bin/dwh/exportAndPushJSONToGitHub.sh
 ```
 
 **Features:**
@@ -374,7 +374,7 @@ ls -lh ./output/json/countries/ | head -10
 
 ```bash
 # Export and deploy to GitHub Pages
-./bin/dwh/exportAndPushToGitHub.sh
+./bin/dwh/exportAndPushJSONToGitHub.sh
 ```
 
 **Note:** This script is typically scheduled to run after datamart updates.
@@ -426,7 +426,7 @@ psql -d osm_notes -c "SELECT COUNT(*) FROM dwh.datamartusers;"
 0 * * * * cd ~/OSM-Notes-Analytics && ./bin/dwh/ETL.sh >> /var/log/osm-analytics-etl.log 2>&1
 
 # Export to JSON and push to GitHub Pages (after datamarts update)
-45 * * * * cd ~/OSM-Notes-Analytics && ./bin/dwh/exportAndPushToGitHub.sh >> /var/log/osm-analytics-export.log 2>&1
+45 * * * * cd ~/OSM-Notes-Analytics && ./bin/dwh/exportAndPushJSONToGitHub.sh >> /var/log/osm-analytics-export.log 2>&1
 
 # Optional: Manual datamart updates (usually not needed, ETL does this automatically)
 # Update country datamart daily at 2 AM

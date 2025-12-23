@@ -979,7 +979,7 @@ lib/osm-common/schemas/
 └── global-stats.schema.json
 ```
 
-Schemas are automatically synced to the data repository during each export via `exportAndPushToGitHub.sh`.
+Schemas are automatically synced to the data repository during each export via `exportAndPushJSONToGitHub.sh`.
 
 **For complete documentation on schema location and usage, see:**
 - **[JSON Schema Location](JSON_Schema_Location.md)**: Complete guide on where to find schemas and how to use them

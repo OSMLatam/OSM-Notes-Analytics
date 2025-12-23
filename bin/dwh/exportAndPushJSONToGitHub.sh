@@ -1,13 +1,16 @@
 #!/bin/bash
 
-# Exports JSON and pushes to GitHub Pages data repository
-# Usage: ./bin/dwh/exportAndPushToGitHub.sh
+# Exports JSON files and pushes to GitHub Pages data repository
+# This script exports datamarts to JSON and publishes them to the OSM-Notes-Data
+# repository without preserving JSON file history (other files maintain their history)
+#
+# Usage: ./bin/dwh/exportAndPushJSONToGitHub.sh
 #
 # This script:
 # 1. Exports datamarts to JSON files
 # 2. Copies JSON files to OSM-Notes-Data/data/
 # 3. Copies JSON schemas to OSM-Notes-Data/schemas/
-# 4. Commits and pushes to GitHub
+# 4. Commits and pushes to GitHub (replaces previous JSON files)
 #
 # Author: Andres Gomez (AngocA)
 # Version: 2025-12-22
@@ -103,47 +106,76 @@ fi
 
 print_success "Schemas copied to data repository"
 
-# Step 3: Git commit and push
-print_info "Step 3: Pushing to GitHub..."
+# Step 3: Git commit and push (without preserving JSON history)
+print_info "Step 3: Committing and pushing to GitHub..."
 
 cd "${DATA_REPO_DIR}"
 
-# Check if there are changes
-if git diff --quiet && git diff --cached --quiet; then
- print_warn "No changes to commit"
- exit 0
+# Ensure we're on main branch
+git checkout main 2>/dev/null || true
+
+# Remove data and schemas directories from git index (if they exist) to start fresh
+# This removes JSON files from tracking but keeps them in working directory
+if git ls-files --error-unmatch data/ >/dev/null 2>&1; then
+  print_info "Removing existing JSON data files from git history..."
+  git rm -r --cached data/ 2>/dev/null || true
+fi
+
+if git ls-files --error-unmatch schemas/ >/dev/null 2>&1; then
+  print_info "Removing existing JSON schemas from git history..."
+  git rm -r --cached schemas/ 2>/dev/null || true
+fi
+
+# Add all JSON files and schemas (fresh add, no history)
+print_info "Adding JSON files and schemas to git..."
+git add data/ schemas/
+
+# Check if there are changes to commit
+if git diff --cached --quiet; then
+  print_warn "No changes to commit (JSON files are identical to previous version)"
+  exit 0
 fi
 
 # Get file count for commit message
-FILE_COUNT=$(find data/ -name "*.json" | wc -l)
+FILE_COUNT=$(find data/ -name "*.json" 2>/dev/null | wc -l || echo "0")
 SCHEMA_COUNT=$(find schemas/ -name "*.json" 2> /dev/null | wc -l || echo "0")
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
-# Commit changes (data and schemas)
-git add data/ schemas/
+# Commit changes (only JSON files, replaces previous JSON commits)
 if [[ ${SCHEMA_COUNT} -gt 0 ]]; then
- git commit -m "Auto-update: ${FILE_COUNT} JSON files and ${SCHEMA_COUNT} schemas exported from Analytics - ${TIMESTAMP}"
+  git commit -m "Auto-update: ${FILE_COUNT} JSON files and ${SCHEMA_COUNT} schemas - ${TIMESTAMP}
+
+This commit replaces all previous JSON files. JSON history is not preserved.
+Other files in the repository maintain their full history."
 else
- git commit -m "Auto-update: ${FILE_COUNT} JSON files exported from Analytics - ${TIMESTAMP}"
+  git commit -m "Auto-update: ${FILE_COUNT} JSON files - ${TIMESTAMP}
+
+This commit replaces all previous JSON files. JSON history is not preserved.
+Other files in the repository maintain their full history."
 fi
 
 # Push to GitHub
+# Note: In production, ensure git credentials are configured for the user running this script
+# See docs/GitHub_Push_Setup.md for configuration instructions
 if git push origin main; then
- print_success "Data pushed to GitHub successfully"
- echo ""
- echo "Data is now available at:"
- echo "https://osmlatam.github.io/OSM-Notes-Data/"
+  print_success "Data pushed to GitHub successfully"
+  echo ""
+  echo "Data is now available at:"
+  echo "https://osmlatam.github.io/OSM-Notes-Data/"
 else
- print_error "Failed to push to GitHub"
- echo ""
- echo "Please check:"
- echo "1. Git credentials are configured"
- echo "2. Remote repository exists and is accessible"
- echo "3. Network connection is available"
- exit 1
+  print_error "Failed to push to GitHub"
+  echo ""
+  echo "Please check:"
+  echo "1. Git credentials are configured (SSH key or Personal Access Token)"
+  echo "2. Remote repository exists and is accessible"
+  echo "3. Network connection is available"
+  echo ""
+  echo "For production setup, see: docs/GitHub_Push_Setup.md"
+  exit 1
 fi
 
 echo ""
-print_success "Done! Data and schemas updated in GitHub Pages"
+print_success "Done! JSON files updated in GitHub repository"
+print_info "Note: JSON file history is not preserved. Each export replaces previous JSON files."
 print_info "Allow 1-2 minutes for GitHub Pages to update"
 print_info "Schemas available at: https://osmlatam.github.io/OSM-Notes-Data/schemas/"

@@ -45,7 +45,7 @@ OSM-Notes-Analytics/lib/osm-common/schemas/
 
 This is a Git submodule pointing to [OSM-Notes-Common](https://github.com/OSMLatam/OSM-Notes-Common).
 
-**Note:** The export script (`exportAndPushToGitHub.sh`) automatically copies schemas from this location to the data repository during each export.
+**Note:** The export script (`exportAndPushJSONToGitHub.sh`) automatically copies schemas from this location to the data repository during each export.
 
 ## Schema Files
 
@@ -148,7 +148,7 @@ async function createTypeSafeAccessor() {
 ### How Schemas Are Updated
 
 1. **Source**: Schemas are maintained in `OSM-Notes-Common` repository
-2. **Sync**: `exportAndPushToGitHub.sh` copies schemas to `OSM-Notes-Data/schemas/` during each export
+2. **Sync**: `exportAndPushJSONToGitHub.sh` copies schemas to `OSM-Notes-Data/schemas/` during each export
 3. **Versioning**: Schema version is tracked in `metadata.json` (`schema_version` field)
 
 ### Checking Schema Version
@@ -197,7 +197,7 @@ lib/osm-common/schemas/
 To update schemas:
 1. Edit schemas in `OSM-Notes-Common` repository
 2. Update submodule: `git submodule update --remote lib/osm-common`
-3. Run export: `./bin/dwh/exportAndPushToGitHub.sh`
+3. Run export: `./bin/dwh/exportAndPushJSONToGitHub.sh`
 
 ### For Data Repository
 

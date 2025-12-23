@@ -134,7 +134,7 @@ Output:
   - Atomic writes with validation
   - Schema validation before export
   - Fail-safe error handling
-- **`exportAndPushToGitHub.sh`**: Exports and deploys to GitHub Pages
+- **`exportAndPushJSONToGitHub.sh`**: Exports and deploys to GitHub Pages
   - For OSM-Notes-Viewer (sister project) consumption
 
 #### 4. Profile Generator (`bin/dwh/profile.sh`)

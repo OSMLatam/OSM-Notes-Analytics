@@ -223,7 +223,7 @@ Automatically export JSON files and push them to the GitHub Pages data repositor
 
 ```bash
 # Export and push to GitHub Pages
-./bin/dwh/exportAndPushToGitHub.sh
+./bin/dwh/exportAndPushJSONToGitHub.sh
 ```
 
 This script will:

@@ -90,14 +90,14 @@ Key scripts:
   the datamarts.
 - `bin/dwh/exportDatamartsToJSON.sh`: Exports datamarts to JSON files for
   web viewer consumption with atomic writes and schema validation.
-- `bin/dwh/exportAndPushToGitHub.sh`: Exports JSON files and automatically
+- `bin/dwh/exportAndPushJSONToGitHub.sh`: Exports JSON files and automatically
   deploys them to GitHub Pages data repository.
 
 ## JSON Export
 
 The `exportDatamartsToJSON.sh` script exports datamart data to JSON files
 for consumption by the web viewer. For automated deployment to GitHub Pages,
-use `exportAndPushToGitHub.sh` instead. The export script also automatically
+use `exportAndPushJSONToGitHub.sh` instead. The export script also automatically
 copies JSON schemas to the data repository for frontend consumption. It provides:
 
 ### Features
@@ -137,7 +137,7 @@ output/json/
 └── global_stats.json
 ```
 
-**Note:** When using `exportAndPushToGitHub.sh`, JSON schemas are also copied to
+**Note:** When using `exportAndPushJSONToGitHub.sh`, JSON schemas are also copied to
 `OSM-Notes-Data/schemas/` for frontend consumption. Schemas are available at:
 - GitHub Pages: `https://osmlatam.github.io/OSM-Notes-Data/schemas/`
 - Local: `OSM-Notes-Data/schemas/` (when repository is cloned)
@@ -193,11 +193,11 @@ For automated exports with GitHub Pages deployment:
 
 ```bash
 # Export and push to GitHub Pages every 15 minutes after datamarts update
-45 2 * * * ~/OSM-Notes-Analytics/bin/dwh/exportAndPushToGitHub.sh
+45 2 * * * ~/OSM-Notes-Analytics/bin/dwh/exportAndPushJSONToGitHub.sh
 ```
 
 **Note:** This replaces `exportDatamartsToJSON.sh` in cron jobs for production
-environments using GitHub Pages. The `exportAndPushToGitHub.sh` script handles
+environments using GitHub Pages. The `exportAndPushJSONToGitHub.sh` script handles
 both export and deployment automatically.
 
 Or use a complete workflow wrapper:
