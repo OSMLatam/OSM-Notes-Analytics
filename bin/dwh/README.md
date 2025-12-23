@@ -142,6 +142,41 @@ output/json/
 - GitHub Pages: `https://osmlatam.github.io/OSM-Notes-Data/schemas/`
 - Local: `OSM-Notes-Data/schemas/` (when repository is cloned)
 
+### CSV Export for AI Context
+
+Export closed notes to CSV files (one per country) for AI assistant context:
+
+```bash
+# Export and push to GitHub repository (does everything in one step)
+./bin/dwh/exportAndPushCSVToGitHub.sh
+```
+
+**Output:**
+- CSV files in `exports/csv/notes-by-country/`
+- One file per country: `{country_id}_{country_name}.csv`
+- Files contain cleaned comments (max 2000 chars, newlines removed, quotes normalized)
+- Optimized column order for AI context understanding
+
+**CSV Structure:**
+- Basic info: note_id, country, location, dates
+- Problem: opening_comment, opened_by_username
+- Context: total_comments, was_reopened, days_to_resolution
+- Solution: closing_comment, closed_by_username
+
+**Scheduling:**
+- Recommended: Monthly export (1st day of month at 3 AM)
+- See `etc/cron.example` for cron configuration
+
+**Production Setup:**
+- For automated pushes from production (e.g., `notes` user), see `docs/GitHub_Push_Setup.md`
+- Configure SSH keys or Personal Access Token for git authentication
+- Test push before enabling cron: `./bin/dwh/exportAndPushCSVToGitHub.sh`
+
+**CSV History:**
+- CSV files are automatically replaced on each export (no history preserved)
+- Other files in the repository maintain their full history
+- The script uses `git rm --cached` to remove CSV from tracking before adding new ones
+
 For complete schema location documentation, see [JSON Schema Location](../../docs/JSON_Schema_Location.md).
 
 The `global_stats.json` file contains aggregated statistics for the entire system:

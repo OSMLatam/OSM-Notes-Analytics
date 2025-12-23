@@ -32,6 +32,18 @@ HOME=/home/your-username
 # 0 * * * * /path/to/OSM-Notes-Analytics/bin/dwh/cron_etl.sh
 
 # ==========================================
+# EXPORT TASKS
+# ==========================================
+
+# Monthly: Export CSV files and push to GitHub (1st day of month at 3 AM)
+# Exports closed notes by country to CSV for AI context
+# 0 3 1 * * /path/to/OSM-Notes-Analytics/bin/dwh/exportAndPushCSVToGitHub.sh >> /var/log/osm-csv-export.log 2>&1
+
+# Daily: Export JSON files and push to GitHub (after datamarts update)
+# Exports datamarts to JSON for web viewer consumption
+# 45 2 * * * /path/to/OSM-Notes-Analytics/bin/dwh/exportAndPushToGitHub.sh >> /var/log/osm-json-export.log 2>&1
+
+# ==========================================
 # MAINTENANCE TASKS
 # ==========================================
 

@@ -758,6 +758,30 @@ For comprehensive testing documentation, see **[tests/README.md](../tests/README
 
 ### CI/CD Documentation
 
+#### [GitHub_Push_Setup.md](GitHub_Push_Setup.md)
+
+**GitHub Push Setup for Production**
+
+Configuration guide for automated git pushes to GitHub from production servers, particularly for non-interactive users (e.g., `notes` user in cron jobs).
+
+**Contents:**
+- SSH key setup (recommended)
+- Personal Access Token configuration
+- Deploy key setup
+- Troubleshooting guide
+- Security best practices
+- Production checklist
+
+**Audience:** System administrators, DevOps engineers
+
+**When to read:**
+- Setting up automated exports to GitHub
+- Configuring git credentials for production
+- Troubleshooting push failures
+- Securing automated git operations
+
+---
+
 #### [CI_CD_Guide.md](CI_CD_Guide.md)
 
 **Complete CI/CD Setup and Configuration Guide**
