@@ -8,40 +8,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  quality-tests:
-    name: Quality Tests
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive
-
-    - name: Install shellcheck
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y shellcheck
-
-    - name: Install shfmt
-      run: |
-        wget -q -O shfmt https://github.com/mvdan/sh/releases/download/v3.7.0/shfmt_v3.7.0_linux_amd64
-        chmod +x shfmt
-        sudo mv shfmt /usr/local/bin/
-        shfmt -version
-
-    - name: Run Quality Tests
-      run: |
-        ./tests/run_quality_tests.sh
-
-    - name: Upload test results
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: quality-test-results
-        path: /tmp/quality_test_output.txt
-        if-no-files-found: ignore
-
   unit-tests:
     name: Unit and Integration Tests
     runs-on: ubuntu-latest
@@ -67,10 +33,10 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Install BATS
+    - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y bats
+        sudo apt-get install -y bats postgresql-client
 
     - name: Setup test database
       env:
@@ -134,19 +100,18 @@ jobs:
 
   all-tests:
     name: All Tests Summary
-    needs: [quality-tests, unit-tests]
+    needs: [unit-tests]
     runs-on: ubuntu-latest
     if: always()
 
     steps:
     - name: Check test results
       run: |
-        if [ "${{ needs.quality-tests.result }}" == "success" ] && [ "${{ needs.unit-tests.result }}" == "success" ]; then
+        if [ "${{ needs.unit-tests.result }}" == "success" ]; then
           echo "✅ All tests passed!"
           exit 0
         else
           echo "❌ Some tests failed"
-          echo "Quality Tests: ${{ needs.quality-tests.result }}"
           echo "Unit Tests: ${{ needs.unit-tests.result }}"
           exit 1
         fi

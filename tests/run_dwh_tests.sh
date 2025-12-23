@@ -102,11 +102,37 @@ echo "===================="
 # Run mock ETL to populate test database
 if [[ -f "${SCRIPT_DIR}/run_mock_etl.sh" ]]; then
  log_info "Populating test database with mock data..."
+ log_info "Database connection info:"
+ log_info "  TEST_DBNAME=${TEST_DBNAME:-}"
+ log_info "  TEST_DBHOST=${TEST_DBHOST:-}"
+ log_info "  TEST_DBPORT=${TEST_DBPORT:-}"
+ log_info "  TEST_DBUSER=${TEST_DBUSER:-}"
+
+ # Verify database connection before running mock ETL
+ # Use appropriate connection method based on environment
+ if [[ -n "${TEST_DBHOST:-}" ]]; then
+  # CI/CD environment - use host/port/user
+  if ! PGPASSWORD="${TEST_DBPASSWORD:-postgres}" psql -h "${TEST_DBHOST}" -p "${TEST_DBPORT:-5432}" -U "${TEST_DBUSER:-postgres}" -d "${TEST_DBNAME}" -c "SELECT 1;" > /dev/null 2>&1; then
+   log_error "Cannot connect to database before running mock ETL"
+   log_error "Please verify database connection settings"
+   exit 1
+  fi
+ else
+  # Local environment - use peer authentication
+  if ! psql -d "${TEST_DBNAME}" -c "SELECT 1;" > /dev/null 2>&1; then
+   log_error "Cannot connect to database before running mock ETL"
+   log_error "Please verify database connection settings"
+   exit 1
+  fi
+ fi
+
  if bash "${SCRIPT_DIR}/run_mock_etl.sh"; then
   log_success "Test database populated"
  else
+  EXIT_CODE=$?
   log_error "Failed to populate test database with mock data"
-  log_error "Exit code: $?"
+  log_error "Exit code: ${EXIT_CODE}"
+  log_error "Check the output above for detailed error messages"
   exit 1
  fi
 else

@@ -132,4 +132,12 @@ jobs:
         echo "- **Analytics Scripts:** bin/dwh/" >> $GITHUB_STEP_SUMMARY
         echo "- **Common Submodule:** lib/osm-common/ (tested in context)" >> $GITHUB_STEP_SUMMARY
 
+    - name: Upload quality test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: quality-test-results
+        path: /tmp/quality_test_output.txt
+        if-no-files-found: ignore
+
 
