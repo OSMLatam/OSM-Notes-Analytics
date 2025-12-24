@@ -4,9 +4,10 @@
 # This allows the web viewer to read precalculated data without direct database access.
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2025-10-23
+# Version: 2025-12-23
 # Note: This script now uses SELECT * to dynamically export all columns,
 # including any new year-based columns added to the datamart tables.
+# For users, it also includes contributor_type_name via JOIN with contributor_types table.
 
 # Fails when a variable is not initialized.
 set -u
@@ -260,11 +261,18 @@ SQL_USERS
 
  if [[ -n "${user_id}" ]]; then
   # Export each modified user to a separate JSON file
-  # Use SELECT * to dynamically include all columns
+  # Use SELECT * to dynamically include all columns plus contributor_type_name from JOIN
   psql -d "${DBNAME_DWH}" -Atq -c "
       SELECT row_to_json(t)
-      FROM dwh.datamartusers t
-      WHERE t.user_id = ${user_id}
+      FROM (
+        SELECT
+          du.*,
+          ct.contributor_type_name
+        FROM dwh.datamartusers du
+        LEFT JOIN dwh.contributor_types ct
+          ON du.id_contributor_type = ct.contributor_type_id
+        WHERE du.user_id = ${user_id}
+      ) t
 	" > "${ATOMIC_TEMP_DIR}/users/${user_id}.json"
 
   echo "  Exported modified user: ${user_id} (${username})"
@@ -299,27 +307,30 @@ psql -d "${DBNAME_DWH}" -Atq -c "
   SELECT json_agg(t)
   FROM (
     SELECT
-      user_id,
-      username,
-      id_contributor_type,
-      date_starting_creating_notes,
-      history_whole_open,
-      history_whole_closed,
-      history_whole_commented,
-      history_year_open,
-      history_year_closed,
-      history_year_commented,
-      avg_days_to_resolution,
-      resolution_rate,
-      notes_resolved_count,
-      notes_still_open_count,
-      user_response_time,
-      days_since_last_action,
-      notes_created_last_30_days,
-      notes_resolved_last_30_days
-    FROM dwh.datamartusers
-    WHERE user_id IS NOT NULL
-    ORDER BY history_whole_open DESC NULLS LAST, history_whole_closed DESC NULLS LAST
+      du.user_id,
+      du.username,
+      du.id_contributor_type,
+      ct.contributor_type_name,
+      du.date_starting_creating_notes,
+      du.history_whole_open,
+      du.history_whole_closed,
+      du.history_whole_commented,
+      du.history_year_open,
+      du.history_year_closed,
+      du.history_year_commented,
+      du.avg_days_to_resolution,
+      du.resolution_rate,
+      du.notes_resolved_count,
+      du.notes_still_open_count,
+      du.user_response_time,
+      du.days_since_last_action,
+      du.notes_created_last_30_days,
+      du.notes_resolved_last_30_days
+    FROM dwh.datamartusers du
+    LEFT JOIN dwh.contributor_types ct
+      ON du.id_contributor_type = ct.contributor_type_id
+    WHERE du.user_id IS NOT NULL
+    ORDER BY du.history_whole_open DESC NULLS LAST, du.history_whole_closed DESC NULLS LAST
   ) t
 " > "${ATOMIC_TEMP_DIR}/indexes/users.json"
 
