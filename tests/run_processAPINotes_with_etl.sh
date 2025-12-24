@@ -365,6 +365,13 @@ drop_base_tables() {
  ${PSQL_CMD} -d "${DBNAME}" -c "DROP TABLE IF EXISTS note_comments_api CASCADE;" > /dev/null 2>&1 || true
  ${PSQL_CMD} -d "${DBNAME}" -c "DROP TABLE IF EXISTS notes_api CASCADE;" > /dev/null 2>&1 || true
  ${PSQL_CMD} -d "${DBNAME}" -c "DROP TABLE IF EXISTS note_comments_text_api CASCADE;" > /dev/null 2>&1 || true
+ # Drop sync tables (used during planet load)
+ ${PSQL_CMD} -d "${DBNAME}" -c "DROP TABLE IF EXISTS note_comments_sync CASCADE;" > /dev/null 2>&1 || true
+ ${PSQL_CMD} -d "${DBNAME}" -c "DROP TABLE IF EXISTS note_comments_text_sync CASCADE;" > /dev/null 2>&1 || true
+ ${PSQL_CMD} -d "${DBNAME}" -c "DROP TABLE IF EXISTS notes_sync CASCADE;" > /dev/null 2>&1 || true
+ # Drop temporary diff tables
+ ${PSQL_CMD} -d "${DBNAME}" -c "DROP TABLE IF EXISTS temp_diff_notes_id CASCADE;" > /dev/null 2>&1 || true
+ ${PSQL_CMD} -d "${DBNAME}" -c "DROP TABLE IF EXISTS temp_diff_text_comments_id CASCADE;" > /dev/null 2>&1 || true
 
  # Reset sequences to prevent ID conflicts
  # This prevents duplicate key errors when processPlanetNotes.sh inserts data
@@ -385,6 +392,19 @@ drop_base_tables() {
    -- Reset note_comments_text sequence
    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'note_comments_text_id_seq') THEN
     PERFORM setval('note_comments_text_id_seq', 1, false);
+   END IF;
+
+   -- Reset users sequence (if exists)
+   IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'users_id_seq') THEN
+    PERFORM setval('users_id_seq', 1, false);
+   END IF;
+
+   -- Reset sync table sequences (if they exist)
+   IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'note_comments_sync_id_seq') THEN
+    PERFORM setval('note_comments_sync_id_seq', 1, false);
+   END IF;
+   IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'note_comments_text_sync_id_seq') THEN
+    PERFORM setval('note_comments_text_sync_id_seq', 1, false);
    END IF;
   END \$\$;
  " > /dev/null 2>&1 || true
@@ -467,9 +487,15 @@ run_processAPINotes() {
    TRUNCATE TABLE IF EXISTS note_comments CASCADE;
    TRUNCATE TABLE IF EXISTS note_comments_text CASCADE;
    TRUNCATE TABLE IF EXISTS notes CASCADE;
+   TRUNCATE TABLE IF EXISTS users CASCADE;
    TRUNCATE TABLE IF EXISTS note_comments_api CASCADE;
    TRUNCATE TABLE IF EXISTS notes_api CASCADE;
    TRUNCATE TABLE IF EXISTS note_comments_text_api CASCADE;
+   TRUNCATE TABLE IF EXISTS note_comments_sync CASCADE;
+   TRUNCATE TABLE IF EXISTS note_comments_text_sync CASCADE;
+   TRUNCATE TABLE IF EXISTS notes_sync CASCADE;
+   TRUNCATE TABLE IF EXISTS temp_diff_notes_id CASCADE;
+   TRUNCATE TABLE IF EXISTS temp_diff_text_comments_id CASCADE;
   " > /dev/null 2>&1 || true
 
   # Reset sequences after truncate
@@ -484,6 +510,15 @@ run_processAPINotes() {
     END IF;
     IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'note_comments_text_id_seq') THEN
      PERFORM setval('note_comments_text_id_seq', 1, false);
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'users_id_seq') THEN
+     PERFORM setval('users_id_seq', 1, false);
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'note_comments_sync_id_seq') THEN
+     PERFORM setval('note_comments_sync_id_seq', 1, false);
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'note_comments_text_sync_id_seq') THEN
+     PERFORM setval('note_comments_text_sync_id_seq', 1, false);
     END IF;
    END \$\$;
   " > /dev/null 2>&1 || true
@@ -641,6 +676,8 @@ run_etl() {
 execute_processAPINotes_and_etl() {
  local EXECUTION_NUMBER="${1:-1}"
  local EXIT_CODE=0
+ local EXECUTION_START_TIME
+ EXECUTION_START_TIME=$(date +%s)
 
  log_info ""
  log_info "=========================================="
@@ -660,12 +697,17 @@ execute_processAPINotes_and_etl() {
 
  # Run processAPINotes
  log_info "--- Step 1: Running processAPINotes.sh (${SOURCE_TYPE}) ---"
+ local PROCESS_START_TIME
+ PROCESS_START_TIME=$(date +%s)
  if ! run_processAPINotes "${EXECUTION_NUMBER}"; then
   log_error "processAPINotes (${SOURCE_TYPE}) execution #${EXECUTION_NUMBER} failed"
   return 1
  fi
-
+ local PROCESS_END_TIME
+ PROCESS_END_TIME=$(date +%s)
+ local PROCESS_DURATION=$((PROCESS_END_TIME - PROCESS_START_TIME))
  log_success "processAPINotes (${SOURCE_TYPE}) execution #${EXECUTION_NUMBER} completed"
+ log_info "⏱️  TIME: processAPINotes took ${PROCESS_DURATION} seconds ($(date -d "@${PROCESS_START_TIME}" +%H:%M:%S) - $(date -d "@${PROCESS_END_TIME}" +%H:%M:%S))"
 
  # Wait a moment before running ETL
  log_info "Waiting 2 seconds before running ETL..."
@@ -673,12 +715,23 @@ execute_processAPINotes_and_etl() {
 
  # Run ETL after processAPINotes
  log_info "--- Step 2: Running ETL after ${SOURCE_TYPE} execution #${EXECUTION_NUMBER} ---"
+ local ETL_START_TIME
+ ETL_START_TIME=$(date +%s)
  if ! run_etl "${EXECUTION_NUMBER}" "${SOURCE_TYPE}"; then
   log_error "ETL failed after ${SOURCE_TYPE} execution #${EXECUTION_NUMBER}"
   EXIT_CODE=1
  fi
-
+ local ETL_END_TIME
+ ETL_END_TIME=$(date +%s)
+ local ETL_DURATION=$((ETL_END_TIME - ETL_START_TIME))
  log_success "ETL completed after ${SOURCE_TYPE} execution #${EXECUTION_NUMBER}"
+ log_info "⏱️  TIME: ETL took ${ETL_DURATION} seconds ($(date -d "@${ETL_START_TIME}" +%H:%M:%S) - $(date -d "@${ETL_END_TIME}" +%H:%M:%S))"
+
+ # Calculate total execution time
+ local EXECUTION_END_TIME
+ EXECUTION_END_TIME=$(date +%s)
+ local EXECUTION_DURATION=$((EXECUTION_END_TIME - EXECUTION_START_TIME))
+ log_info "⏱️  TIME: Total execution #${EXECUTION_NUMBER} took ${EXECUTION_DURATION} seconds ($(date -d "@${EXECUTION_START_TIME}" +%H:%M:%S) - $(date -d "@${EXECUTION_END_TIME}" +%H:%M:%S))"
 
  # Wait a moment before next execution
  log_info "Waiting 2 seconds before next execution..."
@@ -691,6 +744,8 @@ execute_processAPINotes_and_etl() {
 # Main function
 main() {
  local EXIT_CODE=0
+ local MAIN_START_TIME
+ MAIN_START_TIME=$(date +%s)
 
  # Parse arguments
  case "${1:-}" in
@@ -804,11 +859,23 @@ main() {
   fi
  done
 
+ local MAIN_END_TIME
+ MAIN_END_TIME=$(date +%s)
+ local MAIN_DURATION=$((MAIN_END_TIME - MAIN_START_TIME))
+
  if [[ ${EXIT_CODE} -eq 0 ]]; then
   log_success "All executions completed successfully"
  else
   log_error "Some executions failed"
  fi
+
+ log_info ""
+ log_info "═══════════════════════════════════════════════════════════"
+ log_info "  TIMING SUMMARY"
+ log_info "═══════════════════════════════════════════════════════════"
+log_info "⏱️  Total time: ${MAIN_DURATION} seconds ($(date -d "@${MAIN_START_TIME}" +%H:%M:%S) - $(date -d "@${MAIN_END_TIME}" +%H:%M:%S))"
+log_info "   ($((MAIN_DURATION / 60)) minutes and $((MAIN_DURATION % 60)) seconds)"
+ log_info ""
 
  # Cleanup will be done by trap
  exit ${EXIT_CODE}

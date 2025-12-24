@@ -816,14 +816,22 @@ function __processNotesETL {
 # Creates initial facts for all years using parallel processing.
 function __initialFactsParallel {
  __log_start
+ local INITIAL_FACTS_TOTAL_START_TIME
+ INITIAL_FACTS_TOTAL_START_TIME=$(date +%s)
  __logi "=== CREATING INITIAL FACTS (PARALLEL) ==="
 
  # Step 1: Copy base tables from Ingestion DB to Analytics DB (hybrid strategy)
  # This avoids millions of cross-database queries during initial load
+ local STEP1_START_TIME
+ STEP1_START_TIME=$(date +%s)
  __logi "Step 1: Copying base tables from Ingestion DB for initial load..."
  if [[ -f "${COPY_BASE_TABLES_SCRIPT}" ]]; then
   if bash "${COPY_BASE_TABLES_SCRIPT}"; then
+   local STEP1_END_TIME
+   STEP1_END_TIME=$(date +%s)
+   local STEP1_DURATION=$((STEP1_END_TIME - STEP1_START_TIME))
    __logi "Base tables copied successfully"
+   __logi "⏱️  TIME: Step 1 (Copy base tables) took ${STEP1_DURATION} seconds"
   else
    __loge "ERROR: Failed to copy base tables. Initial load cannot proceed."
    exit 1
@@ -834,6 +842,8 @@ function __initialFactsParallel {
  fi
 
  # Create initial facts base objects.
+ local STEP2_START_TIME
+ STEP2_START_TIME=$(date +%s)
  __logi "Step 2: Creating initial facts base objects."
  __logi "Executing: ${POSTGRES_33_CREATE_FACTS_BASE_OBJECTS_SIMPLE}"
  set +e
@@ -846,17 +856,23 @@ function __initialFactsParallel {
   __log_finish
   return 1
  fi
+ local STEP2_END_TIME
+ STEP2_END_TIME=$(date +%s)
+ local STEP2_DURATION=$((STEP2_END_TIME - STEP2_START_TIME))
  __logi "CREATE INITIAL FACTS BASE OBJECTS command completed"
+ __logi "⏱️  TIME: Step 2 (Create base objects) took ${STEP2_DURATION} seconds"
 
  # Disable note activity metrics trigger for performance during bulk load
  # This improves ETL speed by 5-15% during initial load
  # Note: Function checks if trigger exists before attempting to disable
  __logi "Disabling note activity metrics trigger for performance..."
+ local PHASE1_START_TIME
+ PHASE1_START_TIME=$(date +%s)
  __safe_disable_note_activity_metrics_trigger
- __logi "Note activity metrics trigger disabled"
+__logi "Note activity metrics trigger disabled"
 
- # Phase 1: Parallel load by year
- __logi "Phase 1: Starting parallel load by year..."
+# Phase 1: Parallel load by year
+__logi "Phase 1: Starting parallel load by year..."
 
  # Adjust MAX_THREADS for parallel processing
  # Uses n-1 cores, if number of cores is greater than 1.
@@ -891,7 +907,9 @@ function __initialFactsParallel {
  local year="${start_year}"
  local pids=()
 
- # Create procedures for each year
+# Create procedures for each year
+local CREATE_PROCEDURES_START_TIME
+CREATE_PROCEDURES_START_TIME=$(date +%s)
  local failed_procedures=0
  while [[ ${year} -le ${current_year} ]]; do
   __logi "Creating procedure for year ${year}..."
@@ -910,6 +928,10 @@ function __initialFactsParallel {
 
   year=$((year + 1))
  done
+ local CREATE_PROCEDURES_END_TIME
+ CREATE_PROCEDURES_END_TIME=$(date +%s)
+ local CREATE_PROCEDURES_DURATION=$((CREATE_PROCEDURES_END_TIME - CREATE_PROCEDURES_START_TIME))
+ __logi "⏱️  TIME: Creating procedures for all years took ${CREATE_PROCEDURES_DURATION} seconds"
 
  if [[ ${failed_procedures} -gt 0 ]]; then
   __loge "ERROR: Failed to create ${failed_procedures} procedure(s) out of $((current_year - start_year + 1)) total"
@@ -1042,9 +1064,15 @@ function __initialFactsParallel {
   __log_finish
   return 1
  fi
+ local PHASE1_END_TIME
+ PHASE1_END_TIME=$(date +%s)
+ local PHASE1_DURATION=$((PHASE1_END_TIME - PHASE1_START_TIME))
  __logi "Phase 1: All parallel loads completed."
+ __logi "⏱️  TIME: Phase 1 (Parallel load by year) took ${PHASE1_DURATION} seconds"
 
  # Phase 2: Update recent_opened_dimension_id_date for all facts
+ local PHASE2_START_TIME
+ PHASE2_START_TIME=$(date +%s)
  __logi "Phase 2: Updating recent_opened_dimension_id_date for all facts..."
  set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
@@ -1056,9 +1084,15 @@ function __initialFactsParallel {
   __log_finish
   return 1
  fi
+ local PHASE2_END_TIME
+ PHASE2_END_TIME=$(date +%s)
+ local PHASE2_DURATION=$((PHASE2_END_TIME - PHASE2_START_TIME))
  __logi "Phase 2: Update completed."
+ __logi "⏱️  TIME: Phase 2 (Update recent_opened_dimension_id_date) took ${PHASE2_DURATION} seconds"
 
  # Add constraints, indexes and triggers.
+ local CONSTRAINTS_START_TIME
+ CONSTRAINTS_START_TIME=$(date +%s)
  __logi "Adding constraints, indexes and triggers."
  set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
@@ -1071,7 +1105,14 @@ function __initialFactsParallel {
   return 1
  fi
 
+ local CONSTRAINTS_END_TIME
+ CONSTRAINTS_END_TIME=$(date +%s)
+ local CONSTRAINTS_DURATION=$((CONSTRAINTS_END_TIME - CONSTRAINTS_START_TIME))
+ __logi "⏱️  TIME: Adding constraints, indexes and triggers took ${CONSTRAINTS_DURATION} seconds"
+
  # Create automation detection system.
+ local AUTOMATION_START_TIME
+ AUTOMATION_START_TIME=$(date +%s)
  __logi "Creating automation detection system."
  set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
@@ -1083,8 +1124,14 @@ function __initialFactsParallel {
   __log_finish
   return 1
  fi
+ local AUTOMATION_END_TIME
+ AUTOMATION_END_TIME=$(date +%s)
+ local AUTOMATION_DURATION=$((AUTOMATION_END_TIME - AUTOMATION_START_TIME))
+ __logi "⏱️  TIME: Creating automation detection system took ${AUTOMATION_DURATION} seconds"
 
  # Create experience levels system.
+ local EXPERIENCE_START_TIME
+ EXPERIENCE_START_TIME=$(date +%s)
  __logi "Creating experience levels system."
  set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
@@ -1096,8 +1143,14 @@ function __initialFactsParallel {
   __log_finish
   return 1
  fi
+ local EXPERIENCE_END_TIME
+ EXPERIENCE_END_TIME=$(date +%s)
+ local EXPERIENCE_DURATION=$((EXPERIENCE_END_TIME - EXPERIENCE_START_TIME))
+ __logi "⏱️  TIME: Creating experience levels system took ${EXPERIENCE_DURATION} seconds"
 
  # Create note activity metrics trigger.
+ local METRICS_START_TIME
+ METRICS_START_TIME=$(date +%s)
  __logi "Creating note activity metrics trigger."
  set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
@@ -1109,6 +1162,10 @@ function __initialFactsParallel {
   __log_finish
   return 1
  fi
+ local METRICS_END_TIME
+ METRICS_END_TIME=$(date +%s)
+ local METRICS_DURATION=$((METRICS_END_TIME - METRICS_START_TIME))
+ __logi "⏱️  TIME: Creating note activity metrics trigger took ${METRICS_DURATION} seconds"
 
  # Enable note activity metrics trigger after creation
  # (It was disabled before bulk load for performance)
@@ -1127,8 +1184,10 @@ function __initialFactsParallel {
  # Step N: Drop copied base tables after DWH population (hybrid strategy)
  # This frees disk space and ensures incremental uses FDW
  # IMPORTANT: Only drop if Ingestion and Analytics are in DIFFERENT databases
- # If they are the same database (hybrid test mode), we must keep the tables
- # because datamarts and other processes need access to note_comments_text
+# If they are the same database (hybrid test mode), we must keep the tables
+# because datamarts and other processes need access to note_comments_text
+ local DROP_TABLES_START_TIME
+ DROP_TABLES_START_TIME=$(date +%s)
  __logi "Step N: Checking if base tables should be dropped..."
  __logi "Checking database configuration: DBNAME_INGESTION='${DBNAME_INGESTION}', DBNAME_DWH='${DBNAME_DWH}'"
 
@@ -1137,7 +1196,11 @@ function __initialFactsParallel {
   __logi "Databases are different - dropping copied base tables (were copied for initial load)"
   if [[ -f "${DROP_COPIED_BASE_TABLES_SCRIPT}" ]]; then
    if bash "${DROP_COPIED_BASE_TABLES_SCRIPT}"; then
+    local DROP_TABLES_END_TIME
+    DROP_TABLES_END_TIME=$(date +%s)
+    local DROP_TABLES_DURATION=$((DROP_TABLES_END_TIME - DROP_TABLES_START_TIME))
     __logi "Copied base tables dropped successfully"
+    __logi "⏱️  TIME: Drop copied base tables took ${DROP_TABLES_DURATION} seconds"
    else
     __logw "Warning: Failed to drop copied base tables (non-critical, continuing...)"
    fi
@@ -1152,7 +1215,9 @@ function __initialFactsParallel {
   __logi "Skipping drop operation (datamarts need access to note_comments and note_comments_text)"
  fi
 
- # Create hashtag analysis views.
+ # Create hashtag analysis views (consolidated timing)
+ local HASHTAG_START_TIME
+ HASHTAG_START_TIME=$(date +%s)
  __logi "Creating hashtag analysis views."
  set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
@@ -1190,6 +1255,10 @@ function __initialFactsParallel {
   __log_finish
   return 1
  fi
+ local HASHTAG_END_TIME
+ HASHTAG_END_TIME=$(date +%s)
+ local HASHTAG_DURATION=$((HASHTAG_END_TIME - HASHTAG_START_TIME))
+ __logi "⏱️  TIME: Creating hashtag views/indexes/enhancements took ${HASHTAG_DURATION} seconds"
 
  # Update initial load flag to 'completed' after successful parallel load
  __logi "Updating initial load flag to 'completed'..."
@@ -1203,6 +1272,13 @@ function __initialFactsParallel {
  else
   __logi "Initial load flag updated to 'completed'"
  fi
+
+ local INITIAL_FACTS_TOTAL_END_TIME
+ INITIAL_FACTS_TOTAL_END_TIME=$(date +%s)
+ local INITIAL_FACTS_TOTAL_DURATION=$((INITIAL_FACTS_TOTAL_END_TIME - INITIAL_FACTS_TOTAL_START_TIME))
+ __logi "════════════════════════════════════════════════════════════"
+ __logi "⏱️  TIME: === __initialFactsParallel TOTAL TIME: ${INITIAL_FACTS_TOTAL_DURATION} seconds ==="
+ __logi "════════════════════════════════════════════════════════════"
 
  __log_finish
 }
@@ -1444,14 +1520,14 @@ function main() {
 
  __logi "PROCESS_TYPE value: '${PROCESS_TYPE}'"
 
- # Auto-detect execution mode
- __logi "Entering auto-detect mode"
- # Auto-detect if this is the first execution
- local is_first_execution
- is_first_execution=$(__detectFirstExecution | tail -1)
- __logi "Detection result: '${is_first_execution}'"
+# Auto-detect execution mode
+__logi "Entering auto-detect mode"
+# Auto-detect if this is the first execution
+local is_first_execution
+is_first_execution=$(__detectFirstExecution | tail -1)
+__logi "Detection result: '${is_first_execution}'"
 
- if [[ "${is_first_execution}" == "true" ]]; then
+if [[ "${is_first_execution}" == "true" ]]; then
   __logi "AUTO-DETECTED FIRST EXECUTION - Performing initial load"
   set +E
   # shellcheck disable=SC2310
@@ -1467,10 +1543,19 @@ function main() {
   __logi "About to call __initialFactsParallel"
   __initialFactsParallel # Use parallel version
   __logi "Finished calling __initialFactsParallel"
+
+  local MAINTENANCE_START_TIME
+  MAINTENANCE_START_TIME=$(date +%s)
   __perform_database_maintenance
+  local MAINTENANCE_END_TIME
+  MAINTENANCE_END_TIME=$(date +%s)
+  local MAINTENANCE_DURATION=$((MAINTENANCE_END_TIME - MAINTENANCE_START_TIME))
+  __logi "⏱️  TIME: Database maintenance took ${MAINTENANCE_DURATION} seconds"
 
   # Setup FDW after initial load (needed for datamart scripts that access note_comments)
   # Foreign tables provide access to base tables after dropCopiedBaseTables
+  local FDW_START_TIME
+  FDW_START_TIME=$(date +%s)
   __logi "Setting up Foreign Data Wrappers for datamart processing..."
   if [[ "${DBNAME_INGESTION}" != "${DBNAME_DWH}" ]]; then
    __logi "Databases are different, setting up FDW for datamart access"
@@ -1497,28 +1582,56 @@ function main() {
   else
    __logi "Ingestion and Analytics use same database (${DBNAME_DWH}), tables are directly accessible"
   fi
+  local FDW_END_TIME
+  FDW_END_TIME=$(date +%s)
+  local FDW_DURATION=$((FDW_END_TIME - FDW_START_TIME))
+  __logi "⏱️  TIME: Setting up FDW took ${FDW_DURATION} seconds"
 
+  local DATAMART_START_TIME
+  DATAMART_START_TIME=$(date +%s)
   __logi "Executing datamart scripts..."
   set +e
+  local DATAMART_COUNTRIES_START_TIME
+  DATAMART_COUNTRIES_START_TIME=$(date +%s)
   if "${DATAMART_COUNTRIES_SCRIPT}" ""; then
+   local DATAMART_COUNTRIES_END_TIME
+   DATAMART_COUNTRIES_END_TIME=$(date +%s)
+   local DATAMART_COUNTRIES_DURATION=$((DATAMART_COUNTRIES_END_TIME - DATAMART_COUNTRIES_START_TIME))
    __logi "SUCCESS: datamartCountries completed successfully"
+   __logi "⏱️  TIME: datamartCountries took ${DATAMART_COUNTRIES_DURATION} seconds"
   else
    __loge "ERROR: datamartCountries failed with exit code $?"
    __loge "Check log file: $(find /tmp -maxdepth 1 -type d -name 'datamartCountries_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2-)/datamartCountries.log"
   fi
+  local DATAMART_USERS_START_TIME
+  DATAMART_USERS_START_TIME=$(date +%s)
   if "${DATAMART_USERS_SCRIPT}" ""; then
+   local DATAMART_USERS_END_TIME
+   DATAMART_USERS_END_TIME=$(date +%s)
+   local DATAMART_USERS_DURATION=$((DATAMART_USERS_END_TIME - DATAMART_USERS_START_TIME))
    __logi "SUCCESS: datamartUsers completed successfully"
+   __logi "⏱️  TIME: datamartUsers took ${DATAMART_USERS_DURATION} seconds"
   else
    __loge "ERROR: datamartUsers failed with exit code $?"
    __loge "Check log file: $(find /tmp -maxdepth 1 -type d -name 'datamartUsers_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2-)/datamartUsers.log"
   fi
+  local DATAMART_GLOBAL_START_TIME
+  DATAMART_GLOBAL_START_TIME=$(date +%s)
   if "${DATAMART_GLOBAL_SCRIPT}" ""; then
+   local DATAMART_GLOBAL_END_TIME
+   DATAMART_GLOBAL_END_TIME=$(date +%s)
+   local DATAMART_GLOBAL_DURATION=$((DATAMART_GLOBAL_END_TIME - DATAMART_GLOBAL_START_TIME))
    __logi "SUCCESS: datamartGlobal completed successfully"
+   __logi "⏱️  TIME: datamartGlobal took ${DATAMART_GLOBAL_DURATION} seconds"
   else
    __loge "ERROR: datamartGlobal failed with exit code $?"
    __loge "Check log file: $(find /tmp -maxdepth 1 -type d -name 'datamartGlobal_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2-)/datamartGlobal.log"
   fi
   set -e
+  local DATAMART_END_TIME
+  DATAMART_END_TIME=$(date +%s)
+  local DATAMART_DURATION=$((DATAMART_END_TIME - DATAMART_START_TIME))
+  __logi "⏱️  TIME: All datamart scripts total time: ${DATAMART_DURATION} seconds"
  else
   __logi "AUTO-DETECTED INCREMENTAL EXECUTION - Processing only new data"
   set +E

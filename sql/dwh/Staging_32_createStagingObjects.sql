@@ -422,8 +422,56 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
   ELSIF (qty_dwh_notes = 0 AND (initial_load_flag IS NULL OR initial_load_flag = 'true')) THEN
    RAISE NOTICE 'INITIAL LOAD DETECTED - Processing all historical data from 2013-04-24';
    RAISE NOTICE 'This may take several hours for the complete dataset.';
-   CALL staging.process_notes_at_date('2013-04-24 00:00:00.000000+00',
-     qty_dwh_notes, TRUE);
+   
+   -- Initial load: process all historical data using the same incremental logic
+   -- but starting from 2013-04-24
+   -- Get the date of the most recent note action from base tables
+   SELECT /* Notes-staging */ MAX(DATE(created_at))
+    INTO max_note_action_date
+   FROM note_comments;
+   
+   -- Start from the first date with comments
+   SELECT /* Notes-staging */ MIN(DATE(created_at))
+    INTO max_processed_date
+   FROM note_comments;
+   
+   -- Process all dates from first date until the latest date (skip empty days)
+   WHILE (max_processed_date <= max_note_action_date) LOOP
+    -- Timestamp of the max processed note on DWH for this date (should be NULL for initial load)
+    SELECT /* Notes-staging */ MAX(action_at)
+     INTO max_note_on_dwh_timestamp
+    FROM dwh.facts
+    WHERE DATE(action_at) = max_processed_date;
+    
+    IF (max_note_on_dwh_timestamp IS NULL) THEN
+     max_note_on_dwh_timestamp := max_processed_date::TIMESTAMP;
+    END IF;
+    
+    -- Count notes to process on this date
+    SELECT /* Notes-staging */ COUNT(1)
+     INTO qty_notes_on_date
+    FROM note_comments
+    WHERE DATE(created_at) = max_processed_date
+     AND created_at > max_note_on_dwh_timestamp;
+    
+    -- Process notes for this date if there are any
+    IF (qty_notes_on_date > 0) THEN
+     CALL staging.process_notes_at_date(max_note_on_dwh_timestamp,
+       qty_dwh_notes, TRUE);
+    END IF;
+    
+    -- Find next date that actually has comments (skip empty days)
+    SELECT /* Notes-staging */ MIN(DATE(created_at))
+     INTO max_processed_date
+    FROM note_comments
+    WHERE DATE(created_at) > max_processed_date;
+    
+    -- If no more dates with comments, exit loop
+    IF (max_processed_date IS NULL OR max_processed_date > max_note_action_date) THEN
+     EXIT;
+    END IF;
+   END LOOP;
+   
    RAISE NOTICE 'INITIAL LOAD COMPLETED - % facts processed', qty_dwh_notes;
 
    -- Set initial load flag to prevent re-running initial load
