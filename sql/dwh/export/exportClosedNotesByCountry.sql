@@ -132,7 +132,8 @@ SELECT
   n.latitude,
   n.longitude,
   -- 2. Timeline
-  TO_CHAR(opened_fact.action_at, 'YYYY-MM-DD HH24:MI:SS') AS opened_at,
+  -- Get opened_at from dimension_days using opened_dimension_id_date
+  TO_CHAR(opened_date.date_id, 'YYYY-MM-DD HH24:MI:SS') AS opened_at,
   TO_CHAR(closed_fact.action_at, 'YYYY-MM-DD HH24:MI:SS') AS closed_at,
   COALESCE(closed_fact.days_to_resolution, 0) AS days_to_resolution,
   -- 3. Problem context (what was reported)
@@ -155,6 +156,9 @@ FROM dwh.facts closed_fact
   -- Get note coordinates
   LEFT JOIN notes n
     ON closed_fact.id_note = n.note_id
+  -- Get opened date from dimension_days
+  LEFT JOIN dwh.dimension_days opened_date
+    ON closed_fact.opened_dimension_id_date = opened_date.dimension_day_id
   -- Get user who opened the note
   LEFT JOIN dwh.dimension_users du_opened
     ON closed_fact.opened_dimension_id_user = du_opened.dimension_user_id
@@ -165,16 +169,6 @@ FROM dwh.facts closed_fact
     ON closed_fact.closed_dimension_id_user = du_closed.dimension_user_id
   LEFT JOIN users u_closed
     ON du_closed.user_id = u_closed.user_id
-  -- Get the fact row for when note was opened (for opened_at timestamp)
-  LEFT JOIN dwh.facts opened_fact
-    ON closed_fact.id_note = opened_fact.id_note
-    AND opened_fact.action_comment = 'opened'
-    AND opened_fact.sequence_action = (
-      SELECT MIN(sequence_action)
-      FROM dwh.facts
-      WHERE id_note = closed_fact.id_note
-        AND action_comment = 'opened'
-    )
 WHERE closed_fact.action_comment = 'closed'
   -- Country filter already applied in CTE
   -- Only get the most recent close for each note (already filtered in CTE)
