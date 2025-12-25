@@ -1482,36 +1482,43 @@ AS $proc$
   -- End timing and log performance
   m_end_time := CLOCK_TIMESTAMP();
   m_duration_seconds := EXTRACT(EPOCH FROM (m_end_time - m_start_time));
-  
+
   -- Get facts count for context
   SELECT COUNT(*)
    INTO m_facts_count
   FROM dwh.facts
   WHERE dimension_id_country = m_dimension_id_country;
-  
-  -- Log performance
-  INSERT INTO dwh.datamart_performance_log (
-    datamart_type,
-    entity_id,
-    start_time,
-    end_time,
-    duration_seconds,
-    records_processed,
-    facts_count,
-    status
-  ) VALUES (
-    'country',
+
+  -- Log performance (only if table exists - backward compatibility)
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'dwh'
+    AND table_name = 'datamart_performance_log'
+  ) THEN
+   INSERT INTO dwh.datamart_performance_log (
+     datamart_type,
+     entity_id,
+     start_time,
+     end_time,
+     duration_seconds,
+     records_processed,
+     facts_count,
+     status
+   ) VALUES (
+     'country',
+     m_dimension_id_country,
+     m_start_time,
+     m_end_time,
+     m_duration_seconds,
+     1,
+     m_facts_count,
+     'success'
+   );
+  END IF;
+
+  RAISE NOTICE 'Country % processed in %.3f seconds (%, facts)',
     m_dimension_id_country,
-    m_start_time,
-    m_end_time,
-    m_duration_seconds,
-    1,
-    m_facts_count,
-    'success'
-  );
-  
-  RAISE NOTICE 'Country % processed in %.3f seconds (%, facts)', 
-    m_dimension_id_country, 
     m_duration_seconds,
     m_facts_count;
  END

@@ -1518,7 +1518,7 @@ AS $proc$
   WHERE f.action_dimension_id_user = m_dimension_user_id
   ORDER BY d.date_id DESC
   LIMIT 1;
-  
+
   -- If no actions found, set to NULL (will be 0 due to COALESCE above)
   IF m_days_since_last_action IS NULL THEN
     m_days_since_last_action := 0;
@@ -1655,36 +1655,43 @@ AS $proc$
   -- End timing and log performance
   m_end_time := CLOCK_TIMESTAMP();
   m_duration_seconds := EXTRACT(EPOCH FROM (m_end_time - m_start_time));
-  
+
   -- Get facts count for context
   SELECT COUNT(*)
    INTO m_facts_count
   FROM dwh.facts
   WHERE action_dimension_id_user = m_dimension_user_id;
-  
-  -- Log performance
-  INSERT INTO dwh.datamart_performance_log (
-    datamart_type,
-    entity_id,
-    start_time,
-    end_time,
-    duration_seconds,
-    records_processed,
-    facts_count,
-    status
-  ) VALUES (
-    'user',
+
+  -- Log performance (only if table exists - backward compatibility)
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'dwh'
+    AND table_name = 'datamart_performance_log'
+  ) THEN
+   INSERT INTO dwh.datamart_performance_log (
+     datamart_type,
+     entity_id,
+     start_time,
+     end_time,
+     duration_seconds,
+     records_processed,
+     facts_count,
+     status
+   ) VALUES (
+     'user',
+     m_dimension_user_id,
+     m_start_time,
+     m_end_time,
+     m_duration_seconds,
+     1,
+     m_facts_count,
+     'success'
+   );
+  END IF;
+
+  RAISE NOTICE 'User % processed in %.3f seconds (%, facts)',
     m_dimension_user_id,
-    m_start_time,
-    m_end_time,
-    m_duration_seconds,
-    1,
-    m_facts_count,
-    'success'
-  );
-  
-  RAISE NOTICE 'User % processed in %.3f seconds (%, facts)', 
-    m_dimension_user_id, 
     m_duration_seconds,
     m_facts_count;
 END

@@ -369,7 +369,7 @@ BEGIN
     JOIN dwh.dimension_applications da
     ON (f.dimension_application_creation = da.dimension_application_id)
     WHERE f.action_comment = 'opened'
-     AND da.application_type LIKE '%mobile%'
+     AND (da.platform LIKE '%android%' OR da.platform LIKE '%ios%')
    ),
    desktop_apps_count = (
     SELECT /* Notes-datamartGlobal */ COUNT(DISTINCT f.dimension_application_creation)
@@ -377,7 +377,7 @@ BEGIN
     JOIN dwh.dimension_applications da
     ON (f.dimension_application_creation = da.dimension_application_id)
     WHERE f.action_comment = 'opened'
-     AND (da.application_type LIKE '%desktop%' OR da.application_type LIKE '%web%')
+     AND (da.platform LIKE '%desktop%' OR da.platform LIKE '%web%')
    ),
    avg_comment_length = (
     SELECT /* Notes-datamartGlobal */ AVG(comment_length)::DECIMAL(10,2)

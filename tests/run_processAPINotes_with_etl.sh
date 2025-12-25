@@ -659,15 +659,57 @@ run_etl() {
  log_info "ETL will use database: ${DBNAME}"
  log_info "Configuration: DBNAME_INGESTION='${DBNAME_INGESTION}', DBNAME_DWH='${DBNAME_DWH}'"
 
+ # Create directory to save ETL logs permanently
+ local TIMESTAMP
+ TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+ local ETL_LOGS_DIR="${ANALYTICS_ROOT}/tests/logs/etl_execution_${EXECUTION_NUMBER}_${TIMESTAMP}"
+ mkdir -p "${ETL_LOGS_DIR}"
+ log_info "ETL logs will be saved to: ${ETL_LOGS_DIR}"
+
+ # Get timestamp before ETL execution to find the correct log directory
+ local PRE_ETL_TIMESTAMP
+ PRE_ETL_TIMESTAMP=$(date +%s)
+
  # Run ETL in incremental mode (it will auto-detect if it's first execution)
  log_info "Executing: ${ETL_SCRIPT}"
- if "${ETL_SCRIPT}"; then
+
+ # Capture ETL output and save it
+ local ETL_EXIT_CODE=0
+ "${ETL_SCRIPT}" 2>&1 | tee "${ETL_LOGS_DIR}/ETL_output.log" || ETL_EXIT_CODE=$?
+
+ # Find and copy ETL log directory created after PRE_ETL_TIMESTAMP
+ # ETL creates logs in /tmp/ETL_* directories
+ local ETL_LOG_DIR
+ ETL_LOG_DIR=$(find /tmp -maxdepth 1 -type d -name "ETL_*" -newermt "@${PRE_ETL_TIMESTAMP}" -print0 2> /dev/null | xargs -0 ls -td 2> /dev/null | head -1)
+ if [[ -n "${ETL_LOG_DIR}" ]] && [[ -d "${ETL_LOG_DIR}" ]]; then
+  log_info "Copying ETL log directory from ${ETL_LOG_DIR} to ${ETL_LOGS_DIR}..."
+  cp -r "${ETL_LOG_DIR}"/* "${ETL_LOGS_DIR}/" 2> /dev/null || true
+  log_success "ETL logs saved to: ${ETL_LOGS_DIR}"
+ else
+  # Fallback: try to find the most recent ETL log directory
+  log_info "Could not find ETL log directory by timestamp, trying most recent..."
+  ETL_LOG_DIR=$(find /tmp -maxdepth 1 -type d -name "ETL_*" -print0 2> /dev/null | xargs -0 ls -td 2> /dev/null | head -1)
+  if [[ -n "${ETL_LOG_DIR}" ]] && [[ -d "${ETL_LOG_DIR}" ]]; then
+   log_info "Copying most recent ETL log directory from ${ETL_LOG_DIR} to ${ETL_LOGS_DIR}..."
+   cp -r "${ETL_LOG_DIR}"/* "${ETL_LOGS_DIR}/" 2> /dev/null || true
+   log_success "ETL logs saved to: ${ETL_LOGS_DIR}"
+  fi
+ fi
+
+ # Also try to find and copy datamart logs created after PRE_ETL_TIMESTAMP
+ find /tmp -maxdepth 1 -type d -name "datamart*" -newermt "@${PRE_ETL_TIMESTAMP}" 2> /dev/null | while read -r DATAMART_LOG_DIR; do
+  if [[ -n "${DATAMART_LOG_DIR}" ]] && [[ -d "${DATAMART_LOG_DIR}" ]]; then
+   log_info "Copying datamart log directory from ${DATAMART_LOG_DIR} to ${ETL_LOGS_DIR}..."
+   cp -r "${DATAMART_LOG_DIR}" "${ETL_LOGS_DIR}/" 2> /dev/null || true
+  fi
+ done
+
+ if [[ ${ETL_EXIT_CODE} -eq 0 ]]; then
   log_success "ETL completed successfully after ${SOURCE_TYPE} execution #${EXECUTION_NUMBER}"
   return 0
  else
-  local EXIT_CODE=$?
-  log_error "ETL failed with exit code: ${EXIT_CODE} after ${SOURCE_TYPE} execution #${EXECUTION_NUMBER}"
-  return ${EXIT_CODE}
+  log_error "ETL failed with exit code: ${ETL_EXIT_CODE} after ${SOURCE_TYPE} execution #${EXECUTION_NUMBER}"
+  return ${ETL_EXIT_CODE}
  fi
 }
 
@@ -713,7 +755,62 @@ execute_processAPINotes_and_etl() {
  log_info "Waiting 2 seconds before running ETL..."
  sleep 2
 
+ # For execution #1 (planet/base), clean dwh schema before ETL
  # Run ETL after processAPINotes
+ # Clean dwh schema JUST BEFORE ETL to ensure INITIAL LOAD is executed
+ # This must be done right before the ETL to prevent any process from recreating the schema
+ if [[ ${EXECUTION_NUMBER} -eq 1 ]]; then
+  log_info "Cleaning dwh schema JUST BEFORE ETL #1 to ensure INITIAL LOAD..."
+  # Load DBNAME from properties file
+  # shellcheck disable=SC1090
+  source "${INGESTION_ROOT}/etc/properties.sh"
+  local PSQL_CMD="psql"
+  if [[ -n "${DB_HOST:-}" ]]; then
+   PSQL_CMD="${PSQL_CMD} -h ${DB_HOST} -p ${DB_PORT}"
+  fi
+  # Force disconnect any active connections
+  ${PSQL_CMD} -d "${DBNAME}" -c "
+   SELECT pg_terminate_backend(pg_stat_activity.pid)
+   FROM pg_stat_activity
+   WHERE pg_stat_activity.datname = '${DBNAME}'
+    AND pid <> pg_backend_pid()
+    AND state = 'active';
+  " > /dev/null 2>&1 || true
+  # Drop the schema (CASCADE will also drop dwh.properties)
+  # First, verify schema exists
+  local SCHEMA_EXISTS_BEFORE
+  SCHEMA_EXISTS_BEFORE=$(${PSQL_CMD} -d "${DBNAME}" -tAqc "
+   SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = 'dwh';
+  " 2> /dev/null || echo "0")
+  if [[ "${SCHEMA_EXISTS_BEFORE}" != "0" ]]; then
+   log_info "dwh schema exists, dropping it..."
+   # Drop the schema with explicit error handling
+   if ! ${PSQL_CMD} -d "${DBNAME}" -c "DROP SCHEMA dwh CASCADE;" 2>&1; then
+    log_error "Failed to drop dwh schema, trying again after terminating connections..."
+    # Terminate all connections again
+    ${PSQL_CMD} -d "${DBNAME}" -c "
+     SELECT pg_terminate_backend(pg_stat_activity.pid)
+     FROM pg_stat_activity
+     WHERE pg_stat_activity.datname = '${DBNAME}'
+      AND pid <> pg_backend_pid();
+    " > /dev/null 2>&1 || true
+    sleep 1
+    ${PSQL_CMD} -d "${DBNAME}" -c "DROP SCHEMA dwh CASCADE;" > /dev/null 2>&1 || true
+   fi
+  fi
+  # Verify the schema was actually dropped
+  local SCHEMA_EXISTS_AFTER
+  SCHEMA_EXISTS_AFTER=$(${PSQL_CMD} -d "${DBNAME}" -tAqc "
+   SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = 'dwh';
+  " 2> /dev/null || echo "1")
+  if [[ "${SCHEMA_EXISTS_AFTER}" != "0" ]]; then
+   log_error "dwh schema still exists after DROP (count: ${SCHEMA_EXISTS_AFTER})"
+   log_error "This may prevent INITIAL LOAD from executing"
+  else
+   log_success "dwh schema successfully dropped"
+  fi
+  log_success "dwh schema cleaned before ETL #1"
+ fi
  log_info "--- Step 2: Running ETL after ${SOURCE_TYPE} execution #${EXECUTION_NUMBER} ---"
  local ETL_START_TIME
  ETL_START_TIME=$(date +%s)
@@ -873,8 +970,8 @@ main() {
  log_info "═══════════════════════════════════════════════════════════"
  log_info "  TIMING SUMMARY"
  log_info "═══════════════════════════════════════════════════════════"
-log_info "⏱️  Total time: ${MAIN_DURATION} seconds ($(date -d "@${MAIN_START_TIME}" +%H:%M:%S) - $(date -d "@${MAIN_END_TIME}" +%H:%M:%S))"
-log_info "   ($((MAIN_DURATION / 60)) minutes and $((MAIN_DURATION % 60)) seconds)"
+ log_info "⏱️  Total time: ${MAIN_DURATION} seconds ($(date -d "@${MAIN_START_TIME}" +%H:%M:%S) - $(date -d "@${MAIN_END_TIME}" +%H:%M:%S))"
+ log_info "   ($((MAIN_DURATION / 60)) minutes and $((MAIN_DURATION % 60)) seconds)"
  log_info ""
 
  # Cleanup will be done by trap

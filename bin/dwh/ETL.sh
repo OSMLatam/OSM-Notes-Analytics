@@ -191,6 +191,8 @@ declare -r DROP_COPIED_BASE_TABLES_SCRIPT="${SCRIPT_BASE_DIRECTORY}/bin/dwh/drop
 declare -r DATAMART_COUNTRIES_SCRIPT="${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartCountries/datamartCountries.sh"
 declare -r DATAMART_USERS_SCRIPT="${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartUsers/datamartUsers.sh"
 declare -r DATAMART_GLOBAL_SCRIPT="${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartGlobal/datamartGlobal.sh"
+# Create datamart performance log table.
+declare -r POSTGRES_DATAMART_PERFORMANCE_CREATE_TABLE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartPerformance/datamartPerformance_11_createTable.sql"
 
 ###########
 # FUNCTIONS
@@ -869,10 +871,10 @@ function __initialFactsParallel {
  local PHASE1_START_TIME
  PHASE1_START_TIME=$(date +%s)
  __safe_disable_note_activity_metrics_trigger
-__logi "Note activity metrics trigger disabled"
+ __logi "Note activity metrics trigger disabled"
 
-# Phase 1: Parallel load by year
-__logi "Phase 1: Starting parallel load by year..."
+ # Phase 1: Parallel load by year
+ __logi "Phase 1: Starting parallel load by year..."
 
  # Adjust MAX_THREADS for parallel processing
  # Uses n-1 cores, if number of cores is greater than 1.
@@ -907,9 +909,9 @@ __logi "Phase 1: Starting parallel load by year..."
  local year="${start_year}"
  local pids=()
 
-# Create procedures for each year
-local CREATE_PROCEDURES_START_TIME
-CREATE_PROCEDURES_START_TIME=$(date +%s)
+ # Create procedures for each year
+ local CREATE_PROCEDURES_START_TIME
+ CREATE_PROCEDURES_START_TIME=$(date +%s)
  local failed_procedures=0
  while [[ ${year} -le ${current_year} ]]; do
   __logi "Creating procedure for year ${year}..."
@@ -1184,8 +1186,8 @@ CREATE_PROCEDURES_START_TIME=$(date +%s)
  # Step N: Drop copied base tables after DWH population (hybrid strategy)
  # This frees disk space and ensures incremental uses FDW
  # IMPORTANT: Only drop if Ingestion and Analytics are in DIFFERENT databases
-# If they are the same database (hybrid test mode), we must keep the tables
-# because datamarts and other processes need access to note_comments_text
+ # If they are the same database (hybrid test mode), we must keep the tables
+ # because datamarts and other processes need access to note_comments_text
  local DROP_TABLES_START_TIME
  DROP_TABLES_START_TIME=$(date +%s)
  __logi "Step N: Checking if base tables should be dropped..."
@@ -1364,26 +1366,37 @@ function __detectFirstExecution {
   __log_start
   __logi "=== DETECTING EXECUTION MODE ==="
 
-  # Check if DWH facts table exists and has data
-  local facts_count
-  facts_count=$(__psql_with_appname -d "${DBNAME_DWH}" -Atq -c "SELECT COUNT(*) FROM dwh.facts;" 2> /dev/null || echo "0")
-  __logi "Query result for facts count: '${facts_count}'"
+  # First, check if dwh schema exists
+  local schema_exists
+  schema_exists=$(__psql_with_appname -d "${DBNAME_DWH}" -Atq -c "SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = 'dwh';" 2> /dev/null || echo "0")
+  __logi "dwh schema exists: '${schema_exists}'"
 
-  # Check if initial load flag exists
-  local initial_load_flag
-  initial_load_flag=$(__psql_with_appname -d "${DBNAME_DWH}" -Atq -c "SELECT value FROM dwh.properties WHERE key = 'initial load';" 2> /dev/null || echo "")
-  __logi "Query result for initial load flag: '${initial_load_flag}'"
-
-  local result
-  if [[ "${facts_count}" -eq 0 ]]; then
-   __logi "FIRST EXECUTION DETECTED - No facts found in DWH"
-   __logi "Found ${facts_count} facts in DWH, initial load flag: '${initial_load_flag}'"
+  # If schema doesn't exist, this is definitely first execution
+  if [[ "${schema_exists}" == "0" ]]; then
+   __logi "FIRST EXECUTION DETECTED - dwh schema does not exist"
    __logi "Will perform initial load with complete data warehouse creation"
    result="true"
   else
-   __logi "INCREMENTAL EXECUTION DETECTED - Found ${facts_count} facts in DWH"
-   __logi "Will process only new data since last run"
-   result="false"
+   # Schema exists, check if DWH facts table exists and has data
+   local facts_count
+   facts_count=$(__psql_with_appname -d "${DBNAME_DWH}" -Atq -c "SELECT COUNT(*) FROM dwh.facts;" 2> /dev/null || echo "0")
+   __logi "Query result for facts count: '${facts_count}'"
+
+   # Check if initial load flag exists
+   local initial_load_flag
+   initial_load_flag=$(__psql_with_appname -d "${DBNAME_DWH}" -Atq -c "SELECT value FROM dwh.properties WHERE key = 'initial load';" 2> /dev/null || echo "")
+   __logi "Query result for initial load flag: '${initial_load_flag}'"
+
+   if [[ "${facts_count}" -eq 0 ]]; then
+    __logi "FIRST EXECUTION DETECTED - No facts found in DWH"
+    __logi "Found ${facts_count} facts in DWH, initial load flag: '${initial_load_flag}'"
+    __logi "Will perform initial load with complete data warehouse creation"
+    result="true"
+   else
+    __logi "INCREMENTAL EXECUTION DETECTED - Found ${facts_count} facts in DWH"
+    __logi "Will process only new data since last run"
+    result="false"
+   fi
   fi
 
   __log_finish
@@ -1520,14 +1533,21 @@ function main() {
 
  __logi "PROCESS_TYPE value: '${PROCESS_TYPE}'"
 
-# Auto-detect execution mode
-__logi "Entering auto-detect mode"
-# Auto-detect if this is the first execution
-local is_first_execution
-is_first_execution=$(__detectFirstExecution | tail -1)
-__logi "Detection result: '${is_first_execution}'"
+ # Auto-detect execution mode
+ __logi "Entering auto-detect mode"
+ # Auto-detect if this is the first execution
+ local detection_output
+ detection_output=$(__detectFirstExecution)
+ # Log the full detection output
+ echo "${detection_output}" | grep -v "^$" | while IFS= read -r line; do
+  __logi "${line}"
+ done
+ # Extract the result (last line)
+ local is_first_execution
+ is_first_execution=$(echo "${detection_output}" | tail -1)
+ __logi "Detection result: '${is_first_execution}'"
 
-if [[ "${is_first_execution}" == "true" ]]; then
+ if [[ "${is_first_execution}" == "true" ]]; then
   __logi "AUTO-DETECTED FIRST EXECUTION - Performing initial load"
   set +E
   # shellcheck disable=SC2310
@@ -1551,6 +1571,22 @@ if [[ "${is_first_execution}" == "true" ]]; then
   MAINTENANCE_END_TIME=$(date +%s)
   local MAINTENANCE_DURATION=$((MAINTENANCE_END_TIME - MAINTENANCE_START_TIME))
   __logi "⏱️  TIME: Database maintenance took ${MAINTENANCE_DURATION} seconds"
+
+  # Create datamart performance log table before executing datamarts
+  # This table is required by datamartCountries and datamartUsers procedures
+  __logi "Creating datamart performance log table..."
+  set +e
+  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
+   -f "${POSTGRES_DATAMART_PERFORMANCE_CREATE_TABLE}" 2>&1
+  local perf_table_exit_code=$?
+  set -e
+  if [[ ${perf_table_exit_code} -ne 0 ]]; then
+   __loge "ERROR: Failed to create datamart performance log table (exit code: ${perf_table_exit_code})"
+   # Don't fail the ETL, datamarts should still work (backward compatibility)
+   __logw "Continuing anyway (datamarts may not log performance data)"
+  else
+   __logi "Datamart performance log table created successfully"
+  fi
 
   # Setup FDW after initial load (needed for datamart scripts that access note_comments)
   # Foreign tables provide access to base tables after dropCopiedBaseTables
@@ -1649,6 +1685,21 @@ if [[ "${is_first_execution}" == "true" ]]; then
   __processNotesETL
   __logi "Finished calling __processNotesETL"
   __perform_database_maintenance
+
+  # Ensure datamart performance log table exists before executing datamarts
+  # This table is required by datamartCountries and datamartUsers procedures
+  __logi "Ensuring datamart performance log table exists..."
+  set +e
+  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
+   -f "${POSTGRES_DATAMART_PERFORMANCE_CREATE_TABLE}" 2>&1
+  local perf_table_exit_code=$?
+  set -e
+  if [[ ${perf_table_exit_code} -ne 0 ]]; then
+   __loge "ERROR: Failed to create datamart performance log table (exit code: ${perf_table_exit_code})"
+   # Don't fail the ETL, datamarts should still work (backward compatibility)
+   __logw "Continuing anyway (datamarts may not log performance data)"
+  fi
+
   __logi "Executing datamart scripts..."
   set +e
   if "${DATAMART_COUNTRIES_SCRIPT}" ""; then
