@@ -1490,22 +1490,24 @@ AS $proc$
   WHERE dimension_id_country = m_dimension_id_country;
 
   -- Log performance (only if table exists - backward compatibility)
+  -- Use dynamic SQL to avoid compilation-time table validation
   IF EXISTS (
     SELECT 1
     FROM information_schema.tables
     WHERE table_schema = 'dwh'
     AND table_name = 'datamart_performance_log'
   ) THEN
-   INSERT INTO dwh.datamart_performance_log (
-     datamart_type,
-     entity_id,
-     start_time,
-     end_time,
-     duration_seconds,
-     records_processed,
-     facts_count,
-     status
-   ) VALUES (
+   EXECUTE format('
+     INSERT INTO dwh.datamart_performance_log (
+       datamart_type,
+       entity_id,
+       start_time,
+       end_time,
+       duration_seconds,
+       records_processed,
+       facts_count,
+       status
+     ) VALUES (%L, %s, %L, %L, %s, %s, %s, %L)',
      'country',
      m_dimension_id_country,
      m_start_time,
