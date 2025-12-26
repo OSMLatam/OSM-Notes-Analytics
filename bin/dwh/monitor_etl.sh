@@ -37,7 +37,7 @@ if pgrep -f "ETL.sh" > /dev/null; then
  echo ""
  echo "Running processes:"
  for pid in $(pgrep -f "ETL.sh"); do
-  ps -p "$pid" -o pid=,cmd= | awk '{print "  PID:", $1, "| Command:", $2, $3, $4}'
+  ps -p "${pid}" -o pid=,cmd= | awk '{print "  PID:", $1, "| Command:", $2, $3, $4}'
  done
 else
  echo -e "${YELLOW}⚠ ETL is not running${NC}"
@@ -47,7 +47,7 @@ echo ""
 # Check last execution log
 echo "2. Last Execution:"
 LAST_LOG=$(find /tmp -name "ETL.log" -path "*/ETL_*" -type f -printf '%T@ %p\n' 2> /dev/null | sort -rn | head -1 | cut -d' ' -f2-)
-if [ -n "${LAST_LOG}" ]; then
+if [[ -n "${LAST_LOG}" ]]; then
  echo "  Log file: ${LAST_LOG}"
  echo ""
 
@@ -149,7 +149,7 @@ echo ""
 echo "=== Summary ==="
 if pgrep -f "ETL.sh" > /dev/null; then
  echo -e "${GREEN}Status: RUNNING${NC}"
-elif [ -n "${LAST_LOG}" ]; then
+elif [[ -n "${LAST_LOG}" ]]; then
  echo -e "${YELLOW}Status: IDLE (last run completed)${NC}"
 else
  echo -e "${RED}Status: UNKNOWN${NC}"
