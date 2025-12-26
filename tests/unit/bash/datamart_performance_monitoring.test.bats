@@ -19,12 +19,14 @@ setup() {
 
 # Test that performance log table can be created
 @test "Performance log table should be creatable" {
-  if [[ -z "${DBNAME:-}" ]]; then
+  if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
     skip "No database configured"
   fi
 
+  local dbname="${TEST_DBNAME:-${DBNAME}}"
+
   # Create the table
-  run psql -d "${DBNAME}" -v ON_ERROR_STOP=1 -f \
+  run psql -d "${dbname}" -v ON_ERROR_STOP=1 -f \
     "${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartPerformance/datamartPerformance_11_createTable.sql"
 
   [[ "${status}" -eq 0 ]] || echo "Table creation should succeed"
@@ -32,12 +34,14 @@ setup() {
 
 # Test that performance log table exists after creation
 @test "Performance log table should exist" {
-  if [[ -z "${DBNAME:-}" ]]; then
+  if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
     skip "No database configured"
   fi
 
+  local dbname="${TEST_DBNAME:-${DBNAME}}"
+
   # Check if table exists
-  run psql -d "${DBNAME}" -t -c "
+  run psql -d "${dbname}" -t -c "
     SELECT COUNT(*)
     FROM information_schema.tables
     WHERE table_schema = 'dwh'
@@ -50,17 +54,19 @@ setup() {
 
 # Test that performance log table has correct columns
 @test "Performance log table should have correct columns" {
-  if [[ -z "${DBNAME:-}" ]]; then
+  if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
     skip "No database configured"
   fi
 
+  local dbname="${TEST_DBNAME:-${DBNAME}}"
+
   # Check for required columns
-  run psql -d "${DBNAME}" -t -c "
+  run psql -d "${dbname}" -t -c "
     SELECT column_name
     FROM information_schema.columns
     WHERE table_schema = 'dwh'
       AND table_name = 'datamart_performance_log'
-      AND column_name IN ('log_id', 'datamart_type', 'entity_id', 'start_time', 
+      AND column_name IN ('log_id', 'datamart_type', 'entity_id', 'start_time',
                           'end_time', 'duration_seconds', 'facts_count', 'status');
   "
 
@@ -76,22 +82,24 @@ setup() {
 
 # Test that country update procedure logs performance
 @test "Country update procedure should log performance" {
-  if [[ -z "${DBNAME:-}" ]]; then
+  if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
     skip "No database configured"
   fi
 
+  local dbname="${TEST_DBNAME:-${DBNAME}}"
+
   # Ensure table exists
-  psql -d "${DBNAME}" -f \
+  psql -d "${dbname}" -f \
     "${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartPerformance/datamartPerformance_11_createTable.sql" \
     > /dev/null 2>&1 || true
 
   # Get initial log count
-  initial_count=$(psql -d "${DBNAME}" -t -c "
+  initial_count=$(psql -d "${dbname}" -t -c "
     SELECT COUNT(*) FROM dwh.datamart_performance_log WHERE datamart_type = 'country';
   " | tr -d ' ')
 
   # Update a country datamart (if country 1 exists)
-  psql -d "${DBNAME}" -c "
+  psql -d "${dbname}" -c "
     DO \$\$
     BEGIN
       IF EXISTS (SELECT 1 FROM dwh.dimension_countries WHERE dimension_country_id = 1) THEN
@@ -101,7 +109,7 @@ setup() {
   " > /dev/null 2>&1 || true
 
   # Get new log count
-  new_count=$(psql -d "${DBNAME}" -t -c "
+  new_count=$(psql -d "${dbname}" -t -c "
     SELECT COUNT(*) FROM dwh.datamart_performance_log WHERE datamart_type = 'country';
   " | tr -d ' ')
 
@@ -112,17 +120,19 @@ setup() {
 
 # Test that country update performance log has correct data
 @test "Country update performance log should have correct data" {
-  if [[ -z "${DBNAME:-}" ]]; then
+  if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
     skip "No database configured"
   fi
 
+  local dbname="${TEST_DBNAME:-${DBNAME}}"
+
   # Ensure table exists
-  psql -d "${DBNAME}" -f \
+  psql -d "${dbname}" -f \
     "${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartPerformance/datamartPerformance_11_createTable.sql" \
     > /dev/null 2>&1 || true
 
   # Update a country datamart (if country 1 exists)
-  psql -d "${DBNAME}" -c "
+  psql -d "${dbname}" -c "
     DO \$\$
     BEGIN
       IF EXISTS (SELECT 1 FROM dwh.dimension_countries WHERE dimension_country_id = 1) THEN
@@ -132,8 +142,8 @@ setup() {
   " > /dev/null 2>&1 || true
 
   # Check latest log entry
-  run psql -d "${DBNAME}" -t -c "
-    SELECT 
+  run psql -d "${dbname}" -t -c "
+    SELECT
       datamart_type,
       entity_id,
       duration_seconds,
@@ -159,22 +169,24 @@ setup() {
 
 # Test that user update procedure logs performance
 @test "User update procedure should log performance" {
-  if [[ -z "${DBNAME:-}" ]]; then
+  if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
     skip "No database configured"
   fi
 
+  local dbname="${TEST_DBNAME:-${DBNAME}}"
+
   # Ensure table exists
-  psql -d "${DBNAME}" -f \
+  psql -d "${dbname}" -f \
     "${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartPerformance/datamartPerformance_11_createTable.sql" \
     > /dev/null 2>&1 || true
 
   # Get initial log count
-  initial_count=$(psql -d "${DBNAME}" -t -c "
+  initial_count=$(psql -d "${dbname}" -t -c "
     SELECT COUNT(*) FROM dwh.datamart_performance_log WHERE datamart_type = 'user';
   " | tr -d ' ')
 
   # Update a user datamart (if user 1 exists)
-  psql -d "${DBNAME}" -c "
+  psql -d "${dbname}" -c "
     DO \$\$
     BEGIN
       IF EXISTS (SELECT 1 FROM dwh.dimension_users WHERE dimension_user_id = 1) THEN
@@ -184,7 +196,7 @@ setup() {
   " > /dev/null 2>&1 || true
 
   # Get new log count
-  new_count=$(psql -d "${DBNAME}" -t -c "
+  new_count=$(psql -d "${dbname}" -t -c "
     SELECT COUNT(*) FROM dwh.datamart_performance_log WHERE datamart_type = 'user';
   " | tr -d ' ')
 
@@ -194,17 +206,19 @@ setup() {
 
 # Test that user update performance log has correct data
 @test "User update performance log should have correct data" {
-  if [[ -z "${DBNAME:-}" ]]; then
+  if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
     skip "No database configured"
   fi
 
+  local dbname="${TEST_DBNAME:-${DBNAME}}"
+
   # Ensure table exists
-  psql -d "${DBNAME}" -f \
+  psql -d "${dbname}" -f \
     "${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartPerformance/datamartPerformance_11_createTable.sql" \
     > /dev/null 2>&1 || true
 
   # Update a user datamart (if user 1 exists)
-  psql -d "${DBNAME}" -c "
+  psql -d "${dbname}" -c "
     DO \$\$
     BEGIN
       IF EXISTS (SELECT 1 FROM dwh.dimension_users WHERE dimension_user_id = 1) THEN
@@ -214,8 +228,8 @@ setup() {
   " > /dev/null 2>&1 || true
 
   # Check latest log entry
-  run psql -d "${DBNAME}" -t -c "
-    SELECT 
+  run psql -d "${dbname}" -t -c "
+    SELECT
       datamart_type,
       entity_id,
       duration_seconds,
@@ -241,12 +255,14 @@ setup() {
 
 # Test that duration_seconds is positive
 @test "Performance log duration should be positive" {
-  if [[ -z "${DBNAME:-}" ]]; then
+  if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
     skip "No database configured"
   fi
 
+  local dbname="${TEST_DBNAME:-${DBNAME}}"
+
   # Check that all durations are positive
-  run psql -d "${DBNAME}" -t -c "
+  run psql -d "${dbname}" -t -c "
     SELECT COUNT(*)
     FROM dwh.datamart_performance_log
     WHERE duration_seconds IS NOT NULL
@@ -260,12 +276,14 @@ setup() {
 
 # Test that end_time is after start_time
 @test "Performance log end_time should be after start_time" {
-  if [[ -z "${DBNAME:-}" ]]; then
+  if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
     skip "No database configured"
   fi
 
+  local dbname="${TEST_DBNAME:-${DBNAME}}"
+
   # Check that end_time >= start_time
-  run psql -d "${DBNAME}" -t -c "
+  run psql -d "${dbname}" -t -c "
     SELECT COUNT(*)
     FROM dwh.datamart_performance_log
     WHERE end_time < start_time;
@@ -278,13 +296,15 @@ setup() {
 
 # Test that duration matches time difference
 @test "Performance log duration should match time difference" {
-  if [[ -z "${DBNAME:-}" ]]; then
+  if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
     skip "No database configured"
   fi
 
+  local dbname="${TEST_DBNAME:-${DBNAME}}"
+
   # Check that duration_seconds approximately matches (end_time - start_time)
   # Allow 1 second tolerance for rounding
-  run psql -d "${DBNAME}" -t -c "
+  run psql -d "${dbname}" -t -c "
     SELECT COUNT(*)
     FROM dwh.datamart_performance_log
     WHERE ABS(duration_seconds - EXTRACT(EPOCH FROM (end_time - start_time))) > 1.0;
@@ -302,17 +322,19 @@ setup() {
 
 # Test that existing datamart update procedures still work
 @test "Existing datamart update procedures should still work" {
-  if [[ -z "${DBNAME:-}" ]]; then
+  if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
     skip "No database configured"
   fi
 
+  local dbname="${TEST_DBNAME:-${DBNAME}}"
+
   # Ensure table exists (so logging doesn't fail)
-  psql -d "${DBNAME}" -f \
+  psql -d "${dbname}" -f \
     "${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartPerformance/datamartPerformance_11_createTable.sql" \
     > /dev/null 2>&1 || true
 
   # Try to update a country (should not fail even if country doesn't exist)
-  run psql -d "${DBNAME}" -c "
+  run psql -d "${dbname}" -c "
     DO \$\$
     BEGIN
       IF EXISTS (SELECT 1 FROM dwh.dimension_countries WHERE dimension_country_id = 1) THEN
@@ -330,15 +352,17 @@ setup() {
 
 # Test that procedures can be called without performance table (graceful degradation)
 @test "Procedures should handle missing performance table gracefully" {
-  if [[ -z "${DBNAME:-}" ]]; then
+  if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
     skip "No database configured"
   fi
 
+  local dbname="${TEST_DBNAME:-${DBNAME}}"
+
   # Drop table if exists
-  psql -d "${DBNAME}" -c "DROP TABLE IF EXISTS dwh.datamart_performance_log;" > /dev/null 2>&1 || true
+  psql -d "${dbname}" -c "DROP TABLE IF EXISTS dwh.datamart_performance_log;" > /dev/null 2>&1 || true
 
   # Try to update a country (should not fail)
-  run psql -d "${DBNAME}" -c "
+  run psql -d "${dbname}" -c "
     DO \$\$
     BEGIN
       IF EXISTS (SELECT 1 FROM dwh.dimension_countries WHERE dimension_country_id = 1) THEN
@@ -363,12 +387,14 @@ setup() {
 
 # Test that performance log table has indexes
 @test "Performance log table should have indexes" {
-  if [[ -z "${DBNAME:-}" ]]; then
+  if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
     skip "No database configured"
   fi
 
+  local dbname="${TEST_DBNAME:-${DBNAME}}"
+
   # Check for indexes
-  run psql -d "${DBNAME}" -t -c "
+  run psql -d "${dbname}" -t -c "
     SELECT COUNT(*)
     FROM pg_indexes
     WHERE schemaname = 'dwh'
