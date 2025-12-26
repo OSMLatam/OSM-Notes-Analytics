@@ -310,8 +310,8 @@ function __psql_with_appname {
   local new_args=()
   local temp_files=()
 
-  while [[ $i -lt ${#args[@]} ]]; do
-   if [[ "${args[$i]}" == "-f" ]] && [[ $((i + 1)) -lt ${#args[@]} ]]; then
+  while [[ ${i} -lt ${#args[@]} ]]; do
+   if [[ "${args[${i}]}" == "-f" ]] && [[ $((i + 1)) -lt ${#args[@]} ]]; then
     # Found -f, create temp file with timeouts + original file
     local original_file="${args[$((i + 1))]}"
     local temp_sql
@@ -324,13 +324,13 @@ function __psql_with_appname {
     temp_files+=("${temp_sql}")
     modified=true
     ((i += 2))
-   elif [[ "${args[$i]}" == "-c" ]] && [[ $((i + 1)) -lt ${#args[@]} ]]; then
+   elif [[ "${args[${i}]}" == "-c" ]] && [[ $((i + 1)) -lt ${#args[@]} ]]; then
     # Found -c, prepend timeouts to command
     new_args+=("-c" "${timeout_sql}${args[$((i + 1))]}")
     modified=true
     ((i += 2))
    else
-    new_args+=("${args[$i]}")
+    new_args+=("${args[${i}]}")
     ((i++))
    fi
   done
@@ -345,7 +345,7 @@ function __psql_with_appname {
    for temp_file in "${temp_files[@]}"; do
     rm -f "${temp_file}" 2> /dev/null || true
    done
-   return ${exit_code}
+   return "${exit_code}"
   else
    # No -f or -c found, set timeouts in a separate command
    PGAPPNAME="${appname}" psql -c "${timeout_sql}" "$@"
@@ -1038,7 +1038,7 @@ function __initialFactsParallel {
    set -e
    if [[ ${year_exit_code} -ne 0 ]]; then
     __loge "ERROR: Failed to load year ${year} (exit code: ${year_exit_code})"
-    exit ${year_exit_code}
+    exit "${year_exit_code}"
    fi
    __logi "Finished year ${year} load (PID: $$)."
   ) &
@@ -1504,7 +1504,7 @@ function __trapOn() {
   printf "%s WARN: The script %s was terminated. Temporary directory: ${TMP_DIR:-}\n" "$(date +%Y%m%d_%H:%M:%S)" "${MAIN_SCRIPT_NAME}";
   # Remove lock file on termination
   rm -f "${LOCK:-}" 2> /dev/null || true
-  exit ${ERROR_GENERAL};
+  exit "${ERROR_GENERAL}";
  }' SIGINT SIGTERM
  __log_finish
 }

@@ -1557,13 +1557,14 @@ function __trapOn() {
 
    printf "%s ERROR: The script %s did not finish correctly. Temporary directory: ${TMP_DIR:-} - Line number: %d.\n" "$(date +%Y%m%d_%H:%M:%S)" "${MAIN_SCRIPT_NAME}" "${ERROR_LINE}";
    printf "ERROR: Failed command: %s (exit code: %d)\n" "${ERROR_COMMAND}" "${ERROR_EXIT_CODE}";
-   if [[ "${GENERATE_FAILED_FILE}" = true ]]; then
+   if [[ "${GENERATE_FAILED_FILE:-false}" = true ]]; then
+    local FAILED_EXECUTION_FILE="${FAILED_EXECUTION_FILE:-/tmp/etl_failed_${MAIN_SCRIPT_NAME}_$$.log}"
     {
      echo "Error occurred at $(date +%Y%m%d_%H:%M:%S)"
      echo "Script: ${MAIN_SCRIPT_NAME}"
      echo "Line number: ${ERROR_LINE}"
-     echo "Failed command: "${ERROR_COMMAND}"
-     echo "Exit code: "${ERROR_EXIT_CODE}"
+     echo "Failed command: ${ERROR_COMMAND}"
+     echo "Exit code: ${ERROR_EXIT_CODE}"
      echo "Temporary directory: ${TMP_DIR:-unknown}"
      echo "Process ID: $$"
     } > "${FAILED_EXECUTION_FILE}"
@@ -1578,7 +1579,8 @@ function __trapOn() {
   MAIN_SCRIPT_NAME=$(basename "${0}" .sh)
 
   printf "%s WARN: The script %s was terminated. Temporary directory: ${TMP_DIR:-}\n" "$(date +%Y%m%d_%H:%M:%S)" "${MAIN_SCRIPT_NAME}";
-  if [[ "${GENERATE_FAILED_FILE}" = true ]]; then
+  if [[ "${GENERATE_FAILED_FILE:-false}" = true ]]; then
+   local FAILED_EXECUTION_FILE="${FAILED_EXECUTION_FILE:-/tmp/etl_failed_${MAIN_SCRIPT_NAME}_$$.log}"
    {
     echo "Script terminated at $(date +%Y%m%d_%H:%M:%S)"
     echo "Script: ${MAIN_SCRIPT_NAME}"
@@ -1587,7 +1589,7 @@ function __trapOn() {
     echo "Signal: SIGTERM/SIGINT"
    } > "${FAILED_EXECUTION_FILE}"
   fi;
-  exit ${ERROR_GENERAL};
+  exit "${ERROR_GENERAL}";
  }' SIGINT SIGTERM
  __log_finish
 }

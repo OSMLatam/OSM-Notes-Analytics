@@ -62,5 +62,5 @@ else
  #     mail -s "ETL Failed - OSM Notes Analytics" admin@example.com
  # fi
 
- exit ${exit_code}
+ exit "${exit_code}"
 fi

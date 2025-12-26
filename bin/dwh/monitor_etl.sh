@@ -53,7 +53,7 @@ if [ -n "${LAST_LOG}" ]; then
 
  # Get last execution timestamp
  LOG_DIR=$(dirname "${LAST_LOG}")
- if [ -f "${LOG_DIR}/ETL.lock" ]; then
+ if [[ -f "${LOG_DIR}/ETL.lock" ]]; then
   LOCK_TIME=$(stat -c %y "${LOG_DIR}/ETL.lock" 2> /dev/null || echo "unknown")
   echo "  Lock created: ${LOCK_TIME}"
  fi

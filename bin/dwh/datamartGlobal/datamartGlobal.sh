@@ -182,7 +182,7 @@ function __checkBaseTables {
   RET=0
  fi
  __log_finish
- return ${RET}
+ return "${RET}"
 }
 
 # Processes the global statistics.
@@ -197,7 +197,7 @@ function __processGlobalStats {
   __loge "ERROR: Datamart global population failed with exit code ${exit_code}"
   __loge "Check the SQL errors above for details"
   __log_finish
-  return ${exit_code}
+  return "${exit_code}"
  fi
 }
 
@@ -218,7 +218,8 @@ function __trapOn() {
 
    printf "%s ERROR: The script %s did not finish correctly. Temporary directory: ${TMP_DIR:-} - Line number: %d.\n" "$(date +%Y%m%d_%H:%M:%S)" "${MAIN_SCRIPT_NAME}" "${ERROR_LINE}";
    printf "ERROR: Failed command: %s (exit code: %d)\n" "${ERROR_COMMAND}" "${ERROR_EXIT_CODE}";
-   if [[ "${GENERATE_FAILED_FILE}" = true ]]; then
+   if [[ "${GENERATE_FAILED_FILE:-false}" = true ]]; then
+    local FAILED_EXECUTION_FILE="${FAILED_EXECUTION_FILE:-/tmp/etl_failed_${MAIN_SCRIPT_NAME}_$$.log}"
     {
      echo "Error occurred at $(date +%Y%m%d_%H:%M:%S)"
      echo "Script: ${MAIN_SCRIPT_NAME}"
@@ -229,7 +230,7 @@ function __trapOn() {
      echo "Process ID: $$"
     } > "${FAILED_EXECUTION_FILE}"
    fi;
-   exit ${ERROR_EXIT_CODE};
+   exit "${ERROR_EXIT_CODE}";
   fi;
  }' ERR
  # shellcheck disable=SC2154  # variables inside trap are defined dynamically by Bash
@@ -239,7 +240,8 @@ function __trapOn() {
   MAIN_SCRIPT_NAME=$(basename "${0}" .sh)
 
   printf "%s WARN: The script %s was terminated. Temporary directory: ${TMP_DIR:-}\n" "$(date +%Y%m%d_%H:%M:%S)" "${MAIN_SCRIPT_NAME}";
-  if [[ "${GENERATE_FAILED_FILE}" = true ]]; then
+  if [[ "${GENERATE_FAILED_FILE:-false}" = true ]]; then
+   local FAILED_EXECUTION_FILE="${FAILED_EXECUTION_FILE:-/tmp/etl_failed_${MAIN_SCRIPT_NAME}_$$.log}"
    {
     echo "Script terminated at $(date +%Y%m%d_%H:%M:%S)"
     echo "Script: ${MAIN_SCRIPT_NAME}"
@@ -248,7 +250,7 @@ function __trapOn() {
     echo "Signal: SIGTERM/SIGINT"
    } > "${FAILED_EXECUTION_FILE}"
   fi;
-  exit ${ERROR_GENERAL};
+  exit "${ERROR_GENERAL}";
  }' SIGINT SIGTERM
  __log_finish
 }
