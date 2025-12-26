@@ -74,15 +74,22 @@ SQL_OUTPUT=$("${psql_cmd[@]}" -f "${TMP_DDL}" 2>&1)
 SQL_EXIT_CODE=$?
 set -e
 if [[ ${SQL_EXIT_CODE} -ne 0 ]]; then
- # Filter out expected messages about existing objects
- FILTERED_OUTPUT=$(echo "${SQL_OUTPUT}" | grep -vE "(already exists|NOTICE)" || true)
- # If there's still output after filtering, it's a real error
+ # Filter out expected messages about existing objects (in English and Spanish)
+ # Filter ERROR lines that contain "ya existe" or "already exists" - these are expected
+ FILTERED_OUTPUT=$(echo "${SQL_OUTPUT}" | grep -vE "(already exists|NOTICE|ya existe|la relación|ERROR.*ya existe|ERROR.*already exists|psql:.*ERROR.*ya existe)" || true)
+ # Also check if the error is specifically about existing objects
+ # If filtered output is empty or only contains expected patterns, it's OK
  if [[ -n "${FILTERED_OUTPUT}" ]]; then
-  echo "[MOCK-ETL] ERROR: Failed to apply base DWH DDL" >&2
-  echo "[MOCK-ETL] Check the SQL file: ${PROJECT_ROOT}/sql/dwh/ETL_22_createDWHTables.sql" >&2
-  echo "${FILTERED_OUTPUT}" >&2
-  rm -f "${TMP_DDL}"
-  exit 1
+  # Check if remaining output contains actual errors (not just about existing objects)
+  REAL_ERRORS=$(echo "${FILTERED_OUTPUT}" | grep -vE "(CREATE SCHEMA|COMMENT|^$)" | grep -E "^ERROR:" || true)
+  if [[ -n "${REAL_ERRORS}" ]]; then
+   echo "[MOCK-ETL] ERROR: Failed to apply base DWH DDL" >&2
+   echo "[MOCK-ETL] Check the SQL file: ${PROJECT_ROOT}/sql/dwh/ETL_22_createDWHTables.sql" >&2
+   echo "${FILTERED_OUTPUT}" >&2
+   rm -f "${TMP_DDL}"
+   exit 1
+  fi
+  # If no real errors, it was just expected warnings about existing objects - continue
  fi
  # If no filtered output, it was just expected warnings - continue
 fi

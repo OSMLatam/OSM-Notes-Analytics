@@ -179,6 +179,9 @@ setup() {
 
   local dbname="${TEST_DBNAME:-${DBNAME}}"
 
+  # Export TEST_DBNAME so run_mock_etl.sh can use it
+  export TEST_DBNAME="${dbname}"
+
   # Run mock ETL pipeline
   run bash "${SCRIPT_BASE_DIRECTORY}/tests/run_mock_etl.sh"
 
