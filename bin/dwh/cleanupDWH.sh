@@ -159,10 +159,10 @@ function __show_help {
 # Asks for confirmation before destructive operations.
 function __confirm_destructive_operation {
  __log_start
- local OPERATION="${1}"
- local TARGET_DB="${2}"
+ local operation="${1}"
+ local target_db="${2}"
 
- __logi "Performing destructive operation: ${OPERATION} on database: ${TARGET_DB}"
+ __logi "Performing destructive operation: ${operation} on database: ${target_db}"
  __logi "Skipping confirmation (non-interactive mode)"
  __log_finish
 }
@@ -170,16 +170,16 @@ function __confirm_destructive_operation {
 # Checks if database exists.
 function __check_database {
  __log_start
- local TARGET_DB="${1}"
+ local target_db="${1}"
 
- __logi "Checking if database exists: ${TARGET_DB}"
+ __logi "Checking if database exists: ${target_db}"
 
- if psql -lqt | cut -d \| -f 1 | grep -qw "${TARGET_DB}"; then
-  __logi "Database ${TARGET_DB} exists"
+ if psql -lqt | cut -d \| -f 1 | grep -qw "${target_db}"; then
+  __logi "Database ${target_db} exists"
   __log_finish
   return 0
  else
-  __loge "Database ${TARGET_DB} does not exist"
+  __loge "Database ${target_db} does not exist"
   __log_finish
   return 1
  fi
@@ -188,31 +188,31 @@ function __check_database {
 # Executes a SQL cleanup script.
 function __execute_cleanup_script {
  __log_start
- local TARGET_DB="${1}"
- local SCRIPT_PATH="${2}"
- local SCRIPT_NAME="${3}"
+ local target_db="${1}"
+ local script_path="${2}"
+ local script_name="${3}"
 
- __logi "Executing ${SCRIPT_NAME}: ${SCRIPT_PATH}"
+ __logi "Executing ${script_name}: ${script_path}"
 
- if [[ ! -f "${SCRIPT_PATH}" ]]; then
-  __logw "Script not found: ${SCRIPT_PATH} - Skipping"
+ if [[ ! -f "${script_path}" ]]; then
+  __logw "Script not found: ${script_path} - Skipping"
   __log_finish
   return 0
  fi
 
  # Validate SQL script structure
- if ! __validate_sql_structure "${SCRIPT_PATH}"; then
-  __loge "ERROR: SQL script validation failed: ${SCRIPT_PATH}"
+ if ! __validate_sql_structure "${script_path}"; then
+  __loge "ERROR: SQL script validation failed: ${script_path}"
   __log_finish
   return 1
  fi
 
- if psql -d "${TARGET_DB}" -f "${SCRIPT_PATH}" 2>&1; then
-  __logi "SUCCESS: ${SCRIPT_NAME} completed"
+ if psql -d "${target_db}" -f "${script_path}" 2>&1; then
+  __logi "SUCCESS: ${script_name} completed"
   __log_finish
   return 0
  else
-  __loge "FAILED: ${SCRIPT_NAME} failed"
+  __loge "FAILED: ${script_name} failed"
   __log_finish
   return 1
  fi
@@ -221,21 +221,21 @@ function __execute_cleanup_script {
 # Removes DWH schema and all objects.
 function __cleanup_dwh_schema {
  __log_start
- local TARGET_DB="${1}"
+ local target_db="${1}"
 
  __logi "=== REMOVING DWH SCHEMA AND OBJECTS ==="
 
  # Remove staging objects
  __logi "Step 1: Removing staging schema"
- __execute_cleanup_script "${TARGET_DB}" "${SQL_REMOVE_STAGING}" "Staging Schema"
+ __execute_cleanup_script "${target_db}" "${SQL_REMOVE_STAGING}" "Staging Schema"
 
  # Remove datamart objects
  __logi "Step 2: Removing datamart objects"
- __execute_cleanup_script "${TARGET_DB}" "${SQL_REMOVE_DATAMARTS}" "Datamart Objects"
+ __execute_cleanup_script "${target_db}" "${SQL_REMOVE_DATAMARTS}" "Datamart Objects"
 
  # Remove DWH objects
  __logi "Step 3: Removing DWH schema"
- __execute_cleanup_script "${TARGET_DB}" "${SQL_REMOVE_DWH}" "DWH Schema"
+ __execute_cleanup_script "${target_db}" "${SQL_REMOVE_DWH}" "DWH Schema"
 
  __logi "=== DWH CLEANUP COMPLETED ==="
  __log_finish
@@ -280,19 +280,19 @@ function __cleanup_temp_files {
 # Dry run - shows what would be done.
 function __dry_run {
  __log_start
- local TARGET_DB="${1}"
- local MODE="${2}"
+ local target_db="${1}"
+ local mode="${2}"
 
  __logi "=== DRY RUN MODE - No changes will be made ==="
- __logi "Database: ${TARGET_DB}"
- __logi "Cleanup mode: ${MODE}"
+ __logi "Database: ${target_db}"
+ __logi "Cleanup mode: ${mode}"
  echo
  echo "Would execute the following operations:"
  echo
 
- if [[ "${MODE}" == "all" ]] || [[ "${MODE}" == "dwh" ]]; then
+ if [[ "${mode}" == "all" ]] || [[ "${mode}" == "dwh" ]]; then
   echo "⚠️  DESTRUCTIVE OPERATIONS (requires confirmation):"
-  echo "1. Check if database '${TARGET_DB}' exists"
+  echo "1. Check if database '${target_db}' exists"
   echo "2. Ask for user confirmation before proceeding"
   echo "3. Remove staging schema (${SQL_REMOVE_STAGING})"
   echo "4. Remove datamart objects (${SQL_REMOVE_DATAMARTS})"
@@ -303,7 +303,7 @@ function __dry_run {
   echo
  fi
 
- if [[ "${MODE}" == "all" ]] || [[ "${MODE}" == "temp" ]]; then
+ if [[ "${mode}" == "all" ]] || [[ "${mode}" == "temp" ]]; then
   echo "✅ SAFE OPERATIONS (no confirmation needed):"
   echo "6. Remove temporary files from /tmp:"
   echo "   - /tmp/ETL_*"

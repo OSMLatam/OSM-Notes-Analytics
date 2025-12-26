@@ -54,27 +54,27 @@ source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/validationFunctions.sh"
 
 # Schema validation function using ajv
 function __validate_json_with_schema() {
- local JSON_FILE="${1}"
- local SCHEMA_FILE="${2}"
- local NAME="${3:-$(basename "${JSON_FILE}")}"
+ local json_file="${1}"
+ local schema_file="${2}"
+ local name="${3:-$(basename "${json_file}")}"
 
- if [[ ! -f "${JSON_FILE}" ]]; then
-  echo "ERROR: JSON file not found: ${JSON_FILE}"
+ if [[ ! -f "${json_file}" ]]; then
+  echo "ERROR: JSON file not found: ${json_file}"
   return 1
  fi
 
- if [[ ! -f "${SCHEMA_FILE}" ]]; then
-  echo "WARNING: Schema file not found: ${SCHEMA_FILE}"
+ if [[ ! -f "${schema_file}" ]]; then
+  echo "WARNING: Schema file not found: ${schema_file}"
   return 0
  fi
 
  if command -v ajv > /dev/null 2>&1; then
-  if ajv validate -s "${SCHEMA_FILE}" -d "${JSON_FILE}" > /dev/null 2>&1; then
-   echo "  ✓ Valid: ${NAME}"
+  if ajv validate -s "${schema_file}" -d "${json_file}" > /dev/null 2>&1; then
+   echo "  ✓ Valid: ${name}"
    return 0
   else
-   echo "  ✗ Invalid: ${NAME}"
-   ajv validate -s "${SCHEMA_FILE}" -d "${JSON_FILE}" 2>&1 || true
+   echo "  ✗ Invalid: ${name}"
+   ajv validate -s "${schema_file}" -d "${json_file}" 2>&1 || true
    return 1
   fi
  else
@@ -91,8 +91,8 @@ function __calculate_schema_hash() {
  fi
 
  # Get column definitions from datamart tables
- local SCHEMA_HASH
- SCHEMA_HASH=$(
+ local schema_hash
+ schema_hash=$(
   psql -d "${DBNAME_DWH}" -Atq << 'EOF' | sha256sum | cut -d' ' -f1
 SELECT
   COALESCE(string_agg(column_name || ':' || data_type || ':' || ordinal_position, '|' ORDER BY table_name, ordinal_position), '')
@@ -115,15 +115,15 @@ FROM (
 ) t
 EOF
  )
- echo "${SCHEMA_HASH}"
+ echo "${schema_hash}"
 }
 
 # Get current version from version tracking file
 function __get_current_version() {
- local VERSION_FILE="${SCRIPT_BASE_DIRECTORY}/.json_export_version"
+ local version_file="${SCRIPT_BASE_DIRECTORY}/.json_export_version"
 
- if [[ -f "${VERSION_FILE}" ]]; then
-  cat "${VERSION_FILE}"
+ if [[ -f "${version_file}" ]]; then
+  cat "${version_file}"
  else
   echo "1.0.0"
  fi
@@ -131,35 +131,35 @@ function __get_current_version() {
 
 # Increment version (MAJOR.MINOR.PATCH)
 function __increment_version() {
- local CURRENT_VERSION="${1:-1.0.0}"
- local VERSION_TYPE="${2:-patch}" # major, minor, or patch
- local MAJOR MINOR PATCH
+ local current_version="${1:-1.0.0}"
+ local version_type="${2:-patch}" # major, minor, or patch
+ local major minor patch
 
- IFS='.' read -r MAJOR MINOR PATCH <<< "${CURRENT_VERSION}"
+ IFS='.' read -r major minor patch <<< "${current_version}"
 
- case "${VERSION_TYPE}" in
+ case "${version_type}" in
  major)
-  MAJOR=$((MAJOR + 1))
-  MINOR=0
-  PATCH=0
+  major=$((major + 1))
+  minor=0
+  patch=0
   ;;
  minor)
-  MINOR=$((MINOR + 1))
-  PATCH=0
+  minor=$((minor + 1))
+  patch=0
   ;;
  patch | *)
-  PATCH=$((PATCH + 1))
+  patch=$((patch + 1))
   ;;
  esac
 
- echo "${MAJOR}.${MINOR}.${PATCH}"
+ echo "${major}.${minor}.${patch}"
 }
 
 # Save version to file
 function __save_version() {
- local VERSION="${1}"
- local VERSION_FILE="${SCRIPT_BASE_DIRECTORY}/.json_export_version"
- echo "${VERSION}" > "${VERSION_FILE}"
+ local version="${1}"
+ local version_file="${SCRIPT_BASE_DIRECTORY}/.json_export_version"
+ echo "${version}" > "${version_file}"
 }
 
 # Cleanup function for temporary directory

@@ -831,9 +831,9 @@ function __initialFactsParallel {
   if bash "${COPY_BASE_TABLES_SCRIPT}"; then
    local STEP1_END_TIME
    STEP1_END_TIME=$(date +%s)
-   local STEP1_DURATION=$((STEP1_END_TIME - STEP1_START_TIME))
+   local step1_duration=$((STEP1_END_TIME - STEP1_START_TIME))
    __logi "Base tables copied successfully"
-   __logi "⏱️  TIME: Step 1 (Copy base tables) took ${STEP1_DURATION} seconds"
+   __logi "⏱️  TIME: Step 1 (Copy base tables) took ${step1_duration} seconds"
   else
    __loge "ERROR: Failed to copy base tables. Initial load cannot proceed."
    exit 1
@@ -860,9 +860,9 @@ function __initialFactsParallel {
  fi
  local STEP2_END_TIME
  STEP2_END_TIME=$(date +%s)
- local STEP2_DURATION=$((STEP2_END_TIME - STEP2_START_TIME))
+ local step2_duration=$((STEP2_END_TIME - STEP2_START_TIME))
  __logi "CREATE INITIAL FACTS BASE OBJECTS command completed"
- __logi "⏱️  TIME: Step 2 (Create base objects) took ${STEP2_DURATION} seconds"
+ __logi "⏱️  TIME: Step 2 (Create base objects) took ${step2_duration} seconds"
 
  # Disable note activity metrics trigger for performance during bulk load
  # This improves ETL speed by 5-15% during initial load
@@ -932,8 +932,8 @@ function __initialFactsParallel {
  done
  local CREATE_PROCEDURES_END_TIME
  CREATE_PROCEDURES_END_TIME=$(date +%s)
- local CREATE_PROCEDURES_DURATION=$((CREATE_PROCEDURES_END_TIME - CREATE_PROCEDURES_START_TIME))
- __logi "⏱️  TIME: Creating procedures for all years took ${CREATE_PROCEDURES_DURATION} seconds"
+ local create_procedures_duration=$((CREATE_PROCEDURES_END_TIME - CREATE_PROCEDURES_START_TIME))
+ __logi "⏱️  TIME: Creating procedures for all years took ${create_procedures_duration} seconds"
 
  if [[ ${failed_procedures} -gt 0 ]]; then
   __loge "ERROR: Failed to create ${failed_procedures} procedure(s) out of $((current_year - start_year + 1)) total"
@@ -1068,9 +1068,9 @@ function __initialFactsParallel {
  fi
  local PHASE1_END_TIME
  PHASE1_END_TIME=$(date +%s)
- local PHASE1_DURATION=$((PHASE1_END_TIME - PHASE1_START_TIME))
+ local phase1_duration=$((PHASE1_END_TIME - PHASE1_START_TIME))
  __logi "Phase 1: All parallel loads completed."
- __logi "⏱️  TIME: Phase 1 (Parallel load by year) took ${PHASE1_DURATION} seconds"
+ __logi "⏱️  TIME: Phase 1 (Parallel load by year) took ${phase1_duration} seconds"
 
  # Phase 2: Update recent_opened_dimension_id_date for all facts
  local PHASE2_START_TIME
@@ -1088,9 +1088,9 @@ function __initialFactsParallel {
  fi
  local PHASE2_END_TIME
  PHASE2_END_TIME=$(date +%s)
- local PHASE2_DURATION=$((PHASE2_END_TIME - PHASE2_START_TIME))
+ local phase2_duration=$((PHASE2_END_TIME - PHASE2_START_TIME))
  __logi "Phase 2: Update completed."
- __logi "⏱️  TIME: Phase 2 (Update recent_opened_dimension_id_date) took ${PHASE2_DURATION} seconds"
+ __logi "⏱️  TIME: Phase 2 (Update recent_opened_dimension_id_date) took ${phase2_duration} seconds"
 
  # Add constraints, indexes and triggers.
  local CONSTRAINTS_START_TIME
@@ -1109,8 +1109,8 @@ function __initialFactsParallel {
 
  local CONSTRAINTS_END_TIME
  CONSTRAINTS_END_TIME=$(date +%s)
- local CONSTRAINTS_DURATION=$((CONSTRAINTS_END_TIME - CONSTRAINTS_START_TIME))
- __logi "⏱️  TIME: Adding constraints, indexes and triggers took ${CONSTRAINTS_DURATION} seconds"
+ local constraints_duration=$((CONSTRAINTS_END_TIME - CONSTRAINTS_START_TIME))
+ __logi "⏱️  TIME: Adding constraints, indexes and triggers took ${constraints_duration} seconds"
 
  # Create automation detection system.
  local AUTOMATION_START_TIME
@@ -1128,8 +1128,8 @@ function __initialFactsParallel {
  fi
  local AUTOMATION_END_TIME
  AUTOMATION_END_TIME=$(date +%s)
- local AUTOMATION_DURATION=$((AUTOMATION_END_TIME - AUTOMATION_START_TIME))
- __logi "⏱️  TIME: Creating automation detection system took ${AUTOMATION_DURATION} seconds"
+ local automation_duration=$((AUTOMATION_END_TIME - AUTOMATION_START_TIME))
+ __logi "⏱️  TIME: Creating automation detection system took ${automation_duration} seconds"
 
  # Create experience levels system.
  local EXPERIENCE_START_TIME
@@ -1147,8 +1147,8 @@ function __initialFactsParallel {
  fi
  local EXPERIENCE_END_TIME
  EXPERIENCE_END_TIME=$(date +%s)
- local EXPERIENCE_DURATION=$((EXPERIENCE_END_TIME - EXPERIENCE_START_TIME))
- __logi "⏱️  TIME: Creating experience levels system took ${EXPERIENCE_DURATION} seconds"
+ local experience_duration=$((EXPERIENCE_END_TIME - EXPERIENCE_START_TIME))
+ __logi "⏱️  TIME: Creating experience levels system took ${experience_duration} seconds"
 
  # Create note activity metrics trigger.
  local METRICS_START_TIME
@@ -1166,8 +1166,8 @@ function __initialFactsParallel {
  fi
  local METRICS_END_TIME
  METRICS_END_TIME=$(date +%s)
- local METRICS_DURATION=$((METRICS_END_TIME - METRICS_START_TIME))
- __logi "⏱️  TIME: Creating note activity metrics trigger took ${METRICS_DURATION} seconds"
+ local metrics_duration=$((METRICS_END_TIME - METRICS_START_TIME))
+ __logi "⏱️  TIME: Creating note activity metrics trigger took ${metrics_duration} seconds"
 
  # Enable note activity metrics trigger after creation
  # (It was disabled before bulk load for performance)
@@ -1200,9 +1200,9 @@ function __initialFactsParallel {
    if bash "${DROP_COPIED_BASE_TABLES_SCRIPT}"; then
     local DROP_TABLES_END_TIME
     DROP_TABLES_END_TIME=$(date +%s)
-    local DROP_TABLES_DURATION=$((DROP_TABLES_END_TIME - DROP_TABLES_START_TIME))
+    local drop_tables_duration=$((DROP_TABLES_END_TIME - DROP_TABLES_START_TIME))
     __logi "Copied base tables dropped successfully"
-    __logi "⏱️  TIME: Drop copied base tables took ${DROP_TABLES_DURATION} seconds"
+    __logi "⏱️  TIME: Drop copied base tables took ${drop_tables_duration} seconds"
    else
     __logw "Warning: Failed to drop copied base tables (non-critical, continuing...)"
    fi
@@ -1259,8 +1259,8 @@ function __initialFactsParallel {
  fi
  local HASHTAG_END_TIME
  HASHTAG_END_TIME=$(date +%s)
- local HASHTAG_DURATION=$((HASHTAG_END_TIME - HASHTAG_START_TIME))
- __logi "⏱️  TIME: Creating hashtag views/indexes/enhancements took ${HASHTAG_DURATION} seconds"
+ local hashtag_duration=$((HASHTAG_END_TIME - HASHTAG_START_TIME))
+ __logi "⏱️  TIME: Creating hashtag views/indexes/enhancements took ${hashtag_duration} seconds"
 
  # Update initial load flag to 'completed' after successful parallel load
  __logi "Updating initial load flag to 'completed'..."
@@ -1277,9 +1277,9 @@ function __initialFactsParallel {
 
  local INITIAL_FACTS_TOTAL_END_TIME
  INITIAL_FACTS_TOTAL_END_TIME=$(date +%s)
- local INITIAL_FACTS_TOTAL_DURATION=$((INITIAL_FACTS_TOTAL_END_TIME - INITIAL_FACTS_TOTAL_START_TIME))
+ local initial_facts_total_duration=$((INITIAL_FACTS_TOTAL_END_TIME - INITIAL_FACTS_TOTAL_START_TIME))
  __logi "════════════════════════════════════════════════════════════"
- __logi "⏱️  TIME: === __initialFactsParallel TOTAL TIME: ${INITIAL_FACTS_TOTAL_DURATION} seconds ==="
+ __logi "⏱️  TIME: === __initialFactsParallel TOTAL TIME: ${initial_facts_total_duration} seconds ==="
  __logi "════════════════════════════════════════════════════════════"
 
  __log_finish
@@ -1569,8 +1569,8 @@ function main() {
   __perform_database_maintenance
   local MAINTENANCE_END_TIME
   MAINTENANCE_END_TIME=$(date +%s)
-  local MAINTENANCE_DURATION=$((MAINTENANCE_END_TIME - MAINTENANCE_START_TIME))
-  __logi "⏱️  TIME: Database maintenance took ${MAINTENANCE_DURATION} seconds"
+  local maintenance_duration=$((MAINTENANCE_END_TIME - MAINTENANCE_START_TIME))
+  __logi "⏱️  TIME: Database maintenance took ${maintenance_duration} seconds"
 
   # Create datamart performance log table before executing datamarts
   # This table is required by datamartCountries and datamartUsers procedures
@@ -1620,8 +1620,8 @@ function main() {
   fi
   local FDW_END_TIME
   FDW_END_TIME=$(date +%s)
-  local FDW_DURATION=$((FDW_END_TIME - FDW_START_TIME))
-  __logi "⏱️  TIME: Setting up FDW took ${FDW_DURATION} seconds"
+  local fdw_duration=$((FDW_END_TIME - FDW_START_TIME))
+  __logi "⏱️  TIME: Setting up FDW took ${fdw_duration} seconds"
 
   local DATAMART_START_TIME
   DATAMART_START_TIME=$(date +%s)
@@ -1632,9 +1632,9 @@ function main() {
   if "${DATAMART_COUNTRIES_SCRIPT}" ""; then
    local DATAMART_COUNTRIES_END_TIME
    DATAMART_COUNTRIES_END_TIME=$(date +%s)
-   local DATAMART_COUNTRIES_DURATION=$((DATAMART_COUNTRIES_END_TIME - DATAMART_COUNTRIES_START_TIME))
+   local datamart_countries_duration=$((DATAMART_COUNTRIES_END_TIME - DATAMART_COUNTRIES_START_TIME))
    __logi "SUCCESS: datamartCountries completed successfully"
-   __logi "⏱️  TIME: datamartCountries took ${DATAMART_COUNTRIES_DURATION} seconds"
+   __logi "⏱️  TIME: datamartCountries took ${datamart_countries_duration} seconds"
   else
    __loge "ERROR: datamartCountries failed with exit code $?"
    __loge "Check log file: $(find /tmp -maxdepth 1 -type d -name 'datamartCountries_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2-)/datamartCountries.log"
@@ -1644,9 +1644,9 @@ function main() {
   if "${DATAMART_USERS_SCRIPT}" ""; then
    local DATAMART_USERS_END_TIME
    DATAMART_USERS_END_TIME=$(date +%s)
-   local DATAMART_USERS_DURATION=$((DATAMART_USERS_END_TIME - DATAMART_USERS_START_TIME))
+   local datamart_users_duration=$((DATAMART_USERS_END_TIME - DATAMART_USERS_START_TIME))
    __logi "SUCCESS: datamartUsers completed successfully"
-   __logi "⏱️  TIME: datamartUsers took ${DATAMART_USERS_DURATION} seconds"
+   __logi "⏱️  TIME: datamartUsers took ${datamart_users_duration} seconds"
   else
    __loge "ERROR: datamartUsers failed with exit code $?"
    __loge "Check log file: $(find /tmp -maxdepth 1 -type d -name 'datamartUsers_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2-)/datamartUsers.log"
@@ -1656,9 +1656,9 @@ function main() {
   if "${DATAMART_GLOBAL_SCRIPT}" ""; then
    local DATAMART_GLOBAL_END_TIME
    DATAMART_GLOBAL_END_TIME=$(date +%s)
-   local DATAMART_GLOBAL_DURATION=$((DATAMART_GLOBAL_END_TIME - DATAMART_GLOBAL_START_TIME))
+   local datamart_global_duration=$((DATAMART_GLOBAL_END_TIME - DATAMART_GLOBAL_START_TIME))
    __logi "SUCCESS: datamartGlobal completed successfully"
-   __logi "⏱️  TIME: datamartGlobal took ${DATAMART_GLOBAL_DURATION} seconds"
+   __logi "⏱️  TIME: datamartGlobal took ${datamart_global_duration} seconds"
   else
    __loge "ERROR: datamartGlobal failed with exit code $?"
    __loge "Check log file: $(find /tmp -maxdepth 1 -type d -name 'datamartGlobal_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2-)/datamartGlobal.log"
@@ -1666,8 +1666,8 @@ function main() {
   set -e
   local DATAMART_END_TIME
   DATAMART_END_TIME=$(date +%s)
-  local DATAMART_DURATION=$((DATAMART_END_TIME - DATAMART_START_TIME))
-  __logi "⏱️  TIME: All datamart scripts total time: ${DATAMART_DURATION} seconds"
+  local datamart_duration=$((DATAMART_END_TIME - DATAMART_START_TIME))
+  __logi "⏱️  TIME: All datamart scripts total time: ${datamart_duration} seconds"
  else
   __logi "AUTO-DETECTED INCREMENTAL EXECUTION - Processing only new data"
   set +E
