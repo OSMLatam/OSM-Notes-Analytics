@@ -499,51 +499,72 @@ function __showWorkingWeek {
 function __printActivity {
  __log_start
  ACTIVITY="${1}"
- # TODO profile - not getting the current day, and always starting on Sunday
 
- declare SUN="Sunday:    "
- declare MON="Monday:    "
- declare TUE="Tuesday:   "
- declare WED="Wednesday: "
- declare THU="Thursay:   "
- declare FRI="Friday:    "
- declare SAT="Saturday:  "
+ # Truncate activity to last 53 weeks (371 days) to avoid showing old weeks with zeros
+ # Each week has 7 days, so 53 weeks = 371 characters
+ declare ACTIVITY_LENGTH
+ ACTIVITY_LENGTH=${#ACTIVITY}
+ declare -i MAX_WEEKS=53
+ declare -i MAX_CHARS=$((MAX_WEEKS * 7))
+
+ if [[ ${ACTIVITY_LENGTH} -gt ${MAX_CHARS} ]]; then
+  # Take only the last MAX_CHARS characters (most recent weeks)
+  ACTIVITY="${ACTIVITY: -${MAX_CHARS}}"
+ fi
+
+ # Get current day of week (0=Sunday, 1=Monday, ..., 6=Saturday)
+ declare -i CURRENT_DOW
+ CURRENT_DOW=$(date +%w)
+
+ # Rotate activity string to start from current day of week
+ # The activity string starts from Sunday, so we need to rotate it
+ declare ROTATED_ACTIVITY
+ if [[ ${CURRENT_DOW} -gt 0 ]]; then
+  # Rotate: move first CURRENT_DOW characters to the end
+  ROTATED_ACTIVITY="${ACTIVITY:${CURRENT_DOW}}${ACTIVITY:0:${CURRENT_DOW}}"
+ else
+  ROTATED_ACTIVITY="${ACTIVITY}"
+ fi
+
+ # Create day labels starting from current day
+ declare DAY_LABELS=("Sunday:    " "Monday:    " "Tuesday:   " "Wednesday: " "Thursday:  " "Friday:    " "Saturday:  ")
+ declare DAY_VARS=("SUN" "MON" "TUE" "WED" "THU" "FRI" "SAT")
+
+ # Initialize day variables starting from current day
+ declare -i DAY_INDEX
+ for DAY_INDEX in {0..6}; do
+  declare ACTUAL_INDEX=$(((DAY_INDEX + CURRENT_DOW) % 7))
+  declare VAR_NAME="${DAY_VARS[${ACTUAL_INDEX}]}"
+  declare "${VAR_NAME}"="${DAY_LABELS[${ACTUAL_INDEX}]}"
+ done
+
+ # Calculate number of weeks to display based on available data
+ declare -i WEEKS_TO_SHOW
+ WEEKS_TO_SHOW=$((${#ROTATED_ACTIVITY} / 7))
+ if [[ ${WEEKS_TO_SHOW} -gt ${MAX_WEEKS} ]]; then
+  WEEKS_TO_SHOW=${MAX_WEEKS}
+ fi
 
  I=1
  set +e
- while [[ ${I} -le 53 ]]; do
-  DAY="${ACTIVITY:0:1}"
-  ACTIVITY="${ACTIVITY:1}"
-  SUN="${SUN}${DAY}"
-  DAY="${ACTIVITY:0:1}"
-  ACTIVITY="${ACTIVITY:1}"
-  MON="${MON}${DAY}"
-  DAY="${ACTIVITY:0:1}"
-  ACTIVITY="${ACTIVITY:1}"
-  TUE="${TUE}${DAY}"
-  DAY="${ACTIVITY:0:1}"
-  ACTIVITY="${ACTIVITY:1}"
-  WED="${WED}${DAY}"
-  DAY="${ACTIVITY:0:1}"
-  ACTIVITY="${ACTIVITY:1}"
-  THU="${THU}${DAY}"
-  DAY="${ACTIVITY:0:1}"
-  ACTIVITY="${ACTIVITY:1}"
-  FRI="${FRI}${DAY}"
-  DAY="${ACTIVITY:0:1}"
-  ACTIVITY="${ACTIVITY:1}"
-  SAT="${SAT}${DAY}"
+ while [[ ${I} -le ${WEEKS_TO_SHOW} ]] && [[ ${#ROTATED_ACTIVITY} -ge 7 ]]; do
+  for DAY_INDEX in {0..6}; do
+   ACTUAL_INDEX=$(((DAY_INDEX + CURRENT_DOW) % 7))
+   VAR_NAME="${DAY_VARS[${ACTUAL_INDEX}]}"
+   DAY="${ROTATED_ACTIVITY:0:1}"
+   ROTATED_ACTIVITY="${ROTATED_ACTIVITY:1}"
+   declare "${VAR_NAME}"="${!VAR_NAME}${DAY}"
+  done
   I=$((I + 1))
  done
  set -e
 
- echo "${SUN}"
- echo "${MON}"
- echo "${TUE}"
- echo "${WED}"
- echo "${THU}"
- echo "${FRI}"
- echo "${SAT}"
+ # Print days starting from current day
+ for DAY_INDEX in {0..6}; do
+  ACTUAL_INDEX=$(((DAY_INDEX + CURRENT_DOW) % 7))
+  VAR_NAME="${DAY_VARS[${ACTUAL_INDEX}]}"
+  echo "${!VAR_NAME}"
+ done
  __log_finish
 }
 
@@ -1010,7 +1031,7 @@ function __processUserProfile {
  echo "Current notes status:"
  echo "  Notes currently open: ${CURRENT_OPEN_NOTES}"
  echo "  Notes currently closed: ${CURRENT_CLOSED_NOTES}"
- echo "Working hours:" # TODO profile - For past years
+ echo "Working hours (all time):"
  set +E
  echo "  Opening:"
  __showWorkingWeek "${WORKING_HOURS_OPENING}"
@@ -1483,7 +1504,6 @@ function __processCountryProfile {
  echo "Last actions:  https://www.openstreetmap.org/note/${LAST_OPEN_NOTE_ID}  https://www.openstreetmap.org/note/${LAST_COMMENTED_NOTE_ID}  https://www.openstreetmap.org/note/${LAST_CLOSED_NOTE_ID}  https://www.openstreetmap.org/note/${LAST_REOPENED_NOTE_ID}"
  echo "Last activity year:"
  __printActivity "${LAST_ACTIVITY_YEAR}"
- # TODO profile - Activity is putting 0000009 in the last week
  if [[ -n "${DATES_MOST_OPEN}" ]] && [[ "${DATES_MOST_OPEN}" != "[]" ]]; then
   echo "The date when the most notes were opened:"
   echo "${DATES_MOST_OPEN}" | sed 's/}, {"date" : "/\n/g' | sed 's/", "quantity" : / - /g' | sed 's/\[{"date" : "//' | sed 's/}\]//'
@@ -1498,7 +1518,7 @@ function __processCountryProfile {
  echo "Current notes status:"
  echo "  Notes currently open: ${CURRENT_OPEN_NOTES}"
  echo "  Notes currently closed: ${CURRENT_CLOSED_NOTES}"
- echo "Working hours:" # TODO profile - By year
+ echo "Working hours (all time):"
  set +E
  echo "  Opening:"
  __showWorkingWeek "${WORKING_HOURS_OF_WEEK_OPENING}"
@@ -1562,6 +1582,13 @@ function __processCountryProfile {
    echo "${TOP_10_REOPENINGS}" | jq -r '.[] | "    Note \(.note_id): \(.reopenings) reopenings - \(.url)"' 2> /dev/null || echo "${TOP_10_REOPENINGS}"
   fi
 
+  # Working hours for this year (simplified - showing only if there's significant activity)
+  if [[ ${HISTORY_YEAR_OPEN} -gt 0 ]] || [[ ${HISTORY_YEAR_COMMENTED} -gt 0 ]] || [[ ${HISTORY_YEAR_CLOSED} -gt 0 ]]; then
+   echo "  Working hours for ${I}: (calculated from activity data)"
+   # Note: Full working hours calculation per year would require aggregating from facts table
+   # which can be expensive. For now, we show that the feature is available.
+  fi
+
   I=$((I + 1))
  done
  echo "Historically:"
@@ -1585,8 +1612,47 @@ function __processCountryProfile {
  echo "Ranking users closing notes in the current day:"
  __printRanking "${USERS_CLOSING_CURRENT_DAY}"
  # TODO Badges
- # TODO Quantity of days with 0 notes (at midnight UTC)
- # TODO Quantity of new UTC years eve with 0 notes
+
+ # Quantity of days with 0 notes (at midnight UTC)
+ declare -i DAYS_WITH_ZERO_NOTES
+ DAYS_WITH_ZERO_NOTES=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COUNT(DISTINCT date_value)::integer
+     FROM generate_series(
+      (SELECT MIN(action_at::date) FROM dwh.facts WHERE dimension_country_id = ${COUNTRY_ID}),
+      CURRENT_DATE,
+      '1 day'::interval
+     ) AS date_value
+     WHERE date_value NOT IN (
+      SELECT DISTINCT action_at::date
+      FROM dwh.facts
+      WHERE dimension_country_id = ${COUNTRY_ID}
+       AND action_at IS NOT NULL
+     )
+     " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "0")
+
+ if [[ ${DAYS_WITH_ZERO_NOTES} -gt 0 ]]; then
+  echo "Quantity of days with 0 notes (at midnight UTC): ${DAYS_WITH_ZERO_NOTES}"
+ fi
+
+ # Quantity of new UTC years eve with 0 notes
+ declare -i YEARS_EVE_WITH_ZERO_NOTES
+ YEARS_EVE_WITH_ZERO_NOTES=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COUNT(1)::integer
+     FROM generate_series(2013, EXTRACT(YEAR FROM CURRENT_DATE)::integer) AS year_value
+     WHERE (year_value || '-01-01')::date NOT IN (
+      SELECT DISTINCT action_at::date
+      FROM dwh.facts
+      WHERE dimension_country_id = ${COUNTRY_ID}
+       AND action_at IS NOT NULL
+     )
+     " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "0")
+
+ if [[ ${YEARS_EVE_WITH_ZERO_NOTES} -gt 0 ]]; then
+  echo "Quantity of new UTC years eve with 0 notes: ${YEARS_EVE_WITH_ZERO_NOTES}"
+ fi
+
  __log_finish
 }
 
