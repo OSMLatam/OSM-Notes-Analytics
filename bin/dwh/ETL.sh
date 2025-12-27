@@ -178,6 +178,7 @@ declare -r POSTGRES_53B_CREATE_HASHTAG_INDEXES="${SCRIPT_BASE_DIRECTORY}/sql/dwh
 declare -r POSTGRES_54_UNIFY_FACTS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_51_unify.sql"
 # Create note current status table and procedures (ETL-003, ETL-004)
 declare -r POSTGRES_55_CREATE_NOTE_CURRENT_STATUS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_55_createNoteCurrentStatus.sql"
+declare -r POSTGRES_56_GENERATE_ETL_REPORT="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_56_generateETLReport.sql"
 
 # Load notes staging.
 declare -r POSTGRES_61_LOAD_NOTES_STAGING="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_61_loadNotes.sql"
@@ -1756,6 +1757,28 @@ function main() {
    __loge "Check log file: $(find /tmp -maxdepth 1 -type d -name 'datamartGlobal_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2-)/datamartGlobal.log"
   fi
   set -e
+ fi
+
+ # Generate ETL execution report (ETL-001)
+ __logi "Generating ETL execution report..."
+ local report_file
+ report_file="${TMP_DIR}/etl_report.txt"
+ set +e
+ __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
+  -f "${POSTGRES_56_GENERATE_ETL_REPORT}" > "${report_file}" 2>&1
+ local report_exit_code=$?
+ set -e
+ if [[ ${report_exit_code} -eq 0 ]]; then
+  __logi "ETL Report generated successfully:"
+  # Display report in log
+  if [[ -f "${report_file}" ]]; then
+   while IFS= read -r line; do
+    __logi "  ${line}"
+   done < "${report_file}"
+  fi
+ else
+  __logw "Warning: Failed to generate ETL report (exit code: ${report_exit_code})"
+  __logw "Report generation is non-critical, continuing..."
  fi
 
  __logw "Ending process."

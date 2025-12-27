@@ -205,7 +205,7 @@ BEGIN
 
    -- Insert the fact into staging
    INSERT INTO staging.facts_temp (
-     id_note, dimension_id_country,
+     id_note, sequence_action, dimension_id_country,
      action_at, action_comment, action_dimension_id_date,
      action_dimension_id_hour_of_week, action_dimension_id_user,
      opened_dimension_id_date, opened_dimension_id_hour_of_week,
@@ -218,7 +218,7 @@ BEGIN
      local_action_dimension_id_hour_of_week, action_dimension_id_season,
      comment_length, has_url, has_mention
     ) VALUES (
-     rec_note_action.id_note, m_dimension_country_id,
+     rec_note_action.id_note, rec_note_action.sequence_action, m_dimension_country_id,
      rec_note_action.action_at, rec_note_action.action_comment,
      m_action_id_date, m_action_id_hour_of_week, m_dimension_user_action,
      m_opened_id_date, m_opened_id_hour_of_week, m_dimension_user_open,
