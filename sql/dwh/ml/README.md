@@ -35,40 +35,109 @@ This directory contains SQL scripts for implementing Machine Learning classifica
 
 **This must be done FIRST** - installing pgml at the operating system level:
 
-#### Option A: Using Package Manager (Recommended)
+⚠️ **IMPORTANT**: pgml is **NOT available** as a standard apt/deb package. You must use one of the methods below.
+
+#### Option A: Automated Installation Script (RECOMMENDED for existing databases)
+
+If you already have a PostgreSQL database with data, use the automated installation script:
 
 ```bash
-# Ubuntu/Debian (PostgreSQL 14)
-sudo apt-get install postgresql-14-pgml
-
-# Ubuntu/Debian (PostgreSQL 15)
-sudo apt-get install postgresql-15-pgml
-
-# Ubuntu/Debian (PostgreSQL 16)
-sudo apt-get install postgresql-16-pgml
+# Run the installation script (requires sudo)
+cd sql/dwh/ml
+sudo ./install_pgml.sh
 ```
 
-#### Option B: Using Docker
+This script will:
+- Install all required dependencies
+- Install Rust compiler
+- Clone and compile pgml from source
+- Install pgml extension in your existing PostgreSQL
+- Verify the installation
+
+**After installation**, enable the extension in your database:
+```bash
+# Restart PostgreSQL
+sudo systemctl restart postgresql
+
+# Enable extension
+psql -d osm_notes -c "CREATE EXTENSION IF NOT EXISTS pgml;"
+
+# Verify
+psql -d osm_notes -c "SELECT pgml.version();"
+```
+
+#### Option B: Using Docker (Only if starting fresh)
+
+⚠️ **Not recommended if you already have a database** - Docker requires migrating your entire database.
+
+This is only practical if you're starting a new project:
 
 ```bash
 # Use official pgml Docker image
 docker run -d \
   --name postgres-pgml \
   -e POSTGRES_PASSWORD=yourpassword \
+  -e POSTGRES_DB=osm_notes \
   -p 5432:5432 \
   ghcr.io/postgresml/postgresml:latest
+
+# Connect to the containerized database
+docker exec -it postgres-pgml psql -U postgres -d osm_notes
 ```
 
-#### Option C: Compile from Source
+**Note**: If using Docker with an existing database, you'll need to:
+1. Export your database: `pg_dump osm_notes > backup.sql`
+2. Import into Docker container: `docker exec -i postgres-pgml psql -U postgres -d osm_notes < backup.sql`
+3. Update all connection strings to point to the Docker container
+
+#### Option C: Manual Compilation from Source
+
+**Prerequisites**:
+- PostgreSQL 14+ development headers
+- Rust compiler (pgml is written in Rust)
+- Python 3.8+ with development headers
+- Build tools (make, gcc, etc.)
 
 ```bash
-# Clone repository
+# Install build dependencies (Ubuntu/Debian)
+sudo apt-get update
+sudo apt-get install -y \
+  build-essential \
+  postgresql-server-dev-15 \
+  libpython3-dev \
+  python3-pip \
+  curl \
+  git
+
+# Install Rust (required for pgml)
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source $HOME/.cargo/env
+
+# Clone pgml repository
 git clone https://github.com/postgresml/postgresml.git
 cd postgresml
 
 # Build and install
-# See: https://github.com/postgresml/postgresml#installation
+# This will take 10-30 minutes depending on your system
+cargo build --release
+
+# Install the extension
+sudo make install
+
+# Verify installation
+ls /usr/share/postgresql/15/extension/pgml*
 ```
+
+**For detailed build instructions**, see:
+- https://github.com/postgresml/postgresml#installation
+- https://postgresml.org/docs/guides/getting-started/installation
+
+#### Option D: Using Pre-built Binaries (If Available)
+
+Check the pgml releases page for pre-built binaries:
+- https://github.com/postgresml/postgresml/releases
+
+**Note**: Pre-built binaries may not be available for all platforms/PostgreSQL versions.
 
 **Check system installation**:
 
@@ -116,21 +185,19 @@ If you see errors, the system-level installation may be missing.
 
 **This is NOT just SQL - you must install pgml at the OS level first:**
 
+⚠️ **pgml is NOT available as a standard apt package**. Use the automated script or compile from source.
+
 ```bash
 # Check PostgreSQL version (must be 14+)
 psql -d osm_notes -c "SELECT version();"
 
-# Install pgml for your PostgreSQL version
-# For PostgreSQL 14:
-sudo apt-get install postgresql-14-pgml
+# Option 1: Use automated installation script (RECOMMENDED for existing databases)
+cd sql/dwh/ml
+sudo ./install_pgml.sh
 
-# For PostgreSQL 15:
-sudo apt-get install postgresql-15-pgml
+# Option 2: Compile from source manually (see Installation section above)
 
-# For PostgreSQL 16:
-sudo apt-get install postgresql-16-pgml
-
-# Verify installation
+# Verify installation (after compiling from source)
 ls /usr/share/postgresql/*/extension/pgml*
 ```
 
