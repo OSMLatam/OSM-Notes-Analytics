@@ -1484,6 +1484,28 @@ AS $proc$
     END;
   END IF;
 
+  -- Update DM-009: Open notes by year
+  -- Only if the function exists (for backward compatibility)
+  IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'update_country_open_notes_by_year') THEN
+    BEGIN
+      PERFORM dwh.update_country_open_notes_by_year(m_dimension_id_country);
+    EXCEPTION WHEN OTHERS THEN
+      -- Ignore errors for missing columns (backward compatibility)
+      NULL;
+    END;
+  END IF;
+
+  -- Update DM-010: Longest resolution notes (top 10)
+  -- Only if the function exists (for backward compatibility)
+  IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'update_country_longest_resolution_notes') THEN
+    BEGIN
+      PERFORM dwh.update_country_longest_resolution_notes(m_dimension_id_country, 10);
+    EXCEPTION WHEN OTHERS THEN
+      -- Ignore errors for missing columns (backward compatibility)
+      NULL;
+    END;
+  END IF;
+
   -- End timing and log performance
   m_end_time := CLOCK_TIMESTAMP();
   m_duration_seconds := EXTRACT(EPOCH FROM (m_end_time - m_start_time));

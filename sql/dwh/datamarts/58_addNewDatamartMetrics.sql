@@ -184,3 +184,29 @@ BEGIN
   END IF;
 END $$;
 
+-- DM-009: Open notes by year (for countries)
+-- JSON column: { "2013": 5, "2014": 12, ... } - notes opened in each year that are still open
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_schema = 'dwh' AND table_name = 'datamartcountries'
+                 AND column_name = 'open_notes_by_year') THEN
+    ALTER TABLE dwh.datamartcountries ADD COLUMN open_notes_by_year JSON;
+    COMMENT ON COLUMN dwh.datamartcountries.open_notes_by_year IS
+      'DM-009: JSON object with year as key and count of notes opened in that year that are still open. Format: {"2013": 5, "2014": 12, ...}';
+  END IF;
+END $$;
+
+-- DM-010: Notes that took longest to close (for countries)
+-- JSON array with top N notes: [{"note_id": 123, "days_to_resolution": 365, "opened_date": "2020-01-01", "closed_date": "2021-01-01"}, ...]
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_schema = 'dwh' AND table_name = 'datamartcountries'
+                 AND column_name = 'longest_resolution_notes') THEN
+    ALTER TABLE dwh.datamartcountries ADD COLUMN longest_resolution_notes JSON;
+    COMMENT ON COLUMN dwh.datamartcountries.longest_resolution_notes IS
+      'DM-010: JSON array of notes that took longest to close in this country. Format: [{"note_id": 123, "days_to_resolution": 365, "opened_date": "2020-01-01", "closed_date": "2021-01-01"}, ...]';
+  END IF;
+END $$;
+
