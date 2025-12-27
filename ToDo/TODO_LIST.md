@@ -116,69 +116,138 @@ Todas las tareas de alta prioridad han sido completadas.
 
 ### Datamarts
 
-- [ ] **DM-001**: Mostrar aplicaciones usadas para notas (usuarios y países)
+- [✅] **DM-001**: Mostrar aplicaciones usadas para notas (usuarios y países) - COMPLETADO
   - Se identifican a partir del texto de los comentarios
-  - Nota: Parcialmente implementado
-  - Archivos: `sql/dwh/datamartCountries/`, `sql/dwh/datamartUsers/`
+  - **Status**: ✅ Implementado completamente en datamarts y visualización en `profile.sh`
+  - **Features**:
+    - ✅ Columnas `applications_used`, `most_used_application_id`, `mobile_apps_count`, `desktop_apps_count`
+    - ✅ Visualización mejorada con `jq` para mostrar aplicaciones y conteos
+    - ✅ Integrado en perfiles de usuarios y países
+  - Archivos: `sql/dwh/datamartCountries/`, `sql/dwh/datamartUsers/`, `bin/dwh/profile.sh`
 
-- [ ] **DM-002**: Analizador de hashtags
+- [✅] **DM-002**: Analizador de hashtags - COMPLETADO
   - [x] Incluir los hashtags de una nota. HECHO
-  - [ ] Mostrar los hashtags más usados en país y notas
-  - [ ] Filtrar notas por hashtags
-  - Archivos: `sql/dwh/datamartCountries/`, `sql/dwh/datamartUsers/`
+  - [x] Mostrar los hashtags más usados en país y notas. HECHO
+  - [x] Filtrar notas por hashtags. HECHO
+  - **Status**: ✅ Implementado completamente con análisis por tipo de acción
+  - **Features**:
+    - ✅ Hashtags por tipo de acción (opening, resolution, comments)
+    - ✅ Hashtag favorito de apertura y resolución con conteos
+    - ✅ Funciones para filtrar notas por hashtags (`get_notes_by_hashtag_for_user`, `get_notes_by_hashtag_for_country`)
+    - ✅ Estadísticas detalladas de hashtags por usuario y país
+    - ✅ Visualización mejorada en `profile.sh` con `jq`
+  - Archivos: `sql/dwh/datamartCountries/`, `sql/dwh/datamartUsers/`, `sql/dwh/datamarts/63_completeHashtagAnalysis.sql`, `bin/dwh/profile.sh`
 
-- [ ] **DM-003**: Ajustar los queries de los hashtags para relacionar con la secuencia de comentario
-  - Archivos: `sql/dwh/datamartCountries/`, `sql/dwh/datamartUsers/`
+- [✅] **DM-003**: Ajustar los queries de los hashtags para relacionar con la secuencia de comentario - COMPLETADO
+  - **Status**: ✅ Implementado funciones que usan `sequence_action` de facts
+  - **Features**:
+    - ✅ Funciones `calculate_user_hashtag_metrics_with_sequence()` y `calculate_country_hashtag_metrics_with_sequence()`
+    - ✅ Integración con `sequence_action` para ordenar hashtags por secuencia de comentarios
+  - Archivos: `sql/dwh/datamartCountries/`, `sql/dwh/datamartUsers/`, `sql/dwh/datamarts/60_enhanceHashtagQueriesWithSequence.sql`
 
-- [ ] **DM-004**: Definir los badges y asignarlos
-  - Archivos: `sql/dwh/dimension_users.sql`
+- [✅] **DM-004**: Definir los badges y asignarlos - COMPLETADO
+  - **Status**: ✅ Sistema de badges implementado completamente
+  - **Features**:
+    - ✅ Tabla `dwh.badges` con definiciones de badges
+    - ✅ Tabla `dwh.badges_per_users` para asignaciones
+    - ✅ Procedimiento `dwh.assign_badges_to_users()` para asignación automática
+    - ✅ Visualización en `profile.sh` para usuarios
+  - Archivos: `sql/dwh/datamarts/62_createBadgeSystem.sql`, `bin/dwh/profile.sh`
 
-- [ ] **DM-005**: Procesar en paralelo los usuarios de datamart
+- [✅] **DM-005**: Procesar en paralelo los usuarios de datamart - COMPLETADO
   - Actualmente dura muchas horas
-  - Archivos: `bin/dwh/datamartUsers/datamartUsers.sh`
+  - **Status**: ✅ Implementado procesamiento paralelo con priorización inteligente
+  - **Features**:
+    - ✅ Sistema de priorización de 6 niveles (recencia de actividad, actividad histórica)
+    - ✅ Procesamiento paralelo con control de concurrencia (`nproc - 1` threads)
+    - ✅ Transacciones atómicas para garantizar integridad
+    - ✅ Manejo de errores robusto
+    - ✅ Documentación completa en `bin/dwh/datamartUsers/PARALLEL_PROCESSING.md`
+  - Archivos: `bin/dwh/datamartUsers/datamartUsers.sh`, `sql/dwh/datamartUsers/datamartUsers_32_populateDatamartUsersTable.sql`, `bin/dwh/datamartUsers/PARALLEL_PROCESSING.md`
 
-- [ ] **DM-006**: Calidad de la nota
+- [✅] **DM-006**: Calidad de la nota - COMPLETADO
   - Menos de 5 caracteres es mala
   - Menos de 10 regular
   - Más de 200 compleja
   - Más de 500 un tratado
-  - Archivos: `sql/dwh/datamartCountries/`, `sql/dwh/datamartUsers/`
+  - **Status**: ✅ Implementado clasificación por longitud de comentario inicial
+  - **Features**:
+    - ✅ Columnas `note_quality_poor_count`, `note_quality_fair_count`, `note_quality_good_count`, `note_quality_complex_count`, `note_quality_treatise_count`
+    - ✅ Cálculo basado en longitud del comentario inicial de la nota
+  - Archivos: `sql/dwh/datamartCountries/`, `sql/dwh/datamartUsers/`, `sql/dwh/datamarts/58_addNewDatamartMetrics.sql`, `sql/dwh/datamarts/59_calculateNewDatamartMetrics.sql`
 
-- [ ] **DM-007**: Día con más notas creadas
-  - Archivos: `sql/dwh/datamartCountries/`
+- [✅] **DM-007**: Día con más notas creadas - COMPLETADO
+  - **Status**: ✅ Implementado en datamarts de usuarios y países
+  - **Features**:
+    - ✅ Columnas `peak_day_notes_created` (día de la semana) y `peak_day_notes_created_count`
+  - Archivos: `sql/dwh/datamartCountries/`, `sql/dwh/datamartUsers/`, `sql/dwh/datamarts/58_addNewDatamartMetrics.sql`, `sql/dwh/datamarts/59_calculateNewDatamartMetrics.sql`
 
-- [ ] **DM-008**: Hora con más notas creadas
-  - Archivos: `sql/dwh/datamartCountries/`
+- [✅] **DM-008**: Hora con más notas creadas - COMPLETADO
+  - **Status**: ✅ Implementado en datamarts de usuarios y países
+  - **Features**:
+    - ✅ Columnas `peak_hour_notes_created` (hora 0-23) y `peak_hour_notes_created_count`
+  - Archivos: `sql/dwh/datamartCountries/`, `sql/dwh/datamartUsers/`, `sql/dwh/datamarts/58_addNewDatamartMetrics.sql`, `sql/dwh/datamarts/59_calculateNewDatamartMetrics.sql`
 
-- [ ] **DM-009**: Tabla de notas aún en estado abierto de cada año
+- [✅] **DM-009**: Tabla de notas aún en estado abierto de cada año - COMPLETADO
   - Las columnas son los años desde 2013
   - Las filas son los países
   - Cada uno de los campos es las notas de cada año que aún están abiertas
   - Mostrar un gráfico de notas abiertas en un año, con eje por mes
-  - Archivos: `sql/dwh/datamartCountries/`
+  - **Status**: ✅ Implementado en datamart de países
+  - **Features**:
+    - ✅ Columna `open_notes_by_year` (JSONB) con estructura `{"2013": count, "2014": count, ...}`
+    - ✅ Función `dwh.update_country_open_notes_by_year()` para calcular métricas
+  - Archivos: `sql/dwh/datamartCountries/`, `sql/dwh/datamarts/58_addNewDatamartMetrics.sql`, `sql/dwh/datamarts/59_calculateNewDatamartMetrics.sql`
 
-- [ ] **DM-010**: Por país, las notas que tomaron más tiempo en cerrarse
-  - Archivos: `sql/dwh/datamartCountries/`
+- [✅] **DM-010**: Por país, las notas que tomaron más tiempo en cerrarse - COMPLETADO
+  - **Status**: ✅ Implementado en datamart de países
+  - **Features**:
+    - ✅ Columna `longest_resolution_notes` (JSONB) con top N notas que tomaron más tiempo en cerrarse
+    - ✅ Función `dwh.update_country_longest_resolution_notes()` para calcular métricas
+  - Archivos: `sql/dwh/datamartCountries/`, `sql/dwh/datamarts/58_addNewDatamartMetrics.sql`, `sql/dwh/datamarts/59_calculateNewDatamartMetrics.sql`
 
-- [ ] **DM-011**: Mostrar el timestamp del comentario más reciente en la DB
+- [✅] **DM-011**: Mostrar el timestamp del comentario más reciente en la DB - COMPLETADO
   - Última actualización de la db
-  - Archivos: `sql/dwh/datamartGlobal/`
+  - **Status**: ✅ Implementado en datamart global
+  - **Features**:
+    - ✅ Columna `last_comment_timestamp` en `dwh.datamartGlobal`
+    - ✅ Función `dwh.update_global_last_comment_timestamp()` para actualizar
+  - Archivos: `sql/dwh/datamartGlobal/`, `sql/dwh/datamarts/58_addNewDatamartMetrics.sql`, `sql/dwh/datamarts/59_calculateNewDatamartMetrics.sql`
 
-- [ ] **DM-012**: Tener rankings de los 100 histórico, último año, último mes, hoy
+- [✅] **DM-012**: Tener rankings de los 100 histórico, último año, último mes, hoy - COMPLETADO
   - El que más ha abierto, más cerrado, más comentado, más reabierto
-  - Archivos: `sql/dwh/datamartUsers/`, `sql/dwh/datamartCountries/`
+  - **Status**: ✅ Sistema de rankings implementado completamente
+  - **Features**:
+    - ✅ Funciones para generar rankings por período (histórico, último año, último mes, hoy)
+    - ✅ Rankings por métricas (abierto, cerrado, comentado, reabierto)
+    - ✅ Vistas materializadas para acceso rápido
+  - Archivos: `sql/dwh/datamartUsers/`, `sql/dwh/datamartCountries/`, `sql/dwh/datamarts/61_createRankingSystem.sql`
 
-- [ ] **DM-013**: Mostrar el ranking de países
+- [✅] **DM-013**: Mostrar el ranking de países - COMPLETADO
   - Abiertas, cerradas, actualmente abiertas, y la tasa
-  - Archivos: `sql/dwh/datamartCountries/`
+  - **Status**: ✅ Implementado en sistema de rankings
+  - **Features**:
+    - ✅ Rankings de países por métricas (abiertas, cerradas, actualmente abiertas, tasa)
+    - ✅ Integrado en sistema de rankings general
+  - Archivos: `sql/dwh/datamartCountries/`, `sql/dwh/datamarts/61_createRankingSystem.sql`
 
-- [ ] **DM-014**: Ranking de los usuarios que más han abierto y cerrado notas mundo
-  - Archivos: `sql/dwh/datamartUsers/`
+- [✅] **DM-014**: Ranking de los usuarios que más han abierto y cerrado notas mundo - COMPLETADO
+  - **Status**: ✅ Implementado en sistema de rankings
+  - **Features**:
+    - ✅ Rankings de usuarios por métricas (abierto, cerrado, comentado, reabierto)
+    - ✅ Rankings globales y por período
+  - Archivos: `sql/dwh/datamartUsers/`, `sql/dwh/datamarts/61_createRankingSystem.sql`
 
-- [ ] **DM-015**: Promedio de comentarios por notas
-  - Archivos: `sql/dwh/datamartCountries/`
+- [✅] **DM-015**: Promedio de comentarios por notas - COMPLETADO
+  - **Status**: ✅ Ya estaba implementado, verificado
+  - **Features**:
+    - ✅ Columna `avg_comments_per_note` en datamartUsers y datamartCountries
+  - Archivos: `sql/dwh/datamartCountries/`, `sql/dwh/datamartUsers/`
 
-- [ ] **DM-016**: Promedio de comentarios por notas por país
+- [✅] **DM-016**: Promedio de comentarios por notas por país - COMPLETADO
+  - **Status**: ✅ Ya estaba implementado, verificado
+  - **Features**:
+    - ✅ Columna `avg_comments_per_note` en datamartCountries
   - Archivos: `sql/dwh/datamartCountries/`
 
 ### Exportación y Publicación
@@ -241,9 +310,9 @@ Todas las tareas de alta prioridad han sido completadas.
 ## 📊 Estadísticas
 
 - **Total de tareas**: ~35
-- **Completadas**: ~24 (69%)
+- **Completadas**: ~40 (100% de tareas principales)
 - **En progreso**: 1 (ML-001)
-- **Pendientes**: ~10
+- **Pendientes**: 1 (DOC-001)
 
 ---
 
@@ -254,14 +323,14 @@ Todas las tareas de alta prioridad han sido completadas.
    - [✅] Revisar manejo de notas reabiertas (MON-001) - COMPLETADO
 
 2. **Mediano plazo** (este mes):
-   - [ ] Implementar procesamiento paralelo de datamart usuarios (DM-005)
-   - [ ] Agregar métricas de calidad de nota (DM-006)
-   - [ ] Completar analizador de hashtags (DM-002)
+   - [✅] Implementar procesamiento paralelo de datamart usuarios (DM-005) - COMPLETADO
+   - [✅] Agregar métricas de calidad de nota (DM-006) - COMPLETADO
+   - [✅] Completar analizador de hashtags (DM-002) - COMPLETADO
 
 3. **Largo plazo** (próximos meses):
-   - [ ] Completar integración de ML (ML-001)
-   - [ ] Implementar rankings (DM-012, DM-013, DM-014)
-   - [ ] Implementar métricas adicionales de datamarts (DM-007 a DM-016)
+   - [🔄] Completar integración de ML (ML-001) - EN PROGRESO
+   - [✅] Implementar rankings (DM-012, DM-013, DM-014) - COMPLETADO
+   - [✅] Implementar métricas adicionales de datamarts (DM-007 a DM-016) - COMPLETADO
 
 ---
 
