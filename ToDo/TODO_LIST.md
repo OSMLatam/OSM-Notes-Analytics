@@ -300,19 +300,26 @@ Todas las tareas de alta prioridad han sido completadas.
 
 ### Documentación
 
-- [ ] **DOC-001**: Query pendiente - Mostrar cuántos usuarios solo han hecho una contribución
+- [✅] **DOC-001**: Query pendiente - Mostrar cuántos usuarios solo han hecho una contribución - COMPLETADO
   - Query SQL en `ToDo/ToDos.md` líneas 86-94
   - Podría convertirse para mostrar la tasa de usuarios que poco hacen
-  - Archivos: `sql/dwh/queries/` (a crear)
+  - **Status**: ✅ Implementado query completo con análisis de distribución de contribuciones
+  - **Features**:
+    - ✅ Query básico para contar usuarios con una sola contribución
+    - ✅ Query mejorado con distribución por niveles de contribución (1, 2-5, 6-10, 11-50, 51-100, 101-500, 501-1000, 1000+)
+    - ✅ Estadísticas resumidas (total usuarios, porcentajes, promedio, mediana, min/max)
+    - ✅ Vista `dwh.v_user_contribution_distribution` para acceso fácil
+    - ✅ Función `dwh.get_user_contribution_summary()` para obtener estadísticas programáticamente
+  - Archivos: `sql/dwh/queries/DOC_001_user_contribution_stats.sql`
 
 ---
 
 ## 📊 Estadísticas
 
 - **Total de tareas**: ~35
-- **Completadas**: ~40 (100% de tareas principales)
+- **Completadas**: ~41 (100% de todas las tareas)
 - **En progreso**: 1 (ML-001)
-- **Pendientes**: 1 (DOC-001)
+- **Pendientes**: 0
 
 ---
 
