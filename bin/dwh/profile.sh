@@ -1015,15 +1015,58 @@ function __processUserProfile {
      " \
   -v ON_ERROR_STOP=1)
 
+ # Applications used - DM-001
+ declare APPLICATIONS_USED
+ APPLICATIONS_USED=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT applications_used
+    FROM dwh.datamartUsers
+    WHERE dimension_user_id = ${DIMENSION_USER_ID}
+    " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "[]")
+
+ declare -i MOST_USED_APPLICATION_ID
+ MOST_USED_APPLICATION_ID=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COALESCE(most_used_application_id, 0)
+    FROM dwh.datamartUsers
+    WHERE dimension_user_id = ${DIMENSION_USER_ID}
+    " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "0")
+
+ declare -i MOBILE_APPS_COUNT
+ MOBILE_APPS_COUNT=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COALESCE(mobile_apps_count, 0)
+    FROM dwh.datamartUsers
+    WHERE dimension_user_id = ${DIMENSION_USER_ID}
+    " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "0")
+
+ declare -i DESKTOP_APPS_COUNT
+ DESKTOP_APPS_COUNT=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COALESCE(desktop_apps_count, 0)
+    FROM dwh.datamartUsers
+    WHERE dimension_user_id = ${DIMENSION_USER_ID}
+    " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "0")
+
+ declare MOST_USED_APPLICATION_NAME
+ if [[ ${MOST_USED_APPLICATION_ID} -gt 0 ]]; then
+  MOST_USED_APPLICATION_NAME=$(psql -d "${DBNAME_DWH}" -Atq \
+   -c "SELECT application_name
+     FROM dwh.dimension_applications
+     WHERE dimension_application_id = ${MOST_USED_APPLICATION_ID}
+     " \
+   -v ON_ERROR_STOP=1 2> /dev/null || echo "")
+ fi
+
  # Badges from database
  declare BADGES
  BADGES=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT json_agg(json_build_object('badge_name', b.badge_name, 'date_awarded', p.date_awarded, 'comment', p.comment) ORDER BY p.date_awarded DESC)
-     FROM dwh.badges_per_users p
-      JOIN dwh.badges b
-      ON p.id_badge = b.badge_id
-     WHERE p.id_user = ${DIMENSION_USER_ID}
-     " \
+    FROM dwh.badges_per_users p
+     JOIN dwh.badges b
+     ON p.id_badge = b.badge_id
+    WHERE p.id_user = ${DIMENSION_USER_ID}
+    " \
   -v ON_ERROR_STOP=1 2> /dev/null || echo "[]")
 
  # Detect daily achievements (100/300/1000 notes opened/closed in a single day)
@@ -1084,6 +1127,23 @@ function __processUserProfile {
   else
    # Fallback: simple formatting without jq
    echo "${HASHTAGS}" | sed 's/}, {/\n/g' | sed 's/\[{//' | sed 's/}\]//' | sed 's/"hashtag" : "/  #/g' | sed 's/", "count" : / (/g' | sed 's/}$/ times)/g' || echo "  ${HASHTAGS}"
+  fi
+ fi
+ # DM-001: Show applications used
+ if [[ -n "${APPLICATIONS_USED}" ]] && [[ "${APPLICATIONS_USED}" != "[]" ]] && [[ "${APPLICATIONS_USED}" != "null" ]]; then
+  echo "Applications used:"
+  if [[ ${MOBILE_APPS_COUNT} -gt 0 ]] || [[ ${DESKTOP_APPS_COUNT} -gt 0 ]]; then
+   echo "  Mobile apps: ${MOBILE_APPS_COUNT} | Desktop apps: ${DESKTOP_APPS_COUNT}"
+  fi
+  if [[ -n "${MOST_USED_APPLICATION_NAME}" ]] && [[ "${MOST_USED_APPLICATION_NAME}" != "" ]]; then
+   echo "  Most used: ${MOST_USED_APPLICATION_NAME}"
+  fi
+  # Try to format with jq if available, otherwise show raw JSON
+  if command -v jq &> /dev/null; then
+   echo "${APPLICATIONS_USED}" | jq -r '.[] | "  \(.app_name) (\(.count) notes)"' 2> /dev/null || echo "  ${APPLICATIONS_USED}"
+  else
+   # Fallback: simple formatting without jq
+   echo "${APPLICATIONS_USED}" | sed 's/}, {/\n/g' | sed 's/\[{//' | sed 's/}\]//' | sed 's/"app_name" : "/  /g' | sed 's/", "count" : / (/g' | sed 's/, "app_id" : [0-9]*$/ notes)/g' || echo "  ${APPLICATIONS_USED}"
   fi
  fi
  echo "Current notes status:"
@@ -1461,10 +1521,53 @@ function __processCountryProfile {
  declare WORKING_HOURS_OF_WEEK_CLOSING
  WORKING_HOURS_OF_WEEK_CLOSING=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT working_hours_of_week_closing
-     FROM dwh.datamartCountries
-     WHERE dimension_country_id = ${COUNTRY_ID}
-     " \
+    FROM dwh.datamartCountries
+    WHERE dimension_country_id = ${COUNTRY_ID}
+    " \
   -v ON_ERROR_STOP=1)
+
+ # Applications used - DM-001
+ declare APPLICATIONS_USED_COUNTRY
+ APPLICATIONS_USED_COUNTRY=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT applications_used
+    FROM dwh.datamartCountries
+    WHERE dimension_country_id = ${COUNTRY_ID}
+    " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "[]")
+
+ declare -i MOST_USED_APPLICATION_ID_COUNTRY
+ MOST_USED_APPLICATION_ID_COUNTRY=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COALESCE(most_used_application_id, 0)
+    FROM dwh.datamartCountries
+    WHERE dimension_country_id = ${COUNTRY_ID}
+    " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "0")
+
+ declare -i MOBILE_APPS_COUNT_COUNTRY
+ MOBILE_APPS_COUNT_COUNTRY=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COALESCE(mobile_apps_count, 0)
+    FROM dwh.datamartCountries
+    WHERE dimension_country_id = ${COUNTRY_ID}
+    " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "0")
+
+ declare -i DESKTOP_APPS_COUNT_COUNTRY
+ DESKTOP_APPS_COUNT_COUNTRY=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COALESCE(desktop_apps_count, 0)
+    FROM dwh.datamartCountries
+    WHERE dimension_country_id = ${COUNTRY_ID}
+    " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "0")
+
+ declare MOST_USED_APPLICATION_NAME_COUNTRY
+ if [[ ${MOST_USED_APPLICATION_ID_COUNTRY} -gt 0 ]]; then
+  MOST_USED_APPLICATION_NAME_COUNTRY=$(psql -d "${DBNAME_DWH}" -Atq \
+   -c "SELECT application_name
+     FROM dwh.dimension_applications
+     WHERE dimension_application_id = ${MOST_USED_APPLICATION_ID_COUNTRY}
+     " \
+   -v ON_ERROR_STOP=1 2> /dev/null || echo "")
+ fi
 
  # History values.
  # Whole history.
@@ -1686,6 +1789,23 @@ function __processCountryProfile {
   else
    # Fallback: simple formatting without jq
    echo "${HASHTAGS}" | sed 's/}, {/\n/g' | sed 's/\[{//' | sed 's/}\]//' | sed 's/"hashtag" : "/  #/g' | sed 's/", "count" : / (/g' | sed 's/}$/ times)/g' || echo "  ${HASHTAGS}"
+  fi
+ fi
+ # DM-001: Show applications used for country
+ if [[ -n "${APPLICATIONS_USED_COUNTRY}" ]] && [[ "${APPLICATIONS_USED_COUNTRY}" != "[]" ]] && [[ "${APPLICATIONS_USED_COUNTRY}" != "null" ]]; then
+  echo "Applications used:"
+  if [[ ${MOBILE_APPS_COUNT_COUNTRY} -gt 0 ]] || [[ ${DESKTOP_APPS_COUNT_COUNTRY} -gt 0 ]]; then
+   echo "  Mobile apps: ${MOBILE_APPS_COUNT_COUNTRY} | Desktop apps: ${DESKTOP_APPS_COUNT_COUNTRY}"
+  fi
+  if [[ -n "${MOST_USED_APPLICATION_NAME_COUNTRY}" ]] && [[ "${MOST_USED_APPLICATION_NAME_COUNTRY}" != "" ]]; then
+   echo "  Most used: ${MOST_USED_APPLICATION_NAME_COUNTRY}"
+  fi
+  # Try to format with jq if available, otherwise show raw JSON
+  if command -v jq &> /dev/null; then
+   echo "${APPLICATIONS_USED_COUNTRY}" | jq -r '.[] | "  \(.app_name) (\(.count) notes)"' 2> /dev/null || echo "  ${APPLICATIONS_USED_COUNTRY}"
+  else
+   # Fallback: simple formatting without jq
+   echo "${APPLICATIONS_USED_COUNTRY}" | sed 's/}, {/\n/g' | sed 's/\[{//' | sed 's/}\]//' | sed 's/"app_name" : "/  /g' | sed 's/", "count" : / (/g' | sed 's/, "app_id" : [0-9]*$/ notes)/g' || echo "  ${APPLICATIONS_USED_COUNTRY}"
   fi
  fi
  echo "Current notes status:"
