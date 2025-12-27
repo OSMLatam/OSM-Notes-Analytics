@@ -48,14 +48,9 @@ else
  if [[ "${TEST_DEBUG:-}" == "true" ]]; then
   echo "DEBUG: Detected host environment" >&2
  fi
- # Set TEST_DBNAME to same as DBNAME from production properties if available
- # This allows tests to use the same database as the main system
- # Fall back to 'dwh' if DBNAME not set in production properties
- if [[ -f "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh" ]]; then
-  # shellcheck disable=SC1090
-  source "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh"
- fi
- export TEST_DBNAME="${TEST_DBNAME:-${DBNAME:-dwh}}"
+ # Set TEST_DBNAME to osm_notes_analytics_test for local testing
+ # This is the standard test database name for this repository
+ export TEST_DBNAME="${TEST_DBNAME:-osm_notes_analytics_test}"
  export TEST_DBUSER="${TEST_DBUSER:-$(whoami)}"
  export TEST_DBPASSWORD="${TEST_DBPASSWORD:-}"
  export TEST_DBHOST="${TEST_DBHOST:-}"

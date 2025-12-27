@@ -82,8 +82,8 @@ Tests that validate the data warehouse ETL processes and datamarts:
 
 **Prerequisites:**
 
-- PostgreSQL database named `dwh` must exist
-- Database configured in `tests/properties.sh`
+- PostgreSQL database named `osm_notes_analytics_test` must exist (default for local testing)
+- Database configured in `tests/properties.sh` (defaults to `osm_notes_analytics_test`)
 - PostGIS extension installed
 
 **Features:**
@@ -110,14 +110,16 @@ Runs both quality and DWH tests sequentially:
 Edit `tests/properties.sh` to configure test database settings:
 
 ```bash
-# Test database name
-DBNAME="dwh"
+# Test database name (default: osm_notes_analytics_test)
+export TEST_DBNAME="osm_notes_analytics_test"
 
-# Database user
-DB_USER="myuser"
+# Database user (default: current user for peer authentication)
+export TEST_DBUSER="myuser"
 
 # Other test-specific settings
 ```
+
+**Note**: The default test database name is `osm_notes_analytics_test` for local testing.
 
 ### Test Helper Functions
 
@@ -225,7 +227,7 @@ Approximate execution times:
 Create the test database:
 
 ```bash
-createdb dwh
+createdb osm_notes_analytics_test
 psql -d dwh -c "CREATE EXTENSION postgis;"
 ```
 
@@ -256,7 +258,7 @@ chmod +x bin/dwh/*.sh
 Verify database configuration:
 
 ```bash
-psql -d dwh -c "SELECT version();"
+psql -d osm_notes_analytics_test -c "SELECT version();"
 ```
 
 Check `tests/properties.sh` settings match your database.
