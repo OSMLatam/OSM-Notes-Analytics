@@ -144,6 +144,8 @@ declare -r POSTGRES_25_POPULATE_DIMENSIONS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL
 declare -r POSTGRES_26_UPDATE_DIMENSIONS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_26_updateDimensionTables.sql"
 
 # Staging SQL script files.
+# Create shared helper functions for staging (ETL-006: factorize CREATE and INITIAL)
+declare -r POSTGRES_30_SHARED_HELPER_FUNCTIONS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_30_sharedHelperFunctions.sql"
 # Create base staging objects.
 declare -r POSTGRES_31_CREATE_BASE_STAGING_OBJECTS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_31_createBaseStagingObjects.sql"
 # Create staging objects.
@@ -425,6 +427,7 @@ function __checkPrereqs {
   "${POSTGRES_24A_POPULATE_ISO_CODES}"
   "${POSTGRES_25_POPULATE_DIMENSIONS}"
   "${POSTGRES_26_UPDATE_DIMENSIONS}"
+  "${POSTGRES_30_SHARED_HELPER_FUNCTIONS}"
   "${POSTGRES_31_CREATE_BASE_STAGING_OBJECTS}"
   "${POSTGRES_32_CREATE_STAGING_OBJECTS}"
   "${POSTGRES_33_CREATE_FACTS_BASE_OBJECTS}"

@@ -64,11 +64,12 @@ SELECT /* Notes-ETL */ clock_timestamp() AS Processing,
 
 -- Populates the countries dimension with new countries.
 -- ISO codes are populated from reference table if available, otherwise NULL.
+-- Mark new countries as modified so datamarts are updated (ETL-007)
 INSERT INTO dwh.dimension_countries
  (country_id, country_name, country_name_es, country_name_en,
-  iso_alpha2, iso_alpha3)
+  iso_alpha2, iso_alpha3, modified)
  SELECT /* Notes-ETL */ c.country_id, c.country_name, c.country_name_es,
-  c.country_name_en, iso.iso_alpha2, iso.iso_alpha3
+  c.country_name_en, iso.iso_alpha2, iso.iso_alpha3, TRUE
  FROM countries c
   LEFT JOIN dwh.iso_country_codes iso ON c.country_id = iso.osm_country_id
  WHERE c.country_id NOT IN (
@@ -102,12 +103,14 @@ SELECT /* Notes-ETL */ clock_timestamp() AS Processing,
  'Updating modified country names' AS Task;
 
 -- Updates the dimension when country names change or ISO codes are added.
+-- Mark countries as modified so datamarts are updated (ETL-007)
 UPDATE /* Notes-ETL */ dwh.dimension_countries d
  SET country_name = c.country_name,
  country_name_es = c.country_name_es,
  country_name_en = c.country_name_en,
  iso_alpha2 = COALESCE(iso.iso_alpha2, d.iso_alpha2),
- iso_alpha3 = COALESCE(iso.iso_alpha3, d.iso_alpha3)
+ iso_alpha3 = COALESCE(iso.iso_alpha3, d.iso_alpha3),
+ modified = TRUE
  FROM countries AS c
   LEFT JOIN dwh.iso_country_codes iso ON c.country_id = iso.osm_country_id
  WHERE d.country_id = c.country_id
