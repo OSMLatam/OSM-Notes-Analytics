@@ -213,33 +213,16 @@ BEGIN
    ),
 
    -- Current status
+   -- Using note_current_status table for better performance (ETL-003, ETL-004)
    currently_open_count = (
-    SELECT /* Notes-datamartGlobal */ COUNT(DISTINCT id_note)
-    FROM dwh.facts
-    WHERE id_note NOT IN (
-     SELECT DISTINCT id_note
-     FROM dwh.facts
-     WHERE action_comment = 'closed'
-      AND fact_id IN (
-       SELECT /* Notes-datamartGlobal */ MAX(fact_id)
-       FROM dwh.facts
-       GROUP BY id_note
-      )
-    )
+    SELECT /* Notes-datamartGlobal */ COALESCE(COUNT(*), 0)
+    FROM dwh.note_current_status
+    WHERE is_currently_open = TRUE
    ),
    currently_closed_count = (
-    SELECT /* Notes-datamartGlobal */ COUNT(DISTINCT id_note)
-    FROM dwh.facts
-    WHERE id_note IN (
-     SELECT DISTINCT f.id_note
-     FROM dwh.facts f
-     WHERE f.action_comment = 'closed'
-      AND f.fact_id = (
-       SELECT /* Notes-datamartGlobal */ MAX(f2.fact_id)
-       FROM dwh.facts f2
-       WHERE f2.id_note = f.id_note
-      )
-    )
+    SELECT /* Notes-datamartGlobal */ COALESCE(COUNT(*), 0)
+    FROM dwh.note_current_status
+    WHERE is_currently_open = FALSE
    ),
    notes_created_last_30_days = (
     SELECT /* Notes-datamartGlobal */ COUNT(DISTINCT id_note)
@@ -258,22 +241,14 @@ BEGIN
      AND dd.date_id >= CURRENT_DATE - INTERVAL '30 days'
    ),
    notes_backlog_size = (
-    SELECT /* Notes-datamartGlobal */ COUNT(DISTINCT id_note)
-    FROM dwh.facts f
+    -- Using note_current_status table for better performance (ETL-003, ETL-004)
+    -- Count open notes older than 7 days
+    SELECT /* Notes-datamartGlobal */ COALESCE(COUNT(*), 0)
+    FROM dwh.note_current_status ncs
     JOIN dwh.dimension_days dd
-    ON (f.opened_dimension_id_date = dd.dimension_day_id)
-    WHERE f.action_comment = 'opened'
+    ON (ncs.opened_dimension_id_date = dd.dimension_day_id)
+    WHERE ncs.is_currently_open = TRUE
      AND dd.date_id < CURRENT_DATE - INTERVAL '7 days'
-     AND id_note NOT IN (
-      SELECT id_note
-      FROM dwh.facts
-      WHERE action_comment = 'closed'
-       AND fact_id IN (
-        SELECT /* Notes-datamartGlobal */ MAX(fact_id)
-        FROM dwh.facts
-        GROUP BY id_note
-       )
-     )
    ),
 
    -- Resolution metrics

@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS dwh.note_current_status (
   id_note INTEGER NOT NULL,
   dimension_id_country INTEGER NOT NULL,
   opened_dimension_id_user INTEGER,
+  opened_dimension_id_date INTEGER,
   is_currently_open BOOLEAN NOT NULL DEFAULT TRUE,
   last_action_at TIMESTAMP NOT NULL,
   last_action_type note_event_enum NOT NULL,
@@ -22,6 +23,7 @@ COMMENT ON TABLE dwh.note_current_status IS
 COMMENT ON COLUMN dwh.note_current_status.id_note IS 'OSM note ID';
 COMMENT ON COLUMN dwh.note_current_status.dimension_id_country IS 'Country dimension ID';
 COMMENT ON COLUMN dwh.note_current_status.opened_dimension_id_user IS 'User who opened the note';
+COMMENT ON COLUMN dwh.note_current_status.opened_dimension_id_date IS 'Date when the note was opened';
 COMMENT ON COLUMN dwh.note_current_status.is_currently_open IS 'TRUE if note is currently open, FALSE if closed';
 COMMENT ON COLUMN dwh.note_current_status.last_action_at IS 'Timestamp of last action on this note';
 COMMENT ON COLUMN dwh.note_current_status.last_action_type IS 'Type of last action (opened/closed/reopened)';
@@ -56,6 +58,7 @@ BEGIN
     id_note,
     dimension_id_country,
     opened_dimension_id_user,
+    opened_dimension_id_date,
     is_currently_open,
     last_action_at,
     last_action_type
@@ -64,6 +67,7 @@ BEGIN
     f.id_note,
     f.dimension_id_country,
     f.opened_dimension_id_user,
+    f.opened_dimension_id_date,
     CASE
       WHEN f.action_comment IN ('opened', 'reopened') THEN TRUE
       WHEN f.action_comment = 'closed' THEN FALSE
@@ -114,6 +118,7 @@ BEGIN
     id_note,
     dimension_id_country,
     opened_dimension_id_user,
+    opened_dimension_id_date,
     is_currently_open,
     last_action_at,
     last_action_type
@@ -122,6 +127,7 @@ BEGIN
     f.id_note,
     f.dimension_id_country,
     f.opened_dimension_id_user,
+    f.opened_dimension_id_date,
     CASE
       WHEN f.action_comment IN ('opened', 'reopened') THEN TRUE
       WHEN f.action_comment = 'closed' THEN FALSE
@@ -136,6 +142,7 @@ BEGIN
   ON CONFLICT (id_note) DO UPDATE SET
     dimension_id_country = EXCLUDED.dimension_id_country,
     opened_dimension_id_user = EXCLUDED.opened_dimension_id_user,
+    opened_dimension_id_date = EXCLUDED.opened_dimension_id_date,
     is_currently_open = EXCLUDED.is_currently_open,
     last_action_at = EXCLUDED.last_action_at,
     last_action_type = EXCLUDED.last_action_type,

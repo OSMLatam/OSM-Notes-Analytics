@@ -1100,18 +1100,12 @@ AS $proc$
 
   -- Phase 4: Community Health Metrics
   -- Active notes count (currently open notes)
-  SELECT /* Notes-datamartCountries */ COUNT(DISTINCT id_note)
+  -- Using note_current_status table for better performance (ETL-004)
+  SELECT /* Notes-datamartCountries */ COALESCE(COUNT(*), 0)
   INTO m_active_notes_count
-  FROM dwh.facts f
-  WHERE f.dimension_id_country = m_dimension_id_country
-    AND f.action_comment = 'opened'
-    AND NOT EXISTS (
-      SELECT 1
-      FROM dwh.facts f2
-      WHERE f2.id_note = f.id_note
-        AND f2.action_comment = 'closed'
-        AND f2.dimension_id_country = m_dimension_id_country
-    );
+  FROM dwh.note_current_status ncs
+  WHERE ncs.dimension_id_country = m_dimension_id_country
+    AND ncs.is_currently_open = TRUE;
 
   -- Notes backlog size (same as active notes)
   m_notes_backlog_size := m_active_notes_count;
