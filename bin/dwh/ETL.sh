@@ -183,6 +183,8 @@ declare -r POSTGRES_55_CREATE_NOTE_CURRENT_STATUS="${SCRIPT_BASE_DIRECTORY}/sql/
 declare -r POSTGRES_56_GENERATE_ETL_REPORT="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_56_generateETLReport.sql"
 # Validate ETL integrity (MON-001, MON-002)
 declare -r POSTGRES_57_VALIDATE_ETL_INTEGRITY="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_57_validateETLIntegrity.sql"
+# Complete hashtag analysis (DM-002)
+declare -r POSTGRES_63_COMPLETE_HASHTAG_ANALYSIS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamarts/63_completeHashtagAnalysis.sql"
 
 # Load notes staging.
 declare -r POSTGRES_61_LOAD_NOTES_STAGING="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_61_loadNotes.sql"
@@ -447,6 +449,7 @@ function __checkPrereqs {
   "${POSTGRES_55_CREATE_NOTE_CURRENT_STATUS}"
   "${POSTGRES_56_GENERATE_ETL_REPORT}"
   "${POSTGRES_57_VALIDATE_ETL_INTEGRITY}"
+  "${POSTGRES_63_COMPLETE_HASHTAG_ANALYSIS}"
   "${POSTGRES_61_LOAD_NOTES_STAGING}"
  )
 
@@ -802,6 +805,11 @@ function __processNotesETL {
  __logi "Creating specialized hashtag indexes."
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_53B_CREATE_HASHTAG_INDEXES}" 2>&1
+
+ # Complete hashtag analysis functions (DM-002).
+ __logi "Creating complete hashtag analysis functions."
+ __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
+  -f "${POSTGRES_63_COMPLETE_HASHTAG_ANALYSIS}" 2>&1
 
  # Ensure automation detection system exists (needed for update procedures).
  __logi "Ensuring automation detection system exists."

@@ -390,6 +390,14 @@ AS $proc$
   m_notes_resolved_last_30_days INTEGER;
   m_resolution_by_year JSON;
   m_resolution_by_month JSON;
+  -- DM-002: Hashtag analysis variables
+  m_hashtags_opening JSON;
+  m_hashtags_resolution JSON;
+  m_hashtags_comments JSON;
+  m_top_opening_hashtag VARCHAR(50);
+  m_top_resolution_hashtag VARCHAR(50);
+  m_opening_hashtag_count INTEGER;
+  m_resolution_hashtag_count INTEGER;
   m_application_usage_trends JSON;
   m_version_adoption_rates JSON;
   m_notes_health_score DECIMAL(5,2);
@@ -522,6 +530,103 @@ AS $proc$
     LIMIT 50
    ) AS T
   ) AS T2;
+
+  -- DM-002: Hashtags by action type - Opening hashtags
+  SELECT /* Notes-datamartCountries */
+   JSON_AGG(JSON_BUILD_OBJECT('rank', rank, 'hashtag', hashtag, 'count', count))
+   INTO m_hashtags_opening
+  FROM (
+   SELECT
+    RANK() OVER (ORDER BY COUNT(*) DESC) AS rank,
+    h.description AS hashtag,
+    COUNT(*) AS count
+   FROM dwh.fact_hashtags fh
+   JOIN dwh.dimension_hashtags h ON fh.dimension_hashtag_id = h.dimension_hashtag_id
+   JOIN dwh.facts f ON fh.fact_id = f.fact_id
+   WHERE f.dimension_id_country = m_dimension_id_country
+    AND fh.is_opening_hashtag = TRUE
+   GROUP BY h.description
+   ORDER BY COUNT(*) DESC
+   LIMIT 10
+  ) opening_stats;
+
+  -- DM-002: Resolution hashtags
+  SELECT /* Notes-datamartCountries */
+   JSON_AGG(JSON_BUILD_OBJECT('rank', rank, 'hashtag', hashtag, 'count', count))
+   INTO m_hashtags_resolution
+  FROM (
+   SELECT
+    RANK() OVER (ORDER BY COUNT(*) DESC) AS rank,
+    h.description AS hashtag,
+    COUNT(*) AS count
+   FROM dwh.fact_hashtags fh
+   JOIN dwh.dimension_hashtags h ON fh.dimension_hashtag_id = h.dimension_hashtag_id
+   JOIN dwh.facts f ON fh.fact_id = f.fact_id
+   WHERE f.dimension_id_country = m_dimension_id_country
+    AND fh.is_resolution_hashtag = TRUE
+   GROUP BY h.description
+   ORDER BY COUNT(*) DESC
+   LIMIT 10
+  ) resolution_stats;
+
+  -- DM-002: Comment hashtags
+  SELECT /* Notes-datamartCountries */
+   JSON_AGG(JSON_BUILD_OBJECT('rank', rank, 'hashtag', hashtag, 'count', count))
+   INTO m_hashtags_comments
+  FROM (
+   SELECT
+    RANK() OVER (ORDER BY COUNT(*) DESC) AS rank,
+    h.description AS hashtag,
+    COUNT(*) AS count
+   FROM dwh.fact_hashtags fh
+   JOIN dwh.dimension_hashtags h ON fh.dimension_hashtag_id = h.dimension_hashtag_id
+   JOIN dwh.facts f ON fh.fact_id = f.fact_id
+   WHERE f.dimension_id_country = m_dimension_id_country
+    AND fh.used_in_action = 'commented'
+   GROUP BY h.description
+   ORDER BY COUNT(*) DESC
+   LIMIT 10
+  ) comment_stats;
+
+  -- DM-002: Top opening hashtag
+  SELECT h.description
+  INTO m_top_opening_hashtag
+  FROM dwh.fact_hashtags fh
+  JOIN dwh.dimension_hashtags h ON fh.dimension_hashtag_id = h.dimension_hashtag_id
+  JOIN dwh.facts f ON fh.fact_id = f.fact_id
+  WHERE f.dimension_id_country = m_dimension_id_country
+   AND fh.is_opening_hashtag = TRUE
+  GROUP BY h.description
+  ORDER BY COUNT(*) DESC
+  LIMIT 1;
+
+  -- DM-002: Top resolution hashtag
+  SELECT h.description
+  INTO m_top_resolution_hashtag
+  FROM dwh.fact_hashtags fh
+  JOIN dwh.dimension_hashtags h ON fh.dimension_hashtag_id = h.dimension_hashtag_id
+  JOIN dwh.facts f ON fh.fact_id = f.fact_id
+  WHERE f.dimension_id_country = m_dimension_id_country
+   AND fh.is_resolution_hashtag = TRUE
+  GROUP BY h.description
+  ORDER BY COUNT(*) DESC
+  LIMIT 1;
+
+  -- DM-002: Opening hashtag count
+  SELECT COUNT(DISTINCT fh.fact_id)
+  INTO m_opening_hashtag_count
+  FROM dwh.fact_hashtags fh
+  JOIN dwh.facts f ON fh.fact_id = f.fact_id
+  WHERE f.dimension_id_country = m_dimension_id_country
+   AND fh.is_opening_hashtag = TRUE;
+
+  -- DM-002: Resolution hashtag count
+  SELECT COUNT(DISTINCT fh.fact_id)
+  INTO m_resolution_hashtag_count
+  FROM dwh.fact_hashtags fh
+  JOIN dwh.facts f ON fh.fact_id = f.fact_id
+  WHERE f.dimension_id_country = m_dimension_id_country
+   AND fh.is_resolution_hashtag = TRUE;
 
   -- users_open_notes
   SELECT /* Notes-datamartCountries */
@@ -1459,6 +1564,13 @@ AS $proc$
    notes_resolved_last_30_days = m_notes_resolved_last_30_days
   , resolution_by_year = m_resolution_by_year
   , resolution_by_month = m_resolution_by_month
+  , hashtags_opening = m_hashtags_opening
+  , hashtags_resolution = m_hashtags_resolution
+  , hashtags_comments = m_hashtags_comments
+  , top_opening_hashtag = m_top_opening_hashtag
+  , top_resolution_hashtag = m_top_resolution_hashtag
+  , opening_hashtag_count = m_opening_hashtag_count
+  , resolution_hashtag_count = m_resolution_hashtag_count
   , application_usage_trends = m_application_usage_trends
   , version_adoption_rates = m_version_adoption_rates
   , notes_health_score = m_notes_health_score

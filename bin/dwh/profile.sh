@@ -731,10 +731,75 @@ function __processUserProfile {
  declare HASHTAGS
  HASHTAGS=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT hashtags
-     FROM dwh.datamartUsers
-     WHERE dimension_user_id = ${DIMENSION_USER_ID}
-     " \
+    FROM dwh.datamartUsers
+    WHERE dimension_user_id = ${DIMENSION_USER_ID}
+    " \
   -v ON_ERROR_STOP=1)
+
+ # DM-002: Hashtags by action type
+ # shellcheck disable=SC2034
+ # SC2034: These variables are used in the hashtag display section below
+ declare HASHTAGS_OPENING
+ HASHTAGS_OPENING=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT hashtags_opening
+    FROM dwh.datamartUsers
+    WHERE dimension_user_id = ${DIMENSION_USER_ID}
+    " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "[]")
+
+ # shellcheck disable=SC2034
+ declare HASHTAGS_RESOLUTION
+ HASHTAGS_RESOLUTION=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT hashtags_resolution
+    FROM dwh.datamartUsers
+    WHERE dimension_user_id = ${DIMENSION_USER_ID}
+    " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "[]")
+
+ # shellcheck disable=SC2034
+ declare HASHTAGS_COMMENTS
+ HASHTAGS_COMMENTS=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT hashtags_comments
+    FROM dwh.datamartUsers
+    WHERE dimension_user_id = ${DIMENSION_USER_ID}
+    " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "[]")
+
+ # shellcheck disable=SC2034
+ declare FAVORITE_OPENING_HASHTAG
+ FAVORITE_OPENING_HASHTAG=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT favorite_opening_hashtag
+    FROM dwh.datamartUsers
+    WHERE dimension_user_id = ${DIMENSION_USER_ID}
+    " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "")
+
+ # shellcheck disable=SC2034
+ declare FAVORITE_RESOLUTION_HASHTAG
+ FAVORITE_RESOLUTION_HASHTAG=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT favorite_resolution_hashtag
+    FROM dwh.datamartUsers
+    WHERE dimension_user_id = ${DIMENSION_USER_ID}
+    " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "")
+
+ # shellcheck disable=SC2034
+ declare -i OPENING_HASHTAG_COUNT
+ OPENING_HASHTAG_COUNT=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COALESCE(opening_hashtag_count, 0)
+    FROM dwh.datamartUsers
+    WHERE dimension_user_id = ${DIMENSION_USER_ID}
+    " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "0")
+
+ # shellcheck disable=SC2034
+ declare -i RESOLUTION_HASHTAG_COUNT
+ RESOLUTION_HASHTAG_COUNT=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COALESCE(resolution_hashtag_count, 0)
+    FROM dwh.datamartUsers
+    WHERE dimension_user_id = ${DIMENSION_USER_ID}
+    " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "0")
 
  # Calculate hashtag statistics if available
  declare -i TOTAL_HASHTAG_USES=0
@@ -1113,7 +1178,8 @@ function __processUserProfile {
   echo "The date when the most notes were closed:"
   echo "${DATES_MOST_CLOSED}" | sed 's/}, {"date" : "/\n/g' | sed 's/", "quantity" : / - /g' | sed 's/\[{"date" : "//' | sed 's/}\]//'
  fi
- if [[ -n "${HASHTAGS}" ]] && [[ "${HASHTAGS}" != "" ]] && [[ "${HASHTAGS}" != "[]" ]] && [[ "${HASHTAGS}" != "null" ]]; then
+ # DM-002: Enhanced hashtag display for user
+ if [[ -n "${HASHTAGS}" ]] && [[ "${HASHTAGS}" != "[]" ]] && [[ "${HASHTAGS}" != "null" ]]; then
   echo "Hashtags used:"
   if [[ ${UNIQUE_HASHTAGS} -gt 0 ]]; then
    echo "  Total unique hashtags: ${UNIQUE_HASHTAGS}"
@@ -1121,12 +1187,46 @@ function __processUserProfile {
     echo "  Total hashtag uses: ${TOTAL_HASHTAG_USES}"
    fi
   fi
+  # Show favorite hashtags by action type
+  if [[ -n "${FAVORITE_OPENING_HASHTAG}" ]] && [[ "${FAVORITE_OPENING_HASHTAG}" != "" ]]; then
+   echo "  Favorite opening hashtag: #${FAVORITE_OPENING_HASHTAG} (${OPENING_HASHTAG_COUNT} uses)"
+  fi
+  if [[ -n "${FAVORITE_RESOLUTION_HASHTAG}" ]] && [[ "${FAVORITE_RESOLUTION_HASHTAG}" != "" ]]; then
+   echo "  Favorite resolution hashtag: #${FAVORITE_RESOLUTION_HASHTAG} (${RESOLUTION_HASHTAG_COUNT} uses)"
+  fi
+  # Show hashtags by action type
+  if [[ -n "${HASHTAGS_OPENING}" ]] && [[ "${HASHTAGS_OPENING}" != "[]" ]] && [[ "${HASHTAGS_OPENING}" != "null" ]]; then
+   echo "  Top opening hashtags:"
+   if command -v jq &> /dev/null; then
+    echo "${HASHTAGS_OPENING}" | jq -r '.[] | "    #\(.hashtag) (\(.count) times)"' 2> /dev/null || echo "    ${HASHTAGS_OPENING}"
+   else
+    echo "${HASHTAGS_OPENING}" | sed 's/}, {/\n/g' | sed 's/\[{//' | sed 's/}\]//' | sed 's/"hashtag" : "/    #/g' | sed 's/", "count" : / (/g' | sed 's/}$/ times)/g' || echo "    ${HASHTAGS_OPENING}"
+   fi
+  fi
+  if [[ -n "${HASHTAGS_RESOLUTION}" ]] && [[ "${HASHTAGS_RESOLUTION}" != "[]" ]] && [[ "${HASHTAGS_RESOLUTION}" != "null" ]]; then
+   echo "  Top resolution hashtags:"
+   if command -v jq &> /dev/null; then
+    echo "${HASHTAGS_RESOLUTION}" | jq -r '.[] | "    #\(.hashtag) (\(.count) times)"' 2> /dev/null || echo "    ${HASHTAGS_RESOLUTION}"
+   else
+    echo "${HASHTAGS_RESOLUTION}" | sed 's/}, {/\n/g' | sed 's/\[{//' | sed 's/}\]//' | sed 's/"hashtag" : "/    #/g' | sed 's/", "count" : / (/g' | sed 's/}$/ times)/g' || echo "    ${HASHTAGS_RESOLUTION}"
+   fi
+  fi
+  if [[ -n "${HASHTAGS_COMMENTS}" ]] && [[ "${HASHTAGS_COMMENTS}" != "[]" ]] && [[ "${HASHTAGS_COMMENTS}" != "null" ]]; then
+   echo "  Top comment hashtags:"
+   if command -v jq &> /dev/null; then
+    echo "${HASHTAGS_COMMENTS}" | jq -r '.[] | "    #\(.hashtag) (\(.count) times)"' 2> /dev/null || echo "    ${HASHTAGS_COMMENTS}"
+   else
+    echo "${HASHTAGS_COMMENTS}" | sed 's/}, {/\n/g' | sed 's/\[{//' | sed 's/}\]//' | sed 's/"hashtag" : "/    #/g' | sed 's/", "count" : / (/g' | sed 's/}$/ times)/g' || echo "    ${HASHTAGS_COMMENTS}"
+   fi
+  fi
+  # Show all hashtags (general)
+  echo "  All hashtags:"
   # Try to format with jq if available, otherwise show raw JSON
   if command -v jq &> /dev/null; then
-   echo "${HASHTAGS}" | jq -r '.[] | "  #\(.hashtag) (\(.count) times)"' 2> /dev/null || echo "  ${HASHTAGS}"
+   echo "${HASHTAGS}" | jq -r '.[] | "    #\(.hashtag) (\(.quantity) times)"' 2> /dev/null || echo "    ${HASHTAGS}"
   else
    # Fallback: simple formatting without jq
-   echo "${HASHTAGS}" | sed 's/}, {/\n/g' | sed 's/\[{//' | sed 's/}\]//' | sed 's/"hashtag" : "/  #/g' | sed 's/", "count" : / (/g' | sed 's/}$/ times)/g' || echo "  ${HASHTAGS}"
+   echo "${HASHTAGS}" | sed 's/}, {/\n/g' | sed 's/\[{//' | sed 's/}\]//' | sed 's/"hashtag" : "/    #/g' | sed 's/", "quantity" : / (/g' | sed 's/}$/ times)/g' || echo "    ${HASHTAGS}"
   fi
  fi
  # DM-001: Show applications used
@@ -1429,10 +1529,67 @@ function __processCountryProfile {
  declare HASHTAGS
  HASHTAGS=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT hashtags
-     FROM dwh.datamartCountries
-     WHERE dimension_country_id = ${COUNTRY_ID}
-     " \
+    FROM dwh.datamartCountries
+    WHERE dimension_country_id = ${COUNTRY_ID}
+    " \
   -v ON_ERROR_STOP=1)
+
+ # DM-002: Hashtags by action type for country
+ declare HASHTAGS_OPENING_COUNTRY
+ HASHTAGS_OPENING_COUNTRY=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT hashtags_opening
+    FROM dwh.datamartCountries
+    WHERE dimension_country_id = ${COUNTRY_ID}
+    " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "[]")
+
+ declare HASHTAGS_RESOLUTION_COUNTRY
+ HASHTAGS_RESOLUTION_COUNTRY=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT hashtags_resolution
+    FROM dwh.datamartCountries
+    WHERE dimension_country_id = ${COUNTRY_ID}
+    " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "[]")
+
+ declare HASHTAGS_COMMENTS_COUNTRY
+ HASHTAGS_COMMENTS_COUNTRY=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT hashtags_comments
+    FROM dwh.datamartCountries
+    WHERE dimension_country_id = ${COUNTRY_ID}
+    " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "[]")
+
+ declare TOP_OPENING_HASHTAG_COUNTRY
+ TOP_OPENING_HASHTAG_COUNTRY=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT top_opening_hashtag
+    FROM dwh.datamartCountries
+    WHERE dimension_country_id = ${COUNTRY_ID}
+    " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "")
+
+ declare TOP_RESOLUTION_HASHTAG_COUNTRY
+ TOP_RESOLUTION_HASHTAG_COUNTRY=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT top_resolution_hashtag
+    FROM dwh.datamartCountries
+    WHERE dimension_country_id = ${COUNTRY_ID}
+    " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "")
+
+ declare -i OPENING_HASHTAG_COUNT_COUNTRY
+ OPENING_HASHTAG_COUNT_COUNTRY=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COALESCE(opening_hashtag_count, 0)
+    FROM dwh.datamartCountries
+    WHERE dimension_country_id = ${COUNTRY_ID}
+    " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "0")
+
+ declare -i RESOLUTION_HASHTAG_COUNT_COUNTRY
+ RESOLUTION_HASHTAG_COUNT_COUNTRY=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COALESCE(resolution_hashtag_count, 0)
+    FROM dwh.datamartCountries
+    WHERE dimension_country_id = ${COUNTRY_ID}
+    " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "0")
 
  # Calculate hashtag statistics if available
  declare -i TOTAL_HASHTAG_USES=0
@@ -1775,7 +1932,8 @@ function __processCountryProfile {
   echo "The date when the most notes were closed:"
   echo "${DATES_MOST_CLOSED}" | sed 's/}, {"date" : "/\n/g' | sed 's/", "quantity" : / - /g' | sed 's/\[{"date" : "//' | sed 's/}\]//'
  fi
- if [[ -n "${HASHTAGS}" ]] && [[ "${HASHTAGS}" != "" ]] && [[ "${HASHTAGS}" != "[]" ]] && [[ "${HASHTAGS}" != "null" ]]; then
+ # DM-002: Enhanced hashtag display for country
+ if [[ -n "${HASHTAGS}" ]] && [[ "${HASHTAGS}" != "[]" ]] && [[ "${HASHTAGS}" != "null" ]]; then
   echo "Hashtags used:"
   if [[ ${UNIQUE_HASHTAGS} -gt 0 ]]; then
    echo "  Total unique hashtags: ${UNIQUE_HASHTAGS}"
@@ -1783,12 +1941,46 @@ function __processCountryProfile {
     echo "  Total hashtag uses: ${TOTAL_HASHTAG_USES}"
    fi
   fi
+  # Show top hashtags by action type
+  if [[ -n "${TOP_OPENING_HASHTAG_COUNTRY}" ]] && [[ "${TOP_OPENING_HASHTAG_COUNTRY}" != "" ]]; then
+   echo "  Top opening hashtag: #${TOP_OPENING_HASHTAG_COUNTRY} (${OPENING_HASHTAG_COUNT_COUNTRY} uses)"
+  fi
+  if [[ -n "${TOP_RESOLUTION_HASHTAG_COUNTRY}" ]] && [[ "${TOP_RESOLUTION_HASHTAG_COUNTRY}" != "" ]]; then
+   echo "  Top resolution hashtag: #${TOP_RESOLUTION_HASHTAG_COUNTRY} (${RESOLUTION_HASHTAG_COUNT_COUNTRY} uses)"
+  fi
+  # Show hashtags by action type
+  if [[ -n "${HASHTAGS_OPENING_COUNTRY}" ]] && [[ "${HASHTAGS_OPENING_COUNTRY}" != "[]" ]] && [[ "${HASHTAGS_OPENING_COUNTRY}" != "null" ]]; then
+   echo "  Top opening hashtags:"
+   if command -v jq &> /dev/null; then
+    echo "${HASHTAGS_OPENING_COUNTRY}" | jq -r '.[] | "    #\(.hashtag) (\(.count) times)"' 2> /dev/null || echo "    ${HASHTAGS_OPENING_COUNTRY}"
+   else
+    echo "${HASHTAGS_OPENING_COUNTRY}" | sed 's/}, {/\n/g' | sed 's/\[{//' | sed 's/}\]//' | sed 's/"hashtag" : "/    #/g' | sed 's/", "count" : / (/g' | sed 's/}$/ times)/g' || echo "    ${HASHTAGS_OPENING_COUNTRY}"
+   fi
+  fi
+  if [[ -n "${HASHTAGS_RESOLUTION_COUNTRY}" ]] && [[ "${HASHTAGS_RESOLUTION_COUNTRY}" != "[]" ]] && [[ "${HASHTAGS_RESOLUTION_COUNTRY}" != "null" ]]; then
+   echo "  Top resolution hashtags:"
+   if command -v jq &> /dev/null; then
+    echo "${HASHTAGS_RESOLUTION_COUNTRY}" | jq -r '.[] | "    #\(.hashtag) (\(.count) times)"' 2> /dev/null || echo "    ${HASHTAGS_RESOLUTION_COUNTRY}"
+   else
+    echo "${HASHTAGS_RESOLUTION_COUNTRY}" | sed 's/}, {/\n/g' | sed 's/\[{//' | sed 's/}\]//' | sed 's/"hashtag" : "/    #/g' | sed 's/", "count" : / (/g' | sed 's/}$/ times)/g' || echo "    ${HASHTAGS_RESOLUTION_COUNTRY}"
+   fi
+  fi
+  if [[ -n "${HASHTAGS_COMMENTS_COUNTRY}" ]] && [[ "${HASHTAGS_COMMENTS_COUNTRY}" != "[]" ]] && [[ "${HASHTAGS_COMMENTS_COUNTRY}" != "null" ]]; then
+   echo "  Top comment hashtags:"
+   if command -v jq &> /dev/null; then
+    echo "${HASHTAGS_COMMENTS_COUNTRY}" | jq -r '.[] | "    #\(.hashtag) (\(.count) times)"' 2> /dev/null || echo "    ${HASHTAGS_COMMENTS_COUNTRY}"
+   else
+    echo "${HASHTAGS_COMMENTS_COUNTRY}" | sed 's/}, {/\n/g' | sed 's/\[{//' | sed 's/}\]//' | sed 's/"hashtag" : "/    #/g' | sed 's/", "count" : / (/g' | sed 's/}$/ times)/g' || echo "    ${HASHTAGS_COMMENTS_COUNTRY}"
+   fi
+  fi
+  # Show all hashtags (general)
+  echo "  All hashtags:"
   # Try to format with jq if available, otherwise show raw JSON
   if command -v jq &> /dev/null; then
-   echo "${HASHTAGS}" | jq -r '.[] | "  #\(.hashtag) (\(.count) times)"' 2> /dev/null || echo "  ${HASHTAGS}"
+   echo "${HASHTAGS}" | jq -r '.[] | "    #\(.hashtag) (\(.quantity) times)"' 2> /dev/null || echo "    ${HASHTAGS}"
   else
    # Fallback: simple formatting without jq
-   echo "${HASHTAGS}" | sed 's/}, {/\n/g' | sed 's/\[{//' | sed 's/}\]//' | sed 's/"hashtag" : "/  #/g' | sed 's/", "count" : / (/g' | sed 's/}$/ times)/g' || echo "  ${HASHTAGS}"
+   echo "${HASHTAGS}" | sed 's/}, {/\n/g' | sed 's/\[{//' | sed 's/}\]//' | sed 's/"hashtag" : "/    #/g' | sed 's/", "quantity" : / (/g' | sed 's/}$/ times)/g' || echo "    ${HASHTAGS}"
   fi
  fi
  # DM-001: Show applications used for country

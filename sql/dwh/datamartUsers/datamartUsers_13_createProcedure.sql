@@ -497,6 +497,15 @@ AS $proc$
   m_comments_with_mention_pct DECIMAL(5,2);
   m_avg_comments_per_note DECIMAL(10,2);
   m_active_notes_count INTEGER;
+
+  -- DM-002: Hashtag analysis variables
+  m_hashtags_opening JSON;
+  m_hashtags_resolution JSON;
+  m_hashtags_comments JSON;
+  m_favorite_opening_hashtag VARCHAR(50);
+  m_favorite_resolution_hashtag VARCHAR(50);
+  m_opening_hashtag_count INTEGER;
+  m_resolution_hashtag_count INTEGER;
   m_notes_backlog_size INTEGER;
   m_notes_age_distribution JSON;
   m_notes_created_last_30_days INTEGER;
@@ -1626,6 +1635,13 @@ AS $proc$
    notes_resolved_last_30_days = m_notes_resolved_last_30_days
   , resolution_by_year = m_resolution_by_year
   , resolution_by_month = m_resolution_by_month
+  , hashtags_opening = m_hashtags_opening
+  , hashtags_resolution = m_hashtags_resolution
+  , hashtags_comments = m_hashtags_comments
+  , favorite_opening_hashtag = m_favorite_opening_hashtag
+  , favorite_resolution_hashtag = m_favorite_resolution_hashtag
+  , opening_hashtag_count = m_opening_hashtag_count
+  , resolution_hashtag_count = m_resolution_hashtag_count
   , application_usage_trends = m_application_usage_trends
   , version_adoption_rates = m_version_adoption_rates
   , user_response_time = m_user_response_time
