@@ -196,7 +196,7 @@ BEGIN
       'MON-002: Total comment count mismatch'::TEXT,
       'FAIL'::TEXT,
       v_difference,
-      format('Base table has %s comments, facts table has %s actions. Difference: %s', 
+      format('Base table has %s comments, facts table has %s actions. Difference: %s',
         v_base_comments_count, v_facts_comments_count, v_difference);
   ELSE
     RETURN QUERY SELECT
@@ -328,20 +328,20 @@ BEGIN
     v_total_checks := v_total_checks + 1;
     IF v_check_record.status = 'FAIL' THEN
       v_failed_checks := v_failed_checks + 1;
-      RAISE WARNING '%: % - % issues found. %', 
-        v_check_record.check_name, 
-        v_check_record.status, 
+      RAISE WARNING '%: % - % issues found. %',
+        v_check_record.check_name,
+        v_check_record.status,
         v_check_record.issue_count,
         v_check_record.details;
     ELSIF v_check_record.status = 'SKIP' THEN
       v_skipped_checks := v_skipped_checks + 1;
-      RAISE NOTICE '%: % - %', 
-        v_check_record.check_name, 
+      RAISE NOTICE '%: % - %',
+        v_check_record.check_name,
         v_check_record.status,
         v_check_record.details;
     ELSE
-      RAISE NOTICE '%: % - %', 
-        v_check_record.check_name, 
+      RAISE NOTICE '%: % - %',
+        v_check_record.check_name,
         v_check_record.status,
         v_check_record.details;
     END IF;
@@ -357,20 +357,20 @@ BEGIN
     v_total_checks := v_total_checks + 1;
     IF v_check_record.status = 'FAIL' THEN
       v_failed_checks := v_failed_checks + 1;
-      RAISE WARNING '%: % - % issues found. %', 
-        v_check_record.check_name, 
-        v_check_record.status, 
+      RAISE WARNING '%: % - % issues found. %',
+        v_check_record.check_name,
+        v_check_record.status,
         v_check_record.issue_count,
         v_check_record.details;
     ELSIF v_check_record.status = 'SKIP' THEN
       v_skipped_checks := v_skipped_checks + 1;
-      RAISE NOTICE '%: % - %', 
-        v_check_record.check_name, 
+      RAISE NOTICE '%: % - %',
+        v_check_record.check_name,
         v_check_record.status,
         v_check_record.details;
     ELSE
-      RAISE NOTICE '%: % - %', 
-        v_check_record.check_name, 
+      RAISE NOTICE '%: % - %',
+        v_check_record.check_name,
         v_check_record.status,
         v_check_record.details;
     END IF;
@@ -384,7 +384,7 @@ BEGIN
   RAISE NOTICE 'Skipped: %', v_skipped_checks;
 
   IF v_failed_checks > 0 THEN
-    RAISE EXCEPTION 'ETL integrity validation failed. % checks failed out of % total checks.', 
+    RAISE EXCEPTION 'ETL integrity validation failed. % checks failed out of % total checks.',
       v_failed_checks, v_total_checks;
   ELSE
     RAISE NOTICE 'All integrity checks passed!';

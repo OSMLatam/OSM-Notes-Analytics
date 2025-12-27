@@ -1473,6 +1473,17 @@ AS $proc$
    CALL dwh.update_datamart_country_activity_year(m_dimension_id_country, m_year);
   END IF;
 
+  -- Update new metrics (DM-006, DM-007, DM-008)
+  -- Only if the function exists (for backward compatibility)
+  IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'update_country_new_metrics') THEN
+    BEGIN
+      PERFORM dwh.update_country_new_metrics(m_dimension_id_country);
+    EXCEPTION WHEN OTHERS THEN
+      -- Ignore errors for missing columns (backward compatibility)
+      NULL;
+    END;
+  END IF;
+
   -- End timing and log performance
   m_end_time := CLOCK_TIMESTAMP();
   m_duration_seconds := EXTRACT(EPOCH FROM (m_end_time - m_start_time));

@@ -441,6 +441,17 @@ BEGIN
   )
   WHERE dimension_global_id = 1;
 
+  -- Update DM-011: Last comment timestamp
+  -- Only if the function exists (for backward compatibility)
+  IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'update_global_last_comment_timestamp') THEN
+    BEGIN
+      PERFORM dwh.update_global_last_comment_timestamp();
+    EXCEPTION WHEN OTHERS THEN
+      -- Ignore errors for missing columns (backward compatibility)
+      NULL;
+    END;
+  END IF;
+
   RAISE NOTICE 'Global statistics updated successfully.';
 END
 $$;
