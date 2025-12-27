@@ -235,16 +235,8 @@ fi
 # Change to the extension directory
 cd pgml-extension
 
-# Build pgml
-echo -e "${YELLOW}Building pgml (this may take 10-30 minutes)...${NC}"
-echo "This is a long process. Please be patient..."
-
-# Set environment variables for build
-# Use the pg_config we found earlier (for the correct PostgreSQL version)
-export PG_CONFIG="$PG_CONFIG_FULL"
-echo "PG_CONFIG set to: $PG_CONFIG"
-CARGO_BUILD_JOBS=$(nproc)
-export CARGO_BUILD_JOBS
+# Store the build directory path for later use in install_pgml_for_version
+BUILD_DIR_EXTENSION="$BUILD_DIR/pgml-extension"
 
 # Set PGRX_HOME (required by pgrx framework)
 export PGRX_HOME="${PGRX_HOME:-$HOME/.pgrx}"
@@ -261,150 +253,160 @@ else
  echo "Using LLD linker: $(which ld.lld)"
 fi
 
-# CRITICAL: Ensure config.toml exists before building
-# This must happen BEFORE cargo build
-echo -e "${YELLOW}Ensuring pgrx config.toml exists...${NC}"
+# Set Cargo build jobs
+CARGO_BUILD_JOBS=$(nproc)
+export CARGO_BUILD_JOBS
 
-if [[ ! -f "$PGRX_HOME/config.toml" ]]; then
- echo -e "${YELLOW}config.toml not found, creating it now...${NC}"
- mkdir -p "$PGRX_HOME"
+echo -e "${YELLOW}Prepared pgml source code for building...${NC}"
+echo "Will build and install for each PostgreSQL version found"
 
- # Use the pg_config we found earlier (for the correct PostgreSQL version)
- # Create config.toml with correct format for pgrx
- # Format: [pg16] path = "/path/to/pg_config"
- echo "Creating config.toml with:"
- echo "  Version: pg${PG_VERSION}"
- echo "  Path: $PG_CONFIG_FULL"
+# Function to build and install pgml for a specific PostgreSQL version
+# This function must be called from the pgml-extension directory
+install_pgml_for_version() {
+ local target_version=$1
+ local target_pg_config="/usr/lib/postgresql/${target_version}/bin/pg_config"
 
- cat > "$PGRX_HOME/config.toml" << EOF
-[pg${PG_VERSION}]
-path = "$PG_CONFIG_FULL"
-EOF
-
- # Verify it was created
- if [[ ! -f "$PGRX_HOME/config.toml" ]]; then
-  echo -e "${RED}Error: Failed to create config.toml${NC}"
-  exit 1
+ if [[ ! -f "$target_pg_config" ]]; then
+  echo -e "${YELLOW}Skipping PostgreSQL ${target_version}: pg_config not found${NC}"
+  return 1
  fi
 
- echo -e "${GREEN}✓ config.toml created${NC}"
- echo "Contents:"
- cat "$PGRX_HOME/config.toml"
-else
- echo -e "${GREEN}✓ config.toml already exists${NC}"
-fi
+ # Ensure we're in the pgml-extension directory
+ local original_dir
+ original_dir=$(pwd)
+ if [[ ! -f "Cargo.toml" ]] || ! grep -q "name = \"pgml\"" Cargo.toml 2> /dev/null; then
+  if [[ -d "$BUILD_DIR_EXTENSION" ]]; then
+   cd "$BUILD_DIR_EXTENSION" || {
+    echo -e "${RED}Error: Cannot change to $BUILD_DIR_EXTENSION${NC}"
+    return 1
+   }
+  else
+   echo -e "${RED}Error: pgml-extension directory not found at $BUILD_DIR_EXTENSION${NC}"
+   return 1
+  fi
+ fi
 
-# Verify config.toml contains the correct version
-echo -e "${YELLOW}Verifying pgrx configuration...${NC}"
-if grep -q "pg${PG_VERSION}" "$PGRX_HOME/config.toml" 2> /dev/null; then
- echo -e "${GREEN}✓ pgrx config.toml contains pg${PG_VERSION}${NC}"
-else
- echo -e "${RED}Error: pgrx config.toml does not contain pg${PG_VERSION}${NC}"
- echo "Config contents:"
- cat "$PGRX_HOME/config.toml"
  echo ""
- echo "Recreating config.toml with correct version..."
- cat > "$PGRX_HOME/config.toml" << EOF
-[pg${PG_VERSION}]
-path = "$PG_CONFIG_FULL"
-EOF
- cat "$PGRX_HOME/config.toml"
+ echo -e "${GREEN}=== Installing pgml for PostgreSQL ${target_version} ===${NC}"
+ echo "Working directory: $(pwd)"
+
+ # Initialize pgrx for this version
+ echo "Initializing pgrx for PostgreSQL ${target_version}..."
+ if ! cargo pgrx init --pg"${target_version}"="$target_pg_config" 2> /dev/null; then
+  # If init fails, manually add to config.toml
+  if ! grep -q "\[pg${target_version}\]" "$PGRX_HOME/config.toml" 2> /dev/null; then
+   echo "[pg${target_version}]" >> "$PGRX_HOME/config.toml"
+   echo "path = \"$target_pg_config\"" >> "$PGRX_HOME/config.toml"
+  fi
+ fi
+
+ # Set environment variables for this version
+ export PGRX_PG_CONFIG_PATH="$target_pg_config"
+ export PGRX_PG_VERSION_OVERRIDE="pg${target_version}"
+ export PGRX_PG_VERSION="pg${target_version}"
+ export PG_CONFIG="$target_pg_config"
+
+ # Build with explicit version override
+ # CRITICAL: pgml's Cargo.toml has default = ["pg17", "python"]
+ # We MUST disable default features and enable pg${target_version} + python explicitly
+ echo -e "${YELLOW}Building pgml extension for PostgreSQL ${target_version}...${NC}"
+ echo "Using: cargo build --release --no-default-features --features pg${target_version},python"
+
+ if ! cargo build --release --no-default-features --features "pg${target_version},python"; then
+  echo -e "${RED}Error: Failed to build pgml for PostgreSQL ${target_version}${NC}"
+  return 1
+ fi
+
+ # Install pgml extension
+ echo -e "${YELLOW}Installing pgml extension for PostgreSQL ${target_version}...${NC}"
+ if ! cargo pgrx install; then
+  echo -e "${RED}Error: Failed to install pgml for PostgreSQL ${target_version}${NC}"
+  return 1
+ fi
+
+ # Verify installation for this version
+ local pg_libdir
+ local pg_sharedir
+ pg_libdir=$("$target_pg_config" --pkglibdir)
+ pg_sharedir=$("$target_pg_config" --sharedir)
+
+ if [[ -f "$pg_sharedir/extension/pgml.control" ]]; then
+  echo -e "${GREEN}✓ pgml extension files installed successfully for PostgreSQL ${target_version}${NC}"
+  echo "  Control file: $pg_sharedir/extension/pgml.control"
+ else
+  echo -e "${YELLOW}⚠ Warning: pgml.control not found for PostgreSQL ${target_version}${NC}"
+ fi
+
+ if [[ -f "$pg_libdir/pgml.so" ]] || [[ -f "$pg_libdir/pgml-*.so" ]]; then
+  echo -e "${GREEN}✓ pgml library installed successfully for PostgreSQL ${target_version}${NC}"
+  echo "  Library directory: $pg_libdir"
+ else
+  echo -e "${YELLOW}⚠ Warning: pgml library not found for PostgreSQL ${target_version}${NC}"
+ fi
+
+ echo -e "${GREEN}✓ pgml installed successfully for PostgreSQL ${target_version}${NC}"
+
+ # Return to original directory
+ cd "$original_dir" || true
+ return 0
+}
+
+# Determine which PostgreSQL versions to install for
+# If PG_VERSIONS contains multiple versions, install for all 14+
+INSTALL_VERSIONS=""
+if [[ -n "$PG_VERSIONS" ]]; then
+ # Filter versions >= 14
+ for ver in $PG_VERSIONS; do
+  if [[ $ver -ge 14 ]]; then
+   INSTALL_VERSIONS="$INSTALL_VERSIONS $ver"
+  fi
+ done
 fi
 
-# Set environment variables to force pgrx to use the correct PostgreSQL version
-# Use the pg_config we found earlier (for the correct PostgreSQL version)
-export PGRX_PG_CONFIG_PATH="$PG_CONFIG_FULL"
-export PGRX_PG_VERSION_OVERRIDE="pg${PG_VERSION}"
-export PGRX_PG_VERSION="pg${PG_VERSION}"
-
-# Also set default version in config if it doesn't exist
-if ! grep -q "^default" "$PGRX_HOME/config.toml" 2> /dev/null; then
- echo "default = \"pg${PG_VERSION}\"" >> "$PGRX_HOME/config.toml"
+# If no versions found or empty, use the detected PG_VERSION
+if [[ -z "$INSTALL_VERSIONS" ]]; then
+ INSTALL_VERSIONS="$PG_VERSION"
 fi
 
 echo ""
-echo "Environment variables set:"
-echo "  PGRX_PG_CONFIG_PATH=$PGRX_PG_CONFIG_PATH"
-echo "  PGRX_PG_VERSION_OVERRIDE=$PGRX_PG_VERSION_OVERRIDE"
-echo "  PGRX_PG_VERSION=$PGRX_PG_VERSION"
-echo "  PGRX_HOME=$PGRX_HOME"
-echo ""
-echo "Final config.toml:"
-cat "$PGRX_HOME/config.toml"
-echo ""
+echo -e "${YELLOW}Will install pgml for PostgreSQL versions: ${INSTALL_VERSIONS}${NC}"
 
-# Build with release optimizations
-# CRITICAL: Force pgrx to use pg16 by setting PGRX_DEFAULT_PG_VERSION
-# This prevents pgrx from auto-detecting pg17
-export PGRX_DEFAULT_PG_VERSION="pg${PG_VERSION}"
+# Install for each version
+INSTALLED_COUNT=0
+for ver in $INSTALL_VERSIONS; do
+ if install_pgml_for_version "$ver"; then
+  ((INSTALLED_COUNT++))
+ fi
+done
 
-echo ""
-echo -e "${YELLOW}Starting build with forced PostgreSQL version...${NC}"
-echo "Using: pg${PG_VERSION}"
-echo "Config: $PGRX_HOME/config.toml"
-echo ""
-
-# Verify config one more time before building
-if ! grep -q "pg${PG_VERSION}" "$PGRX_HOME/config.toml" 2> /dev/null; then
- echo -e "${RED}ERROR: config.toml verification failed before build!${NC}"
- echo "Expected: pg${PG_VERSION}"
- echo "Config contents:"
- cat "$PGRX_HOME/config.toml"
+if [[ $INSTALLED_COUNT -eq 0 ]]; then
+ echo -e "${RED}Error: Failed to install pgml for any PostgreSQL version${NC}"
  exit 1
 fi
 
-# Build with explicit version override
-# CRITICAL: pgml's Cargo.toml has default = ["pg17", "python"]
-# We MUST disable default features and enable pg16 + python explicitly
-# Python feature is required for the extension to compile
 echo ""
-echo -e "${YELLOW}Building pgml extension...${NC}"
-echo "CRITICAL: pgml defaults to pg17, forcing pg16..."
-echo "Using: cargo build --release --no-default-features --features pg16,python"
+echo -e "${GREEN}Successfully installed pgml for ${INSTALLED_COUNT} PostgreSQL version(s)${NC}"
 
-# Use cargo build (not cargo pgrx build - that command doesn't exist)
-# pgrx is configured via environment variables and config.toml
-# The --pg16 flag is handled by pgrx automatically via config.toml
-# We need both pg16 (PostgreSQL version) and python (required feature)
-cargo build --release --no-default-features --features pg16,python
+# Summary verification
+echo ""
+echo -e "${YELLOW}Verifying installations...${NC}"
+VERIFIED_COUNT=0
+for ver in $INSTALL_VERSIONS; do
+ pg_config_ver="/usr/lib/postgresql/${ver}/bin/pg_config"
+ if [[ -f "$pg_config_ver" ]]; then
+  pg_sharedir_ver=$("$pg_config_ver" --sharedir)
+  if [[ -f "$pg_sharedir_ver/extension/pgml.control" ]]; then
+   echo -e "${GREEN}✓ PostgreSQL ${ver}: pgml.control found${NC}"
+   ((VERIFIED_COUNT++))
+  else
+   echo -e "${YELLOW}⚠ PostgreSQL ${ver}: pgml.control not found${NC}"
+  fi
+ fi
+done
 
-# Install pgml extension
-echo -e "${YELLOW}Installing pgml extension...${NC}"
-# Use cargo pgrx install instead of make install
-# pgrx handles the installation process for PostgreSQL extensions
-# pgrx install uses the default version from config.toml or PGRX_PG_VERSION env var
-if command -v cargo-pgrx &> /dev/null; then
- echo "Using: cargo pgrx install (with pg${PG_VERSION} from config.toml)"
- echo "PGRX_PG_VERSION=${PGRX_PG_VERSION}"
- echo "PGRX_HOME=${PGRX_HOME}"
- # pgrx install should use the default version from config.toml
- # But we can also explicitly set it via environment variable
- export PGRX_PG_VERSION="pg${PG_VERSION}"
- cargo pgrx install
-else
- echo -e "${RED}Error: cargo-pgrx not found, cannot install extension${NC}"
+if [[ $VERIFIED_COUNT -eq 0 ]]; then
+ echo -e "${RED}✗ Error: No pgml installations verified${NC}"
  exit 1
-fi
-
-# Verify installation
-echo -e "${YELLOW}Verifying installation...${NC}"
-# Use the pg_config we found earlier (for the correct PostgreSQL version)
-PG_LIBDIR=$($PG_CONFIG_FULL --pkglibdir)
-PG_SHAREDIR=$($PG_CONFIG_FULL --sharedir)
-
-if [[ -f "$PG_SHAREDIR/extension/pgml.control" ]]; then
- echo -e "${GREEN}✓ pgml extension files installed successfully${NC}"
- echo "  Control file: $PG_SHAREDIR/extension/pgml.control"
-else
- echo -e "${RED}✗ Error: pgml.control not found${NC}"
- exit 1
-fi
-
-if [[ -f "$PG_LIBDIR/pgml.so" ]] || [[ -f "$PG_LIBDIR/pgml-*.so" ]]; then
- echo -e "${GREEN}✓ pgml library installed successfully${NC}"
- echo "  Library directory: $PG_LIBDIR"
-else
- echo -e "${YELLOW}⚠ Warning: pgml.so not found (may be normal if using static linking)${NC}"
 fi
 
 # Cleanup
