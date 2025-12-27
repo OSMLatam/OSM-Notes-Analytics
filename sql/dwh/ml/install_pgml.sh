@@ -355,27 +355,46 @@ install_pgml_for_version() {
 # If PG_VERSIONS contains multiple versions, install for all 14+
 INSTALL_VERSIONS=""
 if [[ -n "$PG_VERSIONS" ]]; then
+ echo "Processing detected PostgreSQL versions: $PG_VERSIONS"
  # Filter versions >= 14
  for ver in $PG_VERSIONS; do
+  echo "Checking version: $ver"
   if [[ $ver -ge 14 ]]; then
+   echo "  ✓ Version $ver is >= 14, adding to install list"
    INSTALL_VERSIONS="$INSTALL_VERSIONS $ver"
+  else
+   echo "  ✗ Version $ver is < 14, skipping"
   fi
  done
+else
+ echo "Warning: No PostgreSQL versions detected via find command"
 fi
 
 # If no versions found or empty, use the detected PG_VERSION
 if [[ -z "$INSTALL_VERSIONS" ]]; then
+ echo "No versions found in PG_VERSIONS, using detected PG_VERSION: $PG_VERSION"
  INSTALL_VERSIONS="$PG_VERSION"
 fi
 
+# Trim leading/trailing spaces
+INSTALL_VERSIONS=$(echo "$INSTALL_VERSIONS" | xargs)
+
 echo ""
 echo -e "${YELLOW}Will install pgml for PostgreSQL versions: ${INSTALL_VERSIONS}${NC}"
+echo "Number of versions to install: $(echo "$INSTALL_VERSIONS" | wc -w)"
 
 # Install for each version
 INSTALLED_COUNT=0
 for ver in $INSTALL_VERSIONS; do
+ echo ""
+ echo -e "${YELLOW}========================================${NC}"
+ echo -e "${YELLOW}Installing for PostgreSQL ${ver}...${NC}"
+ echo -e "${YELLOW}========================================${NC}"
  if install_pgml_for_version "$ver"; then
+  echo -e "${GREEN}✓ Successfully installed for PostgreSQL ${ver}${NC}"
   ((INSTALLED_COUNT++))
+ else
+  echo -e "${RED}✗ Failed to install for PostgreSQL ${ver}${NC}"
  fi
 done
 
