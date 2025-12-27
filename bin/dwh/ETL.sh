@@ -181,6 +181,8 @@ declare -r POSTGRES_54_UNIFY_FACTS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_51_
 # Create note current status table and procedures (ETL-003, ETL-004)
 declare -r POSTGRES_55_CREATE_NOTE_CURRENT_STATUS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_55_createNoteCurrentStatus.sql"
 declare -r POSTGRES_56_GENERATE_ETL_REPORT="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_56_generateETLReport.sql"
+# Validate ETL integrity (MON-001, MON-002)
+declare -r POSTGRES_57_VALIDATE_ETL_INTEGRITY="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_57_validateETLIntegrity.sql"
 
 # Load notes staging.
 declare -r POSTGRES_61_LOAD_NOTES_STAGING="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_61_loadNotes.sql"
@@ -443,6 +445,8 @@ function __checkPrereqs {
   "${POSTGRES_53B_CREATE_HASHTAG_INDEXES}"
   "${POSTGRES_54_UNIFY_FACTS}"
   "${POSTGRES_55_CREATE_NOTE_CURRENT_STATUS}"
+  "${POSTGRES_56_GENERATE_ETL_REPORT}"
+  "${POSTGRES_57_VALIDATE_ETL_INTEGRITY}"
   "${POSTGRES_61_LOAD_NOTES_STAGING}"
  )
 
@@ -1782,6 +1786,21 @@ function main() {
  else
   __logw "Warning: Failed to generate ETL report (exit code: ${report_exit_code})"
   __logw "Report generation is non-critical, continuing..."
+ fi
+
+ # Validate ETL integrity (MON-001, MON-002)
+ __logi "Running ETL integrity validations..."
+ set +e
+ __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
+  -f "${POSTGRES_57_VALIDATE_ETL_INTEGRITY}" 2>&1
+ local validation_exit_code=$?
+ set -e
+ if [[ ${validation_exit_code} -eq 0 ]]; then
+  __logi "ETL integrity validations passed successfully"
+ else
+  __logw "Warning: ETL integrity validation failed (exit code: ${validation_exit_code})"
+  __logw "Validation failures are logged above. Review and fix issues if needed."
+  __logw "Validation is non-critical, continuing..."
  fi
 
  __logw "Ending process."

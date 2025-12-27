@@ -2,7 +2,7 @@
 
 Este documento consolida todos los pendientes del proyecto organizados por categoría y prioridad.
 
-**Última actualización**: 2025-01-XX
+**Última actualización**: 2025-12-17
 
 **Nota**: Este documento consolida todos los pendientes. El ActionPlan.md ha sido eliminado y su contenido relevante (ML pendiente) ha sido movido aquí.
 
@@ -24,43 +24,91 @@ Todas las tareas de alta prioridad han sido completadas.
 
 ### ETL
 
-- [ ] **ETL-001**: Generar un reporte de cambios identificados al cargar la ETL
+- [✅] **ETL-001**: Generar un reporte de cambios identificados al cargar la ETL - COMPLETADO
   - Los select cambiarlos a exports para mostrar otras cosas
-  - Archivos: `bin/dwh/ETL.sh`, `sql/dwh/Staging_*.sql`
+  - **Status**: ✅ Implementado procedimiento `dwh.generate_etl_report()` y script `sql/dwh/ETL_56_generateETLReport.sql`
+  - **Features**:
+    - ✅ Reporte completo de ejecución ETL con métricas de facts, dimensiones, datamarts
+    - ✅ Estadísticas de usuarios, países, hashtags
+    - ✅ Integrado en `bin/dwh/ETL.sh` al finalizar la ejecución
+  - Archivos: `bin/dwh/ETL.sh`, `sql/dwh/ETL_56_generateETLReport.sql`
 
-- [ ] **ETL-002**: Contar los hashtags de las notas en la ETL
+- [✅] **ETL-002**: Contar los hashtags de las notas en la ETL - COMPLETADO
   - Calcular la cantidad de hashtags y ponerla en FACTS
-  - Archivos: `sql/dwh/Staging_*.sql`, `sql/dwh/ETL_22_createDWHTables.sql`
+  - **Status**: ✅ Ya estaba implementado correctamente en staging procedures
+  - **Features**:
+    - ✅ Procesamiento de hashtags mediante `staging.process_hashtags()`
+    - ✅ Conteo de hashtags almacenado en `dwh.facts.hashtag_number`
+    - ✅ IDs de hashtags almacenados en array `dwh.facts.all_hashtag_ids`
+  - Archivos: `sql/dwh/Staging_*.sql`, `sql/dwh/Staging_30_sharedHelperFunctions.sql`
 
-- [ ] **ETL-003**: En el ETL calcular la cantidad de notas abiertas actualmente
+- [✅] **ETL-003**: En el ETL calcular la cantidad de notas abiertas actualmente - COMPLETADO
   - Por usuario? total?
-  - Archivos: `sql/dwh/Staging_*.sql`
+  - **Status**: ✅ Implementado tabla `dwh.note_current_status` y vistas optimizadas
+  - **Features**:
+    - ✅ Tabla `dwh.note_current_status` para tracking eficiente de estado actual
+    - ✅ Vistas `dwh.v_currently_open_notes_by_user` y `dwh.v_currently_open_notes_by_country`
+    - ✅ Procedimientos `dwh.initialize_note_current_status()` y `dwh.update_note_current_status()`
+    - ✅ Integrado en datamarts para mejor rendimiento
+  - Archivos: `sql/dwh/ETL_55_createNoteCurrentStatus.sql`, `sql/dwh/datamartUsers/datamartUsers_13_createProcedure.sql`, `sql/dwh/datamartCountries/datamartCountries_13_createProcedure.sql`
 
-- [ ] **ETL-004**: En el ETL mantener la cantidad de notas abiertas en el país
-  - Archivos: `sql/dwh/Staging_*.sql`
+- [✅] **ETL-004**: En el ETL mantener la cantidad de notas abiertas en el país - COMPLETADO
+  - **Status**: ✅ Implementado junto con ETL-003 usando `dwh.note_current_status`
+  - **Features**:
+    - ✅ Vista `dwh.v_currently_open_notes_by_country` para consultas eficientes
+    - ✅ Integrado en `dwh.datamartCountries` para métricas de backlog
+  - Archivos: `sql/dwh/ETL_55_createNoteCurrentStatus.sql`, `sql/dwh/datamartCountries/datamartCountries_13_createProcedure.sql`
 
-- [ ] **ETL-005**: Usar la secuencia de comentarios en los facts
-  - Archivos: `sql/dwh/Staging_*.sql`
+- [✅] **ETL-005**: Usar la secuencia de comentarios en los facts - COMPLETADO
+  - **Status**: ✅ Implementado campo `sequence_action` en `dwh.facts`
+  - **Features**:
+    - ✅ Campo `sequence_action` agregado a todos los INSERT en staging procedures
+    - ✅ Secuencia de comentarios rastreada correctamente en facts
+  - Archivos: `sql/dwh/Staging_32_createStagingObjects.sql`, `sql/dwh/Staging_34_initialFactsLoadCreate.sql`, `sql/dwh/Staging_34_initialFactsLoadCreate_Parallel.sql`, `sql/dwh/Staging_35_initialFactsLoadExecute_Simple.sql`
 
-- [ ] **ETL-006**: Factorizar CREATE and INITIAL en Staging, ya que tiene partes comunes
-  - Archivos: `sql/dwh/Staging_34_initialFactsLoadCreate.sql`, `sql/dwh/Staging_32_createStagingObjects.sql`
+- [✅] **ETL-006**: Factorizar CREATE and INITIAL en Staging, ya que tiene partes comunes - COMPLETADO
+  - **Status**: ✅ Creado archivo `sql/dwh/Staging_30_sharedHelperFunctions.sql` con funciones comunes
+  - **Features**:
+    - ✅ Función `staging.get_or_create_country_dimension()` para manejo de países
+    - ✅ Procedimiento `staging.process_hashtags()` para procesamiento de hashtags
+    - ✅ Función `staging.calculate_comment_metrics()` para métricas de comentarios
+    - ✅ Función `staging.get_timezone_and_local_metrics()` para métricas de timezone
+    - ✅ Reducción de duplicación de código en staging procedures
+  - Archivos: `sql/dwh/Staging_30_sharedHelperFunctions.sql`, `sql/dwh/Staging_34_initialFactsLoadCreate.sql`, `sql/dwh/Staging_32_createStagingObjects.sql`
 
-- [ ] **ETL-007**: Cuando se actualizan los países, actualizar datamarts afectados
+- [✅] **ETL-007**: Cuando se actualizan los países, actualizar datamarts afectados - COMPLETADO
   - Puede que algunas notas cambien de país
   - Actualizar la dimension, y todo usuario y país de datamarts afectados
   - La mejor estrategia es actualizar los valores del modelo estrella
-  - Archivos: `sql/dwh/datamartCountries/`, `sql/dwh/datamartUsers/`
+  - **Status**: ✅ Implementado marcado `modified = TRUE` cuando países cambian
+  - **Features**:
+    - ✅ `staging.get_or_create_country_dimension()` marca países como modificados
+    - ✅ `sql/dwh/ETL_26_updateDimensionTables.sql` marca países modificados al actualizar
+    - ✅ Datamarts procesan automáticamente países marcados como modificados
+  - Archivos: `sql/dwh/Staging_30_sharedHelperFunctions.sql`, `sql/dwh/ETL_26_updateDimensionTables.sql`, `sql/dwh/datamartCountries/`, `sql/dwh/datamartUsers/`
 
 ### Monitor ETL
 
-- [ ] **MON-001**: Revisar cuando una nota se reabre, que se quite el closed en DWH
+- [✅] **MON-001**: Revisar cuando una nota se reabre, que se quite el closed en DWH - COMPLETADO
   - Pero implica un update lo cual es malo
   - O procesar estos de una manera diferente. Por ejemplo teniendo el max action
-  - Archivos: `sql/dwh/Staging_*.sql`
+  - **Status**: ✅ Implementado validación que verifica que `note_current_status` refleja correctamente el estado actual
+  - **Features**:
+    - ✅ Validación que detecta notas cerradas con reaperturas posteriores
+    - ✅ Validación que verifica que `note_current_status` coincide con la acción más reciente en facts
+    - ✅ La tabla `note_current_status` ya maneja correctamente las reaperturas usando `DISTINCT ON` con `ORDER BY action_at DESC`
+  - Archivos: `sql/dwh/ETL_57_validateETLIntegrity.sql`, `bin/dwh/monitor_etl.sh`
 
-- [ ] **MON-002**: Monitor debe revisar que la cantidad de comentarios es la misma de actions en facts
+- [✅] **MON-002**: Monitor debe revisar que la cantidad de comentarios es la misma de actions en facts - COMPLETADO
   - Algo similar para los datamarts
-  - Archivos: `bin/dwh/monitor_etl.sh`
+  - **Status**: ✅ Implementado validación completa de integridad de datos
+  - **Features**:
+    - ✅ Comparación de conteo total de comentarios entre `public.note_comments` y `dwh.facts`
+    - ✅ Comparación por nota (detecta notas con conteos diferentes)
+    - ✅ Comparación de distribución por tipo de acción
+    - ✅ Manejo de casos donde la tabla base no está disponible (FDW)
+    - ✅ Integrado en `monitor_etl.sh` y ejecutado automáticamente después del ETL
+  - Archivos: `sql/dwh/ETL_57_validateETLIntegrity.sql`, `bin/dwh/monitor_etl.sh`, `bin/dwh/ETL.sh`
 
 ---
 
@@ -193,17 +241,17 @@ Todas las tareas de alta prioridad han sido completadas.
 ## 📊 Estadísticas
 
 - **Total de tareas**: ~35
-- **Completadas**: ~15 (43%)
-- **En progreso**: 2 (EXP-001, ML-001)
-- **Pendientes**: ~18
+- **Completadas**: ~24 (69%)
+- **En progreso**: 1 (ML-001)
+- **Pendientes**: ~10
 
 ---
 
 ## 🎯 Próximos Pasos Recomendados
 
 1. **Corto plazo** (esta semana):
-   - [ ] Completar exportación CSV de notas cerradas (EXP-001)
-   - [ ] Probar exportación con datos reales
+   - [✅] Implementar validación de integridad en monitor ETL (MON-002) - COMPLETADO
+   - [✅] Revisar manejo de notas reabiertas (MON-001) - COMPLETADO
 
 2. **Mediano plazo** (este mes):
    - [ ] Implementar procesamiento paralelo de datamart usuarios (DM-005)
@@ -213,7 +261,7 @@ Todas las tareas de alta prioridad han sido completadas.
 3. **Largo plazo** (próximos meses):
    - [ ] Completar integración de ML (ML-001)
    - [ ] Implementar rankings (DM-012, DM-013, DM-014)
-   - [ ] Optimizaciones de ETL (ETL-001 a ETL-007)
+   - [ ] Implementar métricas adicionales de datamarts (DM-007 a DM-016)
 
 ---
 

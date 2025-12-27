@@ -4,7 +4,7 @@
 # Monitor ETL execution status and recent activity
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2025-12-20
+# Version: 2025-12-27
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
@@ -143,6 +143,70 @@ echo ""
 # Check disk space
 echo "5. Disk Space:"
 df -h /tmp 2> /dev/null | tail -1 | awk '{print "  /tmp: " $4 " available (" $5 " used)"}'
+echo ""
+
+# Integrity validations (MON-001, MON-002)
+echo "6. Integrity Validations:"
+if command -v psql &> /dev/null; then
+ if psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DBUSER:-postgres}" -d "${DBNAME_DWH:-osm_notes}" -c "SELECT 1" &> /dev/null; then
+  # Check if validation functions exist
+  VALIDATION_EXISTS=$(psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DBUSER:-postgres}" -d "${DBNAME_DWH:-osm_notes}" -t -A -c "SELECT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid WHERE n.nspname = 'dwh' AND p.proname = 'validate_etl_integrity')" 2> /dev/null || echo "f")
+
+  if [[ "${VALIDATION_EXISTS}" == "t" ]]; then
+   echo "  Running integrity checks..."
+   echo ""
+
+   # Run MON-001 validation (note_current_status)
+   echo "  MON-001: Note Current Status Validation"
+   MON001_RESULT=$(psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DBUSER:-postgres}" -d "${DBNAME_DWH:-osm_notes}" -t -A -F'|' -c "
+     SELECT check_name, status, issue_count::TEXT, details
+     FROM dwh.validate_note_current_status()
+     ORDER BY check_name;
+   " 2> /dev/null)
+
+   if [[ -n "${MON001_RESULT}" ]]; then
+    echo "${MON001_RESULT}" | while IFS='|' read -r check_name status issue_count details; do
+     if [[ "${status}" == "FAIL" ]]; then
+      echo -e "    ${RED}✗${NC} ${check_name}: ${status} (${issue_count} issues)"
+      echo "      ${details}"
+     else
+      echo -e "    ${GREEN}✓${NC} ${check_name}: ${status}"
+     fi
+    done
+   else
+    echo -e "    ${YELLOW}⚠ Could not run MON-001 validation${NC}"
+   fi
+   echo ""
+
+   # Run MON-002 validation (comment counts)
+   echo "  MON-002: Comment Count Validation"
+   MON002_RESULT=$(psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DBUSER:-postgres}" -d "${DBNAME_DWH:-osm_notes}" -t -A -F'|' -c "
+     SELECT check_name, status, issue_count::TEXT, details
+     FROM dwh.validate_comment_counts()
+     ORDER BY check_name;
+   " 2> /dev/null)
+
+   if [[ -n "${MON002_RESULT}" ]]; then
+    echo "${MON002_RESULT}" | while IFS='|' read -r check_name status issue_count details; do
+     if [[ "${status}" == "FAIL" ]]; then
+      echo -e "    ${RED}✗${NC} ${check_name}: ${status} (${issue_count} issues)"
+      echo "      ${details}"
+     else
+      echo -e "    ${GREEN}✓${NC} ${check_name}: ${status}"
+     fi
+    done
+   else
+    echo -e "    ${YELLOW}⚠ Could not run MON-002 validation${NC}"
+   fi
+  else
+   echo -e "  ${YELLOW}⚠ Integrity validation functions not found. Run ETL_57_validateETLIntegrity.sql to create them.${NC}"
+  fi
+ else
+  echo -e "  ${RED}✗ Database connection FAILED${NC}"
+ fi
+else
+ echo -e "  ${YELLOW}⚠ psql not found${NC}"
+fi
 echo ""
 
 # Summary
