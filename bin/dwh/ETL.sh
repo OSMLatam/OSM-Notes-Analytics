@@ -176,6 +176,8 @@ declare -r POSTGRES_53A_ENHANCE_DATAMARTS_HASHTAGS="${SCRIPT_BASE_DIRECTORY}/sql
 declare -r POSTGRES_53B_CREATE_HASHTAG_INDEXES="${SCRIPT_BASE_DIRECTORY}/sql/dwh/improvements/13_create_hashtag_indexes.sql"
 # Unify facts.
 declare -r POSTGRES_54_UNIFY_FACTS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_51_unify.sql"
+# Create note current status table and procedures (ETL-003, ETL-004)
+declare -r POSTGRES_55_CREATE_NOTE_CURRENT_STATUS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_55_createNoteCurrentStatus.sql"
 
 # Load notes staging.
 declare -r POSTGRES_61_LOAD_NOTES_STAGING="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_61_loadNotes.sql"
@@ -436,6 +438,7 @@ function __checkPrereqs {
   "${POSTGRES_53A_ENHANCE_DATAMARTS_HASHTAGS}"
   "${POSTGRES_53B_CREATE_HASHTAG_INDEXES}"
   "${POSTGRES_54_UNIFY_FACTS}"
+  "${POSTGRES_55_CREATE_NOTE_CURRENT_STATUS}"
   "${POSTGRES_61_LOAD_NOTES_STAGING}"
  )
 
@@ -811,6 +814,16 @@ function __processNotesETL {
  __logi "Updating experience levels for modified users."
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -c "CALL dwh.update_experience_levels_for_modified_users();" 2>&1
+
+ # Create note current status table and procedures (ETL-003, ETL-004)
+ __logi "Creating note current status table and procedures."
+ __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
+  -f "${POSTGRES_55_CREATE_NOTE_CURRENT_STATUS}" 2>&1
+
+ # Update note current status (for incremental updates)
+ __logi "Updating note current status."
+ __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
+  -c "CALL dwh.update_note_current_status();" 2>&1
 
  __log_finish
 }
@@ -1279,6 +1292,28 @@ function __initialFactsParallel {
  INITIAL_FACTS_TOTAL_END_TIME=$(date +%s)
  local initial_facts_total_duration=$((INITIAL_FACTS_TOTAL_END_TIME - INITIAL_FACTS_TOTAL_START_TIME))
  __logi "════════════════════════════════════════════════════════════"
+ # Initialize note current status table (ETL-003, ETL-004)
+ __logi "Initializing note current status table..."
+ local STATUS_START_TIME
+ STATUS_START_TIME=$(date +%s)
+ set +e
+ __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
+  -f "${POSTGRES_55_CREATE_NOTE_CURRENT_STATUS}" 2>&1
+ local status_create_exit_code=$?
+ set -e
+ if [[ ${status_create_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to create note current status objects (exit code: ${status_create_exit_code})"
+  __log_finish
+  return 1
+ fi
+ __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
+  -c "CALL dwh.initialize_note_current_status();" 2>&1
+ local STATUS_END_TIME
+ STATUS_END_TIME=$(date +%s)
+ local status_duration=$((STATUS_END_TIME - STATUS_START_TIME))
+ __logi "Note current status initialized successfully"
+ __logi "⏱️  TIME: Note current status initialization took ${status_duration} seconds"
+
  __logi "⏱️  TIME: === __initialFactsParallel TOTAL TIME: ${initial_facts_total_duration} seconds ==="
  __logi "════════════════════════════════════════════════════════════"
 
