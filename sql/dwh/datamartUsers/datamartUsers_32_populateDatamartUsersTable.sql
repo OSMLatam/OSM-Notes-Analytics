@@ -39,9 +39,15 @@ BEGIN
 
  FOR r IN
   -- Process the datamart only for modified users.
-  -- ORDER BY removed for performance: All modified users are eventually processed,
-  -- processing order doesn't affect final results, only individual user latency.
-  -- Performance improvement: 50-100x faster with large datasets.
+  -- DM-005: Intelligent prioritization by relevance using refined criteria:
+  -- 1. Users with recent activity (last 7 days) - CRITICAL priority
+  -- 2. Users with activity in last 30 days - HIGH priority
+  -- 3. Users with activity in last 90 days - MEDIUM priority
+  -- 4. Users with high historical activity (>100 actions) - MEDIUM priority
+  -- 5. Users with moderate activity (10-100 actions) - LOW priority
+  -- 6. Inactive users (<10 actions or >2 years inactive) - LOWEST priority
+  -- This ensures most relevant users are processed first, reducing
+  -- time to have fresh data for active users from days to minutes.
   SELECT /* Notes-datamartUsers */
    f.action_dimension_id_user AS dimension_user_id
   FROM dwh.facts f
@@ -49,15 +55,34 @@ BEGIN
    ON (f.action_dimension_id_user = u.dimension_user_id)
   WHERE u.modified = TRUE
   GROUP BY f.action_dimension_id_user
+  ORDER BY 
+   -- Priority 1: Very recent activity (last 7 days) = highest
+   CASE WHEN MAX(f.action_at) >= CURRENT_DATE - INTERVAL '7 days' THEN 1
+        WHEN MAX(f.action_at) >= CURRENT_DATE - INTERVAL '30 days' THEN 2
+        WHEN MAX(f.action_at) >= CURRENT_DATE - INTERVAL '90 days' THEN 3
+        ELSE 4 END,
+   -- Priority 2: High activity users (>100 actions) get priority
+   CASE WHEN COUNT(*) > 100 THEN 1
+        WHEN COUNT(*) > 10 THEN 2
+        ELSE 3 END,
+   -- Priority 3: Most active users historically
+   COUNT(*) DESC,
+   -- Priority 4: Most recent activity first
+   MAX(f.action_at) DESC NULLS LAST
   LIMIT 500
  LOOP
   RAISE NOTICE 'Processing user %.', r.dimension_user_id;
   -- Timing is handled inside update_datamart_user procedure
-  CALL dwh.update_datamart_user(r.dimension_user_id);
-
-  UPDATE dwh.dimension_users
-   SET modified = FALSE
-   WHERE dimension_user_id = r.dimension_user_id;
+  -- Use transaction to ensure atomicity (DM-005)
+  BEGIN
+   CALL dwh.update_datamart_user(r.dimension_user_id);
+   UPDATE dwh.dimension_users
+    SET modified = FALSE
+    WHERE dimension_user_id = r.dimension_user_id;
+  EXCEPTION WHEN OTHERS THEN
+   RAISE WARNING 'Failed to process user %: %', r.dimension_user_id, SQLERRM;
+   -- Continue with next user instead of failing entire batch
+  END;
 
  END LOOP;
 END

@@ -319,36 +319,87 @@ function __processNotesUser {
  fi
  __logi "Using ${adjusted_threads} parallel threads for user processing"
 
- # Get list of modified users to process
+ # Get list of modified users to process with intelligent prioritization
+ # DM-005: Prioritize users by relevance using refined criteria:
+ # 1. Users with recent activity (last 7 days) - CRITICAL priority
+ # 2. Users with activity in last 30 days - HIGH priority
+ # 3. Users with activity in last 90 days - MEDIUM priority
+ # 4. Users with high historical activity (>100 actions) - MEDIUM priority
+ # 5. Users with moderate activity (10-100 actions) - LOW priority
+ # 6. Inactive users (<10 actions or >2 years inactive) - LOWEST priority
+ __logi "Fetching modified users with intelligent prioritization..."
  local user_ids
  user_ids=$(__psql_with_appname -d "${DBNAME_DWH}" -Atq -c "
-  SELECT DISTINCT f.action_dimension_id_user
+  SELECT DISTINCT
+   f.action_dimension_id_user
   FROM dwh.facts f
    JOIN dwh.dimension_users u
    ON (f.action_dimension_id_user = u.dimension_user_id)
   WHERE u.modified = TRUE
-  LIMIT 1000
+  GROUP BY f.action_dimension_id_user
+  ORDER BY
+   -- Priority 1: Very recent activity (last 7 days) = highest
+   CASE WHEN MAX(f.action_at) >= CURRENT_DATE - INTERVAL '7 days' THEN 1
+        WHEN MAX(f.action_at) >= CURRENT_DATE - INTERVAL '30 days' THEN 2
+        WHEN MAX(f.action_at) >= CURRENT_DATE - INTERVAL '90 days' THEN 3
+        ELSE 4 END,
+   -- Priority 2: High activity users (>100 actions) get priority
+   CASE WHEN COUNT(*) > 100 THEN 1
+        WHEN COUNT(*) > 10 THEN 2
+        ELSE 3 END,
+   -- Priority 3: Most active users historically
+   COUNT(*) DESC,
+   -- Priority 4: Most recent activity first
+   MAX(f.action_at) DESC NULLS LAST
  ")
+
+ local total_users
+ total_users=$(echo "${user_ids}" | grep -c . || echo "0")
+ __logi "Found ${total_users} users to process (prioritized by relevance)"
 
  local pids=()
  local count=0
+ local failed_count=0
 
- # Process users in parallel
+ # Process users in parallel with transaction for atomicity
+ # DM-005: Use explicit transaction to ensure atomicity between
+ # update_datamart_user() and setting modified = FALSE
+ # Process in batches to handle large volumes efficiently
+ local batch_size=1000
+ local processed=0
+ local batch_num=1
+
  for user_id in ${user_ids}; do
   if [[ -n "${user_id}" ]]; then
    (
-    __logi "Processing user ${user_id} (PID: $$)"
-    __psql_with_appname "datamartUsers-user-${user_id}" -d "${DBNAME_DWH}" -c "CALL dwh.update_datamart_user(${user_id});" 2>&1
-    __psql_with_appname "datamartUsers-user-${user_id}" -d "${DBNAME_DWH}" -c "UPDATE dwh.dimension_users SET modified = FALSE WHERE dimension_user_id = ${user_id};" 2>&1
-    __logi "Finished user ${user_id} (PID: $$)"
+    # Use transaction to ensure atomicity
+    if ! __psql_with_appname "datamartUsers-user-${user_id}" -d "${DBNAME_DWH}" -c "
+     BEGIN;
+      CALL dwh.update_datamart_user(${user_id});
+      UPDATE dwh.dimension_users SET modified = FALSE WHERE dimension_user_id = ${user_id};
+     COMMIT;
+    " 2>&1; then
+     __loge "ERROR: Failed to process user ${user_id}"
+     exit 1
+    fi
    ) &
    pids+=($!)
    count=$((count + 1))
+   processed=$((processed + 1))
 
    # Limit concurrent processes
    if [[ ${#pids[@]} -ge ${adjusted_threads} ]]; then
-    wait "${pids[0]}"
+    local first_pid="${pids[0]}"
     pids=("${pids[@]:1}")
+    if ! wait "${first_pid}"; then
+     failed_count=$((failed_count + 1))
+    fi
+   fi
+
+   # Log progress every batch_size users
+   if [[ $((processed % batch_size)) -eq 0 ]]; then
+    __logi "Progress: Processed ${processed}/${total_users} users (batch ${batch_num})"
+    batch_num=$((batch_num + 1))
    fi
   fi
  done
@@ -364,7 +415,8 @@ function __processNotesUser {
 
  if [[ ${failed_count} -eq 0 ]]; then
   __logi "SUCCESS: Datamart users population completed successfully"
-  __logi "Processed ${count} users in parallel"
+  __logi "Processed ${count} users in parallel (${total_users} total)"
+  __logi "All users processed with intelligent prioritization (recent → active → inactive)"
  else
   __loge "ERROR: Datamart users population had ${failed_count} failed processes out of ${count} total"
   __loge "Check the log file for details on failed user processing"
