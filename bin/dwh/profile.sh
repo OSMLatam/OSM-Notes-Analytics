@@ -726,7 +726,8 @@ function __processUserProfile {
      " \
   -v ON_ERROR_STOP=1)
 
- # Used hashtags TODO profile - procesar texto de notas
+ # Used hashtags - extracted from note text and stored as JSON array
+ # Format: [{"hashtag": "tag1", "count": 5}, {"hashtag": "tag2", "count": 3}]
  declare HASHTAGS
  HASHTAGS=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT hashtags
@@ -734,6 +735,19 @@ function __processUserProfile {
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
      " \
   -v ON_ERROR_STOP=1)
+
+ # Calculate hashtag statistics if available
+ declare -i TOTAL_HASHTAG_USES=0
+ declare -i UNIQUE_HASHTAGS=0
+ if [[ -n "${HASHTAGS}" ]] && [[ "${HASHTAGS}" != "" ]] && [[ "${HASHTAGS}" != "[]" ]] && [[ "${HASHTAGS}" != "null" ]]; then
+  if command -v jq &> /dev/null; then
+   TOTAL_HASHTAG_USES=$(echo "${HASHTAGS}" | jq '[.[] | .count] | add // 0' 2> /dev/null || echo "0")
+   UNIQUE_HASHTAGS=$(echo "${HASHTAGS}" | jq 'length' 2> /dev/null || echo "0")
+  else
+   # Fallback: count manually from JSON
+   UNIQUE_HASHTAGS=$(echo "${HASHTAGS}" | grep -o '"hashtag"' | wc -l || echo "0")
+  fi
+ fi
 
  # Countries opening notes.
  declare COUNTRIES_OPENING
@@ -840,7 +854,9 @@ function __processUserProfile {
      " \
   -v ON_ERROR_STOP=1)
 
- declare -i HISTORY_WHOLE_CLOSED_WITH_COMMENT # TODO profile - process text
+ # History whole closed with comment (notes closed that include explanatory text)
+ # The datamart already filters for comments with non-empty text (LENGTH(TRIM(body)) > 0)
+ declare -i HISTORY_WHOLE_CLOSED_WITH_COMMENT
  HISTORY_WHOLE_CLOSED_WITH_COMMENT=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_whole_closed_with_comment
      FROM dwh.datamartUsers
@@ -881,7 +897,8 @@ function __processUserProfile {
      " \
   -v ON_ERROR_STOP=1)
 
- declare -i HISTORY_YEAR_CLOSED_WITH_COMMENT # TODO profile - process text
+ # History year closed with comment (notes closed this year that include explanatory text)
+ declare -i HISTORY_YEAR_CLOSED_WITH_COMMENT
  HISTORY_YEAR_CLOSED_WITH_COMMENT=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_year_closed_with_comment
      FROM dwh.datamartUsers
@@ -922,7 +939,8 @@ function __processUserProfile {
      " \
   -v ON_ERROR_STOP=1)
 
- declare -i HISTORY_MONTH_CLOSED_WITH_COMMENT # TODO profile - process text
+ # History month closed with comment (notes closed this month that include explanatory text)
+ declare -i HISTORY_MONTH_CLOSED_WITH_COMMENT
  HISTORY_MONTH_CLOSED_WITH_COMMENT=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_month_closed_with_comment
      FROM dwh.datamartUsers
@@ -963,7 +981,8 @@ function __processUserProfile {
      " \
   -v ON_ERROR_STOP=1)
 
- declare -i HISTORY_DAY_CLOSED_WITH_COMMENT # TODO profile - process text
+ # History day closed with comment (notes closed today that include explanatory text)
+ declare -i HISTORY_DAY_CLOSED_WITH_COMMENT
  HISTORY_DAY_CLOSED_WITH_COMMENT=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_day_closed_with_comment
      FROM dwh.datamartUsers
@@ -1053,6 +1072,12 @@ function __processUserProfile {
  fi
  if [[ -n "${HASHTAGS}" ]] && [[ "${HASHTAGS}" != "" ]] && [[ "${HASHTAGS}" != "[]" ]] && [[ "${HASHTAGS}" != "null" ]]; then
   echo "Hashtags used:"
+  if [[ ${UNIQUE_HASHTAGS} -gt 0 ]]; then
+   echo "  Total unique hashtags: ${UNIQUE_HASHTAGS}"
+   if [[ ${TOTAL_HASHTAG_USES} -gt 0 ]]; then
+    echo "  Total hashtag uses: ${TOTAL_HASHTAG_USES}"
+   fi
+  fi
   # Try to format with jq if available, otherwise show raw JSON
   if command -v jq &> /dev/null; then
    echo "${HASHTAGS}" | jq -r '.[] | "  #\(.hashtag) (\(.count) times)"' 2> /dev/null || echo "  ${HASHTAGS}"
@@ -1081,6 +1106,24 @@ function __processUserProfile {
  printf "Current year:  %9d  %9d  %9d  %9d  %9d\n" "${HISTORY_YEAR_OPEN}" "${HISTORY_YEAR_COMMENTED}" "${HISTORY_YEAR_CLOSED}" "${HISTORY_YEAR_CLOSED_WITH_COMMENT}" "${HISTORY_YEAR_REOPENED}"
  printf "Current month: %9d  %9d  %9d  %9d  %9d\n" "${HISTORY_MONTH_OPEN}" "${HISTORY_MONTH_COMMENTED}" "${HISTORY_MONTH_CLOSED}" "${HISTORY_MONTH_CLOSED_WITH_COMMENT}" "${HISTORY_MONTH_REOPENED}"
  printf "Today:         %9d  %9d  %9d  %9d  %9d\n" "${HISTORY_DAY_OPEN}" "${HISTORY_DAY_COMMENTED}" "${HISTORY_DAY_CLOSED}" "${HISTORY_DAY_CLOSED_WITH_COMMENT}" "${HISTORY_DAY_REOPENED}"
+
+ # Analysis of closed with comment: calculate percentages and quality metrics
+ if [[ ${HISTORY_WHOLE_CLOSED} -gt 0 ]]; then
+  declare -i CLOSED_WITH_COMMENT_PCT
+  CLOSED_WITH_COMMENT_PCT=$((HISTORY_WHOLE_CLOSED_WITH_COMMENT * 100 / HISTORY_WHOLE_CLOSED))
+  echo
+  echo "Resolution quality analysis:"
+  echo "  Closed notes with explanatory comments: ${HISTORY_WHOLE_CLOSED_WITH_COMMENT} of ${HISTORY_WHOLE_CLOSED} (${CLOSED_WITH_COMMENT_PCT}%)"
+  if [[ ${CLOSED_WITH_COMMENT_PCT} -ge 80 ]]; then
+   echo "  Quality: Excellent - Most resolutions include explanations"
+  elif [[ ${CLOSED_WITH_COMMENT_PCT} -ge 60 ]]; then
+   echo "  Quality: Good - Majority of resolutions include explanations"
+  elif [[ ${CLOSED_WITH_COMMENT_PCT} -ge 40 ]]; then
+   echo "  Quality: Fair - Some resolutions could benefit from more explanations"
+  else
+   echo "  Quality: Needs improvement - Consider adding explanations to resolutions"
+  fi
+ fi
  I=2013
  CURRENT_YEAR=$(date +%Y)
  while [[ "${I}" -le "${CURRENT_YEAR}" ]]; do
@@ -1322,7 +1365,7 @@ function __processCountryProfile {
      " \
   -v ON_ERROR_STOP=1)
 
- # Used hashtags TODO profile - procesar texto de notas
+ # Used hashtags - extracted from note text and stored as JSON array
  declare HASHTAGS
  HASHTAGS=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT hashtags
@@ -1330,6 +1373,19 @@ function __processCountryProfile {
      WHERE dimension_country_id = ${COUNTRY_ID}
      " \
   -v ON_ERROR_STOP=1)
+
+ # Calculate hashtag statistics if available
+ declare -i TOTAL_HASHTAG_USES=0
+ declare -i UNIQUE_HASHTAGS=0
+ if [[ -n "${HASHTAGS}" ]] && [[ "${HASHTAGS}" != "" ]] && [[ "${HASHTAGS}" != "[]" ]] && [[ "${HASHTAGS}" != "null" ]]; then
+  if command -v jq &> /dev/null; then
+   TOTAL_HASHTAG_USES=$(echo "${HASHTAGS}" | jq '[.[] | .count] | add // 0' 2> /dev/null || echo "0")
+   UNIQUE_HASHTAGS=$(echo "${HASHTAGS}" | jq 'length' 2> /dev/null || echo "0")
+  else
+   # Fallback: count manually from JSON
+   UNIQUE_HASHTAGS=$(echo "${HASHTAGS}" | grep -o '"hashtag"' | wc -l || echo "0")
+  fi
+ fi
 
  # Users opening notes. Global ranking, historically.
  declare USERS_OPENING
@@ -1436,7 +1492,8 @@ function __processCountryProfile {
      " \
   -v ON_ERROR_STOP=1)
 
- declare -i HISTORY_WHOLE_CLOSED_WITH_COMMENT # TODO profile - process text
+ # History whole closed with comment (notes closed that include explanatory text)
+ declare -i HISTORY_WHOLE_CLOSED_WITH_COMMENT
  HISTORY_WHOLE_CLOSED_WITH_COMMENT=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_whole_closed_with_comment
      FROM dwh.datamartCountries
@@ -1477,7 +1534,8 @@ function __processCountryProfile {
      " \
   -v ON_ERROR_STOP=1)
 
- declare -i HISTORY_YEAR_CLOSED_WITH_COMMENT # TODO profile - process text
+ # History year closed with comment (notes closed this year that include explanatory text)
+ declare -i HISTORY_YEAR_CLOSED_WITH_COMMENT
  HISTORY_YEAR_CLOSED_WITH_COMMENT=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_year_closed_with_comment
      FROM dwh.datamartCountries
@@ -1518,7 +1576,8 @@ function __processCountryProfile {
      " \
   -v ON_ERROR_STOP=1)
 
- declare -i HISTORY_MONTH_CLOSED_WITH_COMMENT # TODO profile - process text
+ # History month closed with comment (notes closed this month that include explanatory text)
+ declare -i HISTORY_MONTH_CLOSED_WITH_COMMENT
  HISTORY_MONTH_CLOSED_WITH_COMMENT=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_month_closed_with_comment
      FROM dwh.datamartCountries
@@ -1559,7 +1618,8 @@ function __processCountryProfile {
      " \
   -v ON_ERROR_STOP=1)
 
- declare -i HISTORY_DAY_CLOSED_WITH_COMMENT # TODO profile - process text
+ # History day closed with comment (notes closed today that include explanatory text)
+ declare -i HISTORY_DAY_CLOSED_WITH_COMMENT
  HISTORY_DAY_CLOSED_WITH_COMMENT=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT history_day_closed_with_comment
      FROM dwh.datamartCountries
@@ -1614,6 +1674,12 @@ function __processCountryProfile {
  fi
  if [[ -n "${HASHTAGS}" ]] && [[ "${HASHTAGS}" != "" ]] && [[ "${HASHTAGS}" != "[]" ]] && [[ "${HASHTAGS}" != "null" ]]; then
   echo "Hashtags used:"
+  if [[ ${UNIQUE_HASHTAGS} -gt 0 ]]; then
+   echo "  Total unique hashtags: ${UNIQUE_HASHTAGS}"
+   if [[ ${TOTAL_HASHTAG_USES} -gt 0 ]]; then
+    echo "  Total hashtag uses: ${TOTAL_HASHTAG_USES}"
+   fi
+  fi
   # Try to format with jq if available, otherwise show raw JSON
   if command -v jq &> /dev/null; then
    echo "${HASHTAGS}" | jq -r '.[] | "  #\(.hashtag) (\(.count) times)"' 2> /dev/null || echo "  ${HASHTAGS}"
@@ -1642,6 +1708,24 @@ function __processCountryProfile {
  printf "Current year:  %9d  %9d  %9d  %9d  %9d\n" "${HISTORY_YEAR_OPEN}" "${HISTORY_YEAR_COMMENTED}" "${HISTORY_YEAR_CLOSED}" "${HISTORY_YEAR_CLOSED_WITH_COMMENT}" "${HISTORY_YEAR_REOPENED}"
  printf "Current month: %9d  %9d  %9d  %9d  %9d\n" "${HISTORY_MONTH_OPEN}" "${HISTORY_MONTH_COMMENTED}" "${HISTORY_MONTH_CLOSED}" "${HISTORY_MONTH_CLOSED_WITH_COMMENT}" "${HISTORY_MONTH_REOPENED}"
  printf "Today:         %9d  %9d  %9d  %9d  %9d\n" "${HISTORY_DAY_OPEN}" "${HISTORY_DAY_COMMENTED}" "${HISTORY_DAY_CLOSED}" "${HISTORY_DAY_CLOSED_WITH_COMMENT}" "${HISTORY_DAY_REOPENED}"
+
+ # Analysis of closed with comment: calculate percentages and quality metrics
+ if [[ ${HISTORY_WHOLE_CLOSED} -gt 0 ]]; then
+  declare -i CLOSED_WITH_COMMENT_PCT
+  CLOSED_WITH_COMMENT_PCT=$((HISTORY_WHOLE_CLOSED_WITH_COMMENT * 100 / HISTORY_WHOLE_CLOSED))
+  echo
+  echo "Resolution quality analysis:"
+  echo "  Closed notes with explanatory comments: ${HISTORY_WHOLE_CLOSED_WITH_COMMENT} of ${HISTORY_WHOLE_CLOSED} (${CLOSED_WITH_COMMENT_PCT}%)"
+  if [[ ${CLOSED_WITH_COMMENT_PCT} -ge 80 ]]; then
+   echo "  Quality: Excellent - Most resolutions include explanations"
+  elif [[ ${CLOSED_WITH_COMMENT_PCT} -ge 60 ]]; then
+   echo "  Quality: Good - Majority of resolutions include explanations"
+  elif [[ ${CLOSED_WITH_COMMENT_PCT} -ge 40 ]]; then
+   echo "  Quality: Fair - Some resolutions could benefit from more explanations"
+  else
+   echo "  Quality: Needs improvement - Consider adding explanations to resolutions"
+  fi
+ fi
  I=2013
  CURRENT_YEAR=$(date +%Y)
  while [[ "${I}" -le "${CURRENT_YEAR}" ]]; do
