@@ -1,8 +1,16 @@
 -- Populates the user datamart with aggregated statistics.
 -- Processes 500 users incrementally to avoid database overload.
 --
+-- DM-005: Implements intelligent prioritization:
+-- - Users with recent activity (last 7/30/90 days) processed first
+-- - High-activity users (>100 actions) prioritized
+-- - Atomic transactions ensure data consistency
+-- - Error handling with EXCEPTION prevents batch failures
+--
+-- See bin/dwh/datamartUsers/PARALLEL_PROCESSING.md for detailed documentation.
+--
 -- Author: Andres Gomez (AngocA)
--- Version: 2025-10-21
+-- Version: 2025-12-27
 
 DO /* Notes-datamartUsers-badges */
 $$
@@ -55,7 +63,7 @@ BEGIN
    ON (f.action_dimension_id_user = u.dimension_user_id)
   WHERE u.modified = TRUE
   GROUP BY f.action_dimension_id_user
-  ORDER BY 
+  ORDER BY
    -- Priority 1: Very recent activity (last 7 days) = highest
    CASE WHEN MAX(f.action_at) >= CURRENT_DATE - INTERVAL '7 days' THEN 1
         WHEN MAX(f.action_at) >= CURRENT_DATE - INTERVAL '30 days' THEN 2

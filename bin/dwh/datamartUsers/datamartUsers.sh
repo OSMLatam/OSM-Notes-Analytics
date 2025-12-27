@@ -2,8 +2,17 @@
 
 # Creates a datamart for user data with pre-computed analytics.
 #
+# DM-005: Implements intelligent prioritization and parallel processing:
+# - Users with recent activity (last 7/30/90 days) processed first
+# - High-activity users (>100 actions) prioritized
+# - Parallel processing with nproc-1 threads
+# - Atomic transactions ensure data consistency
+#
 # To follow the progress you can execute:
 #   tail -40f $(ls -1rtd /tmp/datamartUsers_* | tail -1)/datamartUsers.log
+#
+# Documentation: See PARALLEL_PROCESSING.md for detailed information about
+#                 the prioritization and parallel processing system.
 #
 # This is the list of error codes:
 # 1) Help message.
@@ -16,8 +25,8 @@
 # * shfmt -w -i 1 -sr -bn datamartUsers.sh
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2025-08-11
-VERSION="2025-08-11"
+# Version: 2025-12-27
+VERSION="2025-12-27"
 
 #set -xv
 # Fails when a variable is not initialized.
@@ -118,7 +127,15 @@ function __show_help {
  echo "${0} version ${VERSION}"
  echo "This script populates the user datamart with pre-computed analytics."
  echo "The datamart aggregates note statistics by user from the fact table."
- echo "Processing is incremental (500 users per run) to avoid database overload."
+ echo
+ echo "DM-005: Intelligent Prioritization and Parallel Processing"
+ echo "  - Users with recent activity (last 7/30/90 days) processed first"
+ echo "  - High-activity users (>100 actions) prioritized"
+ echo "  - Parallel processing with nproc-1 threads"
+ echo "  - Processes all modified users (no limit)"
+ echo
+ echo "Documentation: See PARALLEL_PROCESSING.md for detailed information"
+ echo "               about prioritization and parallel processing."
  echo
  echo "Written by: Andres Gomez (AngocA)"
  echo "OSM-LatAm, OSM-Colombia, MaptimeBogota."
