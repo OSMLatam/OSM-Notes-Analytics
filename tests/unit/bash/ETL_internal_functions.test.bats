@@ -18,8 +18,10 @@ setup() {
 
 # Test __initialFacts function handles errors gracefully
 @test "__initialFacts should handle missing staging tables gracefully" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Test that function exists - use type -t which returns just the type
@@ -52,8 +54,10 @@ setup() {
 
 # Test __detectFirstExecution function logic
 @test "__detectFirstExecution should detect empty database" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check if dimension_days exists
@@ -111,8 +115,10 @@ EOF
 
 # Test dimension functions work correctly
 @test "Dimension setup functions should work" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Test that we can query dimension tables
@@ -130,8 +136,10 @@ EOF
 
 # Test facts table structure
 @test "Facts table should have required columns for resolution metrics" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check if facts table exists

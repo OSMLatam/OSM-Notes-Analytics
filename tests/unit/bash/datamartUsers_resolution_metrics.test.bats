@@ -26,8 +26,10 @@ setup() {
 
 # Test that resolution metrics columns exist in datamartUsers
 @test "Resolution metrics columns should exist in datamartUsers table" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check if columns exist
@@ -48,8 +50,10 @@ setup() {
 
 # Test that resolution metrics can be calculated for users
 @test "Resolution metrics should be calculable from facts table for users" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Test the calculation query
@@ -67,8 +71,10 @@ setup() {
 
 # Test that resolution rate calculation handles edge cases for users
 @test "Resolution rate should handle division by zero for users" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Test resolution rate calculation doesn't error with zero total
@@ -87,8 +93,10 @@ setup() {
 
 # Test that resolution metrics match cross-reference with facts for users
 @test "Resolution metrics should match facts table calculation for users" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Get a user with data
@@ -138,8 +146,10 @@ EOF
 
 # Test that resolution metrics are not NULL for users with activity
 @test "Resolution metrics should not be NULL for users with activity" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check users with activity have metrics calculated
@@ -158,8 +168,10 @@ EOF
 
 # Test that resolution rate is between 0 and 100 for users
 @test "Resolution rate should be between 0 and 100 for users" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that all resolution rates are valid percentages
@@ -177,8 +189,10 @@ EOF
 
 # Test that resolution time metrics are non-negative for users
 @test "Resolution time metrics should be non-negative for users" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that resolution times are valid
@@ -198,8 +212,10 @@ EOF
 
 # Test that notes_resolved_count + notes_still_open_count is consistent
 @test "Resolution metrics counts should be consistent for users" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that resolved + still_open doesn't exceed opened (we don't have exact count)
@@ -217,8 +233,10 @@ EOF
 
 # Test that datamart update procedure includes resolution metrics for users
 @test "Datamart update procedure should include resolution metrics calculation for users" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that the procedure text includes resolution metrics
@@ -234,8 +252,10 @@ EOF
 
 # Test edge case: user with only opened notes (0% resolution)
 @test "Resolution rate should handle users with no resolved notes" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Look for users with only opened notes
@@ -254,8 +274,10 @@ EOF
 
 # Test edge case: user with all notes resolved (100% resolution)
 @test "Resolution rate should handle users with all notes resolved" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Look for users with all notes resolved

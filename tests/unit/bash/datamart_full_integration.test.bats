@@ -26,8 +26,10 @@ setup() {
 
 # Test that we can create test data
 @test "Test data can be loaded successfully" {
-  if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   local dbname="${TEST_DBNAME:-${DBNAME}}"
@@ -42,8 +44,10 @@ setup() {
 
 # Test that application statistics columns exist
 @test "Application statistics columns exist after data load" {
-  if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   local dbname="${TEST_DBNAME:-${DBNAME}}"
@@ -65,8 +69,10 @@ setup() {
 
 # Test datamart update for a test country
 @test "Datamart update procedure can be executed for test data" {
-  if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   local dbname="${TEST_DBNAME:-${DBNAME}}"
@@ -86,8 +92,10 @@ setup() {
 
 # Test that datamart has data after update
 @test "Datamart contains data after update" {
-  if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   local dbname="${TEST_DBNAME:-${DBNAME}}"
@@ -111,8 +119,10 @@ setup() {
 
 # Test that application calculations work correctly
 @test "Application calculations return valid data" {
-  if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   local dbname="${TEST_DBNAME:-${DBNAME}}"
@@ -139,8 +149,10 @@ setup() {
 
 # Test that resolution metrics are calculated
 @test "Resolution metrics are calculated correctly" {
-  if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   local dbname="${TEST_DBNAME:-${DBNAME}}"
@@ -173,8 +185,10 @@ setup() {
 
 # Test that complete mock ETL pipeline runs successfully
 @test "Complete mock ETL pipeline can be executed" {
-  if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   local dbname="${TEST_DBNAME:-${DBNAME}}"
@@ -192,8 +206,10 @@ setup() {
 
 # Test that datamarts have data after mock ETL
 @test "Datamarts contain data after mock ETL pipeline" {
-  if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   local dbname="${TEST_DBNAME:-${DBNAME}}"

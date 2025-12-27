@@ -3,6 +3,9 @@
 # Require minimum BATS version for run flags
 bats_require_minimum_version 1.5.0
 
+# Load test helper for database connection verification
+load test_helper
+
 # Integration tests for datamartUsers.sh
 # Tests that actually execute the script to detect real errors
 

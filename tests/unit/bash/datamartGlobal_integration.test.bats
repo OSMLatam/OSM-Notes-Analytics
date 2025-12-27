@@ -3,6 +3,9 @@
 # Require minimum BATS version for run flags
 bats_require_minimum_version 1.5.0
 
+# Load test helper for database connection verification
+load test_helper
+
 # Integration tests for datamartGlobal.sh
 # Tests that the global datamart is properly created and populated
 
@@ -97,9 +100,11 @@ teardown() {
 
 # Test that datamart global table structure can be created
 @test "datamart global table can be created" {
- if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
-  skip "No database configured"
- fi
+ # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
+  fi
 
  local dbname="${TEST_DBNAME:-${DBNAME}}"
 
@@ -123,9 +128,11 @@ teardown() {
 
 # Test that datamart global table has required columns
 @test "datamart global table has all required columns" {
- if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
-  skip "No database configured"
- fi
+ # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
+  fi
 
  local dbname="${TEST_DBNAME:-${DBNAME}}"
 
@@ -157,9 +164,11 @@ teardown() {
 
 # Test that datamart global table has exactly one record
 @test "datamart global table should have exactly one record" {
- if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
-  skip "No database configured"
- fi
+ # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
+  fi
 
  local dbname="${TEST_DBNAME:-${DBNAME}}"
 
@@ -179,9 +188,11 @@ teardown() {
 
 # Test that datamart global record has dimension_global_id = 1
 @test "datamart global record should have dimension_global_id = 1" {
- if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
-  skip "No database configured"
- fi
+ # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
+  fi
 
  local dbname="${TEST_DBNAME:-${DBNAME}}"
 
@@ -201,9 +212,11 @@ teardown() {
 
 # Test that population script can be executed
 @test "datamart global population script can be executed" {
- if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
-  skip "No database configured"
- fi
+ # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
+  fi
 
  local dbname="${TEST_DBNAME:-${DBNAME}}"
 
@@ -220,9 +233,11 @@ teardown() {
 
 # Test that datamart global can export to JSON
 @test "datamart global can be exported to JSON" {
- if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
-  skip "No database configured"
- fi
+ # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
+  fi
 
  local dbname="${TEST_DBNAME:-${DBNAME}}"
 
@@ -243,9 +258,11 @@ teardown() {
 
 # Test that check tables script works
 @test "datamart global check tables script validates existence" {
- if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
-  skip "No database configured"
- fi
+ # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
+  fi
 
  local dbname="${TEST_DBNAME:-${DBNAME}}"
 
@@ -261,9 +278,11 @@ teardown() {
 
 # Test that max_date_global_processed table exists
 @test "max_date_global_processed table should exist" {
- if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
-  skip "No database configured"
- fi
+ # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
+  fi
 
  local dbname="${TEST_DBNAME:-${DBNAME}}"
 

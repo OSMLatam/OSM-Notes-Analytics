@@ -24,8 +24,10 @@ setup() {
 
 # Test that application statistics columns exist in datamartCountries
 @test "Application statistics columns should exist in datamartCountries table" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check if columns exist
@@ -45,8 +47,10 @@ setup() {
 
 # Test that application statistics columns exist in datamartUsers
 @test "Application statistics columns should exist in datamartUsers table" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check if columns exist
@@ -66,8 +70,10 @@ setup() {
 
 # Test that applications_used JSON has valid structure
 @test "Applications_used JSON should have valid structure for countries" {
-  if [[ -z "${TEST_DBNAME:-}" ]] && [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   local dbname="${TEST_DBNAME:-${DBNAME}}"
@@ -87,8 +93,10 @@ setup() {
 
 # Test that applications_used JSON has valid structure for users
 @test "Applications_used JSON should have valid structure for users" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Test JSON structure
@@ -106,8 +114,10 @@ setup() {
 
 # Test that mobile_apps_count and desktop_apps_count are non-negative
 @test "Mobile and desktop app counts should be non-negative for countries" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that counts are non-negative
@@ -125,8 +135,10 @@ setup() {
 
 # Test that mobile_apps_count and desktop_apps_count are non-negative for users
 @test "Mobile and desktop app counts should be non-negative for users" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that counts are non-negative
@@ -144,8 +156,10 @@ setup() {
 
 # Test that most_used_application_id references valid application
 @test "Most_used_application_id should reference valid application for countries" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that referenced application exists
@@ -164,8 +178,10 @@ setup() {
 
 # Test that most_used_application_id references valid application for users
 @test "Most_used_application_id should reference valid application for users" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that referenced application exists
@@ -184,8 +200,10 @@ setup() {
 
 # Test that applications_used JSON contains expected fields
 @test "Applications_used JSON should contain app_id, app_name, count" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check JSON structure for countries
@@ -203,8 +221,10 @@ setup() {
 
 # Test that applications can be queried from facts table
 @test "Application statistics should be calculable from facts table" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Test that applications exist in facts
@@ -223,8 +243,10 @@ setup() {
 
 # Test that platform categorization works correctly
 @test "Platform categorization should work (mobile vs desktop)" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Test platform detection

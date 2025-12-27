@@ -1,5 +1,8 @@
 #!/usr/bin/env bats
 
+# Load test helper for database connection verification
+load test_helper
+
 # Tests for hybrid strategy: copy base tables for initial load, FDW for incremental
 #
 # Author: Andres Gomez (AngocA)

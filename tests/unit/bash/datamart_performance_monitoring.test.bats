@@ -19,8 +19,13 @@ setup() {
 
 # Test that performance log table can be created
 @test "Performance log table should be creatable" {
-  if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Load test helper to get verify_database_connection function
+  load test_helper
+  
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   local dbname="${TEST_DBNAME:-${DBNAME}}"
@@ -34,8 +39,13 @@ setup() {
 
 # Test that performance log table exists after creation
 @test "Performance log table should exist" {
-  if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Load test helper to get verify_database_connection function
+  load test_helper
+  
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   local dbname="${TEST_DBNAME:-${DBNAME}}"
@@ -54,8 +64,13 @@ setup() {
 
 # Test that performance log table has correct columns
 @test "Performance log table should have correct columns" {
-  if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Load test helper to get verify_database_connection function
+  load test_helper
+  
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   local dbname="${TEST_DBNAME:-${DBNAME}}"
@@ -82,8 +97,10 @@ setup() {
 
 # Test that country update procedure logs performance
 @test "Country update procedure should log performance" {
-  if [[ -z "${DBNAME:-}" ]] && [[ -z "${TEST_DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   local dbname="${TEST_DBNAME:-${DBNAME}}"

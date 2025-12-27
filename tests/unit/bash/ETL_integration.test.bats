@@ -1,5 +1,8 @@
 #!/usr/bin/env bats
 
+# Load test helper for database connection verification
+load test_helper
+
 # ETL Integration Tests for OSM-Notes-profile
 # Test file: ETL_integration.test.bats
 # Author: Andres Gomez (AngocA)

@@ -27,8 +27,10 @@ setup() {
 
 # Test that resolution metrics columns exist in datamartCountries
 @test "Resolution metrics columns should exist in datamartCountries table" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check if columns exist
@@ -49,8 +51,10 @@ setup() {
 
 # Test that resolution metrics can be calculated
 @test "Resolution metrics should be calculable from facts table" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Test the calculation query
@@ -68,8 +72,10 @@ setup() {
 
 # Test that resolution rate calculation handles edge cases
 @test "Resolution rate should handle division by zero" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Test resolution rate calculation doesn't error with zero total
@@ -88,8 +94,10 @@ setup() {
 
 # Test that resolution metrics match cross-reference with facts
 @test "Resolution metrics should match facts table calculation" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Get a country with data
@@ -139,8 +147,10 @@ EOF
 
 # Test that resolution metrics are not NULL for countries with data
 @test "Resolution metrics should not be NULL for countries with activity" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check countries with activity have metrics calculated
@@ -159,8 +169,10 @@ EOF
 
 # Test that resolution rate is between 0 and 100
 @test "Resolution rate should be between 0 and 100" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that all resolution rates are valid percentages
@@ -178,8 +190,10 @@ EOF
 
 # Test that resolution time metrics are non-negative
 @test "Resolution time metrics should be non-negative" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that resolution times are valid
@@ -199,8 +213,10 @@ EOF
 
 # Test that notes_resolved_count + notes_still_open_count equals total_notes_opened
 @test "Resolution metrics counts should be consistent" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that resolved + still_open equals opened
@@ -220,8 +236,10 @@ EOF
 
 # Test that datamart update procedure includes resolution metrics
 @test "Datamart update procedure should include resolution metrics calculation" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that the procedure text includes resolution metrics
@@ -237,8 +255,10 @@ EOF
 
 # Test that resolution metrics are updated when datamart is refreshed
 @test "Resolution metrics should update when datamart is refreshed" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Get a country's current resolution rate
@@ -274,8 +294,10 @@ EOF
 
 # Test edge case: country with only opened notes (0% resolution)
 @test "Resolution rate should handle countries with no resolved notes" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Look for countries with only opened notes
@@ -294,8 +316,10 @@ EOF
 
 # Test edge case: country with all notes resolved (100% resolution)
 @test "Resolution rate should handle countries with all notes resolved" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Look for countries with all notes resolved

@@ -24,8 +24,10 @@ setup() {
 
 # Test that community health columns exist in datamartCountries
 @test "Community health columns should exist in datamartCountries table" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check if columns exist
@@ -46,8 +48,10 @@ setup() {
 
 # Test that community health columns exist in datamartUsers
 @test "Community health columns should exist in datamartUsers table" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check if columns exist
@@ -68,8 +72,10 @@ setup() {
 
 # Test that active_notes_count is non-negative for countries
 @test "Active notes count should be non-negative for countries" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that active notes count is non-negative
@@ -87,8 +93,10 @@ setup() {
 
 # Test that active_notes_count is non-negative for users
 @test "Active notes count should be non-negative for users" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that active notes count is non-negative
@@ -106,8 +114,10 @@ setup() {
 
 # Test that backlog size is non-negative for countries
 @test "Backlog size should be non-negative for countries" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that backlog size is non-negative
@@ -125,8 +135,10 @@ setup() {
 
 # Test that backlog size is non-negative for users
 @test "Backlog size should be non-negative for users" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that backlog size is non-negative
@@ -144,8 +156,10 @@ setup() {
 
 # Test that 30-day metrics are non-negative for countries
 @test "30-day metrics should be non-negative for countries" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that 30-day metrics are non-negative
@@ -163,8 +177,10 @@ setup() {
 
 # Test that 30-day metrics are non-negative for users
 @test "30-day metrics should be non-negative for users" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that 30-day metrics are non-negative
@@ -182,8 +198,10 @@ setup() {
 
 # Test that age distribution is valid JSON for countries
 @test "Age distribution should be valid JSON for countries" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that age distribution is valid JSON
@@ -201,8 +219,10 @@ setup() {
 
 # Test that age distribution is valid JSON for users
 @test "Age distribution should be valid JSON for users" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that age distribution is valid JSON
@@ -220,8 +240,10 @@ setup() {
 
 # Test that backlog size equals active notes for countries
 @test "Backlog size should equal active notes for countries" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that backlog size equals active notes
@@ -240,8 +262,10 @@ setup() {
 
 # Test that backlog size equals active notes for users
 @test "Backlog size should equal active notes for users" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that backlog size equals active notes
@@ -260,8 +284,10 @@ setup() {
 
 # Test datamart update procedure includes health metrics for countries
 @test "Datamart update procedure should include health metrics for countries" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that the procedure text includes health metrics
@@ -277,8 +303,10 @@ setup() {
 
 # Test datamart update procedure includes health metrics for users
 @test "Datamart update procedure should include health metrics for users" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that the procedure text includes health metrics

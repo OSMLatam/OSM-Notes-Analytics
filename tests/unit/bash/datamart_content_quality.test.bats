@@ -24,8 +24,10 @@ setup() {
 
 # Test that content quality columns exist in datamartCountries
 @test "Content quality columns should exist in datamartCountries table" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check if columns exist
@@ -46,8 +48,10 @@ setup() {
 
 # Test that content quality columns exist in datamartUsers
 @test "Content quality columns should exist in datamartUsers table" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check if columns exist
@@ -68,8 +72,10 @@ setup() {
 
 # Test that avg_comment_length is non-negative for countries
 @test "Avg comment length should be non-negative for countries" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that comment length is non-negative
@@ -87,8 +93,10 @@ setup() {
 
 # Test that avg_comment_length is non-negative for users
 @test "Avg comment length should be non-negative for users" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that comment length is non-negative
@@ -106,8 +114,10 @@ setup() {
 
 # Test that URL and mention percentages are between 0 and 100
 @test "URL and mention percentages should be between 0 and 100 for countries" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that percentages are valid (0-100)
@@ -125,8 +135,10 @@ setup() {
 
 # Test that URL and mention percentages are between 0 and 100 for users
 @test "URL and mention percentages should be between 0 and 100 for users" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that percentages are valid (0-100)
@@ -144,8 +156,10 @@ setup() {
 
 # Test that counts are non-negative
 @test "Comment counts should be non-negative for countries" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that counts are non-negative
@@ -164,8 +178,10 @@ setup() {
 
 # Test that counts are non-negative for users
 @test "Comment counts should be non-negative for users" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that counts are non-negative
@@ -184,8 +200,10 @@ setup() {
 
 # Test content quality metrics can be calculated from facts
 @test "Content quality metrics should be calculable from facts table" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Test calculation query (check for content quality columns)
@@ -203,8 +221,10 @@ setup() {
 
 # Test comment length calculation from facts
 @test "Comment length should be calculable for countries" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Test that we can calculate average comment length
@@ -222,8 +242,10 @@ setup() {
 
 # Test datamart update procedure includes content quality metrics
 @test "Datamart update procedure should include content quality metrics calculation for countries" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that the procedure text includes quality metrics
@@ -239,8 +261,10 @@ setup() {
 
 # Test datamart update procedure includes content quality metrics for users
 @test "Datamart update procedure should include content quality metrics calculation for users" {
-  if [[ -z "${DBNAME:-}" ]]; then
-    skip "No database configured"
+  # Verify database connection - will fail explicitly if DB is not available
+  if ! verify_database_connection; then
+    echo "Database connection failed - test cannot proceed" >&2
+    return 1
   fi
 
   # Check that the procedure text includes quality metrics
