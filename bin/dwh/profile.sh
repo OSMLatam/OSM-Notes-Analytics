@@ -579,7 +579,7 @@ function __processUserProfile {
      " \
   -v ON_ERROR_STOP=1)
 
- # Quantity of days creating notes. (TODO profile - May have stopped opening or closing notes)
+ # Quantity of days creating notes
  declare -i QTY_DAYS_OPEN
  QTY_DAYS_OPEN=$(psql -d "${DBNAME_DWH}" -Atq \
   -c "SELECT CURRENT_DATE - date_starting_creating_notes
@@ -612,6 +612,15 @@ function __processUserProfile {
      WHERE dimension_user_id = ${DIMENSION_USER_ID}
      " \
   -v ON_ERROR_STOP=1)
+
+ # Check if user may have stopped opening or closing notes
+ declare DAYS_SINCE_LAST_ACTION
+ DAYS_SINCE_LAST_ACTION=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COALESCE(days_since_last_action, 0)
+     FROM dwh.datamartUsers
+     WHERE dimension_user_id = ${DIMENSION_USER_ID}
+     " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "0")
 
  # First actions.
  declare -i FIRST_OPEN_NOTE_ID
@@ -987,22 +996,36 @@ function __processUserProfile {
      " \
   -v ON_ERROR_STOP=1)
 
- # Badges. TODO profile - asignar
- # declare BADGES
- # BADGES=$(psql -d "${DBNAME_DWH}" -Atq \
- #    -c "SELECT b.badge_name, p.date_awarded
- #     FROM dwh.badges_per_users p
- #      JOIN dwh.badges b
- #      ON p.id_badge = b.badge_id
- #     WHERE dimension_user_id = ${DIMENSION_USER_ID}
- #     " \
- #    -v ON_ERROR_STOP=1 )
- # ToDo profile - Open more than 100 notes in a day
- # ToDo profile - Open more than 300 notes in a day
- # ToDo profile - Open more than 1000 notes in a day
- # ToDo profile - Resolve more than 100 notes in a day
- # ToDo profile - Resolve more than 300 notes in a day
- # ToDo profile - Resolve more than 1000 notes in a day
+ # Badges from database
+ declare BADGES
+ BADGES=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT json_agg(json_build_object('badge_name', b.badge_name, 'date_awarded', p.date_awarded, 'comment', p.comment) ORDER BY p.date_awarded DESC)
+     FROM dwh.badges_per_users p
+      JOIN dwh.badges b
+      ON p.id_badge = b.badge_id
+     WHERE p.id_user = ${DIMENSION_USER_ID}
+     " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "[]")
+
+ # Detect daily achievements (100/300/1000 notes opened/closed in a single day)
+ declare DAILY_ACHIEVEMENTS
+ DAILY_ACHIEVEMENTS=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT json_agg(json_build_object('date', action_date, 'opened', opened_count, 'closed', closed_count))
+     FROM (
+      SELECT action_at::date AS action_date,
+       COUNT(*) FILTER (WHERE action_type = 'opened') AS opened_count,
+       COUNT(*) FILTER (WHERE action_type = 'closed') AS closed_count
+      FROM dwh.facts
+      WHERE action_dimension_id_user = ${DIMENSION_USER_ID}
+       AND action_at IS NOT NULL
+      GROUP BY action_at::date
+      HAVING COUNT(*) FILTER (WHERE action_type = 'opened') >= 100
+        OR COUNT(*) FILTER (WHERE action_type = 'closed') >= 100
+     ) sub
+     ORDER BY action_date DESC
+     LIMIT 20
+     " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "[]")
 
  # Show user information
  echo "User name: ${USERNAME} (id: ${OSM_USER_ID})."
@@ -1012,6 +1035,9 @@ function __processUserProfile {
  fi
  if [[ ${QTY_DAYS_CLOSE} -gt 0 ]]; then
   echo "Quantity of days solving notes: ${QTY_DAYS_CLOSE}, since ${DATE_FIRST_CLOSE}."
+ fi
+ if [[ ${DAYS_SINCE_LAST_ACTION} -gt 365 ]]; then
+  echo "Note: User may have stopped opening or closing notes (last action was ${DAYS_SINCE_LAST_ACTION} days ago)."
  fi
  echo "First actions: https://www.openstreetmap.org/note/${FIRST_OPEN_NOTE_ID} https://www.openstreetmap.org/note/${FIRST_COMMENTED_NOTE_ID} https://www.openstreetmap.org/note/${FIRST_CLOSED_NOTE_ID} https://www.openstreetmap.org/note/${FIRST_REOPENED_NOTE_ID}"
  echo "Most recent actions:  https://www.openstreetmap.org/note/${LAST_OPEN_NOTE_ID}  https://www.openstreetmap.org/note/${LAST_COMMENTED_NOTE_ID}  https://www.openstreetmap.org/note/${LAST_CLOSED_NOTE_ID}  https://www.openstreetmap.org/note/${LAST_REOPENED_NOTE_ID}"
@@ -1025,8 +1051,15 @@ function __processUserProfile {
   echo "The date when the most notes were closed:"
   echo "${DATES_MOST_CLOSED}" | sed 's/}, {"date" : "/\n/g' | sed 's/", "quantity" : / - /g' | sed 's/\[{"date" : "//' | sed 's/}\]//'
  fi
- if [[ -n "${HASHTAGS}" ]] && [[ "${HASHTAGS}" != "" ]]; then
-  echo "Hashtags used: ${HASHTAGS}"
+ if [[ -n "${HASHTAGS}" ]] && [[ "${HASHTAGS}" != "" ]] && [[ "${HASHTAGS}" != "[]" ]] && [[ "${HASHTAGS}" != "null" ]]; then
+  echo "Hashtags used:"
+  # Try to format with jq if available, otherwise show raw JSON
+  if command -v jq &> /dev/null; then
+   echo "${HASHTAGS}" | jq -r '.[] | "  #\(.hashtag) (\(.count) times)"' 2> /dev/null || echo "  ${HASHTAGS}"
+  else
+   # Fallback: simple formatting without jq
+   echo "${HASHTAGS}" | sed 's/}, {/\n/g' | sed 's/\[{//' | sed 's/}\]//' | sed 's/"hashtag" : "/  #/g' | sed 's/", "count" : / (/g' | sed 's/}$/ times)/g' || echo "  ${HASHTAGS}"
+  fi
  fi
  echo "Current notes status:"
  echo "  Notes currently open: ${CURRENT_OPEN_NOTES}"
@@ -1052,6 +1085,57 @@ function __processUserProfile {
  CURRENT_YEAR=$(date +%Y)
  while [[ "${I}" -le "${CURRENT_YEAR}" ]]; do
   __showActivityYearUsers "${I}"
+
+  # Top 10 Notes with most comments per year
+  declare TOP_10_COMMENTS
+  TOP_10_COMMENTS=$(psql -d "${DBNAME_DWH}" -Atq \
+   -c "SELECT json_agg(json_build_object('note_id', id_note, 'comments', total_comments_on_note, 'url', 'https://www.openstreetmap.org/note/' || id_note) ORDER BY total_comments_on_note DESC)
+     FROM (
+      SELECT DISTINCT ON (id_note) id_note, total_comments_on_note
+      FROM dwh.facts
+      WHERE action_dimension_id_user = ${DIMENSION_USER_ID}
+       AND history_year_commented = ${I}
+       AND total_comments_on_note > 0
+      ORDER BY id_note, total_comments_on_note DESC
+      LIMIT 10
+     ) sub
+    " \
+   -v ON_ERROR_STOP=1 2> /dev/null || echo "[]")
+
+  if [[ -n "${TOP_10_COMMENTS}" ]] && [[ "${TOP_10_COMMENTS}" != "[]" ]] && [[ "${TOP_10_COMMENTS}" != "null" ]]; then
+   echo "  Top 10 Notes with most comments in ${I}:"
+   if command -v jq &> /dev/null; then
+    echo "${TOP_10_COMMENTS}" | jq -r '.[] | "    Note \(.note_id): \(.comments) comments - \(.url)"' 2> /dev/null || echo "${TOP_10_COMMENTS}"
+   else
+    echo "${TOP_10_COMMENTS}" | sed 's/}, {/\n/g' | sed 's/\[{//' | sed 's/}\]//' | sed 's/"note_id" : /    Note /g' | sed 's/, "comments" : /: /g' | sed 's/, "url" : / comments - /g' | sed 's/}$//g' || echo "${TOP_10_COMMENTS}"
+   fi
+  fi
+
+  # Top 10 Notes with most reopening per year
+  declare TOP_10_REOPENINGS
+  TOP_10_REOPENINGS=$(psql -d "${DBNAME_DWH}" -Atq \
+   -c "SELECT json_agg(json_build_object('note_id', id_note, 'reopenings', total_reopenings_count, 'url', 'https://www.openstreetmap.org/note/' || id_note) ORDER BY total_reopenings_count DESC)
+     FROM (
+      SELECT DISTINCT ON (id_note) id_note, total_reopenings_count
+      FROM dwh.facts
+      WHERE action_dimension_id_user = ${DIMENSION_USER_ID}
+       AND history_year_reopened = ${I}
+       AND total_reopenings_count > 0
+      ORDER BY id_note, total_reopenings_count DESC
+      LIMIT 10
+     ) sub
+    " \
+   -v ON_ERROR_STOP=1 2> /dev/null || echo "[]")
+
+  if [[ -n "${TOP_10_REOPENINGS}" ]] && [[ "${TOP_10_REOPENINGS}" != "[]" ]] && [[ "${TOP_10_REOPENINGS}" != "null" ]]; then
+   echo "  Top 10 Notes with most reopenings in ${I}:"
+   if command -v jq &> /dev/null; then
+    echo "${TOP_10_REOPENINGS}" | jq -r '.[] | "    Note \(.note_id): \(.reopenings) reopenings - \(.url)"' 2> /dev/null || echo "${TOP_10_REOPENINGS}"
+   else
+    echo "${TOP_10_REOPENINGS}" | sed 's/}, {/\n/g' | sed 's/\[{//' | sed 's/}\]//' | sed 's/"note_id" : /    Note /g' | sed 's/, "reopenings" : /: /g' | sed 's/, "url" : / reopenings - /g' | sed 's/}$//g' || echo "${TOP_10_REOPENINGS}"
+   fi
+  fi
+
   I=$((I + 1))
  done
  echo "Historically:"
@@ -1077,9 +1161,25 @@ function __processUserProfile {
  echo "Countries for closed notes:"
  __printRanking "${COUNTRIES_CLOSING_CURRENT_DAY}"
 
- # echo "Rankings last 30 days   ${RANKING_MONTH_OPEN} ${RANKING_MONTH_COMMENTED} ${RANKING_MONTH_CLOSED} ${RANKING_MONTH_REOPENED}"
- # echo "Rankings today          ${RANKING_DAY_OPEN} ${RANKING_DAY_COMMENTED} ${RANKING_DAY_CLOSED} ${RANKING_DAY_REOPENED}"
- # echo "Badges: ${BADGES}" #TODO profile -
+ # Show badges if any
+ if [[ -n "${BADGES}" ]] && [[ "${BADGES}" != "[]" ]] && [[ "${BADGES}" != "null" ]]; then
+  echo "Badges:"
+  if command -v jq &> /dev/null; then
+   echo "${BADGES}" | jq -r '.[] | "  \(.badge_name) (awarded: \(.date_awarded))"' 2> /dev/null || echo "  ${BADGES}"
+  else
+   echo "${BADGES}" | sed 's/}, {/\n/g' | sed 's/\[{//' | sed 's/}\]//' | sed 's/"badge_name" : "/  /g' | sed 's/", "date_awarded" : "/ (awarded: /g' | sed 's/", "comment" :.*$/)/g' || echo "  ${BADGES}"
+  fi
+ fi
+
+ # Show daily achievements if any
+ if [[ -n "${DAILY_ACHIEVEMENTS}" ]] && [[ "${DAILY_ACHIEVEMENTS}" != "[]" ]] && [[ "${DAILY_ACHIEVEMENTS}" != "null" ]]; then
+  echo "Daily achievements (100+ notes in a day):"
+  if command -v jq &> /dev/null; then
+   echo "${DAILY_ACHIEVEMENTS}" | jq -r '.[] | "  \(.date): \(.opened) opened, \(.closed) closed"' 2> /dev/null || echo "  ${DAILY_ACHIEVEMENTS}"
+  else
+   echo "${DAILY_ACHIEVEMENTS}" | sed 's/}, {/\n/g' | sed 's/\[{//' | sed 's/}\]//' | sed 's/"date" : "/  /g' | sed 's/", "opened" : /: /g' | sed 's/, "closed" : / opened, /g' | sed 's/}$/ closed/g' || echo "  ${DAILY_ACHIEVEMENTS}"
+  fi
+ fi
  __log_finish
 }
 
@@ -1512,8 +1612,15 @@ function __processCountryProfile {
   echo "The date when the most notes were closed:"
   echo "${DATES_MOST_CLOSED}" | sed 's/}, {"date" : "/\n/g' | sed 's/", "quantity" : / - /g' | sed 's/\[{"date" : "//' | sed 's/}\]//'
  fi
- if [[ -n "${HASHTAGS}" ]] && [[ "${HASHTAGS}" != "" ]]; then
-  echo "Hashtags used: ${HASHTAGS}"
+ if [[ -n "${HASHTAGS}" ]] && [[ "${HASHTAGS}" != "" ]] && [[ "${HASHTAGS}" != "[]" ]] && [[ "${HASHTAGS}" != "null" ]]; then
+  echo "Hashtags used:"
+  # Try to format with jq if available, otherwise show raw JSON
+  if command -v jq &> /dev/null; then
+   echo "${HASHTAGS}" | jq -r '.[] | "  #\(.hashtag) (\(.count) times)"' 2> /dev/null || echo "  ${HASHTAGS}"
+  else
+   # Fallback: simple formatting without jq
+   echo "${HASHTAGS}" | sed 's/}, {/\n/g' | sed 's/\[{//' | sed 's/}\]//' | sed 's/"hashtag" : "/  #/g' | sed 's/", "count" : / (/g' | sed 's/}$/ times)/g' || echo "  ${HASHTAGS}"
+  fi
  fi
  echo "Current notes status:"
  echo "  Notes currently open: ${CURRENT_OPEN_NOTES}"
@@ -1611,7 +1718,9 @@ function __processCountryProfile {
  __printRanking "${USERS_OPENING_CURRENT_DAY}"
  echo "Ranking users closing notes in the current day:"
  __printRanking "${USERS_CLOSING_CURRENT_DAY}"
- # TODO Badges
+
+ # Badges for countries (if implemented in the future)
+ # Note: Currently badges are only for users, but this placeholder is here for future implementation
 
  # Quantity of days with 0 notes (at midnight UTC)
  declare -i DAYS_WITH_ZERO_NOTES
@@ -1659,49 +1768,292 @@ function __processCountryProfile {
 # Shows general stats about notes.
 function __generalNoteStats {
  __log_start
- echo "ToDo Number of notes"
- echo "ToDo Number of currently open notes"
- echo "ToDo Number of currently closed notes"
- echo "ToDo Number of reactivated notes after hidden"
- echo "ToDo Number of OSM note id gaps (probably hidden notes)"
- echo "ToDo Number of reopened notes"
- echo "ToDo Number of note comments"
- echo "ToDo Number of users doing things on notes"
- echo "ToDo Number of users opening notes"
- echo "ToDo Number of users closing notes"
- echo "ToDo Number of users reactivating notes after hidden"
- echo "ToDo All previous values per year since 2013, to show the increment"
- echo "ToDo working hours for opening notes"
- echo "ToDo working hours for closing notes"
- echo "ToDo Top 10 Notes with most comments"
- echo "ToDo Top 10 Notes with most comments for each year since 2013"
- echo "ToDo Top 10 Notes with most reopenings (war)"
- echo "ToDo Top 10 Notes with most reopenings for each year since 2013 (war)"
- echo "ToDo Oldest available note (not hidden)"
- echo "ToDo Most recently opened note"
- echo "ToDo Notes created today"
- echo "ToDo Notes created this month"
- echo "ToDo Notes created this year"
- echo "ToDo Average daily note creation for each year"
- echo "ToDo Average daily note closing for each year"
- echo "ToDo Average monthly note creation for each year"
- echo "ToDo Average monthly note closing for each year"
- echo "ToDo Average annual note creation for each year"
- echo "ToDo Average annual note closing for each year"
- echo "ToDo Top 10 users doing self war of opening and closing"
- echo "ToDo Top 10 users participating in note war"
- echo "ToDo Top 10 users participating in note war per year"
- echo "ToDo Users who have opened more than 1000 notes in a day"
- echo "ToDo Users who have closed more than 1000 notes in a day"
- # TODO Distribution of contributions per user
- # select t.qty, count(1)
- # from (
- #  select count(1) qty, f.action_dimension_id_user user_notes
- #  from dwh.facts f
- #  group by f.action_dimension_id_user
- # ) AS t
- # group by qty
- # order by qty desc
+
+ # Get global statistics from datamartGlobal
+ declare -i TOTAL_OPENED
+ TOTAL_OPENED=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COALESCE(history_whole_open, 0)
+     FROM dwh.datamartGlobal
+     WHERE dimension_global_id = 1
+     " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "0")
+
+ declare -i TOTAL_CLOSED
+ TOTAL_CLOSED=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COALESCE(history_whole_closed, 0)
+     FROM dwh.datamartGlobal
+     WHERE dimension_global_id = 1
+     " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "0")
+
+ declare -i TOTAL_REOPENED
+ TOTAL_REOPENED=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COALESCE(history_whole_reopened, 0)
+     FROM dwh.datamartGlobal
+     WHERE dimension_global_id = 1
+     " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "0")
+
+ declare -i TOTAL_COMMENTED
+ TOTAL_COMMENTED=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COALESCE(history_whole_commented, 0)
+     FROM dwh.datamartGlobal
+     WHERE dimension_global_id = 1
+     " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "0")
+
+ declare -i CURRENTLY_OPEN
+ CURRENTLY_OPEN=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COALESCE(currently_open_count, 0)
+     FROM dwh.datamartGlobal
+     WHERE dimension_global_id = 1
+     " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "0")
+
+ declare -i CURRENTLY_CLOSED
+ CURRENTLY_CLOSED=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COALESCE(currently_closed_count, 0)
+     FROM dwh.datamartGlobal
+     WHERE dimension_global_id = 1
+     " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "0")
+
+ declare -i TOTAL_COMMENTS
+ TOTAL_COMMENTS=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COALESCE(SUM(total_comments_on_note), 0)
+     FROM (
+      SELECT DISTINCT ON (id_note) total_comments_on_note
+      FROM dwh.facts
+      WHERE total_comments_on_note IS NOT NULL
+     ) sub
+     " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "0")
+
+ declare -i TOTAL_USERS
+ TOTAL_USERS=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COUNT(DISTINCT action_dimension_id_user)
+     FROM dwh.facts
+     WHERE action_dimension_id_user IS NOT NULL
+     " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "0")
+
+ declare -i USERS_OPENING
+ USERS_OPENING=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COUNT(DISTINCT action_dimension_id_user)
+     FROM dwh.facts
+     WHERE action_type = 'opened'
+       AND action_dimension_id_user IS NOT NULL
+     " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "0")
+
+ declare -i USERS_CLOSING
+ USERS_CLOSING=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COUNT(DISTINCT action_dimension_id_user)
+     FROM dwh.facts
+     WHERE action_type = 'closed'
+       AND action_dimension_id_user IS NOT NULL
+     " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "0")
+
+ declare FIRST_OPEN_NOTE_ID
+ FIRST_OPEN_NOTE_ID=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COALESCE(first_open_note_id::text, 'N/A')
+     FROM dwh.datamartGlobal
+     WHERE dimension_global_id = 1
+     " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "N/A")
+
+ declare LATEST_OPEN_NOTE_ID
+ LATEST_OPEN_NOTE_ID=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COALESCE(latest_open_note_id::text, 'N/A')
+     FROM dwh.datamartGlobal
+     WHERE dimension_global_id = 1
+     " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "N/A")
+
+ declare DATE_FIRST_OPEN
+ DATE_FIRST_OPEN=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COALESCE(date_starting_creating_notes::text, 'N/A')
+     FROM dwh.datamartGlobal
+     WHERE dimension_global_id = 1
+     " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "N/A")
+
+ # Notes created today
+ declare -i NOTES_TODAY
+ NOTES_TODAY=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COUNT(DISTINCT id_note)
+     FROM dwh.facts
+     WHERE action_type = 'opened'
+       AND action_at::date = CURRENT_DATE
+     " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "0")
+
+ # Notes created this month
+ declare -i NOTES_THIS_MONTH
+ NOTES_THIS_MONTH=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COUNT(DISTINCT id_note)
+     FROM dwh.facts
+     WHERE action_type = 'opened'
+       AND DATE_TRUNC('month', action_at::date) = DATE_TRUNC('month', CURRENT_DATE)
+     " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "0")
+
+ # Notes created this year
+ declare -i NOTES_THIS_YEAR
+ NOTES_THIS_YEAR=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COALESCE(history_year_open, 0)
+     FROM dwh.datamartGlobal
+     WHERE dimension_global_id = 1
+     " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "0")
+
+ # Average days to resolution
+ declare AVG_RESOLUTION_DAYS
+ AVG_RESOLUTION_DAYS=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COALESCE(avg_days_to_resolution::text, 'N/A')
+     FROM dwh.datamartGlobal
+     WHERE dimension_global_id = 1
+     " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "N/A")
+
+ # Resolution rate
+ declare RESOLUTION_RATE
+ RESOLUTION_RATE=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COALESCE(resolution_rate::text, 'N/A')
+     FROM dwh.datamartGlobal
+     WHERE dimension_global_id = 1
+     " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "N/A")
+
+ # Display statistics
+ echo "=== GLOBAL OSM NOTES STATISTICS ==="
+ echo
+ echo "Total Notes:"
+ echo "  Total opened: ${TOTAL_OPENED}"
+ echo "  Total closed: ${TOTAL_CLOSED}"
+ echo "  Total reopened: ${TOTAL_REOPENED}"
+ echo "  Total commented: ${TOTAL_COMMENTED}"
+ echo "  Total comments: ${TOTAL_COMMENTS}"
+ echo
+ echo "Current Status:"
+ echo "  Currently open: ${CURRENTLY_OPEN}"
+ echo "  Currently closed: ${CURRENTLY_CLOSED}"
+ echo
+ echo "Users:"
+ echo "  Total users: ${TOTAL_USERS}"
+ echo "  Users opening notes: ${USERS_OPENING}"
+ echo "  Users closing notes: ${USERS_CLOSING}"
+ echo
+ echo "Temporal Information:"
+ echo "  First note opened: https://www.openstreetmap.org/note/${FIRST_OPEN_NOTE_ID} (${DATE_FIRST_OPEN})"
+ echo "  Most recently opened note: https://www.openstreetmap.org/note/${LATEST_OPEN_NOTE_ID}"
+ echo "  Notes created today: ${NOTES_TODAY}"
+ echo "  Notes created this month: ${NOTES_THIS_MONTH}"
+ echo "  Notes created this year: ${NOTES_THIS_YEAR}"
+ echo
+ echo "Resolution Metrics:"
+ echo "  Average days to resolution: ${AVG_RESOLUTION_DAYS}"
+ echo "  Resolution rate: ${RESOLUTION_RATE}%"
+ echo
+
+ # Statistics per year since 2013
+ echo "Statistics per year:"
+ printf "Year      Opened    Commented    Closed    Reopened\n"
+ I=2013
+ CURRENT_YEAR=$(date +%Y)
+ while [[ "${I}" -le "${CURRENT_YEAR}" ]]; do
+  declare -i YEAR_OPEN
+  YEAR_OPEN=$(psql -d "${DBNAME_DWH}" -Atq \
+   -c "SELECT COUNT(DISTINCT id_note)
+      FROM dwh.facts
+      WHERE action_type = 'opened'
+        AND EXTRACT(YEAR FROM action_at) = ${I}
+      " \
+   -v ON_ERROR_STOP=1 2> /dev/null || echo "0")
+
+  declare -i YEAR_COMMENTED
+  YEAR_COMMENTED=$(psql -d "${DBNAME_DWH}" -Atq \
+   -c "SELECT COUNT(DISTINCT id_note)
+      FROM dwh.facts
+      WHERE action_type = 'commented'
+        AND EXTRACT(YEAR FROM action_at) = ${I}
+      " \
+   -v ON_ERROR_STOP=1 2> /dev/null || echo "0")
+
+  declare -i YEAR_CLOSED
+  YEAR_CLOSED=$(psql -d "${DBNAME_DWH}" -Atq \
+   -c "SELECT COUNT(DISTINCT id_note)
+      FROM dwh.facts
+      WHERE action_type = 'closed'
+        AND EXTRACT(YEAR FROM action_at) = ${I}
+      " \
+   -v ON_ERROR_STOP=1 2> /dev/null || echo "0")
+
+  declare -i YEAR_REOPENED
+  YEAR_REOPENED=$(psql -d "${DBNAME_DWH}" -Atq \
+   -c "SELECT COUNT(DISTINCT id_note)
+      FROM dwh.facts
+      WHERE action_type = 'reopened'
+        AND EXTRACT(YEAR FROM action_at) = ${I}
+      " \
+   -v ON_ERROR_STOP=1 2> /dev/null || echo "0")
+
+  printf "${I}:  %9d  %11d  %9d  %9d\n" "${YEAR_OPEN}" "${YEAR_COMMENTED}" "${YEAR_CLOSED}" "${YEAR_REOPENED}"
+  I=$((I + 1))
+ done
+
+ echo
+ echo "Top 10 Notes with most comments (all time):"
+ declare TOP_10_COMMENTS
+ TOP_10_COMMENTS=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT json_agg(json_build_object('note_id', id_note, 'comments', total_comments_on_note, 'url', 'https://www.openstreetmap.org/note/' || id_note) ORDER BY total_comments_on_note DESC)
+    FROM (
+     SELECT DISTINCT ON (id_note) id_note, total_comments_on_note
+     FROM dwh.facts
+     WHERE total_comments_on_note > 0
+     ORDER BY id_note, total_comments_on_note DESC
+     LIMIT 10
+    ) sub
+   " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "[]")
+
+ if [[ -n "${TOP_10_COMMENTS}" ]] && [[ "${TOP_10_COMMENTS}" != "[]" ]] && [[ "${TOP_10_COMMENTS}" != "null" ]]; then
+  if command -v jq &> /dev/null; then
+   echo "${TOP_10_COMMENTS}" | jq -r '.[] | "  Note \(.note_id): \(.comments) comments - \(.url)"' 2> /dev/null || echo "${TOP_10_COMMENTS}"
+  else
+   echo "${TOP_10_COMMENTS}" | sed 's/}, {/\n/g' | sed 's/\[{//' | sed 's/}\]//' | sed 's/"note_id" : /  Note /g' | sed 's/, "comments" : /: /g' | sed 's/, "url" : / comments - /g' | sed 's/}$//g' || echo "${TOP_10_COMMENTS}"
+  fi
+ fi
+
+ echo
+ echo "Top 10 Notes with most reopenings (all time):"
+ declare TOP_10_REOPENINGS
+ TOP_10_REOPENINGS=$(psql -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT json_agg(json_build_object('note_id', id_note, 'reopenings', total_reopenings_count, 'url', 'https://www.openstreetmap.org/note/' || id_note) ORDER BY total_reopenings_count DESC)
+    FROM (
+     SELECT DISTINCT ON (id_note) id_note, total_reopenings_count
+     FROM dwh.facts
+     WHERE total_reopenings_count > 0
+     ORDER BY id_note, total_reopenings_count DESC
+     LIMIT 10
+    ) sub
+   " \
+  -v ON_ERROR_STOP=1 2> /dev/null || echo "[]")
+
+ if [[ -n "${TOP_10_REOPENINGS}" ]] && [[ "${TOP_10_REOPENINGS}" != "[]" ]] && [[ "${TOP_10_REOPENINGS}" != "null" ]]; then
+  if command -v jq &> /dev/null; then
+   echo "${TOP_10_REOPENINGS}" | jq -r '.[] | "  Note \(.note_id): \(.reopenings) reopenings - \(.url)"' 2> /dev/null || echo "${TOP_10_REOPENINGS}"
+  else
+   echo "${TOP_10_REOPENINGS}" | sed 's/}, {/\n/g' | sed 's/\[{//' | sed 's/}\]//' | sed 's/"note_id" : /  Note /g' | sed 's/, "reopenings" : /: /g' | sed 's/, "url" : / reopenings - /g' | sed 's/}$//g' || echo "${TOP_10_REOPENINGS}"
+  fi
+ fi
+
+ echo
+ echo "Note: Additional statistics (reactivated notes, ID gaps, working hours, user wars, etc.)"
+ echo "      can be calculated from the facts table but require more complex queries."
+ echo "      These may be added in future versions."
+
  __log_finish
 }
 
