@@ -386,6 +386,124 @@ function __function_exists {
  fi
 }
 
+# Processes experience levels for modified users in parallel.
+# Similar to datamartUsers parallel processing, but for experience levels.
+function __processExperienceLevels {
+ __log_start
+ __logi "Updating experience levels for modified users (parallel processing)."
+
+ # Get MAX_THREADS for parallel processing
+ local MAX_THREADS="${MAX_THREADS:-$(nproc)}"
+ local adjusted_threads
+ adjusted_threads=$((MAX_THREADS - 1))
+ if [[ "${adjusted_threads}" -lt 1 ]]; then
+  adjusted_threads=1
+ fi
+ __logi "Using ${adjusted_threads} parallel threads for experience level processing"
+
+ # Get list of modified users without experience level
+ # Prioritize users with recent activity for faster initial results
+ __logi "Fetching modified users without experience level..."
+ local user_ids
+ user_ids=$(__psql_with_appname -d "${DBNAME_DWH}" -Atq -c "
+  SELECT DISTINCT u.dimension_user_id
+  FROM dwh.dimension_users u
+  JOIN dwh.facts f ON f.action_dimension_id_user = u.dimension_user_id
+  WHERE u.modified = TRUE
+    AND u.experience_level_id IS NULL
+  GROUP BY u.dimension_user_id
+  ORDER BY
+   -- Priority 1: Very recent activity (last 7 days) = highest
+   CASE WHEN MAX(f.action_at) >= CURRENT_DATE - INTERVAL '7 days' THEN 1
+        WHEN MAX(f.action_at) >= CURRENT_DATE - INTERVAL '30 days' THEN 2
+        WHEN MAX(f.action_at) >= CURRENT_DATE - INTERVAL '90 days' THEN 3
+        ELSE 4 END,
+   -- Priority 2: High activity users (>100 actions) get priority
+   CASE WHEN COUNT(*) > 100 THEN 1
+        WHEN COUNT(*) > 10 THEN 2
+        ELSE 3 END,
+   -- Priority 3: Most active users historically
+   COUNT(*) DESC,
+   -- Priority 4: Most recent activity first
+   MAX(f.action_at) DESC NULLS LAST
+ ")
+
+ local total_users
+ total_users=$(echo "${user_ids}" | grep -c . || echo "0")
+ __logi "Found ${total_users} users to process (prioritized by relevance)"
+
+ if [[ "${total_users}" -eq 0 ]]; then
+  __logi "No users to process for experience levels"
+  __log_finish
+  return 0
+ fi
+
+ local pids=()
+ local count=0
+ local failed_count=0
+
+ # Process users in parallel
+ # calculate_user_experience() already marks modified = FALSE internally
+ local batch_size=1000
+ local processed=0
+ local batch_num=1
+
+ for user_id in ${user_ids}; do
+  if [[ -n "${user_id}" ]]; then
+   (
+    # Use transaction to ensure atomicity
+    if ! __psql_with_appname "ETL-experience-${user_id}" -d "${DBNAME_DWH}" -c "
+     BEGIN;
+      PERFORM dwh.calculate_user_experience(${user_id});
+     COMMIT;
+    " 2>&1; then
+     __loge "ERROR: Failed to process experience level for user ${user_id}"
+     exit 1
+    fi
+   ) &
+   pids+=($!)
+   count=$((count + 1))
+   processed=$((processed + 1))
+
+   # Limit concurrent processes
+   if [[ ${#pids[@]} -ge ${adjusted_threads} ]]; then
+    local first_pid="${pids[0]}"
+    pids=("${pids[@]:1}")
+    if ! wait "${first_pid}"; then
+     failed_count=$((failed_count + 1))
+    fi
+   fi
+
+   # Log progress every batch_size users
+   if [[ $((processed % batch_size)) -eq 0 ]]; then
+    __logi "Progress: Processed ${processed}/${total_users} users (batch ${batch_num})"
+    batch_num=$((batch_num + 1))
+   fi
+  fi
+ done
+
+ # Wait for remaining processes and check for errors
+ __logi "Waiting for all experience level processing to complete..."
+ for pid in "${pids[@]}"; do
+  if ! wait "${pid}"; then
+   failed_count=$((failed_count + 1))
+  fi
+ done
+
+ if [[ ${failed_count} -eq 0 ]]; then
+  __logi "SUCCESS: Experience level processing completed successfully"
+  __logi "Processed ${count} users in parallel (${total_users} total)"
+ else
+  __loge "ERROR: Experience level processing had ${failed_count} failed processes out of ${count} total"
+  __loge "Check the log file for details on failed user processing"
+ fi
+ __log_finish
+ if [[ ${failed_count} -gt 0 ]]; then
+  return 1
+ fi
+ return 0
+}
+
 # Safely disable note activity metrics trigger (only if function exists)
 # Usage: __safe_disable_note_activity_metrics_trigger
 # This function checks if the trigger function exists before attempting to disable it,
@@ -826,10 +944,8 @@ function __processNotesETL {
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -c "CALL dwh.update_automation_levels_for_modified_users();" 2>&1
 
- # Update experience levels for modified users.
- __logi "Updating experience levels for modified users."
- __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
-  -c "CALL dwh.update_experience_levels_for_modified_users();" 2>&1
+ # Update experience levels for modified users (parallel processing).
+ __processExperienceLevels
 
  # Create note current status table and procedures (ETL-003, ETL-004)
  __logi "Creating note current status table and procedures."
