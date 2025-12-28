@@ -301,7 +301,7 @@ Todas las tareas de alta prioridad han sido completadas.
 ### Documentación
 
 - [✅] **DOC-001**: Query pendiente - Mostrar cuántos usuarios solo han hecho una contribución - COMPLETADO
-  - Query SQL en `ToDo/ToDos.md` líneas 86-94
+  - Query SQL original solicitado para análisis de distribución de contribuciones
   - Podría convertirse para mostrar la tasa de usuarios que poco hacen
   - **Status**: ✅ Implementado query completo con análisis de distribución de contribuciones
   - **Features**:
@@ -352,5 +352,4 @@ Todas las tareas de alta prioridad han sido completadas.
 **Referencias**:
 - `ToDo/TODO_LIST.md` - Este documento (lista consolidada de pendientes)
 - `ToDo/ProgressTracker.md` - Seguimiento de progreso semanal
-- `ToDo/ToDos.md` - Lista original de pendientes
 

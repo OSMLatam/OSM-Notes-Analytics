@@ -2,6 +2,247 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2025-12-27] - Machine Learning Integration and Complete Datamart Implementation
+
+### Added
+
+- **pgml Extension Installation**: Complete installation script for PostgreSQL Machine Learning extension
+  - `sql/dwh/ml/install_pgml.sh`: Automated script to compile and install pgml from source
+  - Supports multiple PostgreSQL versions (14+)
+  - Automatic detection of installed PostgreSQL versions
+  - Comprehensive error handling and build dependency management
+  - Documentation: `sql/dwh/ml/README.md` with installation and usage guide
+- **User Contribution Statistics (DOC-001)**: Complete implementation of user contribution analysis
+  - `sql/dwh/queries/DOC_001_user_contribution_stats.sql`: Query for users with single contribution
+  - Enhanced query with distribution by contribution levels (1, 2-5, 6-10, 11-50, 51-100, 101-500, 501-1000, 1000+)
+  - View `dwh.v_user_contribution_distribution` for easy access
+  - Function `dwh.get_user_contribution_summary()` for programmatic statistics
+- **Complete Datamart Implementation (DM-001 to DM-016)**: All datamart features completed
+  - DM-001: Applications used metrics (mobile/desktop apps tracking)
+  - DM-002: Complete hashtag analyzer with filtering capabilities
+  - DM-003: Hashtag queries enhanced with sequence tracking
+  - DM-004: Badge system with automatic assignment
+  - DM-005: Parallel processing with intelligent prioritization (6-level system)
+  - DM-006: Note quality classification (poor, fair, good, complex, treatise)
+  - DM-007: Peak day for note creation tracking
+  - DM-008: Peak hour for note creation tracking
+  - DM-009: Open notes by year (JSONB structure)
+  - DM-010: Longest resolution notes per country
+  - DM-011: Last comment timestamp in global datamart
+  - DM-012: Ranking system (top 100 historical, last year, last month, today)
+  - DM-013: Country rankings by metrics
+  - DM-014: User rankings globally
+  - DM-015: Average comments per note
+  - DM-016: Average comments per note by country
+
+### Changed
+
+- **Parallel Processing Enhancement**: Intelligent user prioritization system
+  - 6-level prioritization based on recency and historical activity
+  - Parallel execution with concurrency control (`nproc - 1` threads)
+  - Atomic transactions for data integrity
+  - Comprehensive documentation: `bin/dwh/datamartUsers/PARALLEL_PROCESSING.md`
+- **ETL Integrity Validation**: Enhanced monitoring and validation
+  - `sql/dwh/ETL_57_validateETLIntegrity.sql`: Complete integrity checks
+  - Validation of comment counts between `public.note_comments` and `dwh.facts`
+  - Detection of notes with reopens after closure
+  - Integrated in `monitor_etl.sh` and `ETL.sh`
+- **ETL Report Generation**: Comprehensive ETL execution reports
+  - `sql/dwh/ETL_56_generateETLReport.sql`: Report generation procedure
+  - Metrics for facts, dimensions, datamarts
+  - Statistics for users, countries, hashtags
+  - Integrated in `bin/dwh/ETL.sh` at end of execution
+- **Note Current Status Tracking**: Efficient tracking of note states
+  - `sql/dwh/ETL_55_createNoteCurrentStatus.sql`: Current status table and procedures
+  - Views: `dwh.v_currently_open_notes_by_user`, `dwh.v_currently_open_notes_by_country`
+  - Procedures: `dwh.initialize_note_current_status()`, `dwh.update_note_current_status()`
+  - Integrated in datamarts for better performance
+- **Shared Helper Functions**: Code factorization for staging procedures
+  - `sql/dwh/Staging_30_sharedHelperFunctions.sql`: Common functions
+  - `staging.get_or_create_country_dimension()`: Country dimension handling
+  - `staging.process_hashtags()`: Hashtag processing
+  - `staging.calculate_comment_metrics()`: Comment metrics
+  - `staging.get_timezone_and_local_metrics()`: Timezone metrics
+- **Profile Script Enhancements**: Improved user and country profile output
+  - Enhanced hashtag analysis display with `jq`
+  - Comment quality metrics visualization
+  - User statistics and achievements reporting
+  - Activity printing and working hours reporting
+  - Current notes status display
+
+### Technical Details
+
+- **pgml Installation**: Script handles multiple PostgreSQL versions, Rust installation, pgrx configuration, and compilation with Python support
+- **Parallel Processing**: Uses Bash process management with PostgreSQL transactions for atomicity
+- **ETL Validation**: Compares comment counts at multiple levels (total, per note, by action type)
+- **Datamart Metrics**: All new metrics automatically calculated during datamart updates
+- **Badge System**: Automatic badge assignment based on user activity patterns
+
+### Files Modified
+
+- `sql/dwh/ml/install_pgml.sh` (new)
+- `sql/dwh/ml/README.md` (new)
+- `sql/dwh/queries/DOC_001_user_contribution_stats.sql` (new)
+- `bin/dwh/datamartUsers/datamartUsers.sh`: Parallel processing implementation
+- `sql/dwh/datamartUsers/datamartUsers_32_populateDatamartUsersTable.sql`: Prioritization logic
+- `bin/dwh/datamartUsers/PARALLEL_PROCESSING.md` (new)
+- `sql/dwh/ETL_57_validateETLIntegrity.sql` (new)
+- `sql/dwh/ETL_56_generateETLReport.sql` (new)
+- `sql/dwh/ETL_55_createNoteCurrentStatus.sql` (new)
+- `sql/dwh/Staging_30_sharedHelperFunctions.sql` (new)
+- `bin/dwh/profile.sh`: Enhanced visualization
+- `sql/dwh/datamarts/58_addNewDatamartMetrics.sql` (new)
+- `sql/dwh/datamarts/59_calculateNewDatamartMetrics.sql` (new)
+- `sql/dwh/datamarts/60_enhanceHashtagQueriesWithSequence.sql` (new)
+- `sql/dwh/datamarts/61_createRankingSystem.sql` (new)
+- `sql/dwh/datamarts/62_createBadgeSystem.sql` (new)
+- `sql/dwh/datamarts/63_completeHashtagAnalysis.sql` (new)
+
+### Documentation
+
+- Added `bin/dwh/datamartUsers/PARALLEL_PROCESSING.md`: Complete documentation of parallel processing system
+- Added `sql/dwh/ml/README.md`: pgml installation and usage guide
+- Updated `ToDo/TODO_LIST.md`: All datamart tasks marked as completed
+- Removed obsolete files: `ToDo/ToDos.md`, `ToDo/DATAMARTS_IMPLEMENTATION_PLAN.md`
+
+---
+
+## [2025-12-26] - ETL Enhancements and Script Standardization
+
+### Added
+
+- **ETL Report Generation**: `sql/dwh/ETL_56_generateETLReport.sql` for comprehensive ETL execution reports
+- **Note Current Status Tracking**: `sql/dwh/ETL_55_createNoteCurrentStatus.sql` for efficient note state tracking
+- **Shared Helper Functions**: `sql/dwh/Staging_30_sharedHelperFunctions.sql` for code reuse in staging procedures
+- **Profile Script Enhancements**: Improved visualization with `jq` for hashtags, quality metrics, and achievements
+
+### Changed
+
+- **Script Standardization**: Standardized variable naming conventions across DWH scripts
+- **Exit Code Handling**: Consistent exit code handling across all scripts
+- **Error Handling**: Improved error handling in `run_mock_etl.sh` for existing objects
+- **ETL Table Validation**: Enhanced validation for incremental executions
+- **Monitor Script**: Improved consistency and readability in `monitor_etl.sh`
+
+### Files Modified
+
+- `bin/dwh/ETL.sh`: Report generation integration
+- `bin/dwh/monitor_etl.sh`: Improved consistency
+- `bin/dwh/profile.sh`: Enhanced output
+- Multiple staging SQL files: Shared helper functions integration
+
+---
+
+## [2025-12-25] - Performance Monitoring and ETL Improvements
+
+### Added
+
+- **Dynamic SQL for Performance Logging**: Performance logging in datamart procedures
+- **ETL Performance Logging**: Datamart performance logging and schema management
+- **Detailed Timing Logs**: Enhanced ETL process with detailed timing logs and initial load handling
+
+### Changed
+
+- **ETL Process**: Enhanced with datamart performance logging
+- **Schema Management**: Improved schema management in ETL script
+- **Table Validation**: Enhanced ETL table validation for incremental executions
+
+---
+
+## [2025-12-23] - Export and Publication Features
+
+### Added
+
+- **JSON Export Script**: `bin/dwh/exportAndPushJSONToGitHub.sh` for JSON export and deployment
+- **CSV Export Script**: `bin/dwh/exportAndPushCSVToGitHub.sh` for closed notes CSV export
+- **Contributor Type Information**: Enhanced `exportDatamartsToJSON` script to include contributor type information
+
+### Changed
+
+- **Closed Notes Export**: Updated SQL query to use `dimension_days` for `opened_at`
+- **Export Scripts**: Enhanced to include JSON schema copying
+
+---
+
+## [2025-12-22] - Documentation Consolidation
+
+### Changed
+
+- **Action Plan Consolidation**: Consolidated Action Plan into TODO_LIST
+- **Documentation Updates**: Simplified documentation in ProgressTracker and README files
+- **Submodule Updates**: Updated subproject references
+
+### Removed
+
+- **API Proposal**: Removed API Proposal document from repository
+
+---
+
+## [2025-12-20] - ETL Script Enhancements
+
+### Added
+
+- **Timeout Configuration**: ETL script with timeout configuration for psql commands
+- **Process Locking**: Process locking mechanism in ETL script
+- **Schema Management**: Enhanced schema management in ETL script
+
+### Changed
+
+- **Error Handling**: Enhanced error handling and verification in ETL script
+- **Logging**: Improved logging and output handling in ETL script
+
+---
+
+## [2025-12-19] - Country Dimension and Resolution Ratio Improvements
+
+### Added
+
+- **FORCE_SWAP_ON_WARNING**: Environment variable to hybrid setup script
+- **REST API Proposal**: Added REST API proposal for OSM Notes Analytics and Ingestion
+
+### Changed
+
+- **Country Dimension Handling**: Enhanced country dimension handling in staging procedures
+- **Resolution Ratio**: Updated `resolution_ratio` column precision and calculation logic
+- **psql Function**: Updated `__psql_with_appname` function for improved argument handling
+
+---
+
+## [2025-12-18] - Automation Detection and Experience Levels
+
+### Added
+
+- **Automation Detection**: Automation detection system in ETL process
+- **Experience Levels**: Experience levels system in ETL process
+
+### Changed
+
+- **Error Handling**: Improved error handling and logging in datamart scripts
+- **Error Logging**: Corrected error logging in ETL script for datamart processes
+
+---
+
+## [2025-12-16] - Database Connection and Streaming Analytics
+
+### Added
+
+- **LISTEN/NOTIFY Implementation Guide**: Implementation guide in Bash for streaming analytics
+- **Real-time Streaming Analytics Plan**: Implementation plan for real-time streaming analytics
+- **Function Existence Check**: Function existence check and safe trigger disablement in ETL script
+- **Database Connection Verification**: Enhanced database connection verification in ETL workflow
+
+### Changed
+
+- **NULL Handling**: Fixed NULL handling for `recent_opened_dimension_id_date` in staging process
+- **Error Handling**: Improved error handling in mock ETL script for DWH DDL execution
+- **Cleanup Script**: Enhanced cleanupDWH script with additional options
+
+### Removed
+
+- **Obsolete DWH Objects**: Removed obsolete DWH objects from ETL script
+
+---
+
 ## [2025-12-15] - PostgreSQL Process Identification Enhancement
 
 ### Changed
