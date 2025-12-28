@@ -45,9 +45,11 @@ HOME=/home/notes
 # Runs on day 15 to ensure ETL has processed all data from previous month
 0 2 15 * * /home/notes/OSM-Notes-Analytics/bin/dwh/exportAndPushCSVToGitHub.sh
 
-# Daily: Export JSON files and push to GitHub (after datamarts update)
+# Daily: Export JSON files and push to GitHub (after ETL completes successfully)
 # Exports datamarts to JSON for web viewer consumption
-# 45 2 * * * /home/notes/OSM-Notes-Analytics/bin/dwh/exportAndPushJSONToGitHub.sh >> /tmp/osm-json-export.log 2>&1
+# Only runs if ETL completed successfully (using && operator)
+# The export script has its own lock file to prevent concurrent executions
+# 45 2 * * * /home/notes/OSM-Notes-Analytics/bin/dwh/ETL.sh && /home/notes/OSM-Notes-Analytics/bin/dwh/exportAndPushJSONToGitHub.sh >> /tmp/osm-json-export.log 2>&1
 
 # ==========================================
 # MAINTENANCE TASKS

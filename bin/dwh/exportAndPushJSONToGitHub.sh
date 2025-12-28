@@ -13,9 +13,23 @@
 # 4. Commits and pushes to GitHub (replaces previous JSON files)
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2025-12-22
+# Version: 2025-12-28
 
-set -euo pipefail
+set -eu pipefail
+
+# Script basename for lock file
+BASENAME=$(basename -s .sh "${0}")
+readonly BASENAME
+
+# Lock file for single execution
+LOCK="/tmp/${BASENAME}.lock"
+readonly LOCK
+
+# Process start time
+PROCESS_START_TIME=$(date '+%Y-%m-%d %H:%M:%S')
+readonly PROCESS_START_TIME
+ORIGINAL_PID=$$
+readonly ORIGINAL_PID
 
 # Colors for output
 RED='\033[0;31m'
@@ -47,6 +61,39 @@ print_error() {
 print_success() {
  echo -e "${GREEN}✓${NC} $1"
 }
+
+# Setup lock file for single execution
+setup_lock() {
+ print_warn "Validating single execution."
+ exec 7> "${LOCK}"
+ if ! flock -n 7; then
+  print_error "Another instance of ${BASENAME} is already running."
+  print_error "Lock file: ${LOCK}"
+  if [[ -f "${LOCK}" ]]; then
+   print_error "Lock file contents:"
+   cat "${LOCK}" || true
+  fi
+  exit 1
+ fi
+
+ cat > "${LOCK}" << EOF
+PID: ${ORIGINAL_PID}
+Process: ${BASENAME}
+Started: ${PROCESS_START_TIME}
+Main script: ${0}
+EOF
+}
+
+# Cleanup function to remove lock file
+cleanup() {
+ rm -f "${LOCK}" 2> /dev/null || true
+}
+
+# Trap to cleanup lock file on exit
+trap cleanup EXIT INT TERM
+
+# Setup lock before proceeding
+setup_lock
 
 # Check if data repository exists
 if [[ ! -d "${DATA_REPO_DIR}" ]]; then
@@ -112,18 +159,18 @@ print_info "Step 3: Committing and pushing to GitHub..."
 cd "${DATA_REPO_DIR}"
 
 # Ensure we're on main branch
-git checkout main 2>/dev/null || true
+git checkout main 2> /dev/null || true
 
 # Remove data and schemas directories from git index (if they exist) to start fresh
 # This removes JSON files from tracking but keeps them in working directory
-if git ls-files --error-unmatch data/ >/dev/null 2>&1; then
-  print_info "Removing existing JSON data files from git history..."
-  git rm -r --cached data/ 2>/dev/null || true
+if git ls-files --error-unmatch data/ > /dev/null 2>&1; then
+ print_info "Removing existing JSON data files from git history..."
+ git rm -r --cached data/ 2> /dev/null || true
 fi
 
-if git ls-files --error-unmatch schemas/ >/dev/null 2>&1; then
-  print_info "Removing existing JSON schemas from git history..."
-  git rm -r --cached schemas/ 2>/dev/null || true
+if git ls-files --error-unmatch schemas/ > /dev/null 2>&1; then
+ print_info "Removing existing JSON schemas from git history..."
+ git rm -r --cached schemas/ 2> /dev/null || true
 fi
 
 # Add all JSON files and schemas (fresh add, no history)
@@ -132,23 +179,23 @@ git add data/ schemas/
 
 # Check if there are changes to commit
 if git diff --cached --quiet; then
-  print_warn "No changes to commit (JSON files are identical to previous version)"
-  exit 0
+ print_warn "No changes to commit (JSON files are identical to previous version)"
+ exit 0
 fi
 
 # Get file count for commit message
-FILE_COUNT=$(find data/ -name "*.json" 2>/dev/null | wc -l || echo "0")
+FILE_COUNT=$(find data/ -name "*.json" 2> /dev/null | wc -l || echo "0")
 SCHEMA_COUNT=$(find schemas/ -name "*.json" 2> /dev/null | wc -l || echo "0")
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
 # Commit changes (only JSON files, replaces previous JSON commits)
 if [[ ${SCHEMA_COUNT} -gt 0 ]]; then
-  git commit -m "Auto-update: ${FILE_COUNT} JSON files and ${SCHEMA_COUNT} schemas - ${TIMESTAMP}
+ git commit -m "Auto-update: ${FILE_COUNT} JSON files and ${SCHEMA_COUNT} schemas - ${TIMESTAMP}
 
 This commit replaces all previous JSON files. JSON history is not preserved.
 Other files in the repository maintain their full history."
 else
-  git commit -m "Auto-update: ${FILE_COUNT} JSON files - ${TIMESTAMP}
+ git commit -m "Auto-update: ${FILE_COUNT} JSON files - ${TIMESTAMP}
 
 This commit replaces all previous JSON files. JSON history is not preserved.
 Other files in the repository maintain their full history."
@@ -158,20 +205,20 @@ fi
 # Note: In production, ensure git credentials are configured for the user running this script
 # See docs/GitHub_Push_Setup.md for configuration instructions
 if git push origin main; then
-  print_success "Data pushed to GitHub successfully"
-  echo ""
-  echo "Data is now available at:"
-  echo "https://osmlatam.github.io/OSM-Notes-Data/"
+ print_success "Data pushed to GitHub successfully"
+ echo ""
+ echo "Data is now available at:"
+ echo "https://osmlatam.github.io/OSM-Notes-Data/"
 else
-  print_error "Failed to push to GitHub"
-  echo ""
-  echo "Please check:"
-  echo "1. Git credentials are configured (SSH key or Personal Access Token)"
-  echo "2. Remote repository exists and is accessible"
-  echo "3. Network connection is available"
-  echo ""
-  echo "For production setup, see: docs/GitHub_Push_Setup.md"
-  exit 1
+ print_error "Failed to push to GitHub"
+ echo ""
+ echo "Please check:"
+ echo "1. Git credentials are configured (SSH key or Personal Access Token)"
+ echo "2. Remote repository exists and is accessible"
+ echo "3. Network connection is available"
+ echo ""
+ echo "For production setup, see: docs/GitHub_Push_Setup.md"
+ exit 1
 fi
 
 echo ""
