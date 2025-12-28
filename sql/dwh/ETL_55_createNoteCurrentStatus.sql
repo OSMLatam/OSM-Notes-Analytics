@@ -47,10 +47,10 @@ DECLARE
   v_count INTEGER;
 BEGIN
   RAISE NOTICE 'Initializing note_current_status table...';
-  
+
   -- Clear existing data
   TRUNCATE TABLE dwh.note_current_status;
-  
+
   -- Insert current status for all notes
   -- A note is open if the last relevant action (opened/closed/reopened) is 'opened' or 'reopened'
   -- A note is closed if the last relevant action is 'closed'
@@ -78,7 +78,7 @@ BEGIN
   FROM dwh.facts f
   WHERE f.action_comment IN ('opened', 'closed', 'reopened')
   ORDER BY f.id_note, f.action_at DESC;
-  
+
   GET DIAGNOSTICS v_count = ROW_COUNT;
   RAISE NOTICE 'Initialized % notes in note_current_status', v_count;
 END;
@@ -102,15 +102,15 @@ BEGIN
   IF p_min_timestamp IS NULL THEN
     -- Get the last update timestamp from properties or use a safe default
     SELECT COALESCE(
-      (SELECT value::TIMESTAMP FROM dwh.properties WHERE key = 'last_note_status_update'),
+      (SELECT value::TIMESTAMP FROM dwh.properties WHERE key = 'note_status_upd'),
       '1970-01-01'::TIMESTAMP
     ) INTO v_min_ts;
   ELSE
     v_min_ts := p_min_timestamp;
   END IF;
-  
+
   RAISE NOTICE 'Updating note_current_status for notes with actions after %', v_min_ts;
-  
+
   -- Update or insert status for notes with new actions
   -- For each note, get the most recent relevant action (opened/closed/reopened)
   -- and update the status accordingly
@@ -147,13 +147,14 @@ BEGIN
     last_action_at = EXCLUDED.last_action_at,
     last_action_type = EXCLUDED.last_action_type,
     last_updated = CURRENT_TIMESTAMP;
-  
+
   GET DIAGNOSTICS v_count = ROW_COUNT;
   RAISE NOTICE 'Updated % notes in note_current_status', v_count;
-  
+
   -- Update the last update timestamp (using format that fits VARCHAR(26))
+  -- Key shortened to fit VARCHAR(16) limit
   INSERT INTO dwh.properties (key, value)
-  VALUES ('last_note_status_update', TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS'))
+  VALUES ('note_status_upd', TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS'))
   ON CONFLICT (key) DO UPDATE SET value = TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS');
 END;
 $$;
