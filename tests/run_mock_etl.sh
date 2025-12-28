@@ -21,6 +21,9 @@ if [[ -n "${TEST_DBUSER:-}" ]]; then
 fi
 if [[ -n "${TEST_DBPASSWORD:-}" ]]; then
  export PGPASSWORD="${TEST_DBPASSWORD}"
+elif [[ -n "${TEST_DBHOST:-}" ]]; then
+ # In CI/CD environment, default password is 'postgres' if not specified
+ export PGPASSWORD="${PGPASSWORD:-postgres}"
 fi
 
 echo "[MOCK-ETL] Using database: ${DBNAME}"
@@ -31,17 +34,32 @@ else
 fi
 
 # Verify database connection before proceeding
-if ! psql -d "${DBNAME}" -c "SELECT 1;" > /dev/null 2>&1; then
- echo "[MOCK-ETL] ERROR: Cannot connect to database ${DBNAME}" >&2
- echo "[MOCK-ETL] Please verify database connection settings:" >&2
- echo "[MOCK-ETL]   TEST_DBNAME=${TEST_DBNAME:-}" >&2
- echo "[MOCK-ETL]   TEST_DBHOST=${TEST_DBHOST:-}" >&2
- echo "[MOCK-ETL]   TEST_DBPORT=${TEST_DBPORT:-}" >&2
- echo "[MOCK-ETL]   TEST_DBUSER=${TEST_DBUSER:-}" >&2
- exit 1
+# Build psql command based on environment (CI/CD vs local)
+if [[ -n "${TEST_DBHOST:-}" ]]; then
+ # CI/CD environment - use explicit connection parameters
+ if ! PGPASSWORD="${TEST_DBPASSWORD:-postgres}" psql -h "${TEST_DBHOST}" -p "${TEST_DBPORT:-5432}" -U "${TEST_DBUSER:-postgres}" -d "${DBNAME}" -c "SELECT 1;" > /dev/null 2>&1; then
+  echo "[MOCK-ETL] ERROR: Cannot connect to database ${DBNAME}" >&2
+  echo "[MOCK-ETL] Please verify database connection settings:" >&2
+  echo "[MOCK-ETL]   TEST_DBNAME=${TEST_DBNAME:-}" >&2
+  echo "[MOCK-ETL]   TEST_DBHOST=${TEST_DBHOST:-}" >&2
+  echo "[MOCK-ETL]   TEST_DBPORT=${TEST_DBPORT:-}" >&2
+  echo "[MOCK-ETL]   TEST_DBUSER=${TEST_DBUSER:-}" >&2
+  exit 1
+ fi
+ psql_cmd=(psql -h "${TEST_DBHOST}" -p "${TEST_DBPORT:-5432}" -U "${TEST_DBUSER:-postgres}" -d "${DBNAME}" -v ON_ERROR_STOP=1)
+else
+ # Local environment - use peer authentication
+ if ! psql -d "${DBNAME}" -c "SELECT 1;" > /dev/null 2>&1; then
+  echo "[MOCK-ETL] ERROR: Cannot connect to database ${DBNAME}" >&2
+  echo "[MOCK-ETL] Please verify database connection settings:" >&2
+  echo "[MOCK-ETL]   TEST_DBNAME=${TEST_DBNAME:-}" >&2
+  echo "[MOCK-ETL]   TEST_DBHOST=${TEST_DBHOST:-}" >&2
+  echo "[MOCK-ETL]   TEST_DBPORT=${TEST_DBPORT:-}" >&2
+  echo "[MOCK-ETL]   TEST_DBUSER=${TEST_DBUSER:-}" >&2
+  exit 1
+ fi
+ psql_cmd=(psql -d "${DBNAME}" -v ON_ERROR_STOP=1)
 fi
-
-psql_cmd=(psql -d "${DBNAME}" -v ON_ERROR_STOP=1)
 
 echo "[MOCK-ETL] Ensuring enum type exists (mock scope only)..."
 "${psql_cmd[@]}" << 'SQL'
