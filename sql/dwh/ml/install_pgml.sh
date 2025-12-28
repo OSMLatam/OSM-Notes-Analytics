@@ -326,6 +326,22 @@ install_pgml_for_version() {
  local config_file="$PGRX_HOME/config.toml"
  local original_default=""
  if [[ -f "$config_file" ]]; then
+  # Ensure pg${target_version} entry exists in config.toml (format: pg14 = "/path/to/pg_config")
+  if ! grep -q "^pg${target_version}" "$config_file"; then
+   # Find the [configs] section and add the entry after it
+   if grep -q "^\[configs\]" "$config_file"; then
+    # Add after [configs] line
+    sed -i "/^\[configs\]/a pg${target_version} = \"$target_pg_config\"" "$config_file"
+   else
+    # Add [configs] section if it doesn't exist
+    echo "[configs]" >> "$config_file"
+    echo "pg${target_version} = \"$target_pg_config\"" >> "$config_file"
+   fi
+  else
+   # Update existing entry to ensure it points to the correct path
+   sed -i "s|^pg${target_version} = \".*\"|pg${target_version} = \"$target_pg_config\"|" "$config_file"
+  fi
+
   # Extract current default value
   original_default=$(grep "^default" "$config_file" | head -1 | sed 's/.*= *"\(.*\)".*/\1/' || echo "")
 
@@ -334,11 +350,27 @@ install_pgml_for_version() {
    # Replace existing default line
    sed -i "s/^default = \".*\"/default = \"pg${target_version}\"/" "$config_file"
   else
-   # Add default if it doesn't exist
-   echo "default = \"pg${target_version}\"" >> "$config_file"
+   # Add default if it doesn't exist (should be after [configs] section)
+   if grep -q "^\[configs\]" "$config_file"; then
+    sed -i "/^\[configs\]/a default = \"pg${target_version}\"" "$config_file"
+   else
+    echo "default = \"pg${target_version}\"" >> "$config_file"
+   fi
   fi
 
-  echo "Temporarily set default to pg${target_version} in config.toml"
+  # Verify the change was applied
+  local new_default
+  new_default=$(grep "^default" "$config_file" | head -1 | sed 's/.*= *"\(.*\)".*/\1/' || echo "")
+  if [[ "$new_default" == "pg${target_version}" ]]; then
+   echo "Temporarily set default to pg${target_version} in config.toml"
+   echo "Config file now contains:"
+   grep -E "^(default|pg${target_version}|\[configs\])" "$config_file" | head -5
+  else
+   echo -e "${RED}Error: Failed to set default to pg${target_version} (found: $new_default)${NC}"
+   echo "Config file contents:"
+   cat "$config_file"
+   return 1
+  fi
  fi
 
  # Set environment variables to ensure correct version is used
@@ -347,6 +379,22 @@ install_pgml_for_version() {
  export PGRX_PG_VERSION="pg${target_version}"
  export PG_CONFIG="$target_pg_config"
  export PGRX_DEFAULT_PG_VERSION="pg${target_version}"
+
+ # CRITICAL: Update PATH to prioritize the correct pg_config
+ # This ensures that /usr/bin/pg_config (which might be a symlink to pg16) is not used
+ local pg_config_dir
+ pg_config_dir=$(dirname "$target_pg_config")
+ export PATH="$pg_config_dir:$PATH"
+
+ # Verify the correct pg_config is being used
+ local current_pg_config
+ current_pg_config=$(which pg_config)
+ echo "Using pg_config: $current_pg_config"
+ echo "Expected pg_config: $target_pg_config"
+ if [[ "$current_pg_config" != "$target_pg_config" ]]; then
+  echo -e "${YELLOW}Warning: pg_config in PATH ($current_pg_config) differs from target ($target_pg_config)${NC}"
+  echo "Forcing use of target pg_config via PATH"
+ fi
 
  if ! cargo pgrx install; then
   # Restore original default on error
