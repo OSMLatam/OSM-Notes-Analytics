@@ -1852,8 +1852,13 @@ function main() {
    __logi "⏱️  TIME: datamartCountries took ${datamart_countries_duration} seconds"
   else
    __loge "ERROR: datamartCountries failed with exit code $?"
+   # Find log file directory (failures are acceptable here)
+   local datamart_countries_log_dir
    # shellcheck disable=SC2312  # Command substitution in error message is intentional; failures are acceptable
-   __loge "Check log file: $(find /tmp -maxdepth 1 -type d -name 'datamartCountries_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2-)/datamartCountries.log"
+   datamart_countries_log_dir=$(find /tmp -maxdepth 1 -type d -name 'datamartCountries_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2- || echo "")
+   if [[ -n "${datamart_countries_log_dir}" ]]; then
+    __loge "Check log file: ${datamart_countries_log_dir}/datamartCountries.log"
+   fi
   fi
   local DATAMART_USERS_START_TIME
   DATAMART_USERS_START_TIME=$(date +%s)
@@ -1865,8 +1870,13 @@ function main() {
    __logi "⏱️  TIME: datamartUsers took ${datamart_users_duration} seconds"
   else
    __loge "ERROR: datamartUsers failed with exit code $?"
+   # Find log file directory (failures are acceptable here)
+   local datamart_users_log_dir
    # shellcheck disable=SC2312  # Command substitution in error message is intentional; failures are acceptable
-   __loge "Check log file: $(find /tmp -maxdepth 1 -type d -name 'datamartUsers_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2-)/datamartUsers.log"
+   datamart_users_log_dir=$(find /tmp -maxdepth 1 -type d -name 'datamartUsers_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2- || echo "")
+   if [[ -n "${datamart_users_log_dir}" ]]; then
+    __loge "Check log file: ${datamart_users_log_dir}/datamartUsers.log"
+   fi
   fi
   local DATAMART_GLOBAL_START_TIME
   DATAMART_GLOBAL_START_TIME=$(date +%s)
@@ -1878,8 +1888,13 @@ function main() {
    __logi "⏱️  TIME: datamartGlobal took ${datamart_global_duration} seconds"
   else
    __loge "ERROR: datamartGlobal failed with exit code $?"
+   # Find log file directory (failures are acceptable here)
+   local datamart_global_log_dir
    # shellcheck disable=SC2312  # Command substitution in error message is intentional; failures are acceptable
-   __loge "Check log file: $(find /tmp -maxdepth 1 -type d -name 'datamartGlobal_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2-)/datamartGlobal.log"
+   datamart_global_log_dir=$(find /tmp -maxdepth 1 -type d -name 'datamartGlobal_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2- || echo "")
+   if [[ -n "${datamart_global_log_dir}" ]]; then
+    __loge "Check log file: ${datamart_global_log_dir}/datamartGlobal.log"
+   fi
   fi
   set -e
   local DATAMART_END_TIME
@@ -1924,23 +1939,37 @@ function main() {
    __logi "SUCCESS: datamartCountries completed successfully"
   else
    __loge "ERROR: datamartCountries failed with exit code $?"
+   # Find log file directory (failures are acceptable here)
+   local datamart_countries_log_dir
    # shellcheck disable=SC2312  # Command substitution in error message is intentional; failures are acceptable
-   __loge "Check log file: $(find /tmp -maxdepth 1 -type d -name 'datamartCountries_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2-)/datamartCountries.log"
+   datamart_countries_log_dir=$(find /tmp -maxdepth 1 -type d -name 'datamartCountries_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2- || echo "")
+   if [[ -n "${datamart_countries_log_dir}" ]]; then
+    __loge "Check log file: ${datamart_countries_log_dir}/datamartCountries.log"
+   fi
   fi
   if "${DATAMART_USERS_SCRIPT}" ""; then
    __logi "SUCCESS: datamartUsers completed successfully"
   else
    __loge "ERROR: datamartUsers failed with exit code $?"
+   # Find log file directory (failures are acceptable here)
+   local datamart_users_log_dir
    # shellcheck disable=SC2312  # Command substitution in error message is intentional; failures are acceptable
-   __loge "Check log file: $(find /tmp -maxdepth 1 -type d -name 'datamartUsers_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2-)/datamartUsers.log"
+   datamart_users_log_dir=$(find /tmp -maxdepth 1 -type d -name 'datamartUsers_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2- || echo "")
+   if [[ -n "${datamart_users_log_dir}" ]]; then
+    __loge "Check log file: ${datamart_users_log_dir}/datamartUsers.log"
+   fi
   fi
   if "${DATAMART_GLOBAL_SCRIPT}" ""; then
    __logi "SUCCESS: datamartGlobal completed successfully"
   else
    __loge "ERROR: datamartGlobal failed with exit code $?"
+   # Find log file directory (failures are acceptable here)
+   local datamart_global_log_dir
    # shellcheck disable=SC2312  # Command substitution in error message is intentional; failures are acceptable
-   __loge "Check log file: $(find /tmp -maxdepth 1 -type d -name 'datamartGlobal_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2-)/datamartGlobal.log"
-   __loge "Check log file: $(find /tmp -maxdepth 1 -type d -name 'datamartGlobal_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2-)/datamartGlobal.log"
+   datamart_global_log_dir=$(find /tmp -maxdepth 1 -type d -name 'datamartGlobal_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2- || echo "")
+   if [[ -n "${datamart_global_log_dir}" ]]; then
+    __loge "Check log file: ${datamart_global_log_dir}/datamartGlobal.log"
+   fi
   fi
   set -e
  fi
