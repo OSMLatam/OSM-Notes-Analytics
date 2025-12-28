@@ -144,7 +144,10 @@ function __show_help {
  echo "  ${0} --dry-run                 # Show what would be done (safe)"
  echo
  echo "Database configuration from etc/properties.sh:"
- echo "  Database: ${DBNAME_DWH:-${DBNAME:-not set}}"
+ echo "  Analytics DB: ${DBNAME_DWH:-${DBNAME:-not set}}"
+ if [[ -n "${DBNAME_INGESTION:-}" ]] && [[ "${DBNAME_INGESTION}" != "${DBNAME_DWH:-${DBNAME:-}}" ]]; then
+  echo "  Ingestion DB: ${DBNAME_INGESTION}"
+ fi
  echo "  User: ${DB_USER:-not set}"
  echo
  echo "WARNING: Default behavior removes ALL data warehouse data AND temporary files!"

@@ -30,6 +30,18 @@ NC='\033[0m' # No Color
 echo "=== OSM Notes Analytics - ETL Monitor ==="
 echo ""
 
+# Show database configuration
+echo "Database Configuration:"
+DB_INGESTION="${DBNAME_INGESTION:-${DBNAME_DWH:-notes_dwh}}"
+DB_DWH="${DBNAME_DWH:-notes_dwh}"
+echo "  Analytics DB: ${DB_DWH}"
+if [[ "${DB_INGESTION}" != "${DB_DWH}" ]]; then
+ echo "  Ingestion DB: ${DB_INGESTION} (separate database)"
+else
+ echo "  Ingestion DB: ${DB_INGESTION} (same as Analytics DB)"
+fi
+echo ""
+
 # Check if ETL is currently running
 echo "1. Process Status:"
 if pgrep -f "ETL.sh" > /dev/null; then
@@ -74,15 +86,35 @@ echo ""
 # Check database connectivity
 echo "3. Database Connection:"
 if command -v psql &> /dev/null; then
- if psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DB_USER:-notes}" -d "${DBNAME_DWH:-notes_dwh}" -c "SELECT 1" &> /dev/null; then
-  echo -e "${GREEN}✓ Database connection OK${NC}"
+ # Check if using separate databases (use variables set above)
+ USING_SEPARATE_DBS=false
 
-  # Check ETL status if etl_control table exists
-  # shellcheck disable=SC2312  # Command substitution in pipe is intentional; psql/grep commands are safe
-  if psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DB_USER:-notes}" -d "${DBNAME_DWH:-notes_dwh}" -t -c "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'dwh' AND table_name = 'etl_control')" 2> /dev/null | grep -q "t"; then
-   echo ""
-   echo "  ETL Control Status:"
-   psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DB_USER:-notes}" -d "${DBNAME_DWH:-notes_dwh}" -c "
+ if [[ "${DB_INGESTION}" != "${DB_DWH}" ]]; then
+  USING_SEPARATE_DBS=true
+ fi
+
+ # Check Analytics/DWH database connection
+ if psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DB_USER_DWH:-${DB_USER:-notes}}" -d "${DB_DWH}" -c "SELECT 1" &> /dev/null; then
+  echo -e "${GREEN}✓ Analytics DB (${DB_DWH}) connection OK${NC}"
+ else
+  echo -e "${RED}✗ Analytics DB (${DB_DWH}) connection FAILED${NC}"
+ fi
+
+ # Check Ingestion database connection if using separate databases
+ if [[ "${USING_SEPARATE_DBS}" == "true" ]]; then
+  if psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DB_USER_INGESTION:-${DB_USER:-notes}}" -d "${DB_INGESTION}" -c "SELECT 1" &> /dev/null; then
+   echo -e "${GREEN}✓ Ingestion DB (${DB_INGESTION}) connection OK${NC}"
+  else
+   echo -e "${RED}✗ Ingestion DB (${DB_INGESTION}) connection FAILED${NC}"
+  fi
+ fi
+
+ # Check ETL status if etl_control table exists (only in DWH database)
+ # shellcheck disable=SC2312  # Command substitution in pipe is intentional; psql/grep commands are safe
+ if psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DB_USER_DWH:-${DB_USER:-notes}}" -d "${DB_DWH}" -t -c "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'dwh' AND table_name = 'etl_control')" 2> /dev/null | grep -q "t"; then
+  echo ""
+  echo "  ETL Control Status:"
+  psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DB_USER_DWH:-${DB_USER:-notes}}" -d "${DB_DWH}" -c "
         SELECT
           table_name,
           COALESCE(last_processed_timestamp::text, 'N/A') as last_processed,
@@ -90,9 +122,6 @@ if command -v psql &> /dev/null; then
           COALESCE(status, 'N/A') as status
         FROM dwh.etl_control;
       " 2> /dev/null || echo "  Could not query etl_control table"
-  fi
- else
-  echo -e "${RED}✗ Database connection FAILED${NC}"
  fi
 else
  echo -e "${YELLOW}⚠ psql not found${NC}"
@@ -102,7 +131,7 @@ echo ""
 # Check facts table statistics
 echo "4. Data Warehouse Statistics:"
 if command -v psql &> /dev/null; then
- psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DB_USER:-notes}" -d "${DBNAME_DWH:-notes_dwh}" -c "
+ psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DB_USER_DWH:-${DB_USER:-notes}}" -d "${DBNAME_DWH:-notes_dwh}" -c "
     SELECT
       'facts' as table_name,
       COUNT(*)::text as row_count,
@@ -153,9 +182,9 @@ echo ""
 # Integrity validations (MON-001, MON-002)
 echo "6. Integrity Validations:"
 if command -v psql &> /dev/null; then
- if psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DB_USER:-notes}" -d "${DBNAME_DWH:-notes_dwh}" -c "SELECT 1" &> /dev/null; then
+ if psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DB_USER_DWH:-${DB_USER:-notes}}" -d "${DBNAME_DWH:-notes_dwh}" -c "SELECT 1" &> /dev/null; then
   # Check if validation functions exist
-  VALIDATION_EXISTS=$(psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DB_USER:-notes}" -d "${DBNAME_DWH:-notes_dwh}" -t -A -c "SELECT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid WHERE n.nspname = 'dwh' AND p.proname = 'validate_etl_integrity')" 2> /dev/null || echo "f")
+  VALIDATION_EXISTS=$(psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DB_USER_DWH:-${DB_USER:-notes}}" -d "${DBNAME_DWH:-notes_dwh}" -t -A -c "SELECT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid WHERE n.nspname = 'dwh' AND p.proname = 'validate_etl_integrity')" 2> /dev/null || echo "f")
 
   if [[ "${VALIDATION_EXISTS}" == "t" ]]; then
    echo "  Running integrity checks..."
@@ -163,7 +192,7 @@ if command -v psql &> /dev/null; then
 
    # Run MON-001 validation (note_current_status)
    echo "  MON-001: Note Current Status Validation"
-   MON001_RESULT=$(psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DB_USER:-notes}" -d "${DBNAME_DWH:-notes_dwh}" -t -A -F'|' -c "
+   MON001_RESULT=$(psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DB_USER_DWH:-${DB_USER:-notes}}" -d "${DBNAME_DWH:-notes_dwh}" -t -A -F'|' -c "
      SELECT check_name, status, issue_count::TEXT, details
      FROM dwh.validate_note_current_status()
      ORDER BY check_name;
@@ -185,7 +214,7 @@ if command -v psql &> /dev/null; then
 
    # Run MON-002 validation (comment counts)
    echo "  MON-002: Comment Count Validation"
-   MON002_RESULT=$(psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DB_USER:-notes}" -d "${DBNAME_DWH:-notes_dwh}" -t -A -F'|' -c "
+   MON002_RESULT=$(psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DB_USER_DWH:-${DB_USER:-notes}}" -d "${DBNAME_DWH:-notes_dwh}" -t -A -F'|' -c "
      SELECT check_name, status, issue_count::TEXT, details
      FROM dwh.validate_comment_counts()
      ORDER BY check_name;
