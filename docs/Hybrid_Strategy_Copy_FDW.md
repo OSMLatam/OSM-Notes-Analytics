@@ -62,7 +62,7 @@
 ```bash
 # Separate databases
 DBNAME_INGESTION="osm_notes"
-DBNAME_DWH="osm_notes_dwh"
+DBNAME_DWH="notes_dwh"
 DB_USER_INGESTION="ingestion_user"
 DB_USER_DWH="analytics_user"
 
@@ -150,7 +150,7 @@ Auto-detects incremental execution and:
 
 **Solution:** The script handles this automatically (drops and recreates). If it persists:
 ```bash
-psql -d osm_notes_dwh -c "DROP TABLE IF EXISTS public.notes, public.note_comments, public.note_comments_text, public.users, public.countries CASCADE;"
+psql -d notes_dwh -c "DROP TABLE IF EXISTS public.notes, public.note_comments, public.note_comments_text, public.users, public.countries CASCADE;"
 ```
 
 ---

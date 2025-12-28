@@ -18,7 +18,7 @@ fi
 # DBNAME is maintained for backward compatibility when both databases are the same
 # shellcheck disable=SC2034
 if [[ -z "${DBNAME_DWH:-}" ]]; then
- DBNAME_DWH="${DBNAME:-osm_notes}"
+ DBNAME_DWH="${DBNAME_DWH:-notes_dwh}"
 fi
 # shellcheck disable=SC2034
 if [[ -z "${DBNAME_INGESTION:-}" ]]; then

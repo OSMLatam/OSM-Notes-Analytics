@@ -62,7 +62,7 @@ Only the `.example` template files are versioned in the repository.
 # Database name (should match the ingestion system database)
 # Recommended: Use DBNAME_INGESTION and DBNAME_DWH for clarity
 DBNAME_INGESTION="osm_notes"
-DBNAME_DWH="osm_notes_dwh"
+DBNAME_DWH="notes_dwh"
 # Legacy/compatibility: Use DBNAME when both databases are the same
 DBNAME="osm_notes"
 
@@ -391,7 +391,7 @@ Matches `XSLT_MAX_DEPTH` in `properties.sh`.
 
    ```bash
    DBNAME_INGESTION="osm_notes"
-   DBNAME_DWH="osm_notes_dwh"
+   DBNAME_DWH="notes_dwh"
    DBNAME="osm_notes"  # Use when both databases are the same
    DB_USER="your_username"
    ```
@@ -480,7 +480,7 @@ Configuration can be overridden with environment variables:
 ```bash
 # Override database name (recommended: use DBNAME_INGESTION and DBNAME_DWH)
 export DBNAME_INGESTION="osm_notes"
-export DBNAME_DWH="osm_notes_dwh"
+export DBNAME_DWH="notes_dwh"
 # Or use DBNAME for same database (legacy/compatibility)
 export DBNAME="osm_notes_test"
 

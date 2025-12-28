@@ -9,7 +9,7 @@ This comprehensive troubleshooting guide consolidates common problems and soluti
 ```bash
 # Recommended configuration
 export DBNAME_INGESTION="osm_notes"
-export DBNAME_DWH="osm_notes_dwh"
+export DBNAME_DWH="notes_dwh"
 
 # For commands checking Ingestion tables, use DBNAME_INGESTION or DBNAME
 # For commands checking DWH tables, use DBNAME_DWH or DBNAME

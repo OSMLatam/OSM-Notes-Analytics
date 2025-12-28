@@ -51,20 +51,20 @@ These variables are used across **all scripts** and should be standardized:
 - **Example**: 
   ```bash
   export DBNAME_INGESTION=osm_notes
-  export DBNAME_DWH=osm_notes_dwh
+  export DBNAME_DWH=notes_dwh
   ./bin/dwh/ETL.sh
   ```
 
 #### `DBNAME_DWH` (Recommended)
 
 - **Purpose**: PostgreSQL database name for Analytics/DWH system
-- **Values**: String (e.g., `osm_notes_dwh`)
-- **Default**: `osm_notes` (from `etc/properties.sh`, or `DBNAME` if not set)
+- **Values**: String (e.g., `notes_dwh`)
+- **Default**: `notes_dwh` (from `etc/properties.sh`, or `DBNAME` if not set)
 - **Usage**: Specify the Analytics database when it differs from Ingestion database
 - **Example**: 
   ```bash
   export DBNAME_INGESTION=osm_notes
-  export DBNAME_DWH=osm_notes_dwh
+  export DBNAME_DWH=notes_dwh
   ./bin/dwh/ETL.sh
   ```
 
@@ -310,7 +310,7 @@ Defined in `etc/properties.sh` (created from `etc/properties.sh.example`, can be
 
 ### Database Configuration
 
-- **`DBNAME`**: PostgreSQL database name (default: `notes`)
+- **`DBNAME`**: PostgreSQL database name (default: `osm_notes`)
 - **`DB_USER`**: PostgreSQL user (default: `myuser`)
 
 ### Processing Configuration

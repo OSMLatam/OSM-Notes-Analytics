@@ -88,7 +88,7 @@ export ETL_BATCH_SIZE="1000"
 # Database configuration (recommended: use DBNAME_INGESTION and DBNAME_DWH)
 # Option 1: Separate databases (recommended for production)
 export DBNAME_INGESTION="osm_notes"
-export DBNAME_DWH="osm_notes_dwh"
+export DBNAME_DWH="notes_dwh"
 export DBHOST="localhost"
 export DBPORT="5432"
 export DBUSER="postgres"
@@ -258,7 +258,7 @@ Use case: Fresh start or reset after schema changes.
 | `LOG_LEVEL` | Logging verbosity | `ERROR` | All scripts |
 | `CLEAN` | Clean temporary files | `true` | All scripts |
 | `DBNAME_INGESTION` | Ingestion database name | `osm_notes` | DWH scripts |
-| `DBNAME_DWH` | Analytics/DWH database name | `osm_notes_dwh` | DWH scripts |
+| `DBNAME_DWH` | Analytics/DWH database name | `notes_dwh` | DWH scripts |
 | `DBNAME` | Database name (legacy/compatibility) | `osm_notes` | All scripts (fallback) |
 | `DBHOST` | Database host | `localhost` | All scripts |
 | `DBPORT` | Database port | `5432` | All scripts |

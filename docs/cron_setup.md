@@ -260,7 +260,7 @@ DBPORT=5432
 DBUSER=postgres
 # Database configuration (recommended: use DBNAME_INGESTION and DBNAME_DWH)
 DBNAME_INGESTION=osm_notes
-DBNAME_DWH=osm_notes_dwh
+DBNAME_DWH=notes_dwh
 # Legacy/compatibility (use when both databases are the same):
 # DBNAME=osm_notes
 ```
