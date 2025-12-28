@@ -58,12 +58,26 @@ export DBNAME_DWH
 export DBNAME_INGESTION
 
 declare BASENAME
-BASENAME=$(basename -s .sh "${0}")
+# Use BASH_SOURCE[0] when sourced, $0 when executed directly
+if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+ # Script is being sourced
+ BASENAME=$(basename -s .sh "${BASH_SOURCE[0]}")
+else
+ # Script is being executed
+ BASENAME=$(basename -s .sh "${0}")
+fi
 readonly BASENAME
 
 # Main script name for trap handlers (must be global, not local)
 declare MAIN_SCRIPT_NAME
-MAIN_SCRIPT_NAME=$(basename "${0}" .sh)
+# Use BASH_SOURCE[0] when sourced, $0 when executed directly
+if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+ # Script is being sourced
+ MAIN_SCRIPT_NAME=$(basename "${BASH_SOURCE[0]}" .sh)
+else
+ # Script is being executed
+ MAIN_SCRIPT_NAME=$(basename "${0}" .sh)
+fi
 readonly MAIN_SCRIPT_NAME
 
 # Original process start time and PID (to preserve in lock file).
@@ -73,14 +87,29 @@ readonly PROCESS_START_TIME
 declare -r ORIGINAL_PID=$$
 
 # Temporary directory for all files.
-declare TMP_DIR
-TMP_DIR=$(mktemp -d "/tmp/${BASENAME}_XXXXXX")
-readonly TMP_DIR
-chmod 777 "${TMP_DIR}"
+# Only create temp directory if not being sourced for testing
+if [[ -z "${TMP_DIR:-}" ]]; then
+ declare TMP_DIR
+ if [[ "${SKIP_MAIN:-}" != "true" ]]; then
+  TMP_DIR=$(mktemp -d "/tmp/${BASENAME}_XXXXXX" 2> /dev/null || echo "/tmp/${BASENAME}_$$")
+  chmod 777 "${TMP_DIR}" 2> /dev/null || true
+ else
+  # When sourced for testing, use a default temp directory
+  TMP_DIR="/tmp/${BASENAME}_test_$$"
+ fi
+ readonly TMP_DIR
+else
+ # TMP_DIR already set (e.g., by test framework)
+ declare -r TMP_DIR
+fi
 
 # Log file for output.
 declare LOG_FILENAME
-LOG_FILENAME="${TMP_DIR}/${BASENAME}.log"
+if [[ -n "${TMP_DIR:-}" ]]; then
+ LOG_FILENAME="${TMP_DIR}/${BASENAME}.log"
+else
+ LOG_FILENAME="/tmp/${BASENAME}.log"
+fi
 readonly LOG_FILENAME
 
 # Lock file for single execution.
@@ -109,14 +138,17 @@ source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/errorHandlingFunctions.sh"
 # Configure log file early if running from cron (not a terminal)
 # This prevents logger from writing to stdout which would be sent by email
 # Redirect stdout and stderr to log file immediately when running from cron
-if [[ ! -t 1 ]]; then
+# Skip redirection when sourced for testing or when showing help
+if [[ "${SKIP_MAIN:-}" != "true" ]] && [[ ! -t 1 ]] && [[ "${1:-}" != "--help" ]] && [[ "${1:-}" != "-h" ]]; then
  # Redirect all output to log file to prevent cron from sending emails
  exec >> "${LOG_FILENAME}" 2>&1
  __set_log_file "${LOG_FILENAME}"
 fi
 
-# Initialize logger
-__start_logger
+# Initialize logger (skip if sourced for testing and logger already initialized)
+if [[ "${SKIP_MAIN:-}" != "true" ]] || ! type -t __logi > /dev/null 2>&1; then
+ __start_logger
+fi
 
 # PostgreSQL SQL script files.
 # Check ingestion base tables.
@@ -217,7 +249,10 @@ if [[ -f "${ETL_CONFIG_FILE}" ]]; then
  source "${ETL_CONFIG_FILE}"
  # Only log if there's a problem - configuration loading is expected
 else
- __logw "ETL configuration file not found, using defaults"
+ # Only log warning if logger is available (not when sourced for testing)
+ if type -t __logw > /dev/null 2>&1; then
+  __logw "ETL configuration file not found, using defaults"
+ fi
 fi
 
 # Load local ETL configuration if available (overrides global settings)
@@ -1702,10 +1737,10 @@ function main() {
 
  __checkPrereqs
 
-# Validate base ingestion tables and columns before processing
-__logi "Validating base ingestion tables and columns..."
-# shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
-if ! __checkIngestionBaseTables; then
+ # Validate base ingestion tables and columns before processing
+ __logi "Validating base ingestion tables and columns..."
+ # shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
+ if ! __checkIngestionBaseTables; then
   __loge "Base ingestion tables validation failed. ETL cannot proceed."
   exit 1
  fi
@@ -1955,8 +1990,10 @@ if ! __checkIngestionBaseTables; then
  __log_finish
 }
 
-# Allows to other user read the directory.
-chmod go+x "${TMP_DIR}"
+# Allows to other user read the directory (skip if sourced for testing)
+if [[ "${SKIP_MAIN:-}" != "true" ]] && [[ -n "${TMP_DIR:-}" ]] && [[ -d "${TMP_DIR:-}" ]]; then
+ chmod go+x "${TMP_DIR}"
+fi
 
 # Logger already initialized, log file already set if running from cron
 # When running from cron, exec already redirected stdout/stderr to log file

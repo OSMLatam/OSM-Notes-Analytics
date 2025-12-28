@@ -36,12 +36,11 @@ load ../../test_helper
 @test "ETL.sh should have all required functions available" {
  # Test that key functions are available
  local REQUIRED_FUNCTIONS=(
-  "__createDWH"
-  "__createStaging"
-  "__loadStaging"
-  "__loadDWH"
-  "__createDatamarts"
-  "__showHelp"
+  "__createBaseTables"
+  "__processNotesETL"
+  "__initialFacts"
+  "__initialFactsParallel"
+  "__show_help"
  )
 
  for FUNC in "${REQUIRED_FUNCTIONS[@]}"; do
@@ -175,25 +174,21 @@ load ../../test_helper
 
 # Test that datamart creation functions work correctly
 @test "ETL.sh datamart creation functions should work correctly" {
- # Test that datamart functions are available
- local DATAMART_FUNCTIONS=(
-  "__createDatamartUsers"
-  "__createDatamartCountries"
- )
-
- for FUNC in "${DATAMART_FUNCTIONS[@]}"; do
-  run bash -c "SKIP_MAIN=true source ${SCRIPT_BASE_DIRECTORY}/bin/dwh/ETL.sh && declare -f ${FUNC}"
-  [[ "${status}" -eq 0 ]] || echo "Function ${FUNC} should be available"
- done
+ # Test that datamart scripts exist and are executable
+ # Note: Datamart creation is done via separate scripts, not functions in ETL.sh
+ [[ -f "${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartUsers/datamartUsers.sh" ]]
+ [[ -f "${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartCountries/datamartCountries.sh" ]]
+ [[ -x "${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartUsers/datamartUsers.sh" ]]
+ [[ -x "${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartCountries/datamartCountries.sh" ]]
 }
 
 # Test that staging functions work correctly
 @test "ETL.sh staging functions should work correctly" {
- # Test that staging functions are available
+ # Test that staging-related functions are available
+ # Staging is handled within __createBaseTables and __processNotesETL
  local STAGING_FUNCTIONS=(
-  "__createStagingTables"
-  "__loadStagingData"
-  "__unifyStagingData"
+  "__createBaseTables"
+  "__processNotesETL"
  )
 
  for FUNC in "${STAGING_FUNCTIONS[@]}"; do

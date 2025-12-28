@@ -225,9 +225,16 @@ teardown() {
  [[ "${ETL_MAX_PARALLEL_JOBS}" = "2" ]]
  [[ "${MAX_THREADS}" = "4" ]]
 
- # Test help with parallel processing
- run bash -c "cd \"\${PROJECT_ROOT}\" && LOG_LEVEL=ERROR ./bin/dwh/ETL.sh --help"
- [[ "${status}" -eq 0 ]]
+ # Test help with parallel processing - use timeout to prevent hanging
+ local exit_code
+ bash -c "
+  cd \"\${PROJECT_ROOT}\"
+  export LOG_LEVEL=ERROR
+  timeout 10s bash ./bin/dwh/ETL.sh --help
+ " || exit_code=$?
+
+ # Check exit code (should be 0 for help)
+ [[ "${exit_code:-0}" -eq 0 ]]
 }
 
 @test "ETL configuration validation" {
