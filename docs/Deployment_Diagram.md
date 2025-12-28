@@ -194,14 +194,14 @@ gantt
 
 ```cron
 # ETL: Incremental updates every 15 minutes
-*/15 * * * * /path/to/OSM-Notes-Analytics/bin/dwh/ETL.sh >> /var/log/osm-notes-etl.log 2>&1
+*/15 * * * * export CLEAN=false ; export LOG_LEVEL=INFO ; export DBNAME=notes ; export DB_USER=notes ; /home/notes/OSM-Notes-Analytics/bin/dwh/ETL.sh >> /var/log/osm-notes-etl.log 2>&1
 
 # Datamarts: Update daily at 2 AM (after ETL completes)
-0 2 * * * /path/to/OSM-Notes-Analytics/bin/dwh/datamartUsers/datamartUsers.sh >> /var/log/osm-notes-datamarts.log 2>&1
-30 2 * * * /path/to/OSM-Notes-Analytics/bin/dwh/datamartCountries/datamartCountries.sh >> /var/log/osm-notes-datamarts.log 2>&1
+0 2 * * * /home/notes/OSM-Notes-Analytics/bin/dwh/datamartUsers/datamartUsers.sh >> /var/log/osm-notes-datamarts.log 2>&1
+30 2 * * * /home/notes/OSM-Notes-Analytics/bin/dwh/datamartCountries/datamartCountries.sh >> /var/log/osm-notes-datamarts.log 2>&1
 
 # JSON Export: Every 15 minutes (after datamarts update)
-*/15 * * * * /path/to/OSM-Notes-Analytics/bin/dwh/exportDatamartsToJSON.sh >> /var/log/osm-notes-export.log 2>&1
+*/15 * * * * /home/notes/OSM-Notes-Analytics/bin/dwh/exportDatamartsToJSON.sh >> /var/log/osm-notes-export.log 2>&1
 
 # Maintenance: Weekly cleanup and optimization
 0 3 * * 0 psql -U postgres -d osm_notes -c "VACUUM ANALYZE dwh.facts;" >> /var/log/osm-notes-maintenance.log 2>&1

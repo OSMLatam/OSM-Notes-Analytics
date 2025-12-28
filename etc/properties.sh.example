@@ -30,7 +30,7 @@ if [[ -z "${DB_USER:-}" ]]; then
 fi
 
 # Email configuration for reports.
-declare EMAILS="${EMAILS:-username@domain.com}"
+declare EMAILS="${EMAILS:-notes@osm.lat}"
 
 # OpenStreetMap API configuration.
 # shellcheck disable=SC2034

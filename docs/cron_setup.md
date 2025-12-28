@@ -78,12 +78,15 @@ cp etc/cron.example /tmp/osm-notes-cron
 Edit `/tmp/osm-notes-cron` and update the paths:
 
 ```bash
-# Find this line:
-*/15 * * * * /path/to/OSM-Notes-Analytics/bin/dwh/cron_etl.sh
-
-# Replace with your actual path:
-*/15 * * * * /home/angoca/github/OSM-Notes-Analytics/bin/dwh/cron_etl.sh
+# Example configuration (production path):
+*/15 * * * * export CLEAN=false ; export LOG_LEVEL=INFO ; export DBNAME=notes ; export DB_USER=notes ; /home/notes/OSM-Notes-Analytics/bin/dwh/ETL.sh
 ```
+
+**Production Configuration**:
+- `CLEAN=false`: Keeps temporary files for debugging (use `CLEAN=true` to save disk space)
+- `LOG_LEVEL=INFO`: Balanced logging (use `ERROR` for less verbose, `DEBUG` for debugging)
+- `DBNAME=notes`: Your database name
+- `DB_USER=notes`: Your database user
 
 Also update:
 - `SHELL=/bin/bash` (if using different shell)
@@ -108,7 +111,9 @@ crontab -l
 
 You should see output like:
 ```
-*/15 * * * * /home/angoca/github/OSM-Notes-Analytics/bin/dwh/cron_etl.sh
+*/15 * * * * export CLEAN=false ; export LOG_LEVEL=INFO ; export DBNAME=notes ; export DB_USER=notes ; /home/notes/OSM-Notes-Analytics/bin/dwh/ETL.sh
+0 2 15 * * /home/notes/OSM-Notes-Analytics/bin/dwh/exportAndPushCSVToGitHub.sh
+0 4 1 * * /home/notes/OSM-Notes-Analytics/bin/dwh/ml_retrain.sh >> /tmp/ml-retrain.log 2>&1
 ```
 
 ---
@@ -175,7 +180,7 @@ Add to cron for automated monitoring:
 
 ```cron
 # Daily report at 6 AM
-0 6 * * * /path/to/OSM-Notes-Analytics/bin/dwh/monitor_etl.sh > /tmp/etl_daily_report.txt
+0 6 * * * /home/notes/OSM-Notes-Analytics/bin/dwh/monitor_etl.sh > /tmp/etl_daily_report.txt
 ```
 
 ### Email Alerts
@@ -186,7 +191,7 @@ Configure email alerts in `bin/dwh/cron_etl.sh`:
 # Uncomment and configure these lines:
 if command -v mail &> /dev/null; then
   echo "ETL failed with exit code ${exit_code}. Check logs at ${ETL_LOG_FILE}" | \
-    mail -s "ETL Failed - OSM Notes Analytics" admin@example.com
+    mail -s "ETL Failed - OSM Notes Analytics" notes@osm.lat
 fi
 ```
 
@@ -232,7 +237,7 @@ ls -la bin/dwh/*.sh
 
 ```bash
 # Good
-/path/to/OSM-Notes-Analytics/bin/dwh/cron_etl.sh
+/home/notes/OSM-Notes-Analytics/bin/dwh/cron_etl.sh
 
 # Bad
 bin/dwh/cron_etl.sh
@@ -285,7 +290,7 @@ Test cron jobs manually first:
 
 ```bash
 # Run wrapper manually
-./bin/dwh/cron_etl.sh
+/home/notes/OSM-Notes-Analytics/bin/dwh/cron_etl.sh
 
 # Check output
 tail -f /var/log/osm-notes-etl.log
@@ -297,7 +302,7 @@ Begin with less frequent execution:
 
 ```cron
 # Start with hourly updates
-0 * * * * /path/to/OSM-Notes-Analytics/bin/dwh/cron_etl.sh
+0 * * * * /home/notes/OSM-Notes-Analytics/bin/dwh/cron_etl.sh
 ```
 
 Then increase frequency based on performance.
@@ -311,7 +316,7 @@ Watch log directory size:
 du -sh /tmp/ETL_*
 
 # Set up alert in cron
-0 4 * * * du -sh /tmp/ETL_* | mail -s "ETL Log Size" admin@example.com
+0 4 * * * du -sh /tmp/ETL_* | mail -s "ETL Log Size" notes@osm.lat
 ```
 
 ### 4. Regular Maintenance
@@ -347,7 +352,7 @@ Monitor for failures:
 grep -i error /var/log/osm-notes-etl.log | tail -20
 
 # Set up daily error report
-0 7 * * * grep -i error /var/log/osm-notes-etl.log | tail -50 | mail -s "ETL Errors" admin@example.com
+0 7 * * * grep -i error /var/log/osm-notes-etl.log | tail -50 | mail -s "ETL Errors" notes@osm.lat
 ```
 
 ---
@@ -359,11 +364,17 @@ grep -i error /var/log/osm-notes-etl.log | tail -20
 You can run different ETL operations at different times:
 
 ```cron
-# Incremental updates every 15 minutes
-*/15 * * * * /path/to/OSM-Notes-Analytics/bin/dwh/cron_etl.sh
+# Incremental updates every 15 minutes (production)
+*/15 * * * * export CLEAN=false ; export LOG_LEVEL=INFO ; export DBNAME=notes ; export DB_USER=notes ; /home/notes/OSM-Notes-Analytics/bin/dwh/ETL.sh
 
-# Full reload every Sunday at 2 AM
-0 2 * * 0 /path/to/OSM-Notes-Analytics/bin/dwh/ETL.sh
+# Export CSV monthly (15th day at 2 AM)
+0 2 15 * * /home/notes/OSM-Notes-Analytics/bin/dwh/exportAndPushCSVToGitHub.sh
+
+# ML training/retraining monthly (1st day at 4 AM)
+0 4 1 * * /home/notes/OSM-Notes-Analytics/bin/dwh/ml_retrain.sh >> /tmp/ml-retrain.log 2>&1
+
+# Full reload every Sunday at 2 AM (if needed)
+0 2 * * 0 /home/notes/OSM-Notes-Analytics/bin/dwh/ETL.sh
 ```
 
 ### Custom Log Rotation
@@ -392,7 +403,7 @@ Run ETL only during business hours:
 
 ```cron
 # Only run 8 AM - 8 PM
-*/15 8-20 * * * /path/to/OSM-Notes-Analytics/bin/dwh/cron_etl.sh
+*/15 8-20 * * * /home/notes/OSM-Notes-Analytics/bin/dwh/cron_etl.sh
 ```
 
 ---

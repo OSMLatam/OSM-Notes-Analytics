@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #
 # Intelligent ML model training/retraining script
 # Automatically detects system state and decides what to do:

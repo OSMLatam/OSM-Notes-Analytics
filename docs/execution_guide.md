@@ -367,8 +367,12 @@ psql -d $DBNAME -c "REINDEX SCHEMA dwh"
 ### Daily Operations
 
 ```bash
-# Incremental update (recommended every 15-30 minutes, auto-detects mode)
-*/15 * * * * /path/to/OSM-Notes-Analytics/bin/dwh/ETL.sh
+# Incremental update (recommended every 15 minutes, auto-detects mode)
+# Production configuration: LOG_LEVEL=INFO, CLEAN=false (keeps logs for debugging)
+*/15 * * * * export CLEAN=false ; export LOG_LEVEL=INFO ; export DBNAME=notes ; export DB_USER=notes ; /home/notes/OSM-Notes-Analytics/bin/dwh/ETL.sh
+
+# Alternative: Production mode (less verbose, cleans temporary files)
+# */15 * * * * export CLEAN=true ; export LOG_LEVEL=ERROR ; export DBNAME=notes ; export DB_USER=notes ; /home/notes/OSM-Notes-Analytics/bin/dwh/ETL.sh
 ```
 
 ### Weekly Maintenance
@@ -381,6 +385,13 @@ psql -d $DBNAME -c "VACUUM ANALYZE dwh.facts"
 ### Monthly Tasks
 
 ```bash
+# Export CSV files (15th day of month at 2 AM)
+# 0 2 15 * * /home/notes/OSM-Notes-Analytics/bin/dwh/exportAndPushCSVToGitHub.sh
+
+# ML model training/retraining (1st day of month at 4 AM)
+# Script automatically detects if training or retraining is needed
+# 0 4 1 * * /home/notes/OSM-Notes-Analytics/bin/dwh/ml_retrain.sh >> /tmp/ml-retrain.log 2>&1
+
 # Check index usage
 psql -d $DBNAME -c "SELECT * FROM pg_stat_user_indexes WHERE schemaname = 'dwh'"
 

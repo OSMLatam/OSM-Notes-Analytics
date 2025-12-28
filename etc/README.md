@@ -82,7 +82,7 @@ DB_USER="myuser"
 
 ```bash
 # Email addresses for reports and notifications (comma-separated)
-EMAILS="username@domain.com"
+EMAILS="notes@osm.lat"
 ```
 
 **Note:** Email notifications are configured in `etl.properties` (`ETL_NOTIFICATION_ENABLED`,
@@ -470,7 +470,7 @@ ETL_LOG_LEVEL="INFO"
 CLEAN="true"  # Remove temporary files
 ETL_VALIDATE_INTEGRITY=true
 ETL_NOTIFICATION_ENABLED=true
-ETL_NOTIFICATION_EMAIL="admin@domain.com"
+ETL_NOTIFICATION_EMAIL="notes@osm.lat"
 ```
 
 ## Environment Variables
