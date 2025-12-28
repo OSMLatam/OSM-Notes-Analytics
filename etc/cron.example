@@ -72,6 +72,28 @@ HOME=/home/your-username
 # 0 2 * * * find /backups/dwh_*.sql -mtime +30 -delete
 
 # ==========================================
+# MACHINE LEARNING TASKS
+# ==========================================
+
+# Monthly: Intelligent ML training/retraining (1st day of month at 2 AM)
+# Script automatically detects system state and decides what to do:
+# - No data → do nothing (exits silently)
+# - Facts + dimensions ready → initial training (basic features)
+# - Datamarts populated → full training (all features)
+# - Models exist → retraining (if 10%+ new data or 30+ days old)
+# Takes 30-120 minutes if training is needed
+# Logs go to /tmp/ml_retrain_*.log (or use ML_LOG_FILE env var to customize)
+# 0 2 1 * * /path/to/OSM-Notes-Analytics/bin/dwh/ml_retrain.sh >> /tmp/ml-retrain.log 2>&1
+
+# Alternative: Quarterly retraining (1st day of quarter at 2 AM)
+# 0 2 1 */3 * /path/to/OSM-Notes-Analytics/bin/dwh/ml_retrain.sh >> /tmp/ml-retrain.log 2>&1
+
+# Note: If you need /var/log, create the file first with sudo:
+# sudo touch /var/log/ml-retrain.log
+# sudo chmod 666 /var/log/ml-retrain.log
+# Then use: >> /var/log/ml-retrain.log 2>&1
+
+# ==========================================
 # MONITORING TASKS (Optional)
 # ==========================================
 

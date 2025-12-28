@@ -408,7 +408,7 @@ If you see errors, the system-level installation may be missing.
 
 ```bash
 # Check PostgreSQL version (must be 14+)
-psql -d osm_notes -c "SELECT version();"
+psql -d notes_dwh -c "SELECT version();"
 
 # Option 1: Use automated installation script (RECOMMENDED for existing databases)
 cd sql/dwh/ml
@@ -420,11 +420,27 @@ sudo ./install_pgml.sh
 ls /usr/share/postgresql/*/extension/pgml*
 ```
 
-### Step 1: Enable Extension in Database
+### Step 1: Check Prerequisites
+
+**Before training, verify that required tables exist and have data:**
+
+```bash
+# Check prerequisites (core tables, datamarts, training data)
+psql -d notes_dwh -f sql/dwh/ml/ml_00_check_prerequisites.sql
+```
+
+**What you need:**
+- ✅ **Required**: `dwh.facts`, `dwh.dimension_days`, `dwh.dimension_applications`
+- ⚠️ **Recommended**: `dwh.datamartCountries`, `dwh.datamartUsers` (for better features)
+- ⚠️ **Recommended**: `dwh.v_note_hashtag_features` (for hashtag features)
+
+**Note**: You can train **without datamarts** (they use LEFT JOIN with default values), but accuracy will be lower. Datamarts are automatically populated by ETL, but may take time to fully populate (especially `datamartUsers` which processes incrementally).
+
+### Step 2: Enable Extension in Database
 
 ```sql
 -- Connect to database
-\c osm_notes
+\c notes_dwh
 
 -- Enable pgml extension (this is the SQL part)
 CREATE EXTENSION IF NOT EXISTS pgml;
@@ -433,20 +449,22 @@ CREATE EXTENSION IF NOT EXISTS pgml;
 SELECT pgml.version();
 ```
 
-### Step 2: Create Feature Views
+### Step 3: Create Feature Views
 
 ```bash
-psql -d osm_notes -f sql/dwh/ml/ml_01_setupPgML.sql
+psql -d notes_dwh -f sql/dwh/ml/ml_01_setupPgML.sql
 ```
 
 This creates:
 - `dwh.v_note_ml_training_features`: Features + target variables for training
 - `dwh.v_note_ml_prediction_features`: Features for new notes (no targets)
 
-### Step 3: Train Models
+**Note**: The views use `LEFT JOIN` with `COALESCE`, so they work even if datamarts are empty (using default values of 0).
+
+### Step 4: Train Models
 
 ```bash
-psql -d osm_notes -f sql/dwh/ml/ml_02_trainPgMLModels.sql
+psql -d notes_dwh -f sql/dwh/ml/ml_02_trainPgMLModels.sql
 ```
 
 **⚠️ Training takes time** (several minutes to hours depending on data size):
@@ -464,10 +482,10 @@ SELECT * FROM pgml.training_runs ORDER BY created_at DESC LIMIT 5;
 SELECT * FROM pgml.deployed_models WHERE project_name LIKE 'note_classification%';
 ```
 
-### Step 4: Make Predictions
+### Step 5: Make Predictions
 
 ```bash
-psql -d osm_notes -f sql/dwh/ml/ml_03_predictWithPgML.sql
+psql -d notes_dwh -f sql/dwh/ml/ml_03_predictWithPgML.sql
 ```
 
 Or use the helper function:
@@ -535,6 +553,139 @@ SELECT * FROM pgml.train(
   algorithm => 'xgboost'
 );
 ```
+
+**Training without datamarts**: If datamarts are not populated, the model will still train but will use default values (0) for geographic and user features. You can re-train later when datamarts are populated for better accuracy.
+
+## Training Time and Performance
+
+### Expected Training Times
+
+Training time depends on:
+- **Data size**: Number of training samples
+- **Model complexity**: Number of classes and features
+- **Hardware**: CPU and memory available
+
+**Estimated times** (for typical dataset sizes):
+
+| Model | Classes | Training Samples | Estimated Time |
+|-------|---------|------------------|----------------|
+| Main Category | 2 | 10,000 | 5-15 minutes |
+| Main Category | 2 | 100,000 | 30-60 minutes |
+| Specific Type | 18+ | 10,000 | 15-30 minutes |
+| Specific Type | 18+ | 100,000 | 60-120 minutes |
+| Action Recommendation | 3 | 10,000 | 10-20 minutes |
+| Action Recommendation | 3 | 100,000 | 45-90 minutes |
+
+**Total for all 3 models**: 30-120 minutes (depending on data size)
+
+### Performance Considerations
+
+- **CPU Usage**: Training is CPU-intensive. May slow down other database operations.
+- **Memory Usage**: XGBoost requires significant memory (2-4GB for 100K samples).
+- **Database Load**: Training reads from `dwh.v_note_ml_training_features` view.
+- **Best Practice**: Run training during low-traffic periods or schedule it separately.
+
+## Model Retraining Strategy
+
+### When to Retrain
+
+Models should be retrained when:
+
+1. **New Data Available**: 10%+ new training samples since last training
+2. **Time-Based**: Monthly or quarterly (even without much new data)
+3. **Performance Degradation**: Model accuracy drops significantly
+4. **Data Drift**: Distribution of note types changes over time
+5. **After Datamart Updates**: When datamarts are fully populated (better features)
+
+### Retraining Frequency Recommendations
+
+| Frequency | Use Case | Command |
+|-----------|----------|---------|
+| **Monthly** | Recommended for production | `bin/dwh/ml_retrain.sh` (via cron) |
+| **Quarterly** | Stable systems with slow data growth | `bin/dwh/ml_retrain.sh` (via cron) |
+| **On-Demand** | After major data updates or when accuracy drops | `bin/dwh/ml_retrain.sh --force` |
+| **After Initial Training** | When datamarts are first populated | `bin/dwh/ml_retrain.sh --force` |
+
+### Automated Training/Retraining
+
+The script is **fully automatic** - it detects system state and decides what to do:
+
+**Decision Logic**:
+1. **No data** → Do nothing (exit silently)
+2. **Facts + dimensions ready** → Initial training (basic features)
+3. **Datamarts populated** → Full training (all features)
+4. **Models exist** → Retraining (if 10%+ new data or 30+ days old)
+
+**Usage**:
+```bash
+# Just run it - no options needed!
+bin/dwh/ml_retrain.sh
+```
+
+**Cron Example** (monthly - recommended):
+```bash
+# Intelligent ML training/retraining (1st day of month at 2 AM)
+# Script automatically decides what to do based on system state
+0 2 1 * * /path/to/OSM-Notes-Analytics/bin/dwh/ml_retrain.sh >> /var/log/ml-retrain.log 2>&1
+```
+
+**What it does automatically**:
+- ✅ Checks if enough data exists (exits silently if not)
+- ✅ Detects if datamarts are populated
+- ✅ Checks if models already exist
+- ✅ Decides between initial training vs retraining
+- ✅ Only retrains if significant new data (10%+) or 30+ days old
+
+## ETL Integration
+
+### Current Status: NOT Integrated
+
+**⚠️ Important**: ML training is **NOT currently integrated** into the ETL workflow. This is intentional:
+
+- **Training is expensive**: Takes 30-120 minutes, CPU-intensive
+- **Not needed frequently**: Models don't need retraining every ETL run
+- **Separate concern**: Training vs. prediction are different processes
+- **Flexible scheduling**: Can run training independently when convenient
+
+### Integration Strategy
+
+**Recommended approach**:
+
+1. **Initial Training**: Manual (one-time setup)
+   ```bash
+   psql -d notes_dwh -f sql/dwh/ml/ml_02_trainPgMLModels.sql
+   ```
+
+2. **Predictions**: Can be integrated into ETL (fast, uses trained models)
+   ```sql
+   -- In ETL, after processing new notes:
+   CALL dwh.classify_new_notes_pgml(1000);
+   ```
+
+3. **Retraining**: Automated via cron (monthly/quarterly)
+   ```bash
+   # Via cron (see cron.example)
+   0 2 1 * * /path/to/bin/dwh/ml_retrain.sh
+   ```
+
+### Future Integration Options
+
+If you want to integrate training into ETL (not recommended for frequent runs):
+
+```bash
+# Add to ETL.sh (after datamart updates):
+if [[ "${RETRAIN_ML:-false}" == "true" ]]; then
+  __logi "Retraining ML models..."
+  "${PROJECT_ROOT}/bin/dwh/ml_retrain.sh"
+fi
+```
+
+**Usage**:
+```bash
+RETRAIN_ML=true ./bin/dwh/ETL.sh  # Only when you want to retrain
+```
+
+**Note**: This is optional and not recommended for regular ETL runs due to training time.
 
 ### Make Predictions (How to Consume)
 

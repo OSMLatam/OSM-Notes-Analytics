@@ -1,0 +1,135 @@
+-- Retrain pgml models for note classification
+-- This script retrains models with updated data
+--
+-- Author: OSM Notes Analytics Project
+-- Date: 2025-12-27
+-- Purpose: Retrain ML models with fresh data
+
+-- ============================================================================
+-- Prerequisites
+-- ============================================================================
+-- 1. pgml extension must be installed and enabled
+-- 2. Training data view must exist (dwh.v_note_ml_training_features)
+-- 3. Sufficient new training data (recommended: 10%+ new resolved notes since last training)
+
+-- ============================================================================
+-- Check Training Data Freshness
+-- ============================================================================
+
+-- Check when models were last trained
+SELECT 
+  project_name,
+  MAX(created_at) as last_trained_at,
+  NOW() - MAX(created_at) as age
+FROM pgml.deployed_models
+WHERE project_name LIKE 'note_classification%'
+GROUP BY project_name;
+
+-- Check how many new training samples are available
+SELECT 
+  COUNT(*) as total_training_samples,
+  COUNT(*) FILTER (WHERE opened_dimension_id_date > (
+    SELECT MAX(created_at) - INTERVAL '30 days'
+    FROM pgml.deployed_models
+    WHERE project_name = 'note_classification_main_category'
+  )) as new_samples_last_30_days
+FROM dwh.v_note_ml_training_features
+WHERE main_category IS NOT NULL;
+
+-- ============================================================================
+-- Retrain Level 1 Model: Main Category (2 classes)
+-- ============================================================================
+
+SELECT * FROM pgml.train(
+  project_name => 'note_classification_main_category',
+  task => 'classification',
+  relation_name => 'dwh.v_note_ml_training_features',
+  y_column_name => 'main_category',
+  algorithm => 'xgboost',
+  hyperparams => '{
+    "n_estimators": 100,
+    "max_depth": 6,
+    "learning_rate": 0.1
+  }'::jsonb,
+  test_size => 0.2,
+  test_sampling => 'random'
+);
+
+-- ============================================================================
+-- Retrain Level 2 Model: Specific Type (18+ classes)
+-- ============================================================================
+
+SELECT * FROM pgml.train(
+  project_name => 'note_classification_specific_type',
+  task => 'classification',
+  relation_name => 'dwh.v_note_ml_training_features',
+  y_column_name => 'specific_type',
+  algorithm => 'xgboost',
+  hyperparams => '{
+    "n_estimators": 200,
+    "max_depth": 8,
+    "learning_rate": 0.05,
+    "class_weight": "balanced"
+  }'::jsonb,
+  test_size => 0.2,
+  test_sampling => 'random'
+);
+
+-- ============================================================================
+-- Retrain Level 3 Model: Action Recommendation (3 classes)
+-- ============================================================================
+
+SELECT * FROM pgml.train(
+  project_name => 'note_classification_action',
+  task => 'classification',
+  relation_name => 'dwh.v_note_ml_training_features',
+  y_column_name => 'recommended_action',
+  algorithm => 'xgboost',
+  hyperparams => '{
+    "n_estimators": 150,
+    "max_depth": 7,
+    "learning_rate": 0.1
+  }'::jsonb,
+  test_size => 0.2,
+  test_sampling => 'random'
+);
+
+-- ============================================================================
+-- Compare Old vs New Model Performance
+-- ============================================================================
+
+WITH model_comparison AS (
+  SELECT 
+    project_name,
+    created_at,
+    metrics->>'accuracy' as accuracy,
+    metrics->>'f1' as f1_score,
+    ROW_NUMBER() OVER (PARTITION BY project_name ORDER BY created_at DESC) as rn
+  FROM pgml.deployed_models
+  WHERE project_name LIKE 'note_classification%'
+)
+SELECT 
+  project_name,
+  MAX(CASE WHEN rn = 1 THEN accuracy END) as new_accuracy,
+  MAX(CASE WHEN rn = 2 THEN accuracy END) as previous_accuracy,
+  ROUND(
+    ((MAX(CASE WHEN rn = 1 THEN accuracy::numeric END) - 
+      MAX(CASE WHEN rn = 2 THEN accuracy::numeric END)) * 100)::numeric, 
+    2
+  ) as accuracy_change_pct
+FROM model_comparison
+GROUP BY project_name
+ORDER BY project_name;
+
+-- ============================================================================
+-- Notes
+-- ============================================================================
+-- - Retraining may take several minutes to hours depending on data size
+-- - pgml automatically deploys the best model (based on test metrics)
+-- - Old models are kept for comparison but not used for predictions
+-- - Monitor model performance over time to detect drift
+-- - Consider retraining when:
+--   * 10%+ new training data available
+--   * Model accuracy drops significantly
+--   * Data distribution changes (e.g., new note types emerge)
+--   * Monthly/quarterly schedule (recommended)
