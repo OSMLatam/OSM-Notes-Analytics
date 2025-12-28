@@ -201,6 +201,7 @@ function __execute_cleanup_script {
  fi
 
  # Validate SQL script structure
+ # shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
  if ! __validate_sql_structure "${script_path}"; then
   __loge "ERROR: SQL script validation failed: ${script_path}"
   __log_finish
@@ -259,6 +260,7 @@ function __cleanup_temp_files {
  for PATTERN in "${TEMP_PATTERNS[@]}"; do
   if [[ -d "/tmp" ]]; then
    # Find and remove matching directories
+   # shellcheck disable=SC2312  # Command substitution in process substitution is intentional; find command is safe
    while IFS= read -r -d '' DIR; do
     __logd "Removing: ${DIR}"
     rm -rf "${DIR}"
@@ -339,6 +341,7 @@ function __checkPrereqs {
 
  for SQL_FILE in "${SQL_FILES[@]}"; do
   if [[ -f "${SQL_FILE}" ]]; then
+   # shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
    if ! __validate_sql_structure "${SQL_FILE}"; then
     __loge "ERROR: SQL file validation failed: ${SQL_FILE}"
     exit "${ERROR_MISSING_LIBRARY}"
@@ -433,6 +436,7 @@ function main() {
 
  # Check database exists for DWH cleanup
  if [[ "${MODE}" == "all" ]] || [[ "${MODE}" == "dwh" ]]; then
+  # shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
   if ! __check_database "${TARGET_DB}"; then
    __loge "ERROR: Database ${TARGET_DB} does not exist. Cannot cleanup DWH objects."
    __loge "Use --remove-temp-files to clean only temporary files."

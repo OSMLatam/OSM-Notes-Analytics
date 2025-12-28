@@ -37,6 +37,7 @@ if pgrep -f "ETL.sh" > /dev/null; then
  echo ""
  echo "Running processes:"
  for pid in $(pgrep -f "ETL.sh"); do
+  # shellcheck disable=SC2312  # Command substitution in pipe is intentional; ps/awk commands are safe
   ps -p "${pid}" -o pid=,cmd= | awk '{print "  PID:", $1, "| Command:", $2, $3, $4}'
  done
 else
@@ -46,6 +47,7 @@ echo ""
 
 # Check last execution log
 echo "2. Last Execution:"
+# shellcheck disable=SC2312  # Command substitution is intentional; find/sort/head/cut commands are safe
 LAST_LOG=$(find /tmp -name "ETL.log" -path "*/ETL_*" -type f -printf '%T@ %p\n' 2> /dev/null | sort -rn | head -1 | cut -d' ' -f2-)
 if [[ -n "${LAST_LOG}" ]]; then
  echo "  Log file: ${LAST_LOG}"
@@ -61,6 +63,7 @@ if [[ -n "${LAST_LOG}" ]]; then
  echo ""
  echo "  Last 20 lines of log:"
  echo "  ---"
+ # shellcheck disable=SC2312  # Command substitution in pipe is intentional; tail/sed commands are safe
  tail -20 "${LAST_LOG}" | sed 's/^/  /'
  echo "  ---"
 else
@@ -75,6 +78,7 @@ if command -v psql &> /dev/null; then
   echo -e "${GREEN}✓ Database connection OK${NC}"
 
   # Check ETL status if etl_control table exists
+  # shellcheck disable=SC2312  # Command substitution in pipe is intentional; psql/grep commands are safe
   if psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DB_USER:-notes}" -d "${DBNAME_DWH:-notes_dwh}" -t -c "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'dwh' AND table_name = 'etl_control')" 2> /dev/null | grep -q "t"; then
    echo ""
    echo "  ETL Control Status:"
@@ -142,6 +146,7 @@ echo ""
 
 # Check disk space
 echo "5. Disk Space:"
+# shellcheck disable=SC2312  # Command substitution in pipe is intentional; df/tail/awk commands are safe
 df -h /tmp 2> /dev/null | tail -1 | awk '{print "  /tmp: " $4 " available (" $5 " used)"}'
 echo ""
 

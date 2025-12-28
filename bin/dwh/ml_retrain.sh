@@ -262,18 +262,21 @@ main() {
  __logi "Database: ${DBNAME_DWH}"
 
  # Step 1: Check pgml extension
+ # shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
  if ! check_pgml_extension; then
   __loge "Prerequisites not met. Exiting."
   exit 1
  fi
 
  # Step 2: Ensure training view exists
+ # shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
  if ! ensure_training_view; then
   __loge "Failed to setup training views. Exiting."
   exit 1
  fi
 
  # Step 3: Check if we have enough data
+ # shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
  if ! check_core_tables; then
   # No data or insufficient data - exit silently (normal for early stages)
   exit 0
@@ -283,11 +286,13 @@ main() {
  local has_datamarts=false
  local has_models=false
 
+ # shellcheck disable=SC2310  # Function invocation in condition is intentional for error handling
  if check_datamarts_populated; then
   has_datamarts=true
   __logi "✅ Datamarts are populated (will use enhanced features)"
  fi
 
+ # shellcheck disable=SC2310  # Function invocation in condition is intentional for error handling
  if check_models_exist; then
   has_models=true
   __logi "✅ Models already exist (checking if retraining needed)"
@@ -296,8 +301,10 @@ main() {
  # Decision tree:
  if [[ "${has_models}" == true ]]; then
   # Models exist - check if retraining is needed
+  # shellcheck disable=SC2310  # Function invocation in condition is intentional for error handling
   if check_retraining_needed; then
    __logi "Retraining needed - starting retraining..."
+   # shellcheck disable=SC2310  # Function invocation in condition is intentional for error handling
    if train_models "${ML_DIR}/ml_05_retrainModels.sql" "Model retraining"; then
     __logi "✅ Retraining completed successfully"
     exit 0
@@ -312,6 +319,7 @@ main() {
  elif [[ "${has_datamarts}" == true ]]; then
   # No models but datamarts ready - full initial training
   __logi "Datamarts ready - starting full initial training..."
+  # shellcheck disable=SC2310  # Function invocation in condition is intentional for error handling
   if train_models "${ML_DIR}/ml_02_trainPgMLModels.sql" "Full initial training"; then
    __logi "✅ Full training completed successfully"
    exit 0
@@ -323,6 +331,7 @@ main() {
   # No models, no datamarts - basic initial training
   __logi "Core tables ready (datamarts not yet populated) - starting basic training..."
   __logw "Note: Training with basic features. Re-train later when datamarts are populated for better accuracy."
+  # shellcheck disable=SC2310  # Function invocation in condition is intentional for error handling
   if train_models "${ML_DIR}/ml_02_trainPgMLModels.sql" "Basic initial training"; then
    __logi "✅ Basic training completed successfully"
    exit 0

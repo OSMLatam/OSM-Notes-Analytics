@@ -188,6 +188,7 @@ function __checkBaseTables {
 # Processes the global statistics.
 function __processGlobalStats {
  __log_start
+ # shellcheck disable=SC2310  # Function invocation in condition is intentional for error handling
  if __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -f "${POPULATE_FILE}" 2>&1; then
   __logi "SUCCESS: Datamart global population completed successfully"
   __log_finish
@@ -297,6 +298,7 @@ function main() {
  ONLY_EXECUTION="yes"
 
  set +E
+ # shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
  if ! __checkBaseTables; then
   __loge "Failed to check/create base tables"
   exit 1

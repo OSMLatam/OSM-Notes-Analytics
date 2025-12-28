@@ -169,6 +169,7 @@ while IFS='|' read -r country_id country_name; do
  if [[ -n "${country_id}" && -n "${country_name}" ]]; then
   total_countries=$((total_countries + 1))
 
+  # shellcheck disable=SC2310  # Function invocation in condition is intentional for error handling
   if __export_country_notes "${country_id}" "${country_name}"; then
    exported_countries=$((exported_countries + 1))
    # Count notes in the file

@@ -172,6 +172,7 @@ function __cleanup_temp() {
 
 # Reset json_exported flag for modified entities
 function __reset_exported_flags() {
+ # shellcheck disable=SC2312  # Command substitution in echo is intentional; date command is safe
  echo "$(date +%Y-%m-%d\ %H:%M:%S) - Resetting export flags for modified entities..."
 
  # Reset users marked as modified
@@ -218,6 +219,7 @@ mkdir -p "${ATOMIC_TEMP_DIR}/users"
 mkdir -p "${ATOMIC_TEMP_DIR}/countries"
 mkdir -p "${ATOMIC_TEMP_DIR}/indexes"
 
+# shellcheck disable=SC2312  # Command substitution in echo is intentional; date command is safe
 echo "$(date +%Y-%m-%d\ %H:%M:%S) - Starting datamart JSON export to temporary directory"
 
 # Check if dwh schema exists
@@ -239,6 +241,7 @@ fi
 __reset_exported_flags
 
 # Export users - incremental mode
+# shellcheck disable=SC2312  # Command substitution in echo is intentional; date command is safe
 echo "$(date +%Y-%m-%d\ %H:%M:%S) - Exporting users datamart (incremental)..."
 
 # Copy existing user files to temp directory to preserve unchanged ones
@@ -286,6 +289,7 @@ SQL_USERS
 	" > /dev/null 2>&1 || true
 
   # Validate only modified user files
+  # shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
   if ! __validate_json_with_schema \
    "${ATOMIC_TEMP_DIR}/users/${user_id}.json" \
    "${SCHEMA_DIR}/user-profile.schema.json" \
@@ -302,6 +306,7 @@ else
 fi
 
 # Create user index file
+# shellcheck disable=SC2312  # Command substitution in echo is intentional; date command is safe
 echo "$(date +%Y-%m-%d\ %H:%M:%S) - Creating user index..."
 psql -d "${DBNAME_DWH}" -Atq -c "
   SELECT json_agg(t)
@@ -335,6 +340,7 @@ psql -d "${DBNAME_DWH}" -Atq -c "
 " > "${ATOMIC_TEMP_DIR}/indexes/users.json"
 
 # Validate user index
+# shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
 if ! __validate_json_with_schema \
  "${ATOMIC_TEMP_DIR}/indexes/users.json" \
  "${SCHEMA_DIR}/user-index.schema.json" \
@@ -343,6 +349,7 @@ if ! __validate_json_with_schema \
 fi
 
 # Export countries - incremental mode
+# shellcheck disable=SC2312  # Command substitution in echo is intentional; date command is safe
 echo "$(date +%Y-%m-%d\ %H:%M:%S) - Exporting countries datamart (incremental)..."
 
 # Copy existing country files to temp directory to preserve unchanged ones
@@ -381,6 +388,7 @@ SQL_COUNTRIES
 	" > /dev/null 2>&1 || true
 
   # Validate only modified country files
+  # shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
   if ! __validate_json_with_schema \
    "${ATOMIC_TEMP_DIR}/countries/${country_id}.json" \
    "${SCHEMA_DIR}/country-profile.schema.json" \
@@ -397,6 +405,7 @@ else
 fi
 
 # Create country index file
+# shellcheck disable=SC2312  # Command substitution in echo is intentional; date command is safe
 echo "$(date +%Y-%m-%d\ %H:%M:%S) - Creating country index..."
 psql -d "${DBNAME_DWH}" -Atq -c "
   SELECT json_agg(t)
@@ -428,6 +437,7 @@ psql -d "${DBNAME_DWH}" -Atq -c "
 " > "${ATOMIC_TEMP_DIR}/indexes/countries.json"
 
 # Validate country index
+# shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
 if ! __validate_json_with_schema \
  "${ATOMIC_TEMP_DIR}/indexes/countries.json" \
  "${SCHEMA_DIR}/country-index.schema.json" \
@@ -436,6 +446,7 @@ if ! __validate_json_with_schema \
 fi
 
 # Create metadata file with versioning
+# shellcheck disable=SC2312  # Command substitution in echo is intentional; date command is safe
 echo "$(date +%Y-%m-%d\ %H:%M:%S) - Creating metadata with versioning..."
 
 # Get current version and calculate schema hash
@@ -444,6 +455,7 @@ SCHEMA_VERSION="1.0.0"
 DATA_SCHEMA_HASH=$(__calculate_schema_hash)
 EXPORT_TIMESTAMP=$(date +%s)
 
+# shellcheck disable=SC2312  # Command substitution in heredoc is intentional; date/find/wc commands are safe
 cat > "${ATOMIC_TEMP_DIR}/metadata.json" << EOF
 {
   "export_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
@@ -461,6 +473,7 @@ echo "  Export version: ${CURRENT_VERSION}"
 echo "  Schema hash: ${DATA_SCHEMA_HASH}"
 
 # Validate metadata
+# shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
 if ! __validate_json_with_schema \
  "${ATOMIC_TEMP_DIR}/metadata.json" \
  "${SCHEMA_DIR}/metadata.schema.json" \
@@ -469,6 +482,7 @@ if ! __validate_json_with_schema \
 fi
 
 # Export global statistics
+# shellcheck disable=SC2312  # Command substitution in echo is intentional; date command is safe
 echo "$(date +%Y-%m-%d\ %H:%M:%S) - Exporting global datamart..."
 psql -d "${DBNAME_DWH}" -Atq -c "
   SELECT row_to_json(t)
@@ -505,6 +519,7 @@ psql -d "${DBNAME_DWH}" -Atq -c "
 
 # Validate global stats
 if [[ -f "${SCHEMA_DIR}/global-stats.schema.json" ]]; then
+ # shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
  if ! __validate_json_with_schema \
   "${ATOMIC_TEMP_DIR}/global_stats.json" \
   "${SCHEMA_DIR}/global-stats.schema.json" \
@@ -526,6 +541,7 @@ fi
 
 # All validations passed - atomic move to final destination
 echo ""
+# shellcheck disable=SC2312  # Command substitution in echo is intentional; date command is safe
 echo "$(date +%Y-%m-%d\ %H:%M:%S) - All validations passed, moving to final destination..."
 
 # Ensure output directory exists
@@ -537,8 +553,11 @@ mkdir -p "${OUTPUT_DIR}/indexes"
 # Move files atomically (move is atomic operation)
 mv "${ATOMIC_TEMP_DIR}"/* "${OUTPUT_DIR}/"
 
+# shellcheck disable=SC2312  # Command substitution in echo is intentional; date command is safe
 echo "$(date +%Y-%m-%d\ %H:%M:%S) - JSON export completed successfully"
+# shellcheck disable=SC2312  # Command substitution in echo is intentional; find/wc commands are safe
 echo "  Users: $(find "${OUTPUT_DIR}/users" -maxdepth 1 -type f | wc -l) files"
+# shellcheck disable=SC2312  # Command substitution in echo is intentional; find/wc commands are safe
 echo "  Countries: $(find "${OUTPUT_DIR}/countries" -maxdepth 1 -type f | wc -l) files"
 echo "  Global statistics: global_stats.json, global_stats_summary.json"
 echo "  Output directory: ${OUTPUT_DIR}"

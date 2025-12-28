@@ -452,6 +452,7 @@ function __processExperienceLevels {
   if [[ -n "${user_id}" ]]; then
    (
     # Use transaction to ensure atomicity
+    # shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
     if ! __psql_with_appname "ETL-experience-${user_id}" -d "${DBNAME_DWH}" -c "
      BEGIN;
       PERFORM dwh.calculate_user_experience(${user_id});
@@ -509,6 +510,7 @@ function __processExperienceLevels {
 # This function checks if the trigger function exists before attempting to disable it,
 # avoiding error messages during first execution when the trigger hasn't been created yet.
 function __safe_disable_note_activity_metrics_trigger {
+ # shellcheck disable=SC2310  # Function invocation in condition is intentional for error handling
  if __function_exists "dwh" "disable_note_activity_metrics_trigger" "${DBNAME_DWH}"; then
   __logi "Disabling note activity metrics trigger for bulk load performance..."
   __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
@@ -651,9 +653,11 @@ function __createBaseTables {
  __logi "=== CREATING DWH TABLES ==="
  __logi "Dropping any existing DWH objects."
  __logi "Executing: ${POSTGRES_12_DROP_DATAMART_OBJECTS}"
+ # shellcheck disable=SC2310  # Function invocation in || condition is intentional; failures are ignored
  __psql_with_appname -d "${DBNAME_DWH}" -f "${POSTGRES_12_DROP_DATAMART_OBJECTS}" 2>&1 || true
  __logi "First DROP command completed"
  __logi "Executing: ${POSTGRES_13_DROP_DWH_OBJECTS}"
+ # shellcheck disable=SC2310  # Function invocation in || condition is intentional; failures are ignored
  __psql_with_appname -d "${DBNAME_DWH}" -f "${POSTGRES_13_DROP_DWH_OBJECTS}" 2>&1 || true
  __logi "Second DROP command completed"
 
@@ -827,6 +831,7 @@ function __processNotesETL {
    set -e
 
    # Use envsubst to replace variables in SQL file
+   # shellcheck disable=SC2310  # Function invocation in || condition is intentional for error handling
    envsubst < "${POSTGRES_60_SETUP_FDW}" \
     | __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 2>&1 || {
     __loge "ERROR: Failed to setup Foreign Data Wrappers"
@@ -1150,6 +1155,7 @@ function __initialFactsParallel {
     __loge "This may indicate a problem with object creation or visibility"
     __loge "Attempting to show current state of objects..."
     {
+     # shellcheck disable=SC2310  # Function invocation in || condition is intentional for error handling
      __psql_with_appname -d "${DBNAME_DWH}" -c "
       SELECT 'Schemas:' as info;
       SELECT nspname FROM pg_namespace WHERE nspname IN ('dwh', 'staging');
@@ -1537,6 +1543,7 @@ function __detectFirstExecution {
 
   # First, check if dwh schema exists
   local schema_exists
+  # shellcheck disable=SC2310  # Function invocation in || condition is intentional; failures return default value
   schema_exists=$(__psql_with_appname -d "${DBNAME_DWH}" -Atq -c "SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = 'dwh';" 2> /dev/null || echo "0")
   __logi "dwh schema exists: '${schema_exists}'"
 
@@ -1548,11 +1555,13 @@ function __detectFirstExecution {
   else
    # Schema exists, check if DWH facts table exists and has data
    local facts_count
+   # shellcheck disable=SC2310  # Function invocation in || condition is intentional; failures return default value
    facts_count=$(__psql_with_appname -d "${DBNAME_DWH}" -Atq -c "SELECT COUNT(*) FROM dwh.facts;" 2> /dev/null || echo "0")
    __logi "Query result for facts count: '${facts_count}'"
 
    # Check if initial load flag exists
    local initial_load_flag
+   # shellcheck disable=SC2310  # Function invocation in || condition is intentional; failures return default value
    initial_load_flag=$(__psql_with_appname -d "${DBNAME_DWH}" -Atq -c "SELECT value FROM dwh.properties WHERE key = 'initial load';" 2> /dev/null || echo "")
    __logi "Query result for initial load flag: '${initial_load_flag}'"
 
@@ -1693,9 +1702,10 @@ function main() {
 
  __checkPrereqs
 
- # Validate base ingestion tables and columns before processing
- __logi "Validating base ingestion tables and columns..."
- if ! __checkIngestionBaseTables; then
+# Validate base ingestion tables and columns before processing
+__logi "Validating base ingestion tables and columns..."
+# shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
+if ! __checkIngestionBaseTables; then
   __loge "Base ingestion tables validation failed. ETL cannot proceed."
   exit 1
  fi
@@ -1774,6 +1784,7 @@ function main() {
     export FDW_INGESTION_USER="${FDW_INGESTION_USER:-analytics_readonly}" 2> /dev/null || true
     export FDW_INGESTION_PASSWORD="${FDW_INGESTION_PASSWORD:-}" 2> /dev/null || true
     set -e
+    # shellcheck disable=SC2310  # Function invocation in || condition is intentional for error handling
     envsubst < "${POSTGRES_60_SETUP_FDW}" \
      | __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 2>&1 || {
      __loge "ERROR: Failed to setup Foreign Data Wrappers for datamart processing"
@@ -1806,6 +1817,7 @@ function main() {
    __logi "⏱️  TIME: datamartCountries took ${datamart_countries_duration} seconds"
   else
    __loge "ERROR: datamartCountries failed with exit code $?"
+   # shellcheck disable=SC2312  # Command substitution in error message is intentional; failures are acceptable
    __loge "Check log file: $(find /tmp -maxdepth 1 -type d -name 'datamartCountries_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2-)/datamartCountries.log"
   fi
   local DATAMART_USERS_START_TIME
@@ -1818,6 +1830,7 @@ function main() {
    __logi "⏱️  TIME: datamartUsers took ${datamart_users_duration} seconds"
   else
    __loge "ERROR: datamartUsers failed with exit code $?"
+   # shellcheck disable=SC2312  # Command substitution in error message is intentional; failures are acceptable
    __loge "Check log file: $(find /tmp -maxdepth 1 -type d -name 'datamartUsers_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2-)/datamartUsers.log"
   fi
   local DATAMART_GLOBAL_START_TIME
@@ -1830,6 +1843,7 @@ function main() {
    __logi "⏱️  TIME: datamartGlobal took ${datamart_global_duration} seconds"
   else
    __loge "ERROR: datamartGlobal failed with exit code $?"
+   # shellcheck disable=SC2312  # Command substitution in error message is intentional; failures are acceptable
    __loge "Check log file: $(find /tmp -maxdepth 1 -type d -name 'datamartGlobal_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2-)/datamartGlobal.log"
   fi
   set -e
@@ -1875,18 +1889,22 @@ function main() {
    __logi "SUCCESS: datamartCountries completed successfully"
   else
    __loge "ERROR: datamartCountries failed with exit code $?"
+   # shellcheck disable=SC2312  # Command substitution in error message is intentional; failures are acceptable
    __loge "Check log file: $(find /tmp -maxdepth 1 -type d -name 'datamartCountries_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2-)/datamartCountries.log"
   fi
   if "${DATAMART_USERS_SCRIPT}" ""; then
    __logi "SUCCESS: datamartUsers completed successfully"
   else
    __loge "ERROR: datamartUsers failed with exit code $?"
+   # shellcheck disable=SC2312  # Command substitution in error message is intentional; failures are acceptable
    __loge "Check log file: $(find /tmp -maxdepth 1 -type d -name 'datamartUsers_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2-)/datamartUsers.log"
   fi
   if "${DATAMART_GLOBAL_SCRIPT}" ""; then
    __logi "SUCCESS: datamartGlobal completed successfully"
   else
    __loge "ERROR: datamartGlobal failed with exit code $?"
+   # shellcheck disable=SC2312  # Command substitution in error message is intentional; failures are acceptable
+   __loge "Check log file: $(find /tmp -maxdepth 1 -type d -name 'datamartGlobal_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2-)/datamartGlobal.log"
    __loge "Check log file: $(find /tmp -maxdepth 1 -type d -name 'datamartGlobal_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2-)/datamartGlobal.log"
   fi
   set -e

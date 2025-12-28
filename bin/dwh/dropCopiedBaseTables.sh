@@ -51,6 +51,7 @@ TABLES=("note_comments_text" "note_comments" "notes" "users" "countries")
 
 __log_start
 __logi "=== DROPPING COPIED BASE TABLES ==="
+# shellcheck disable=SC2312  # Command substitution in log message is intentional; whoami command is safe
 __logi "Target DB: ${ANALYTICS_DB} (user: ${ANALYTICS_USER:-$(whoami)})"
 
 # Build psql command array

@@ -390,6 +390,7 @@ function __processNotesUser {
   if [[ -n "${user_id}" ]]; then
    (
     # Use transaction to ensure atomicity
+    # shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
     if ! __psql_with_appname "datamartUsers-user-${user_id}" -d "${DBNAME_DWH}" -c "
      BEGIN;
       CALL dwh.update_datamart_user(${user_id});
@@ -546,6 +547,7 @@ function main() {
  PROCESS_OLD_USERS=no
 
  set +E
+ # shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
  if ! __checkBaseTables; then
   __loge "Failed to check/create base tables"
   exit 1
@@ -553,6 +555,7 @@ function main() {
  # Add new columns for years after 2013.
  __addYears
  set -E
+ # shellcheck disable=SC2310  # Function invocation in condition is intentional for error handling
  if __processNotesUser; then
   __logi "SUCCESS: Datamart users processing completed successfully"
  else

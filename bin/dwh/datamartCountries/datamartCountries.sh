@@ -166,6 +166,7 @@ function __checkPrereqs {
 
  # Validate each SQL file
  for SQL_FILE in "${SQL_FILES[@]}"; do
+  # shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
   if ! __validate_sql_structure "${SQL_FILE}"; then
    __loge "ERROR: SQL file validation failed: ${SQL_FILE}"
    exit "${ERROR_MISSING_LIBRARY}"
@@ -234,6 +235,7 @@ function __addYears {
 # Processes the notes and comments.
 function __processNotesCountries {
  __log_start
+ # shellcheck disable=SC2310  # Function invocation in condition is intentional for error handling
  if __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -f "${POPULATE_FILE}" 2>&1; then
   __logi "SUCCESS: Datamart countries population completed successfully"
   __log_finish
@@ -343,6 +345,7 @@ function main() {
  ONLY_EXECUTION="yes"
 
  set +E
+ # shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
  if ! __checkBaseTables; then
   __loge "Failed to check/create base tables"
   exit 1

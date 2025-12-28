@@ -153,6 +153,7 @@ for table in "${TABLES[@]}"; do
  " 2> /dev/null | while read -r index_sql; do
   if [[ -n "${index_sql}" ]]; then
    psql -d "${ANALYTICS_DB}" ${ANALYTICS_USER:+-U "${ANALYTICS_USER}"} -c "${index_sql}" > /dev/null 2>&1 || {
+    # shellcheck disable=SC2310  # Function invocation in || condition is intentional for error handling
     __logw "Warning: Failed to create index for ${table}, continuing..."
    }
   fi
