@@ -45,8 +45,8 @@ These variables are used across **all scripts** and should be standardized:
 #### `DBNAME_INGESTION` (Recommended)
 
 - **Purpose**: PostgreSQL database name for Ingestion system
-- **Values**: String (e.g., `osm_notes`)
-- **Default**: `osm_notes` (from `etc/properties.sh`, or `DBNAME` if not set)
+- **Values**: String (e.g., `notes_dwh`)
+- **Default**: `notes_dwh` (from `etc/properties.sh`, or `DBNAME` if not set)
 - **Usage**: Specify the Ingestion database when it differs from Analytics database
 - **Example**: 
   ```bash
@@ -71,8 +71,8 @@ These variables are used across **all scripts** and should be standardized:
 #### `DBNAME` (Legacy/Compatibility)
 
 - **Purpose**: PostgreSQL database name (legacy variable for backward compatibility)
-- **Values**: String (e.g., `osm_notes`, `osm_notes_test`)
-- **Default**: `osm_notes` (from `etc/properties.sh`)
+- **Values**: String (e.g., `notes_dwh`, `osm_notes_analytics_test`)
+- **Default**: `notes_dwh` (from `etc/properties.sh`)
 - **Usage**: Use when both Ingestion and Analytics use the same database. This is a fallback if `DBNAME_INGESTION` or `DBNAME_DWH` are not set.
 - **Example**: 
   ```bash
@@ -85,8 +85,8 @@ These variables are used across **all scripts** and should be standardized:
 ### `DB_USER`
 
 - **Purpose**: PostgreSQL database user
-- **Values**: String (e.g., `myuser`, `postgres`)
-- **Default**: `myuser` (from `etc/properties.sh`)
+- **Values**: String (e.g., `notes`, `postgres`)
+- **Default**: `notes` (from `etc/properties.sh`)
 - **Usage**: Override for different database users
 - **Example**: 
   ```bash
@@ -310,8 +310,8 @@ Defined in `etc/properties.sh` (created from `etc/properties.sh.example`, can be
 
 ### Database Configuration
 
-- **`DBNAME`**: PostgreSQL database name (default: `osm_notes`)
-- **`DB_USER`**: PostgreSQL user (default: `myuser`)
+- **`DBNAME`**: PostgreSQL database name (default: `notes_dwh`)
+- **`DB_USER`**: PostgreSQL user (default: `notes`)
 
 ### Processing Configuration
 

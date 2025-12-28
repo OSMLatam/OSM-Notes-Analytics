@@ -61,13 +61,13 @@ Only the `.example` template files are versioned in the repository.
 ```bash
 # Database name (should match the ingestion system database)
 # Recommended: Use DBNAME_INGESTION and DBNAME_DWH for clarity
-DBNAME_INGESTION="osm_notes"
+DBNAME_INGESTION="notes_dwh"
 DBNAME_DWH="notes_dwh"
 # Legacy/compatibility: Use DBNAME when both databases are the same
-DBNAME="osm_notes"
+DBNAME="notes_dwh"
 
 # Database user with read/write access to DWH schema
-DB_USER="myuser"
+DB_USER="notes"
 ```
 
 **Important Notes:**
@@ -390,10 +390,10 @@ Matches `XSLT_MAX_DEPTH` in `properties.sh`.
 1. **Set database credentials:**
 
    ```bash
-   DBNAME_INGESTION="osm_notes"
+   DBNAME_INGESTION="notes_dwh"
    DBNAME_DWH="notes_dwh"
-   DBNAME="osm_notes"  # Use when both databases are the same
-   DB_USER="your_username"
+   DBNAME="notes_dwh"  # Use when both databases are the same
+   DB_USER="notes"
    ```
 
 1. **Adjust parallel processing:**
@@ -479,10 +479,10 @@ Configuration can be overridden with environment variables:
 
 ```bash
 # Override database name (recommended: use DBNAME_INGESTION and DBNAME_DWH)
-export DBNAME_INGESTION="osm_notes"
+export DBNAME_INGESTION="notes_dwh"
 export DBNAME_DWH="notes_dwh"
 # Or use DBNAME for same database (legacy/compatibility)
-export DBNAME="osm_notes_test"
+export DBNAME="osm_notes_analytics_test"
 
 # Override log level
 export LOG_LEVEL="DEBUG"
@@ -524,15 +524,15 @@ nano etc/properties.sh.local
 
 ```bash
 # Create .pgpass in home directory
-echo "localhost:5432:osm_notes:myuser:mypassword" >> ~/.pgpass
+echo "localhost:5432:notes_dwh:notes:mypassword" >> ~/.pgpass
 chmod 600 ~/.pgpass
 ```
 
 **Or use PostgreSQL environment variables:**
 
 ```bash
-export PGDATABASE="osm_notes"
-export PGUSER="myuser"
+export PGDATABASE="notes_dwh"
+export PGUSER="notes"
 export PGPASSWORD="mypassword"
 ```
 

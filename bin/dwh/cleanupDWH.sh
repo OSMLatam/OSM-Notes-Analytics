@@ -396,7 +396,7 @@ function main() {
 
  # Parse mode from CLEANUP_MODE (first argument)
  # Use DBNAME_DWH if set, otherwise fallback to DBNAME
- local TARGET_DB="${DBNAME_DWH:-${DBNAME:-osm_notes}}"
+ local TARGET_DB="${DBNAME_DWH:-${DBNAME:-notes_dwh}}"
  local MODE="all"
 
  if [[ "${CLEANUP_MODE}" == "--dry-run" ]]; then

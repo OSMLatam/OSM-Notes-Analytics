@@ -32,7 +32,7 @@ if [[ -f "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh.local" ]]; then
 fi
 
 # Database configuration
-ANALYTICS_DB="${DBNAME_DWH:-osm_notes}"
+ANALYTICS_DB="${DBNAME_DWH:-notes_dwh}"
 # Only set user if explicitly provided via environment variable (allows peer authentication when not set)
 # If DB_USER_DWH was not explicitly set before loading properties, ignore the value from properties.sh
 if [[ -z "${DB_USER_DWH_WAS_SET}" ]]; then

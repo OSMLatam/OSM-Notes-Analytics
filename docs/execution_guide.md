@@ -87,15 +87,15 @@ export ETL_BATCH_SIZE="1000"
 
 # Database configuration (recommended: use DBNAME_INGESTION and DBNAME_DWH)
 # Option 1: Separate databases (recommended for production)
-export DBNAME_INGESTION="osm_notes"
+export DBNAME_INGESTION="notes_dwh"
 export DBNAME_DWH="notes_dwh"
 export DBHOST="localhost"
 export DBPORT="5432"
-export DBUSER="postgres"
+export DBUSER="notes"
 
 # Option 2: Same database (DBNAME is legacy, but still supported for compatibility)
 # When DBNAME_INGESTION and DBNAME_DWH are not set, DBNAME is used for both
-export DBNAME="osm_notes"  # Legacy: used when both databases are the same
+export DBNAME="notes_dwh"  # Legacy: used when both databases are the same
 ```
 
 **Note:** For DWH operations, use `DBNAME_INGESTION` and `DBNAME_DWH`. The `DBNAME` variable is maintained for backward compatibility when both Ingestion and Analytics use the same database.
@@ -257,9 +257,9 @@ Use case: Fresh start or reset after schema changes.
 |----------|-------------|---------|---------|
 | `LOG_LEVEL` | Logging verbosity | `ERROR` | All scripts |
 | `CLEAN` | Clean temporary files | `true` | All scripts |
-| `DBNAME_INGESTION` | Ingestion database name | `osm_notes` | DWH scripts |
+| `DBNAME_INGESTION` | Ingestion database name | `notes_dwh` | DWH scripts |
 | `DBNAME_DWH` | Analytics/DWH database name | `notes_dwh` | DWH scripts |
-| `DBNAME` | Database name (legacy/compatibility) | `osm_notes` | All scripts (fallback) |
+| `DBNAME` | Database name (legacy/compatibility) | `notes_dwh` | All scripts (fallback) |
 | `DBHOST` | Database host | `localhost` | All scripts |
 | `DBPORT` | Database port | `5432` | All scripts |
 | `DBUSER` | Database user | `postgres` | All scripts |

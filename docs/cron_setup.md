@@ -259,10 +259,10 @@ DBHOST=localhost
 DBPORT=5432
 DBUSER=postgres
 # Database configuration (recommended: use DBNAME_INGESTION and DBNAME_DWH)
-DBNAME_INGESTION=osm_notes
+DBNAME_INGESTION=notes_dwh
 DBNAME_DWH=notes_dwh
 # Legacy/compatibility (use when both databases are the same):
-# DBNAME=osm_notes
+# DBNAME=notes_dwh
 ```
 
 ### Issue: Lock File Never Released
@@ -325,7 +325,7 @@ Add these tasks to cron:
 
 ```cron
 # Weekly VACUUM ANALYZE
-0 3 * * 0 psql -U postgres -d osm_notes -c "VACUUM ANALYZE dwh.facts"
+0 3 * * 0 psql -U notes -d notes_dwh -c "VACUUM ANALYZE dwh.facts"
 
 # Weekly log cleanup
 30 3 * * 0 find /tmp/ETL_* -type d -mtime +7 -exec rm -rf {} \;
@@ -337,7 +337,7 @@ Implement backups:
 
 ```cron
 # Daily DWH backup
-0 1 * * * pg_dump -U postgres -d osm_notes -n dwh > /backups/dwh_$(date +\%Y\%m\%d).sql
+0 1 * * * pg_dump -U notes -d notes_dwh -n dwh > /backups/dwh_$(date +\%Y\%m\%d).sql
 
 # Keep last 30 days
 0 2 * * * find /backups/dwh_*.sql -mtime +30 -delete

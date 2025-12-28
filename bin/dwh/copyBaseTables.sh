@@ -43,8 +43,8 @@ fi
 
 # Database configuration
 # Default to same DB if not specified (backward compatibility)
-INGESTION_DB="${DBNAME_INGESTION:-osm_notes}"
-ANALYTICS_DB="${DBNAME_DWH:-osm_notes}"
+INGESTION_DB="${DBNAME_INGESTION:-notes_dwh}"
+ANALYTICS_DB="${DBNAME_DWH:-notes_dwh}"
 # Only set user if explicitly provided (allows peer authentication when not set)
 # If variables were unset before loading properties, restore empty state for peer auth
 if [[ "${USER_INGESTION_WAS_UNSET}" == "true" ]]; then

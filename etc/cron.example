@@ -55,7 +55,7 @@ HOME=/home/notes
 
 # Weekly: VACUUM ANALYZE (Sundays at 3 AM)
 # Optimizes database performance
-0 3 * * 0 psql -U postgres -d osm_notes -c "VACUUM ANALYZE dwh.facts"
+0 3 * * 0 psql -U notes -d notes_dwh -c "VACUUM ANALYZE dwh.facts"
 
 # Weekly: Clean old log files (Sundays at 3:30 AM)
 # Removes logs older than 7 days to prevent disk fill
@@ -71,7 +71,7 @@ HOME=/home/notes
 
 # Daily: Backup DWH schema (1 AM)
 # Creates a backup of the entire dwh schema
-# 0 1 * * * pg_dump -U postgres -d osm_notes -n dwh > /backups/dwh_$(date +\%Y\%m\%d).sql
+# 0 1 * * * pg_dump -U notes -d notes_dwh -n dwh > /backups/dwh_$(date +\%Y\%m\%d).sql
 
 # Daily: Rotate old backups (2 AM)
 # Keeps only last 30 days of backups
@@ -108,7 +108,7 @@ HOME=/home/notes
 # 0 6 * * * /home/notes/OSM-Notes-Analytics/bin/dwh/monitor_etl.sh > /tmp/etl_daily_report.txt
 
 # Weekly: Generate weekly summary (Mondays at 8 AM)
-# 0 8 * * 1 psql -U postgres -d osm_notes -c "SELECT COUNT(*) as total_facts FROM dwh.facts" >> /tmp/weekly_summary.txt
+# 0 8 * * 1 psql -U notes -d notes_dwh -c "SELECT COUNT(*) as total_facts FROM dwh.facts" >> /tmp/weekly_summary.txt
 
 # ==========================================
 # NOTES

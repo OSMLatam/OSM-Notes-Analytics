@@ -467,8 +467,8 @@ nano etc/properties.sh
 **Key settings:**
 
 ```bash
-DBNAME="osm_notes"    # Database name
-DB_USER="myuser"      # Database user
+DBNAME="notes_dwh"    # Database name
+DB_USER="notes"       # Database user
 MAX_THREADS="4"       # Parallel processing threads (auto-calculated from CPU cores)
 CLEAN="true"          # Clean temporary files after processing
 ```
@@ -476,7 +476,7 @@ CLEAN="true"          # Clean temporary files after processing
 **Override via environment:**
 
 ```bash
-export DBNAME=osm_notes_test
+export DBNAME=osm_notes_analytics_test
 export DB_USER=postgres
 ./bin/dwh/ETL.sh
 ```

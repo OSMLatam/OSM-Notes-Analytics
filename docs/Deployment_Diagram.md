@@ -204,7 +204,7 @@ gantt
 */15 * * * * /home/notes/OSM-Notes-Analytics/bin/dwh/exportDatamartsToJSON.sh >> /var/log/osm-notes-export.log 2>&1
 
 # Maintenance: Weekly cleanup and optimization
-0 3 * * 0 psql -U postgres -d osm_notes -c "VACUUM ANALYZE dwh.facts;" >> /var/log/osm-notes-maintenance.log 2>&1
+0 3 * * 0 psql -U notes -d notes_dwh -c "VACUUM ANALYZE dwh.facts;" >> /var/log/osm-notes-maintenance.log 2>&1
 30 3 * * 0 find /tmp/ETL_* -type d -mtime +7 -exec rm -rf {} \; 2>/dev/null || true
 ```
 
@@ -343,11 +343,11 @@ git submodule update --init --recursive
 
 ```bash
 # Create database (if not exists)
-createdb osm_notes
+createdb notes_dwh
 
 # Enable PostGIS
-psql -d osm_notes -c "CREATE EXTENSION postgis;"
-psql -d osm_notes -c "CREATE EXTENSION btree_gist;"
+psql -d notes_dwh -c "CREATE EXTENSION postgis;"
+psql -d notes_dwh -c "CREATE EXTENSION btree_gist;"
 
 # Configure connection
 cp etc/properties.sh.example etc/properties.sh
@@ -605,7 +605,7 @@ find /tmp/ETL_* -name "ETL.lock" -mmin +240 -delete
 
 ```bash
 # Restore from backup
-psql -U postgres -d osm_notes < /backups/dwh_20250115.sql
+psql -U notes -d notes_dwh < /backups/dwh_20250115.sql
 
 # Re-run ETL if needed
 ./bin/dwh/ETL.sh

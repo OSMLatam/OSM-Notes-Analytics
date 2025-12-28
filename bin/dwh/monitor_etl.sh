@@ -71,14 +71,14 @@ echo ""
 # Check database connectivity
 echo "3. Database Connection:"
 if command -v psql &> /dev/null; then
- if psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DBUSER:-postgres}" -d "${DBNAME_DWH:-osm_notes}" -c "SELECT 1" &> /dev/null; then
+ if psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DBUSER:-postgres}" -d "${DBNAME_DWH:-notes_dwh}" -c "SELECT 1" &> /dev/null; then
   echo -e "${GREEN}✓ Database connection OK${NC}"
 
   # Check ETL status if etl_control table exists
-  if psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DBUSER:-postgres}" -d "${DBNAME_DWH:-osm_notes}" -t -c "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'dwh' AND table_name = 'etl_control')" 2> /dev/null | grep -q "t"; then
+  if psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DBUSER:-postgres}" -d "${DBNAME_DWH:-notes_dwh}" -t -c "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'dwh' AND table_name = 'etl_control')" 2> /dev/null | grep -q "t"; then
    echo ""
    echo "  ETL Control Status:"
-   psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DBUSER:-postgres}" -d "${DBNAME_DWH:-osm_notes}" -c "
+   psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DBUSER:-postgres}" -d "${DBNAME_DWH:-notes_dwh}" -c "
         SELECT
           table_name,
           COALESCE(last_processed_timestamp::text, 'N/A') as last_processed,
@@ -98,7 +98,7 @@ echo ""
 # Check facts table statistics
 echo "4. Data Warehouse Statistics:"
 if command -v psql &> /dev/null; then
- psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DBUSER:-postgres}" -d "${DBNAME_DWH:-osm_notes}" -c "
+ psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DBUSER:-postgres}" -d "${DBNAME_DWH:-notes_dwh}" -c "
     SELECT
       'facts' as table_name,
       COUNT(*)::text as row_count,
@@ -148,7 +148,7 @@ echo ""
 # Integrity validations (MON-001, MON-002)
 echo "6. Integrity Validations:"
 if command -v psql &> /dev/null; then
- if psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DBUSER:-postgres}" -d "${DBNAME_DWH:-osm_notes}" -c "SELECT 1" &> /dev/null; then
+ if psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DBUSER:-postgres}" -d "${DBNAME_DWH:-notes_dwh}" -c "SELECT 1" &> /dev/null; then
   # Check if validation functions exist
   VALIDATION_EXISTS=$(psql -h "${DBHOST:-localhost}" -p "${DBPORT:-5432}" -U "${DBUSER:-postgres}" -d "${DBNAME_DWH:-osm_notes}" -t -A -c "SELECT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid WHERE n.nspname = 'dwh' AND p.proname = 'validate_etl_integrity')" 2> /dev/null || echo "f")
 

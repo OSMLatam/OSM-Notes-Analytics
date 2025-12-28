@@ -206,14 +206,14 @@ Edit with your database credentials:
 
 ```bash
 # Database configuration
-DBNAME="osm_notes"          # Same database as Ingestion
-DB_USER="myuser"           # Your PostgreSQL user
+DBNAME="notes_dwh"          # Production database
+DB_USER="notes"             # Production PostgreSQL user
 ```
 
 **Verify configuration:**
 ```bash
 # Test database connection
-psql -d "${DBNAME:-osm_notes}" -U "${DB_USER:-myuser}" -c "SELECT version();"
+psql -d "${DBNAME:-notes_dwh}" -U "${DB_USER:-notes}" -c "SELECT version();"
 # Should show PostgreSQL version information
 ```
 
@@ -1040,8 +1040,8 @@ This analytics system depends on the **OSM-Notes-Ingestion** ingestion system:
 
 ```bash
 # Database configuration
-DBNAME="osm_notes"
-DB_USER="myuser"
+DBNAME="notes_dwh"
+DB_USER="notes"
 
 # Processing configuration
 LOOP_SIZE="10000"
