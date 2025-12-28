@@ -944,8 +944,10 @@ function __processNotesETL {
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -c "CALL dwh.update_automation_levels_for_modified_users();" 2>&1
 
- # Update experience levels for modified users (parallel processing).
- __processExperienceLevels
+ # Update experience levels for modified users.
+ __logi "Updating experience levels for modified users."
+ __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
+  -c "CALL dwh.update_experience_levels_for_modified_users();" 2>&1
 
  # Create note current status table and procedures (ETL-003, ETL-004)
  __logi "Creating note current status table and procedures."
