@@ -4,7 +4,7 @@
 bats_require_minimum_version 1.5.0
 
 # Load test helper for database connection verification
-load ../../test_helper
+load ../../../tests/test_helper
 
 # Tests for datamart performance monitoring system
 # Verifies that performance logging works correctly and doesn't break existing functionality
@@ -23,7 +23,7 @@ setup() {
 # Test that performance log table can be created
 @test "Performance log table should be creatable" {
   # Load test helper to get verify_database_connection function
-  load test_helper
+  load ../../../tests/test_helper
   
   # Verify database connection - will fail explicitly if DB is not available
   if ! verify_database_connection; then
@@ -43,7 +43,7 @@ setup() {
 # Test that performance log table exists after creation
 @test "Performance log table should exist" {
   # Load test helper to get verify_database_connection function
-  load test_helper
+  load ../../../tests/test_helper
   
   # Verify database connection - will fail explicitly if DB is not available
   if ! verify_database_connection; then
@@ -68,7 +68,7 @@ setup() {
 # Test that performance log table has correct columns
 @test "Performance log table should have correct columns" {
   # Load test helper to get verify_database_connection function
-  load test_helper
+  load ../../../tests/test_helper
   
   # Verify database connection - will fail explicitly if DB is not available
   if ! verify_database_connection; then

@@ -355,6 +355,7 @@ function __checkPrereqs {
 # Function that activates the error trap.
 function __trapOn() {
  __log_start
+ # shellcheck disable=SC2154
  trap '{
   local ERROR_LINE="${LINENO}"
   local ERROR_COMMAND="${BASH_COMMAND}"
