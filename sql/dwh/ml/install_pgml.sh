@@ -318,10 +318,49 @@ install_pgml_for_version() {
  fi
 
  # Install pgml extension
+ # CRITICAL: cargo pgrx install uses the 'default' value from config.toml
+ # We need to temporarily change it to the target version
  echo -e "${YELLOW}Installing pgml extension for PostgreSQL ${target_version}...${NC}"
+
+ # Backup and update config.toml default
+ local config_file="$PGRX_HOME/config.toml"
+ local original_default=""
+ if [[ -f "$config_file" ]]; then
+  # Extract current default value
+  original_default=$(grep "^default" "$config_file" | head -1 | sed 's/.*= *"\(.*\)".*/\1/' || echo "")
+
+  # Update default to target version
+  if grep -q "^default" "$config_file"; then
+   # Replace existing default line
+   sed -i "s/^default = \".*\"/default = \"pg${target_version}\"/" "$config_file"
+  else
+   # Add default if it doesn't exist
+   echo "default = \"pg${target_version}\"" >> "$config_file"
+  fi
+
+  echo "Temporarily set default to pg${target_version} in config.toml"
+ fi
+
+ # Set environment variables to ensure correct version is used
+ export PGRX_PG_CONFIG_PATH="$target_pg_config"
+ export PGRX_PG_VERSION_OVERRIDE="pg${target_version}"
+ export PGRX_PG_VERSION="pg${target_version}"
+ export PG_CONFIG="$target_pg_config"
+ export PGRX_DEFAULT_PG_VERSION="pg${target_version}"
+
  if ! cargo pgrx install; then
+  # Restore original default on error
+  if [[ -n "$original_default" ]] && [[ -f "$config_file" ]]; then
+   sed -i "s/^default = \".*\"/default = \"${original_default}\"/" "$config_file"
+  fi
   echo -e "${RED}Error: Failed to install pgml for PostgreSQL ${target_version}${NC}"
   return 1
+ fi
+
+ # Restore original default after successful installation
+ if [[ -n "$original_default" ]] && [[ -f "$config_file" ]]; then
+  sed -i "s/^default = \".*\"/default = \"${original_default}\"/" "$config_file"
+  echo "Restored default to ${original_default} in config.toml"
  fi
 
  # Verify installation for this version
