@@ -1512,10 +1512,11 @@ AS $proc$
   WHERE c.action_at > o.action_at;
 
   -- Days since last action
+  -- CURRENT_DATE - date_id already returns INTEGER (days), no need for EXTRACT
   SELECT /* Notes-datamartUsers */ COALESCE(
-    EXTRACT(DAY FROM (CURRENT_DATE - d.date_id)),
+    (CURRENT_DATE - d.date_id)::INTEGER,
     0
-  )::INTEGER
+  )
   INTO m_days_since_last_action
   FROM dwh.facts f
   JOIN dwh.dimension_days d ON f.action_dimension_id_date = d.dimension_day_id
