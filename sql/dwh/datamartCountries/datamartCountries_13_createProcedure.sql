@@ -321,7 +321,7 @@ CREATE OR REPLACE PROCEDURE dwh.update_datamart_country (
 LANGUAGE plpgsql
 AS $proc$
  DECLARE
-  qty SMALLINT;
+  qty INTEGER;
   m_todays_activity INTEGER;
   m_last_year_activity CHAR(371);
   m_lastest_open_note_id INTEGER;

@@ -347,7 +347,7 @@ function __processNotesUser {
  __logi "Fetching modified users with intelligent prioritization..."
  local user_ids
  user_ids=$(__psql_with_appname -d "${DBNAME_DWH}" -Atq -c "
-  SELECT DISTINCT
+  SELECT
    f.action_dimension_id_user
   FROM dwh.facts f
    JOIN dwh.dimension_users u
