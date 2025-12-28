@@ -54,27 +54,64 @@ This script will:
 - Install pgml extension in your existing PostgreSQL
 - Verify the installation
 
-**After installation**, enable the extension in your database:
+**After installation**, you need to:
+
+1. **Install Python ML dependencies** (required for pgml):
 ```bash
-# Install Python ML dependencies (required for pgml)
+# Install system packages (may not be sufficient - see troubleshooting below)
 sudo apt-get install python3-numpy python3-scipy python3-xgboost
+
+# CRITICAL: pgml requires additional packages that may not be available via apt:
+# - lightgbm
+# - scikit-learn (imported as 'sklearn')
+# These must be installed with pip for the specific Python version pgml uses
+```
+
+2. **Configure shared_preload_libraries** (required for model deployment):
+```bash
+# Add pgml to shared_preload_libraries
+psql -d postgres -c "ALTER SYSTEM SET shared_preload_libraries = 'pg_stat_statements,pgml';"
+# Or if pg_stat_statements is not installed:
+psql -d postgres -c "ALTER SYSTEM SET shared_preload_libraries = 'pgml';"
+
+# IMPORTANT: Check the configuration file to ensure correct format
+sudo cat /var/lib/postgresql/14/main/postgresql.auto.conf | grep shared_preload_libraries
+# Should show: shared_preload_libraries = 'pg_stat_statements,pgml'
+# NOT: shared_preload_libraries = '"pg_stat_statements,pgml"'
+
+# If format is wrong, fix it:
+sudo nano /var/lib/postgresql/14/main/postgresql.auto.conf
+# Change: shared_preload_libraries = '"pg_stat_statements,pgml"'
+# To:     shared_preload_libraries = 'pg_stat_statements,pgml'
 
 # Restart PostgreSQL
-sudo systemctl restart postgresql
+sudo systemctl restart postgresql@14-main
+```
 
-# Enable extension
-psql -d notes_dwh -c "CREATE EXTENSION IF NOT EXISTS pgml;"
+3. **Install Python packages for the specific Python version** (see troubleshooting section below):
+```bash
+# pgml typically uses Python 3.10, check the error message to confirm
+# Install all required packages:
+sudo python3.10 -m pip install --break-system-packages --ignore-installed --no-cache-dir \
+  numpy scipy xgboost lightgbm scikit-learn
+
+# Verify installation
+sudo -u postgres python3.10 -c "import numpy, scipy, xgboost, lightgbm, sklearn; print('OK')"
+```
+
+4. **Enable extension in your database**:
+```bash
+# Use the PostgreSQL 14 binary directly (if psql defaults to another version)
+sudo -u postgres /usr/lib/postgresql/14/bin/psql -d notes_dwh -c "CREATE EXTENSION IF NOT EXISTS pgml;"
 
 # Verify
-psql -d notes_dwh -c "SELECT pgml.version();"
+sudo -u postgres /usr/lib/postgresql/14/bin/psql -d notes_dwh -c "SELECT pgml.version();"
 ```
 
-**Note**: If you get errors about missing Python modules (`xgboost`, `numpy`, etc.), install them with:
-```bash
-sudo apt-get install python3-numpy python3-scipy python3-xgboost
-```
-
-This installs the system packages (recommended) instead of using pip, which avoids PEP 668 externally-managed-environment issues.
+**Note**: The `apt-get` packages may not be sufficient because:
+- They may be compiled for a different Python version than what pgml uses
+- `lightgbm` and `scikit-learn` are not available in standard apt repositories
+- You MUST install them with pip for the specific Python version (usually 3.10)
 
 **Troubleshooting**: If you get errors about missing Python modules or numpy source directory:
 
@@ -92,20 +129,30 @@ sudo -u postgres python3 -c "import xgboost; print(xgboost.__version__)" || echo
 # If pgml says "Python version: 3.10.12", you need Python 3.10 packages
 # If pgml says "Python version: 3.11.x", you need Python 3.11 packages
 
-# Install packages for the specific Python version that pgml is using
-# For Python 3.10:
-sudo python3.10 -m pip install --break-system-packages numpy scipy xgboost 2>/dev/null || \
-sudo pip3 install --break-system-packages numpy scipy xgboost
+# CRITICAL: The packages installed via apt may be compiled for a different Python version
+# You MUST install them with pip for the specific Python version pgml is using
 
-# For Python 3.11 (if that's what pgml is using):
-sudo python3.11 -m pip install --break-system-packages numpy scipy xgboost 2>/dev/null || \
-sudo pip3 install --break-system-packages numpy scipy xgboost
+# For Python 3.10 (most common case):
+# First, ensure pip is available for Python 3.10
+sudo python3.10 -m ensurepip --upgrade 2>/dev/null || \
+sudo apt-get install python3.10-distutils python3.10-venv
 
-# Verify installation for the specific Python version
-# Replace 3.10 with the version pgml is using
-sudo -u postgres python3.10 -c "import numpy, scipy, xgboost; print('All packages available')" 2>/dev/null || \
-sudo -u postgres python3 -c "import numpy, scipy, xgboost; print('All packages available')"
+# Install packages specifically for Python 3.10 (all required packages)
+sudo python3.10 -m pip install --break-system-packages --ignore-installed --no-cache-dir \
+  numpy scipy xgboost lightgbm scikit-learn
+
+# Verify installation for Python 3.10
+sudo -u postgres python3.10 -c "import numpy; print('numpy:', numpy.__version__)"
+sudo -u postgres python3.10 -c "import scipy; print('scipy:', scipy.__version__)"
+sudo -u postgres python3.10 -c "import xgboost; print('xgboost:', xgboost.__version__)"
+sudo -u postgres python3.10 -c "import lightgbm; print('lightgbm:', lightgbm.__version__)"
+sudo -u postgres python3.10 -c "import sklearn; print('sklearn:', sklearn.__version__)"
+
+# If all work, try importing all together
+sudo -u postgres python3.10 -c "import numpy, scipy, xgboost, lightgbm, sklearn; print('All packages available for Python 3.10')"
 ```
+
+**Important**: If you get errors about `numpy.core._multiarray_umath` or "numpy source directory", it means the numpy package is not properly installed for that Python version. The apt packages (`python3-numpy`) are compiled for the default Python version (usually 3.12), but pgml might be using Python 3.10. You MUST install with pip for the specific Python version.
 
 3. **If you get numpy source directory error**, check PYTHONPATH in PostgreSQL environment:
 ```bash
@@ -191,6 +238,46 @@ psql -d notes_dwh -c 'CREATE EXTENSION IF NOT EXISTS pgml;'
 # Re-run the installation script, which will recompile with current Python
 cd sql/dwh/ml
 sudo ./install_pgml.sh
+```
+
+**Important Note**: If pgml was compiled with Python 3.10 but your system has Python 3.11, you have two options:
+
+1. **Install Python 3.10 and packages for it** (if Python 3.10 is available):
+```bash
+# Check if Python 3.10 is available
+python3.10 --version 2>/dev/null || echo "Python 3.10 not found"
+
+# If available, install packages for Python 3.10 (all required packages)
+sudo python3.10 -m pip install --break-system-packages --ignore-installed --no-cache-dir \
+  numpy scipy xgboost lightgbm scikit-learn
+
+# Verify
+sudo -u postgres python3.10 -c "import numpy, scipy, xgboost, lightgbm, sklearn; print('OK')"
+```
+
+2. **Force pgml to use Python 3.11** by ensuring Python 3.11 is the default during compilation:
+```bash
+# Make sure Python 3.11 is the default
+sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
+sudo update-alternatives --set python3 /usr/bin/python3.11
+
+# Verify
+python3 --version  # Should show 3.11.x
+
+# Recompile pgml
+cd sql/dwh/ml
+sudo ./install_pgml.sh
+```
+
+**If the numpy source directory error persists**, it might be that pgml is finding a numpy source directory during import. Try:
+```bash
+# Find and remove any numpy source directories
+find /tmp -type d -name "numpy" -not -path "*/site-packages/*" -exec rm -rf {} + 2>/dev/null || true
+find /root -type d -name "numpy" -not -path "*/site-packages/*" -exec rm -rf {} + 2>/dev/null || true
+
+# Also check if there's a numpy directory in the current working directory
+# when PostgreSQL tries to load pgml
+# This can happen if the working directory contains numpy source
 ```
 
 4. **Restart PostgreSQL after installing packages**:

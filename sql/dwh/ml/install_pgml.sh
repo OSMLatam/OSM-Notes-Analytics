@@ -534,45 +534,82 @@ echo ""
 
 # Install Python ML packages using pip (required for pgml)
 echo -e "${YELLOW}Installing Python ML packages...${NC}"
-if command -v pip3 &> /dev/null; then
- echo "Installing numpy, scipy, and xgboost using pip..."
- if pip3 install --break-system-packages --quiet numpy scipy xgboost 2> /dev/null; then
-  echo -e "${GREEN}✓ Python ML packages installed successfully${NC}"
+echo "Note: pgml requires numpy, scipy, xgboost, lightgbm, and scikit-learn"
+echo "These packages must be installed for the Python version that pgml was compiled with."
+
+# Detect Python version used by pgml (usually Python 3.10)
+PYTHON_VERSION=""
+if command -v python3.10 &> /dev/null; then
+ PYTHON_VERSION="3.10"
+ echo "Detected Python 3.10, installing packages for this version..."
+elif command -v python3.11 &> /dev/null; then
+ PYTHON_VERSION="3.11"
+ echo "Detected Python 3.11, installing packages for this version..."
+elif command -v python3 &> /dev/null; then
+ PYTHON_VERSION="3"
+ echo "Using default Python 3, installing packages..."
+fi
+
+if [[ -n "$PYTHON_VERSION" ]]; then
+ PYTHON_CMD="python${PYTHON_VERSION}"
+ PIP_CMD="${PYTHON_CMD} -m pip"
+
+ echo "Installing numpy, scipy, xgboost, lightgbm, and scikit-learn using ${PIP_CMD}..."
+ if ${PIP_CMD} install --break-system-packages --ignore-installed --no-cache-dir numpy scipy xgboost lightgbm scikit-learn 2> /dev/null; then
+  echo -e "${GREEN}✓ Python ML packages installed successfully for Python ${PYTHON_VERSION}${NC}"
  else
   echo -e "${YELLOW}⚠ Warning: Failed to install Python packages with pip${NC}"
   echo "You may need to install them manually:"
-  echo "  sudo pip3 install --break-system-packages numpy scipy xgboost"
+  echo "  sudo ${PIP_CMD} install --break-system-packages --ignore-installed --no-cache-dir numpy scipy xgboost lightgbm scikit-learn"
  fi
 else
- echo -e "${YELLOW}⚠ Warning: pip3 not found, skipping Python package installation${NC}"
+ echo -e "${YELLOW}⚠ Warning: Python 3 not found, skipping Python package installation${NC}"
  echo "Install Python packages manually:"
- echo "  sudo pip3 install --break-system-packages numpy scipy xgboost"
+ echo "  sudo python3.10 -m pip install --break-system-packages --ignore-installed --no-cache-dir numpy scipy xgboost lightgbm scikit-learn"
 fi
 
 # Verify Python packages are accessible
 echo ""
 echo -e "${YELLOW}Verifying Python packages...${NC}"
-if python3 -c "import numpy, scipy, xgboost" 2> /dev/null; then
- echo -e "${GREEN}✓ Python packages are accessible${NC}"
+if [[ -n "$PYTHON_VERSION" ]]; then
+ if ${PYTHON_CMD} -c "import numpy, scipy, xgboost, lightgbm, sklearn" 2> /dev/null; then
+  echo -e "${GREEN}✓ Python packages are accessible for Python ${PYTHON_VERSION}${NC}"
+ else
+  echo -e "${YELLOW}⚠ Warning: Python packages may not be accessible${NC}"
+  echo "Try installing with: sudo ${PIP_CMD} install --break-system-packages --ignore-installed --no-cache-dir numpy scipy xgboost lightgbm scikit-learn"
+  echo "Then verify with: sudo -u postgres ${PYTHON_CMD} -c 'import numpy, scipy, xgboost, lightgbm, sklearn; print(\"OK\")'"
+ fi
 else
- echo -e "${YELLOW}⚠ Warning: Python packages may not be accessible${NC}"
- echo "Try installing with: sudo pip3 install --break-system-packages numpy scipy xgboost"
+ echo -e "${YELLOW}⚠ Warning: Cannot verify Python packages (Python not found)${NC}"
 fi
 
 echo ""
 echo "Next steps:"
 echo "1. Install Python ML packages (if not already installed):"
-echo "   sudo pip3 install --break-system-packages numpy scipy xgboost"
+if [[ -n "$PYTHON_VERSION" ]]; then
+ echo "   sudo ${PIP_CMD} install --break-system-packages --ignore-installed --no-cache-dir numpy scipy xgboost lightgbm scikit-learn"
+else
+ echo "   sudo python3.10 -m pip install --break-system-packages --ignore-installed --no-cache-dir numpy scipy xgboost lightgbm scikit-learn"
+fi
 echo ""
 echo "2. Verify packages are accessible to PostgreSQL:"
-echo "   sudo -u postgres python3 -c 'import numpy, scipy, xgboost; print(\"OK\")'"
+if [[ -n "$PYTHON_VERSION" ]]; then
+ echo "   sudo -u postgres ${PYTHON_CMD} -c 'import numpy, scipy, xgboost, lightgbm, sklearn; print(\"OK\")'"
+else
+ echo "   sudo -u postgres python3.10 -c 'import numpy, scipy, xgboost, lightgbm, sklearn; print(\"OK\")'"
+fi
 echo ""
-echo "3. Restart PostgreSQL service:"
-echo "   sudo systemctl restart postgresql"
+echo "3. Configure shared_preload_libraries in PostgreSQL:"
+echo "   psql -d postgres -c \"ALTER SYSTEM SET shared_preload_libraries = 'pg_stat_statements,pgml';\""
+echo "   (Note: If pg_stat_statements is not installed, use: 'pgml')"
 echo ""
-echo "4. Enable the extension in your database:"
-echo "   psql -d notes_dwh -c 'CREATE EXTENSION IF NOT EXISTS pgml;'"
+echo "4. Restart PostgreSQL service:"
+echo "   sudo systemctl restart postgresql@14-main"
+echo "   (Adjust version number as needed)"
 echo ""
-echo "5. Verify installation:"
-echo "   psql -d notes_dwh -c 'SELECT pgml.version();'"
+echo "5. Enable the extension in your database:"
+echo "   sudo -u postgres /usr/lib/postgresql/14/bin/psql -d notes_dwh -c 'CREATE EXTENSION IF NOT EXISTS pgml;'"
+echo ""
+echo "6. Verify installation:"
+echo "   sudo -u postgres /usr/lib/postgresql/14/bin/psql -d notes_dwh -c 'SELECT pgml.version();'"
 echo ""

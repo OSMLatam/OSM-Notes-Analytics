@@ -2,7 +2,7 @@
 
 Este documento consolida todos los pendientes del proyecto organizados por categoría y prioridad.
 
-**Última actualización**: 2025-12-17
+**Última actualización**: 2025-12-28
 
 **Nota**: Este documento consolida todos los pendientes. El ActionPlan.md ha sido eliminado y su contenido relevante (ML pendiente) ha sido movido aquí.
 
@@ -283,7 +283,7 @@ Todas las tareas de alta prioridad han sido completadas.
   - **Description**: Predictive models for resolution time, note classification
   - **Effort**: High (8-12 hours)
   - **Dependencies**: First complete all datamart metrics ✅ (completed)
-  - **Status**: IN PROGRESS - Documentation and scripts ready, pending pgml installation and model training
+  - **Status**: IN PROGRESS - pgml extension installed and configured, pending model training
   - **Completed**:
     - ✅ Comprehensive ML implementation plan (`docs/ML_Implementation_Plan.md`)
     - ✅ Note categorization guide (`docs/Note_Categorization.md`)
@@ -292,8 +292,13 @@ Todas las tareas de alta prioridad han sido completadas.
     - ✅ README with installation and usage guide (`sql/dwh/ml/README.md`)
     - ✅ Feature views for ML training and prediction
     - ✅ Usage examples and helper functions
+    - ✅ **pgml extension installed** for PostgreSQL 14 (and 16) on production server
+    - ✅ **Python dependencies installed** (numpy, scipy, xgboost, lightgbm, scikit-learn) for Python 3.10
+    - ✅ **shared_preload_libraries configured** correctly
+    - ✅ **Extension created** in `notes_dwh` database and verified working
+    - ✅ **Installation script updated** (`sql/dwh/ml/install_pgml.sh`) with all required Python packages
+    - ✅ **Documentation updated** with troubleshooting steps for Python dependencies and shared_preload_libraries
   - **Remaining**:
-    - ⏳ Install pgml extension (requires PostgreSQL 14+)
     - ⏳ Train hierarchical classification models (main category, specific type, action recommendation)
     - ⏳ Integrate predictions into ETL workflow
   - **Files**: `sql/dwh/ml/`, `docs/ML_Implementation_Plan.md`, `docs/Note_Categorization.md`, `docs/External_Classification_Strategies.md`
