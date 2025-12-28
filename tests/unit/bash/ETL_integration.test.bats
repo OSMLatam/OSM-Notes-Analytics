@@ -1,14 +1,12 @@
 #!/usr/bin/env bats
 
 # Load test helper for database connection verification
-load test_helper
+load ../../test_helper
 
 # ETL Integration Tests for OSM-Notes-profile
 # Test file: ETL_integration.test.bats
 # Author: Andres Gomez (AngocA)
 # Version: 2025-08-14
-
-load "../../test_helper.bash"
 
 # Test that ETL.sh can be sourced without errors
 @test "ETL.sh should be sourceable without errors" {

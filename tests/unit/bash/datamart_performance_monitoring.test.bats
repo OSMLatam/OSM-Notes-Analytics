@@ -3,6 +3,9 @@
 # Require minimum BATS version for run flags
 bats_require_minimum_version 1.5.0
 
+# Load test helper for database connection verification
+load ../../test_helper
+
 # Tests for datamart performance monitoring system
 # Verifies that performance logging works correctly and doesn't break existing functionality
 

@@ -1,12 +1,10 @@
 #!/usr/bin/env bats
 
 # Load test helper for database connection verification
-load test_helper
+load ../../test_helper
 
 # Tests for enhanced ETL functionality
 # Author: Andres Gomez (AngocA)
-
-load "${BATS_TEST_DIRNAME}/../../test_helper"
 
 setup() {
  # Create temporary test directory

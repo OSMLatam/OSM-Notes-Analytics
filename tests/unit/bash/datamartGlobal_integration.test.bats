@@ -4,7 +4,7 @@
 bats_require_minimum_version 1.5.0
 
 # Load test helper for database connection verification
-load test_helper
+load ../../test_helper
 
 # Integration tests for datamartGlobal.sh
 # Tests that the global datamart is properly created and populated

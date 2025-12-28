@@ -1,14 +1,12 @@
 #!/usr/bin/env bats
 
 # Load test helper for database connection verification
-load test_helper
+load ../../test_helper
 
 # Tests for hybrid strategy: copy base tables for initial load, FDW for incremental
 #
 # Author: Andres Gomez (AngocA)
 # Version: 2025-10-27
-
-load "../../test_helper.bash"
 
 # Test configuration
 TEST_INGESTION_DB="osm_notes_dwh_test1"
