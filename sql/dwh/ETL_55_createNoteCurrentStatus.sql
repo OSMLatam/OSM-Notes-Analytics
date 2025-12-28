@@ -151,10 +151,10 @@ BEGIN
   GET DIAGNOSTICS v_count = ROW_COUNT;
   RAISE NOTICE 'Updated % notes in note_current_status', v_count;
   
-  -- Update the last update timestamp
+  -- Update the last update timestamp (using format that fits VARCHAR(26))
   INSERT INTO dwh.properties (key, value)
-  VALUES ('last_note_status_update', CURRENT_TIMESTAMP::TEXT)
-  ON CONFLICT (key) DO UPDATE SET value = CURRENT_TIMESTAMP::TEXT;
+  VALUES ('last_note_status_update', TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS'))
+  ON CONFLICT (key) DO UPDATE SET value = TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS');
 END;
 $$;
 
