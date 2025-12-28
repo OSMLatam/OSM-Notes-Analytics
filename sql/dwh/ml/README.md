@@ -56,14 +56,146 @@ This script will:
 
 **After installation**, enable the extension in your database:
 ```bash
+# Install Python ML dependencies (required for pgml)
+sudo apt-get install python3-numpy python3-scipy python3-xgboost
+
 # Restart PostgreSQL
 sudo systemctl restart postgresql
 
 # Enable extension
-psql -d osm_notes -c "CREATE EXTENSION IF NOT EXISTS pgml;"
+psql -d notes_dwh -c "CREATE EXTENSION IF NOT EXISTS pgml;"
 
 # Verify
-psql -d osm_notes -c "SELECT pgml.version();"
+psql -d notes_dwh -c "SELECT pgml.version();"
+```
+
+**Note**: If you get errors about missing Python modules (`xgboost`, `numpy`, etc.), install them with:
+```bash
+sudo apt-get install python3-numpy python3-scipy python3-xgboost
+```
+
+This installs the system packages (recommended) instead of using pip, which avoids PEP 668 externally-managed-environment issues.
+
+**Troubleshooting**: If you get errors about missing Python modules or numpy source directory:
+
+1. **Verify Python packages are accessible to PostgreSQL**:
+```bash
+# Check what Python PostgreSQL is using
+sudo -u postgres python3 -c "import sys; print(sys.executable)"
+sudo -u postgres python3 -c "import numpy; print(numpy.__version__)" || echo "numpy not found"
+sudo -u postgres python3 -c "import xgboost; print(xgboost.__version__)" || echo "xgboost not found"
+```
+
+2. **If packages are missing for PostgreSQL's Python**, install them with pip using `--break-system-packages`:
+```bash
+# First, identify which Python version pgml is using (check the error message)
+# If pgml says "Python version: 3.10.12", you need Python 3.10 packages
+# If pgml says "Python version: 3.11.x", you need Python 3.11 packages
+
+# Install packages for the specific Python version that pgml is using
+# For Python 3.10:
+sudo python3.10 -m pip install --break-system-packages numpy scipy xgboost 2>/dev/null || \
+sudo pip3 install --break-system-packages numpy scipy xgboost
+
+# For Python 3.11 (if that's what pgml is using):
+sudo python3.11 -m pip install --break-system-packages numpy scipy xgboost 2>/dev/null || \
+sudo pip3 install --break-system-packages numpy scipy xgboost
+
+# Verify installation for the specific Python version
+# Replace 3.10 with the version pgml is using
+sudo -u postgres python3.10 -c "import numpy, scipy, xgboost; print('All packages available')" 2>/dev/null || \
+sudo -u postgres python3 -c "import numpy, scipy, xgboost; print('All packages available')"
+```
+
+3. **If you get numpy source directory error**, check PYTHONPATH in PostgreSQL environment:
+```bash
+# Check PostgreSQL's environment
+sudo -u postgres env | grep PYTHONPATH
+
+# Check systemd service file for PostgreSQL
+sudo systemctl show postgresql@14-main.service | grep Environment
+# Or check the main service
+sudo systemctl show postgresql.service | grep Environment
+
+# If PYTHONPATH includes numpy source directories, you need to fix it:
+# Option 1: Edit PostgreSQL systemd service override
+sudo systemctl edit postgresql@14-main.service
+# Add:
+# [Service]
+# Environment="PYTHONPATH="
+
+# Option 2: Or edit the main PostgreSQL service
+sudo systemctl edit postgresql.service
+# Add:
+# [Service]
+# Environment="PYTHONPATH="
+
+# Then reload and restart
+sudo systemctl daemon-reload
+sudo systemctl restart postgresql
+```
+
+**Alternative solution**: If the above doesn't work, check if there's a numpy source directory in common locations:
+```bash
+# Check for numpy source directories in /tmp (common build location)
+find /tmp -name "numpy" -type d 2>/dev/null | head -5
+
+# Check if there's a numpy source directory in the pgml build directory
+find /tmp/pgml-build -name "numpy" -type d 2>/dev/null | head -5
+
+# Remove any numpy source directories found
+find /tmp -name "numpy" -type d -path "*/pgml-build/*" -exec rm -rf {} + 2>/dev/null || true
+find /tmp -name "numpy" -type d -path "*/target/*" -exec rm -rf {} + 2>/dev/null || true
+
+# Verify the systemd override was applied
+sudo systemctl show postgresql@14-main.service | grep -i environment
+
+# If PYTHONPATH is still set, try unsetting it explicitly
+sudo systemctl edit postgresql@14-main.service
+# Make sure it contains:
+# [Service]
+# Environment="PYTHONPATH="
+# Environment="PYTHONHOME="
+
+# Reload and restart
+sudo systemctl daemon-reload
+sudo systemctl restart postgresql
+```
+
+**If the problem persists**, the issue might be that pgml was compiled with a different Python version. The error message shows which Python version pgml is using (e.g., "Python version: 3.10.12"). 
+
+**Solution**: Recompile pgml with the correct Python version, or install Python packages for the version pgml is using:
+
+```bash
+# 1. Check what Python version pgml is using (from the error message)
+# If it says "Python version: 3.10.12", you need Python 3.10
+
+# 2. Install Python 3.10 if not available
+sudo apt-get install python3.10 python3.10-dev python3.10-distutils
+
+# 3. Install packages for Python 3.10 specifically
+sudo python3.10 -m pip install --break-system-packages numpy scipy xgboost
+
+# 4. Verify packages are accessible
+sudo -u postgres python3.10 -c "import numpy, scipy, xgboost; print('OK')"
+
+# 5. Restart PostgreSQL
+sudo systemctl restart postgresql
+
+# 6. Try creating extension again
+psql -d notes_dwh -c 'CREATE EXTENSION IF NOT EXISTS pgml;'
+```
+
+**Alternative**: If Python 3.10 is not available, you may need to recompile pgml with Python 3.11:
+```bash
+# Re-run the installation script, which will recompile with current Python
+cd sql/dwh/ml
+sudo ./install_pgml.sh
+```
+
+4. **Restart PostgreSQL after installing packages**:
+```bash
+sudo systemctl restart postgresql
 ```
 
 #### Option B: Using Docker (Only if starting fresh)

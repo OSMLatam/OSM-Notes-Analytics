@@ -81,6 +81,9 @@ apt-get install -y \
  "postgresql-server-dev-${PG_VERSION}" \
  libpython3-dev \
  python3-pip \
+ python3-numpy \
+ python3-scipy \
+ python3-xgboost \
  curl \
  git \
  pkg-config \
@@ -520,16 +523,56 @@ echo -e "${YELLOW}Cleaning up build directory...${NC}"
 cd /
 rm -rf "$BUILD_DIR"
 
+# Cleanup any numpy source directories that might interfere
+echo -e "${YELLOW}Cleaning up any numpy source directories...${NC}"
+find /tmp -name "numpy" -type d -path "*/pgml-build/*" -exec rm -rf {} + 2> /dev/null || true
+find /tmp -name "numpy" -type d -path "*/target/*" -exec rm -rf {} + 2> /dev/null || true
+
 echo ""
 echo -e "${GREEN}=== Installation Complete ===${NC}"
 echo ""
+
+# Install Python ML packages using pip (required for pgml)
+echo -e "${YELLOW}Installing Python ML packages...${NC}"
+if command -v pip3 &> /dev/null; then
+ echo "Installing numpy, scipy, and xgboost using pip..."
+ if pip3 install --break-system-packages --quiet numpy scipy xgboost 2> /dev/null; then
+  echo -e "${GREEN}✓ Python ML packages installed successfully${NC}"
+ else
+  echo -e "${YELLOW}⚠ Warning: Failed to install Python packages with pip${NC}"
+  echo "You may need to install them manually:"
+  echo "  sudo pip3 install --break-system-packages numpy scipy xgboost"
+ fi
+else
+ echo -e "${YELLOW}⚠ Warning: pip3 not found, skipping Python package installation${NC}"
+ echo "Install Python packages manually:"
+ echo "  sudo pip3 install --break-system-packages numpy scipy xgboost"
+fi
+
+# Verify Python packages are accessible
+echo ""
+echo -e "${YELLOW}Verifying Python packages...${NC}"
+if python3 -c "import numpy, scipy, xgboost" 2> /dev/null; then
+ echo -e "${GREEN}✓ Python packages are accessible${NC}"
+else
+ echo -e "${YELLOW}⚠ Warning: Python packages may not be accessible${NC}"
+ echo "Try installing with: sudo pip3 install --break-system-packages numpy scipy xgboost"
+fi
+
+echo ""
 echo "Next steps:"
-echo "1. Restart PostgreSQL service:"
+echo "1. Install Python ML packages (if not already installed):"
+echo "   sudo pip3 install --break-system-packages numpy scipy xgboost"
+echo ""
+echo "2. Verify packages are accessible to PostgreSQL:"
+echo "   sudo -u postgres python3 -c 'import numpy, scipy, xgboost; print(\"OK\")'"
+echo ""
+echo "3. Restart PostgreSQL service:"
 echo "   sudo systemctl restart postgresql"
 echo ""
-echo "2. Enable the extension in your database:"
-echo "   psql -d osm_notes -c 'CREATE EXTENSION IF NOT EXISTS pgml;'"
+echo "4. Enable the extension in your database:"
+echo "   psql -d notes_dwh -c 'CREATE EXTENSION IF NOT EXISTS pgml;'"
 echo ""
-echo "3. Verify installation:"
-echo "   psql -d osm_notes -c 'SELECT pgml.version();'"
+echo "5. Verify installation:"
+echo "   psql -d notes_dwh -c 'SELECT pgml.version();'"
 echo ""
