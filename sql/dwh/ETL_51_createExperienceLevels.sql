@@ -148,6 +148,7 @@ BEGIN
   END IF;
 
   -- Update dimension_users
+  -- Also set modified = FALSE to prevent reprocessing (optimization)
   UPDATE dwh.dimension_users SET
     total_notes_opened = v_notes_opened,
     total_notes_closed = v_notes_closed,
@@ -155,7 +156,8 @@ BEGIN
     resolution_ratio = v_resolution_ratio,
     last_activity_date = v_last_activity_date,
     experience_level_id = v_experience_id,
-    experience_calculated_at = CURRENT_TIMESTAMP
+    experience_calculated_at = CURRENT_TIMESTAMP,
+    modified = FALSE
   WHERE dimension_user_id = p_dimension_user_id;
 
   RETURN v_experience_id;
@@ -183,13 +185,13 @@ BEGIN
     FROM dwh.dimension_users
     WHERE modified = TRUE
       AND experience_level_id IS NULL
-    LIMIT 1000
+    LIMIT 5000
   LOOP
     PERFORM dwh.calculate_user_experience(rec_user.dimension_user_id);
 
     m_updated_count := m_updated_count + 1;
 
-    IF m_updated_count % 100 = 0 THEN
+    IF m_updated_count % 500 = 0 THEN
       COMMIT;
       RAISE NOTICE 'Updated experience levels for % users...', m_updated_count;
     END IF;
