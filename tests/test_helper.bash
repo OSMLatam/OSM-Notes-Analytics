@@ -6,29 +6,29 @@
 
 # Function to setup test data
 setup_test_database() {
-  local dbname="${DBNAME:-dwh}"
-  echo "Setting up test database: ${dbname}" >&2
+ local dbname="${DBNAME:-dwh}"
+ echo "Setting up test database: ${dbname}" >&2
 
-  # Load base tables data first (required for ETL to work)
-  if [[ -f "${TEST_BASE_DIR}/tests/sql/setup_base_tables_data.sql" ]]; then
-    echo "Loading base tables test data from setup_base_tables_data.sql" >&2
-    psql -d "${dbname}" -f "${TEST_BASE_DIR}/tests/sql/setup_base_tables_data.sql" > /dev/null 2>&1 || true
-  fi
+ # Load base tables data first (required for ETL to work)
+ if [[ -f "${TEST_BASE_DIR}/tests/sql/setup_base_tables_data.sql" ]]; then
+  echo "Loading base tables test data from setup_base_tables_data.sql" >&2
+  psql -d "${dbname}" -f "${TEST_BASE_DIR}/tests/sql/setup_base_tables_data.sql" > /dev/null 2>&1 || true
+ fi
 
-  # Run setup SQL if it exists (for star schema data)
-  if [[ -f "${TEST_BASE_DIR}/tests/sql/setup_test_data.sql" ]]; then
-    echo "Loading test data from setup_test_data.sql" >&2
-    psql -d "${dbname}" -f "${TEST_BASE_DIR}/tests/sql/setup_test_data.sql" > /dev/null 2>&1 || true
-  fi
+ # Run setup SQL if it exists (for star schema data)
+ if [[ -f "${TEST_BASE_DIR}/tests/sql/setup_test_data.sql" ]]; then
+  echo "Loading test data from setup_test_data.sql" >&2
+  psql -d "${dbname}" -f "${TEST_BASE_DIR}/tests/sql/setup_test_data.sql" > /dev/null 2>&1 || true
+ fi
 
-  # Ensure temporal resolution JSON columns exist for datamarts (idempotent)
-  psql -d "${dbname}" -tAc "SELECT 1 FROM information_schema.tables WHERE table_schema='dwh' AND table_name='datamartcountries'" > /dev/null 2>&1 && \
-    psql -d "${dbname}" -c "ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS resolution_by_year JSON; ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS resolution_by_month JSON;" > /dev/null 2>&1 || true
-  psql -d "${dbname}" -tAc "SELECT 1 FROM information_schema.tables WHERE table_schema='dwh' AND table_name='datamartusers'" > /dev/null 2>&1 && \
-    psql -d "${dbname}" -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS resolution_by_year JSON; ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS resolution_by_month JSON;" > /dev/null 2>&1 || true
+ # Ensure temporal resolution JSON columns exist for datamarts (idempotent)
+ psql -d "${dbname}" -tAc "SELECT 1 FROM information_schema.tables WHERE table_schema='dwh' AND table_name='datamartcountries'" > /dev/null 2>&1 \
+  && psql -d "${dbname}" -c "ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS resolution_by_year JSON; ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS resolution_by_month JSON;" > /dev/null 2>&1 || true
+ psql -d "${dbname}" -tAc "SELECT 1 FROM information_schema.tables WHERE table_schema='dwh' AND table_name='datamartusers'" > /dev/null 2>&1 \
+  && psql -d "${dbname}" -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS resolution_by_year JSON; ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS resolution_by_month JSON;" > /dev/null 2>&1 || true
 
-  # Create minimal datamart tables if missing (for unit tests that don't run full DDL)
-  psql -d "${dbname}" -c "
+ # Create minimal datamart tables if missing (for unit tests that don't run full DDL)
+ psql -d "${dbname}" -c "
   DO $$
   BEGIN
     IF NOT EXISTS (
@@ -166,18 +166,25 @@ else
  echo "Warning: validationFunctions.sh not found at lib/osm-common/"
 fi
 
-# Set additional environment variables for Docker container only
-# For host environment, don't set these to allow peer authentication
+# Set additional environment variables for Docker container and CI/CD environments
+# For local host environment, don't set these to allow peer authentication
 if [[ -f "/app/bin/dwh/ETL.sh" ]]; then
  # Running in Docker container - set PostgreSQL variables
  export PGHOST="${TEST_DBHOST}"
  export PGUSER="${TEST_DBUSER}"
  export PGPASSWORD="${TEST_DBPASSWORD}"
  export PGDATABASE="${TEST_DBNAME}"
+elif [[ -n "${TEST_DBHOST:-}" ]]; then
+ # CI/CD environment (GitHub Actions, etc.) - set PostgreSQL variables for TCP/IP connection
+ export PGHOST="${TEST_DBHOST}"
+ export PGPORT="${TEST_DBPORT:-5432}"
+ export PGUSER="${TEST_DBUSER:-postgres}"
+ export PGPASSWORD="${TEST_DBPASSWORD:-postgres}"
+ export PGDATABASE="${TEST_DBNAME}"
 else
- # Running on host - don't set PGUSER/PGPASSWORD to use peer authentication
+ # Running on local host - don't set PGUSER/PGPASSWORD to use peer authentication
  # Only set PGDATABASE if needed
- unset PGHOST PGPASSWORD PGUSER 2> /dev/null || true
+ unset PGHOST PGPORT PGPASSWORD PGUSER 2> /dev/null || true
  export PGDATABASE="${TEST_DBNAME}"
 fi
 
@@ -188,45 +195,45 @@ __start_logger
 # This function should be called at the start of tests that require a database
 # It will fail explicitly if the database is not available, rather than silently skipping
 verify_database_connection() {
-  local dbname="${TEST_DBNAME:-${DBNAME:-}}"
-  
-  # First check if database name is configured
-  if [[ -z "${dbname}" ]]; then
-    echo "ERROR: No database configured (TEST_DBNAME or DBNAME not set)" >&2
-    echo "Please configure TEST_DBNAME in tests/properties.sh or set it as an environment variable" >&2
-    return 1
+ local dbname="${TEST_DBNAME:-${DBNAME:-}}"
+
+ # First check if database name is configured
+ if [[ -z "${dbname}" ]]; then
+  echo "ERROR: No database configured (TEST_DBNAME or DBNAME not set)" >&2
+  echo "Please configure TEST_DBNAME in tests/properties.sh or set it as an environment variable" >&2
+  return 1
+ fi
+
+ # Try to connect to the database
+ # Use appropriate connection method based on environment
+ if [[ -n "${TEST_DBHOST:-}" ]]; then
+  # CI/CD environment - use host/port/user
+  if ! PGPASSWORD="${TEST_DBPASSWORD:-postgres}" psql -h "${TEST_DBHOST}" -p "${TEST_DBPORT:-5432}" -U "${TEST_DBUSER:-postgres}" -d "${dbname}" -c "SELECT 1;" > /dev/null 2>&1; then
+   echo "ERROR: Cannot connect to database ${dbname}" >&2
+   echo "Connection details:" >&2
+   echo "  TEST_DBNAME=${TEST_DBNAME:-}" >&2
+   echo "  TEST_DBHOST=${TEST_DBHOST:-}" >&2
+   echo "  TEST_DBPORT=${TEST_DBPORT:-}" >&2
+   echo "  TEST_DBUSER=${TEST_DBUSER:-}" >&2
+   echo "Please verify database connection settings and ensure the database exists" >&2
+   return 1
   fi
-  
-  # Try to connect to the database
-  # Use appropriate connection method based on environment
-  if [[ -n "${TEST_DBHOST:-}" ]]; then
-    # CI/CD environment - use host/port/user
-    if ! PGPASSWORD="${TEST_DBPASSWORD:-postgres}" psql -h "${TEST_DBHOST}" -p "${TEST_DBPORT:-5432}" -U "${TEST_DBUSER:-postgres}" -d "${dbname}" -c "SELECT 1;" > /dev/null 2>&1; then
-      echo "ERROR: Cannot connect to database ${dbname}" >&2
-      echo "Connection details:" >&2
-      echo "  TEST_DBNAME=${TEST_DBNAME:-}" >&2
-      echo "  TEST_DBHOST=${TEST_DBHOST:-}" >&2
-      echo "  TEST_DBPORT=${TEST_DBPORT:-}" >&2
-      echo "  TEST_DBUSER=${TEST_DBUSER:-}" >&2
-      echo "Please verify database connection settings and ensure the database exists" >&2
-      return 1
-    fi
-  else
-    # Local environment - use peer authentication
-    if ! psql -d "${dbname}" -c "SELECT 1;" > /dev/null 2>&1; then
-      echo "ERROR: Cannot connect to database ${dbname}" >&2
-      echo "Connection details:" >&2
-      echo "  TEST_DBNAME=${TEST_DBNAME:-}" >&2
-      echo "  DBNAME=${DBNAME:-}" >&2
-      echo "Please verify:" >&2
-      echo "  1. Database ${dbname} exists (run: createdb ${dbname})" >&2
-      echo "  2. PostgreSQL is running" >&2
-      echo "  3. You have permission to connect to the database" >&2
-      return 1
-    fi
+ else
+  # Local environment - use peer authentication
+  if ! psql -d "${dbname}" -c "SELECT 1;" > /dev/null 2>&1; then
+   echo "ERROR: Cannot connect to database ${dbname}" >&2
+   echo "Connection details:" >&2
+   echo "  TEST_DBNAME=${TEST_DBNAME:-}" >&2
+   echo "  DBNAME=${DBNAME:-}" >&2
+   echo "Please verify:" >&2
+   echo "  1. Database ${dbname} exists (run: createdb ${dbname})" >&2
+   echo "  2. PostgreSQL is running" >&2
+   echo "  3. You have permission to connect to the database" >&2
+   return 1
   fi
-  
-  return 0
+ fi
+
+ return 0
 }
 
 # Setup function - runs before each test
@@ -347,15 +354,15 @@ create_test_database() {
  echo "DEBUG: dbname = ${dbname}"
 
  # Check if PostgreSQL is available
- if psql -d postgres -c "SELECT 1;" >/dev/null 2>&1; then
+ if psql -d postgres -c "SELECT 1;" > /dev/null 2>&1; then
   echo "DEBUG: PostgreSQL available, using real database"
 
   # Try to connect to the specified database first
-  if psql -d "${dbname}" -c "SELECT 1;" >/dev/null 2>&1; then
+  if psql -d "${dbname}" -c "SELECT 1;" > /dev/null 2>&1; then
    echo "Test database ${dbname} already exists and is accessible"
   else
    echo "Test database ${dbname} does not exist, creating it..."
-   createdb "${dbname}" 2>/dev/null || true
+   createdb "${dbname}" 2> /dev/null || true
    echo "Test database ${dbname} created successfully"
   fi
 
@@ -464,7 +471,7 @@ drop_test_database() {
  if [[ -f "/app/bin/dwh/ETL.sh" ]]; then
   # Running in Docker - actually drop the database to clean up between tests
   echo "Dropping test database ${dbname}..."
-  psql -h "${TEST_DBHOST}" -U "${TEST_DBUSER}" -d "postgres" -c "DROP DATABASE IF EXISTS ${dbname};" 2>/dev/null || true
+  psql -h "${TEST_DBHOST}" -U "${TEST_DBUSER}" -d "postgres" -c "DROP DATABASE IF EXISTS ${dbname};" 2> /dev/null || true
   echo "Test database ${dbname} dropped successfully"
  else
   # Running on host - simulate database drop
@@ -584,12 +591,10 @@ procedure_exists() {
 
 # Helper function to assert directory exists
 assert_dir_exists() {
-  local dir_path="$1"
-  if [[ ! -d "${dir_path}" ]]; then
-    echo "Directory does not exist: ${dir_path}" >&2
-    return 1
-  fi
-  return 0
+ local dir_path="$1"
+ if [[ ! -d "${dir_path}" ]]; then
+  echo "Directory does not exist: ${dir_path}" >&2
+  return 1
+ fi
+ return 0
 }
-
-
