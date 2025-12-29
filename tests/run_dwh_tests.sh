@@ -107,23 +107,70 @@ if [[ -f "${SCRIPT_DIR}/run_mock_etl.sh" ]]; then
  log_info "  TEST_DBHOST=${TEST_DBHOST:-}"
  log_info "  TEST_DBPORT=${TEST_DBPORT:-}"
  log_info "  TEST_DBUSER=${TEST_DBUSER:-}"
+ log_info "  TEST_DBPASSWORD=${TEST_DBPASSWORD:+***set***}"
+
+ # Ensure all required variables are set for CI/CD environment
+ if [[ -n "${TEST_DBHOST:-}" ]]; then
+  if [[ -z "${TEST_DBNAME:-}" ]]; then
+   log_error "TEST_DBNAME is required but not set"
+   exit 1
+  fi
+  if [[ -z "${TEST_DBUSER:-}" ]]; then
+   log_error "TEST_DBUSER is required but not set"
+   exit 1
+  fi
+  # Export variables to ensure they're available to subprocesses
+  export TEST_DBNAME TEST_DBHOST TEST_DBPORT TEST_DBUSER TEST_DBPASSWORD
+  export PGHOST="${TEST_DBHOST}"
+  export PGPORT="${TEST_DBPORT:-5432}"
+  export PGUSER="${TEST_DBUSER}"
+  export PGPASSWORD="${TEST_DBPASSWORD:-postgres}"
+  export PGDATABASE="${TEST_DBNAME}"
+ fi
 
  # Verify database connection before running mock ETL
  # Use appropriate connection method based on environment
  if [[ -n "${TEST_DBHOST:-}" ]]; then
   # CI/CD environment - use host/port/user
-  if ! PGPASSWORD="${TEST_DBPASSWORD:-postgres}" psql -h "${TEST_DBHOST}" -p "${TEST_DBPORT:-5432}" -U "${TEST_DBUSER:-postgres}" -d "${TEST_DBNAME}" -c "SELECT 1;" > /dev/null 2>&1; then
+  log_info "Verifying database connection (CI/CD mode)..."
+  CONNECTION_OUTPUT=$(PGPASSWORD="${TEST_DBPASSWORD:-postgres}" psql -h "${TEST_DBHOST}" -p "${TEST_DBPORT:-5432}" -U "${TEST_DBUSER:-postgres}" -d "${TEST_DBNAME}" -c "SELECT 1;" 2>&1)
+  CONNECTION_EXIT_CODE=$?
+  if [[ ${CONNECTION_EXIT_CODE} -ne 0 ]]; then
    log_error "Cannot connect to database before running mock ETL"
-   log_error "Please verify database connection settings"
+   log_error "Connection attempt failed with exit code: ${CONNECTION_EXIT_CODE}"
+   log_error "Connection details:"
+   log_error "  Host: ${TEST_DBHOST}"
+   log_error "  Port: ${TEST_DBPORT:-5432}"
+   log_error "  User: ${TEST_DBUSER:-postgres}"
+   log_error "  Database: ${TEST_DBNAME}"
+   log_error "  Password: ${TEST_DBPASSWORD:+***set***}"
+   log_error "Error output:"
+   if [[ -n "${CONNECTION_OUTPUT}" ]]; then
+    echo "${CONNECTION_OUTPUT}" | sed 's/^/  /' | while IFS= read -r line || [[ -n "${line}" ]]; do
+     log_error "${line}"
+    done
+   fi
    exit 1
   fi
+  log_success "Database connection verified"
  else
   # Local environment - use peer authentication
-  if ! psql -d "${TEST_DBNAME}" -c "SELECT 1;" > /dev/null 2>&1; then
+  log_info "Verifying database connection (local mode)..."
+  CONNECTION_OUTPUT=$(psql -d "${TEST_DBNAME}" -c "SELECT 1;" 2>&1)
+  CONNECTION_EXIT_CODE=$?
+  if [[ ${CONNECTION_EXIT_CODE} -ne 0 ]]; then
    log_error "Cannot connect to database before running mock ETL"
-   log_error "Please verify database connection settings"
+   log_error "Connection attempt failed with exit code: ${CONNECTION_EXIT_CODE}"
+   log_error "Database: ${TEST_DBNAME}"
+   log_error "Error output:"
+   if [[ -n "${CONNECTION_OUTPUT}" ]]; then
+    echo "${CONNECTION_OUTPUT}" | sed 's/^/  /' | while IFS= read -r line || [[ -n "${line}" ]]; do
+     log_error "${line}"
+    done
+   fi
    exit 1
   fi
+  log_success "Database connection verified"
  fi
 
  if bash "${SCRIPT_DIR}/run_mock_etl.sh"; then
