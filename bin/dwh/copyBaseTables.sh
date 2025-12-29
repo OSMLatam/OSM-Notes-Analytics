@@ -12,13 +12,25 @@
 set -euo pipefail
 
 # Base directory for the project.
+# Allow SCRIPT_BASE_DIRECTORY to be set externally (e.g., by tests)
 declare SCRIPT_BASE_DIRECTORY
-SCRIPT_BASE_DIRECTORY="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." &> /dev/null && pwd)"
+if [[ -z "${SCRIPT_BASE_DIRECTORY:-}" ]]; then
+ SCRIPT_BASE_DIRECTORY="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." &> /dev/null && pwd)"
+fi
 readonly SCRIPT_BASE_DIRECTORY
 
 # Load logger
 # shellcheck disable=SC1091
-source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/bash_logger.sh"
+if [[ -f "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/bash_logger.sh" ]]; then
+ source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/bash_logger.sh"
+else
+ # Minimal logger if file doesn't exist
+ __logi() { echo "[INFO] $*"; }
+ __loge() { echo "[ERROR] $*" >&2; }
+ __logw() { echo "[WARN] $*"; }
+ __log_start() { echo "[START]"; }
+ __log_finish() { echo "[FINISH]"; }
+fi
 
 # Save original state of user variables before loading properties
 # This allows tests to unset them for peer authentication
@@ -31,14 +43,18 @@ if [[ -z "${DB_USER_DWH+x}" ]]; then
  USER_DWH_WAS_UNSET=true
 fi
 
-# Load properties
+# Load properties (handle missing file gracefully for testing)
 # shellcheck disable=SC1091
-source "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh"
+set +e
+if [[ -f "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh" ]]; then
+ source "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh" 2> /dev/null || true
+fi
+set -e
 
 # Load local properties if they exist
 if [[ -f "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh.local" ]]; then
  # shellcheck disable=SC1091
- source "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh.local"
+ source "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh.local" 2> /dev/null || true
 fi
 
 # Database configuration
@@ -58,6 +74,28 @@ else
  ANALYTICS_USER="${DB_USER_DWH:-}"
 fi
 
+# Helper function to build psql command with correct connection parameters
+build_psql_cmd() {
+ local dbname="$1"
+ local dbuser="${2:-}"
+
+ # Use CI/CD environment variables if available
+ if [[ -n "${TEST_DBHOST:-}" ]] || [[ -n "${PGHOST:-}" ]]; then
+  local host="${TEST_DBHOST:-${PGHOST:-localhost}}"
+  local port="${TEST_DBPORT:-${PGPORT:-5432}}"
+  local user="${dbuser:-${TEST_DBUSER:-${PGUSER:-postgres}}}"
+  local password="${TEST_DBPASSWORD:-${PGPASSWORD:-postgres}}"
+  echo "PGPASSWORD=\"${password}\" psql -h ${host} -p ${port} -U ${user} -d ${dbname}"
+ else
+  # Local environment - use peer authentication
+  if [[ -n "${dbuser}" ]]; then
+   echo "psql -U ${dbuser} -d ${dbname}"
+  else
+   echo "psql -d ${dbname}"
+  fi
+ fi
+}
+
 # Tables to copy (in order of dependencies)
 TABLES=("countries" "users" "notes" "note_comments" "note_comments_text")
 
@@ -74,35 +112,39 @@ if [[ "${INGESTION_DB}" == "${ANALYTICS_DB}" ]]; then
  exit 0
 fi
 
+# Build psql commands for source and target databases
+INGESTION_PSQL_CMD=$(build_psql_cmd "${INGESTION_DB}" "${INGESTION_USER}")
+ANALYTICS_PSQL_CMD=$(build_psql_cmd "${ANALYTICS_DB}" "${ANALYTICS_USER}")
+
 # Validate source database connection
-if ! psql -d "${INGESTION_DB}" ${INGESTION_USER:+-U "${INGESTION_USER}"} -c "SELECT 1;" > /dev/null 2>&1; then
+if ! eval "${INGESTION_PSQL_CMD}" -c "SELECT 1;" > /dev/null 2>&1; then
  __loge "ERROR: Cannot connect to source database ${INGESTION_DB}"
  exit 1
 fi
 
 # Validate target database connection
-if ! psql -d "${ANALYTICS_DB}" ${ANALYTICS_USER:+-U "${ANALYTICS_USER}"} -c "SELECT 1;" > /dev/null 2>&1; then
+if ! eval "${ANALYTICS_PSQL_CMD}" -c "SELECT 1;" > /dev/null 2>&1; then
  __loge "ERROR: Cannot connect to target database ${ANALYTICS_DB}"
  exit 1
 fi
 
 # Create schema if not exists
 __logi "Ensuring public schema exists in target database"
-psql -d "${ANALYTICS_DB}" ${ANALYTICS_USER:+-U "${ANALYTICS_USER}"} -c "CREATE SCHEMA IF NOT EXISTS public;" > /dev/null 2>&1 || true
+eval "${ANALYTICS_PSQL_CMD}" -c "CREATE SCHEMA IF NOT EXISTS public;" > /dev/null 2>&1 || true
 
 # Copy each table
 for table in "${TABLES[@]}"; do
  __logi "Copying table: ${table}"
 
  # Verify source database connection before checking table
- if ! psql -d "${INGESTION_DB}" ${INGESTION_USER:+-U "${INGESTION_USER}"} -c "SELECT 1;" > /dev/null 2>&1; then
+ if ! eval "${INGESTION_PSQL_CMD}" -c "SELECT 1;" > /dev/null 2>&1; then
   __loge "ERROR: Cannot connect to source database ${INGESTION_DB} while copying table ${table}"
   __loge "Source database may have been dropped or is unavailable"
   exit 1
  fi
 
  # Check if table exists in source
- if ! psql -d "${INGESTION_DB}" ${INGESTION_USER:+-U "${INGESTION_USER}"} -t -c \
+ if ! eval "${INGESTION_PSQL_CMD}" -t -c \
   "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '${table}';" \
   | grep -q 1; then
   __logw "Table ${table} does not exist in source database, skipping"
@@ -110,39 +152,50 @@ for table in "${TABLES[@]}"; do
  fi
 
  # Check if table already exists in target (should not happen, but handle gracefully)
- if psql -d "${ANALYTICS_DB}" ${ANALYTICS_USER:+-U "${ANALYTICS_USER}"} -t -c \
+ if eval "${ANALYTICS_PSQL_CMD}" -t -c \
   "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '${table}';" \
   | grep -q 1; then
   __logw "Table ${table} already exists in target database, dropping first"
-  psql -d "${ANALYTICS_DB}" ${ANALYTICS_USER:+-U "${ANALYTICS_USER}"} -c "DROP TABLE IF EXISTS public.${table} CASCADE;" > /dev/null 2>&1 || true
+  eval "${ANALYTICS_PSQL_CMD}" -c "DROP TABLE IF EXISTS public.${table} CASCADE;" > /dev/null 2>&1 || true
  fi
 
  # Get table structure and create in target
  __logi "Creating table structure for ${table}"
- pg_dump -d "${INGESTION_DB}" ${INGESTION_USER:+-U "${INGESTION_USER}"} \
+ # Build pg_dump command
+ if [[ -n "${TEST_DBHOST:-}" ]] || [[ -n "${PGHOST:-}" ]]; then
+  PGDUMP_HOST="${TEST_DBHOST:-${PGHOST:-localhost}}"
+  PGDUMP_PORT="${TEST_DBPORT:-${PGPORT:-5432}}"
+  PGDUMP_USER="${INGESTION_USER:-${TEST_DBUSER:-${PGUSER:-postgres}}}"
+  PGDUMP_PASSWORD="${TEST_DBPASSWORD:-${PGPASSWORD:-postgres}}"
+  PGDUMP_CMD="PGPASSWORD=\"${PGDUMP_PASSWORD}\" pg_dump -h ${PGDUMP_HOST} -p ${PGDUMP_PORT} -U ${PGDUMP_USER} -d ${INGESTION_DB}"
+ else
+  PGDUMP_CMD="pg_dump -d ${INGESTION_DB} ${INGESTION_USER:+-U \"${INGESTION_USER}\"}"
+ fi
+
+ eval "${PGDUMP_CMD}" \
   -t "public.${table}" \
   --schema-only \
   --no-owner --no-acl \
-  | psql -d "${ANALYTICS_DB}" ${ANALYTICS_USER:+-U "${ANALYTICS_USER}"} -q > /dev/null 2>&1 || {
+  | eval "${ANALYTICS_PSQL_CMD}" -q > /dev/null 2>&1 || {
   __loge "ERROR: Failed to create table structure for ${table}"
   exit 1
  }
 
  # Copy data using COPY (fastest method)
  __logi "Copying data for ${table}"
- row_count=$(psql -d "${INGESTION_DB}" ${INGESTION_USER:+-U "${INGESTION_USER}"} -t -c "SELECT COUNT(*) FROM public.${table};" | tr -d ' ')
+ row_count=$(eval "${INGESTION_PSQL_CMD}" -t -c "SELECT COUNT(*) FROM public.${table};" | tr -d ' ')
  __logi "Copying ${row_count} rows from ${table}"
 
- if ! psql -d "${INGESTION_DB}" ${INGESTION_USER:+-U "${INGESTION_USER}"} \
+ if ! eval "${INGESTION_PSQL_CMD}" \
   -c "\COPY public.${table} TO STDOUT" 2> /dev/null \
-  | psql -d "${ANALYTICS_DB}" ${ANALYTICS_USER:+-U "${ANALYTICS_USER}"} \
+  | eval "${ANALYTICS_PSQL_CMD}" \
    -c "\COPY public.${table} FROM STDIN" > /dev/null 2>&1; then
   __loge "ERROR: Failed to copy data for ${table}"
   exit 1
  fi
 
  # Verify row count
- target_count=$(psql -d "${ANALYTICS_DB}" ${ANALYTICS_USER:+-U "${ANALYTICS_USER}"} -t -c "SELECT COUNT(*) FROM public.${table};" | tr -d ' ')
+ target_count=$(eval "${ANALYTICS_PSQL_CMD}" -t -c "SELECT COUNT(*) FROM public.${table};" | tr -d ' ')
  if [[ "${row_count}" != "${target_count}" ]]; then
   __loge "ERROR: Row count mismatch for ${table}: source=${row_count}, target=${target_count}"
   exit 1
@@ -151,7 +204,7 @@ for table in "${TABLES[@]}"; do
 
  # Create indexes (copy from source)
  __logi "Creating indexes for ${table}"
- psql -d "${INGESTION_DB}" ${INGESTION_USER:+-U "${INGESTION_USER}"} -t -A -c "
+ eval "${INGESTION_PSQL_CMD}" -t -A -c "
    SELECT 'CREATE INDEX IF NOT EXISTS ' || indexname || ' ON public.${table} ' ||
           regexp_replace(indexdef, '^CREATE (UNIQUE )?INDEX .* ON public\.${table} ', '') || ';'
    FROM pg_indexes
@@ -159,7 +212,7 @@ for table in "${TABLES[@]}"; do
    AND indexname NOT LIKE '%_pkey';
  " 2> /dev/null | while read -r index_sql; do
   if [[ -n "${index_sql}" ]]; then
-   psql -d "${ANALYTICS_DB}" ${ANALYTICS_USER:+-U "${ANALYTICS_USER}"} -c "${index_sql}" > /dev/null 2>&1 || {
+   eval "${ANALYTICS_PSQL_CMD}" -c "${index_sql}" > /dev/null 2>&1 || {
     # shellcheck disable=SC2310  # Function invocation in || condition is intentional for error handling
     __logw "Warning: Failed to create index for ${table}, continuing..."
    }
@@ -168,7 +221,7 @@ for table in "${TABLES[@]}"; do
 
  # Analyze table for better query performance
  __logi "Analyzing table ${table}"
- psql -d "${ANALYTICS_DB}" ${ANALYTICS_USER:+-U "${ANALYTICS_USER}"} -c "ANALYZE public.${table};" > /dev/null 2>&1 || true
+ eval "${ANALYTICS_PSQL_CMD}" -c "ANALYZE public.${table};" > /dev/null 2>&1 || true
 
  __logi "Table ${table} copied successfully"
 done
