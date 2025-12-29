@@ -28,13 +28,15 @@ HOME=/home/notes
 # This processes only new notes/comments since last run
 # Uses LOG_LEVEL=INFO for production (change to ERROR for less verbose, DEBUG for debugging)
 # Uses CLEAN=false to keep temporary files for debugging (change to CLEAN=true to save disk space)
-*/15 * * * * export CLEAN=false ; export LOG_LEVEL=INFO ; export DBNAME=notes ; export DB_USER=notes ; /home/notes/OSM-Notes-Analytics/bin/dwh/ETL.sh
+# DBNAME_INGESTION: Database for ingestion system (where notes/comments are stored)
+# DBNAME_DWH: Database for analytics/DWH system (where star schema is created)
+*/15 * * * * export CLEAN=false ; export LOG_LEVEL=INFO ; export DBNAME_INGESTION=notes ; export DBNAME_DWH=notes_dwh ; export DB_USER=notes ; /home/notes/OSM-Notes-Analytics/bin/dwh/ETL.sh
 
 # Alternative: Run ETL every hour (if 15 min is too frequent)
-# 0 * * * * export CLEAN=true ; export LOG_LEVEL=ERROR ; export DBNAME=notes ; export DB_USER=notes ; /home/notes/OSM-Notes-Analytics/bin/dwh/ETL.sh
+# 0 * * * * export CLEAN=true ; export LOG_LEVEL=ERROR ; export DBNAME_INGESTION=notes ; export DBNAME_DWH=notes_dwh ; export DB_USER=notes ; /home/notes/OSM-Notes-Analytics/bin/dwh/ETL.sh
 
 # Alternative: Production mode (less verbose, cleans temporary files)
-# */15 * * * * export CLEAN=true ; export LOG_LEVEL=ERROR ; export DBNAME=notes ; export DB_USER=notes ; /home/notes/OSM-Notes-Analytics/bin/dwh/ETL.sh
+# */15 * * * * export CLEAN=true ; export LOG_LEVEL=ERROR ; export DBNAME_INGESTION=notes ; export DBNAME_DWH=notes_dwh ; export DB_USER=notes ; /home/notes/OSM-Notes-Analytics/bin/dwh/ETL.sh
 
 # ==========================================
 # EXPORT TASKS
