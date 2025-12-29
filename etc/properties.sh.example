@@ -9,28 +9,60 @@
 # Version: 2025-08-18
 
 # Database configuration.
-# shellcheck disable=SC2034
-if [[ -z "${DBNAME:-}" ]]; then
- declare -r DBNAME="${DBNAME:-notes_dwh}"
-fi
-# Database name variables for DWH operations (recommended)
-# DBNAME_DWH and DBNAME_INGESTION are recommended for DWH operations
-# DBNAME is maintained for backward compatibility when both databases are the same
-# shellcheck disable=SC2034
-if [[ -z "${DBNAME_DWH:-}" ]]; then
- DBNAME_DWH="${DBNAME_DWH:-notes_dwh}"
-fi
+#
+# IMPORTANT: This project uses separate databases for Ingestion and Analytics
+# - DBNAME_INGESTION: Source database (Ingestion project - where notes are stored)
+# - DBNAME_DWH: Analytics database (this project - where star schema DWH is stored)
+#
+# Separate database configuration for Ingestion and Analytics
 # shellcheck disable=SC2034
 if [[ -z "${DBNAME_INGESTION:-}" ]]; then
- DBNAME_INGESTION="${DBNAME_INGESTION:-notes_dwh}"
+ declare -r DBNAME_INGESTION="${DBNAME_INGESTION:-notes}"
+fi
+# shellcheck disable=SC2034
+if [[ -z "${DBNAME_DWH:-}" ]]; then
+ declare -r DBNAME_DWH="${DBNAME_DWH:-notes_dwh}"
 fi
 # shellcheck disable=SC2034
 if [[ -z "${DB_USER:-}" ]]; then
  declare -r DB_USER="${DB_USER:-notes}"
 fi
 
+# Database users for separate databases (optional, defaults to DB_USER)
+# shellcheck disable=SC2034
+if [[ -z "${DB_USER_INGESTION:-}" ]]; then
+ declare -r DB_USER_INGESTION="${DB_USER_INGESTION:-${DB_USER}}"
+fi
+# shellcheck disable=SC2034
+if [[ -z "${DB_USER_DWH:-}" ]]; then
+ declare -r DB_USER_DWH="${DB_USER_DWH:-${DB_USER}}"
+fi
+
+# Foreign Data Wrapper configuration (for accessing Ingestion DB from Analytics DB)
+# Only needed when DBNAME_INGESTION != DBNAME_DWH
+# shellcheck disable=SC2034
+if [[ -z "${FDW_INGESTION_HOST:-}" ]]; then
+ declare -r FDW_INGESTION_HOST="${FDW_INGESTION_HOST:-localhost}"
+fi
+# shellcheck disable=SC2034
+if [[ -z "${FDW_INGESTION_DBNAME:-}" ]]; then
+ declare -r FDW_INGESTION_DBNAME="${FDW_INGESTION_DBNAME:-${DBNAME_INGESTION}}"
+fi
+# shellcheck disable=SC2034
+if [[ -z "${FDW_INGESTION_PORT:-}" ]]; then
+ declare -r FDW_INGESTION_PORT="${FDW_INGESTION_PORT:-5432}"
+fi
+# shellcheck disable=SC2034
+if [[ -z "${FDW_INGESTION_USER:-}" ]]; then
+ declare -r FDW_INGESTION_USER="${FDW_INGESTION_USER:-analytics_readonly}"
+fi
+# shellcheck disable=SC2034
+if [[ -z "${FDW_INGESTION_PASSWORD:-}" ]]; then
+ declare -r FDW_INGESTION_PASSWORD="${FDW_INGESTION_PASSWORD:-}"
+fi
+
 # Email configuration for reports.
-declare EMAILS="${EMAILS:-notes@osm.lat}"
+declare EMAILS="${EMAILS:-username@domain.com}"
 
 # OpenStreetMap API configuration.
 # shellcheck disable=SC2034
@@ -127,3 +159,27 @@ if [[ -z "${JSON_OUTPUT_DIR:-}" ]]; then
  declare -r JSON_OUTPUT_DIR="${JSON_OUTPUT_DIR:-./output/json}"
 fi
 
+# PostgreSQL timeouts for ETL queries
+# These timeouts help prevent long-running queries from blocking other operations
+# statement_timeout: Maximum time a single statement can run (default: 30 minutes)
+# lock_timeout: Maximum time to wait for a lock (default: 10 seconds)
+# idle_in_transaction_session_timeout: Maximum time a transaction can be idle (default: 10 minutes)
+# shellcheck disable=SC2034
+if [[ -z "${PSQL_STATEMENT_TIMEOUT:-}" ]]; then
+ declare -r PSQL_STATEMENT_TIMEOUT="${PSQL_STATEMENT_TIMEOUT:-30min}"
+fi
+# shellcheck disable=SC2034
+if [[ -z "${PSQL_LOCK_TIMEOUT:-}" ]]; then
+ declare -r PSQL_LOCK_TIMEOUT="${PSQL_LOCK_TIMEOUT:-10s}"
+fi
+# shellcheck disable=SC2034
+if [[ -z "${PSQL_IDLE_IN_TRANSACTION_TIMEOUT:-}" ]]; then
+ declare -r PSQL_IDLE_IN_TRANSACTION_TIMEOUT="${PSQL_IDLE_IN_TRANSACTION_TIMEOUT:-10min}"
+fi
+
+# Use READ ONLY transactions for queries that only read from ingestion tables
+# This helps reduce lock contention and improves concurrency
+# shellcheck disable=SC2034
+if [[ -z "${PSQL_READONLY_FOR_INGESTION:-}" ]]; then
+ declare -r PSQL_READONLY_FOR_INGESTION="${PSQL_READONLY_FOR_INGESTION:-true}"
+fi

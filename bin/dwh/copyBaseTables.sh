@@ -58,8 +58,8 @@ if [[ -f "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh.local" ]]; then
 fi
 
 # Database configuration
-# Default to same DB if not specified (backward compatibility)
-INGESTION_DB="${DBNAME_INGESTION:-notes_dwh}"
+# Use explicit database names - no fallback to avoid confusion
+INGESTION_DB="${DBNAME_INGESTION:-notes}"
 ANALYTICS_DB="${DBNAME_DWH:-notes_dwh}"
 # Only set user if explicitly provided (allows peer authentication when not set)
 # If variables were unset before loading properties, restore empty state for peer auth

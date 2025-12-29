@@ -52,10 +52,10 @@ if [[ -f "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh" ]]; then
 else
  # If properties.sh doesn't exist, set minimal defaults for testing
  if [[ -z "${DBNAME_DWH:-}" ]]; then
-  export DBNAME_DWH="${DBNAME_DWH:-${DBNAME:-dwh}}"
+  export DBNAME_DWH="${DBNAME_DWH:-notes_dwh}"
  fi
  if [[ -z "${DBNAME_INGESTION:-}" ]]; then
-  export DBNAME_INGESTION="${DBNAME_INGESTION:-${DBNAME_INGESTION:-${DBNAME:-dwh}}}"
+  export DBNAME_INGESTION="${DBNAME_INGESTION:-notes}"
  fi
 fi
 
@@ -647,7 +647,7 @@ function __checkIngestionBaseTables {
  __log_start
  __logi "=== CHECKING INGESTION BASE TABLES AND COLUMNS ==="
  set +e
- __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
+ __psql_with_appname -d "${DBNAME_INGESTION}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_10_CHECK_BASE_TABLES}" 2>&1
  RET=${?}
  set -e

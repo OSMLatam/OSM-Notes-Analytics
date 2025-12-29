@@ -144,8 +144,8 @@ function __show_help {
  echo "  ${0} --dry-run                 # Show what would be done (safe)"
  echo
  echo "Database configuration from etc/properties.sh:"
- echo "  Analytics DB: ${DBNAME_DWH:-${DBNAME:-not set}}"
- if [[ -n "${DBNAME_INGESTION:-}" ]] && [[ "${DBNAME_INGESTION}" != "${DBNAME_DWH:-${DBNAME:-}}" ]]; then
+ echo "  Analytics DB: ${DBNAME_DWH:-not set}"
+ if [[ -n "${DBNAME_INGESTION:-}" ]] && [[ "${DBNAME_INGESTION}" != "${DBNAME_DWH:-}" ]]; then
   echo "  Ingestion DB: ${DBNAME_INGESTION}"
  fi
  echo "  User: ${DB_USER:-not set}"
@@ -403,7 +403,7 @@ function main() {
 
  # Parse mode from CLEANUP_MODE (first argument)
  # Use DBNAME_DWH if set, otherwise fallback to DBNAME
- local TARGET_DB="${DBNAME_DWH:-${DBNAME:-notes_dwh}}"
+ local TARGET_DB="${DBNAME_DWH:-notes_dwh}"
  local MODE="all"
 
  if [[ "${CLEANUP_MODE}" == "--dry-run" ]]; then
