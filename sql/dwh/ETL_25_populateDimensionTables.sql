@@ -68,15 +68,16 @@ SELECT /* Notes-ETL */ clock_timestamp() AS Processing,
 
 -- Insert an id for notes without a country. It does not insert again if it
 -- already exist on the table (-1 NOT IN).
+-- Note: This does not depend on the countries table, it's just a check to ensure
+-- the row doesn't already exist in dimension_countries.
 INSERT INTO dwh.dimension_countries
  (country_id, country_name, country_name_es, country_name_en)
  SELECT /* Notes-ETL */ -1, 'Unkown - International waters',
   'Desconocido - Aguas internacionales', 'Unkown - International waters'
- FROM countries
  WHERE -1 NOT IN (
   SELECT /* Notes-ETL */ country_id
   FROM dwh.dimension_countries
- ) LIMIT 1
+ )
 ;
 
 SELECT /* Notes-ETL */ clock_timestamp() AS Processing,
