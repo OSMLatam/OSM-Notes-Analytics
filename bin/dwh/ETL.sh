@@ -791,19 +791,10 @@ function __createBaseTables {
  fi
  __logi "POPULATE DIMENSIONS command completed"
 
- __logi "Initial user dimension population."
- __logi "Executing: ${POSTGRES_26_UPDATE_DIMENSIONS}"
- set +e
- __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
-  -f "${POSTGRES_26_UPDATE_DIMENSIONS}" 2>&1
- local update_dimensions_exit_code=$?
- set -e
- if [[ ${update_dimensions_exit_code} -ne 0 ]]; then
-  __loge "ERROR: Failed to update dimensions (exit code: ${update_dimensions_exit_code})"
-  __log_finish
-  return 1
- fi
- __logi "UPDATE DIMENSIONS command completed"
+ # Note: ETL_26_updateDimensionTables.sql is now executed in __initialFactsParallel
+ # after base tables are copied (Step 1a), not here during __createBaseTables
+ # because it needs access to 'users' and 'countries' tables which don't exist yet
+ # during initial DWH creation.
 
  __logi "Creating base staging objects."
  __logi "Executing: ${POSTGRES_31_CREATE_BASE_STAGING_OBJECTS}"
@@ -1034,6 +1025,21 @@ function __initialFactsParallel {
    local step1_duration=$((STEP1_END_TIME - STEP1_START_TIME))
    __logi "Base tables copied successfully"
    __logi "⏱️  TIME: Step 1 (Copy base tables) took ${step1_duration} seconds"
+
+   # Step 1a: Update dimensions now that base tables are available
+   # This populates dimension_users and dimension_countries from the copied base tables
+   __logi "Step 1a: Updating dimensions with data from copied base tables..."
+   set +e
+   __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
+    -f "${POSTGRES_26_UPDATE_DIMENSIONS}" 2>&1
+   local update_dimensions_exit_code=$?
+   set -e
+   if [[ ${update_dimensions_exit_code} -ne 0 ]]; then
+    __loge "ERROR: Failed to update dimensions (exit code: ${update_dimensions_exit_code})"
+    __log_finish
+    return 1
+   fi
+   __logi "Dimensions updated successfully"
   else
    __loge "ERROR: Failed to copy base tables. Initial load cannot proceed."
    exit 1
