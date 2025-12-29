@@ -74,25 +74,25 @@ else
  ANALYTICS_USER="${DB_USER_DWH:-}"
 fi
 
-# Helper function to build psql command with correct connection parameters
-build_psql_cmd() {
+# Helper function to build psql command array
+build_psql_array() {
  local dbname="$1"
  local dbuser="${2:-}"
+ local -n psql_array="$3" # nameref to array
 
+ psql_array=()
  # Use CI/CD environment variables if available
  if [[ -n "${TEST_DBHOST:-}" ]] || [[ -n "${PGHOST:-}" ]]; then
-  local host="${TEST_DBHOST:-${PGHOST:-localhost}}"
-  local port="${TEST_DBPORT:-${PGPORT:-5432}}"
-  local user="${dbuser:-${TEST_DBUSER:-${PGUSER:-postgres}}}"
-  local password="${TEST_DBPASSWORD:-${PGPASSWORD:-postgres}}"
-  echo "PGPASSWORD=\"${password}\" psql -h ${host} -p ${port} -U ${user} -d ${dbname}"
+  psql_array+=(-h "${TEST_DBHOST:-${PGHOST:-localhost}}")
+  psql_array+=(-p "${TEST_DBPORT:-${PGPORT:-5432}}")
+  psql_array+=(-U "${dbuser:-${TEST_DBUSER:-${PGUSER:-postgres}}}")
+  psql_array+=(-d "${dbname}")
  else
   # Local environment - use peer authentication
   if [[ -n "${dbuser}" ]]; then
-   echo "psql -U ${dbuser} -d ${dbname}"
-  else
-   echo "psql -d ${dbname}"
+   psql_array+=(-U "${dbuser}")
   fi
+  psql_array+=(-d "${dbname}")
  fi
 }
 
@@ -112,39 +112,50 @@ if [[ "${INGESTION_DB}" == "${ANALYTICS_DB}" ]]; then
  exit 0
 fi
 
-# Build psql commands for source and target databases
-INGESTION_PSQL_CMD=$(build_psql_cmd "${INGESTION_DB}" "${INGESTION_USER}")
-ANALYTICS_PSQL_CMD=$(build_psql_cmd "${ANALYTICS_DB}" "${ANALYTICS_USER}")
+# Build psql command arrays for source and target databases
+declare -a INGESTION_PSQL_ARGS
+declare -a ANALYTICS_PSQL_ARGS
+build_psql_array "${INGESTION_DB}" "${INGESTION_USER}" INGESTION_PSQL_ARGS
+build_psql_array "${ANALYTICS_DB}" "${ANALYTICS_USER}" ANALYTICS_PSQL_ARGS
+
+# Set passwords for CI/CD environments
+if [[ -n "${TEST_DBHOST:-}" ]] || [[ -n "${PGHOST:-}" ]]; then
+ INGESTION_PGPASSWORD="${TEST_DBPASSWORD:-${PGPASSWORD:-postgres}}"
+ ANALYTICS_PGPASSWORD="${TEST_DBPASSWORD:-${PGPASSWORD:-postgres}}"
+else
+ INGESTION_PGPASSWORD=""
+ ANALYTICS_PGPASSWORD=""
+fi
 
 # Validate source database connection
-if ! eval "${INGESTION_PSQL_CMD}" -c "SELECT 1;" > /dev/null 2>&1; then
+if ! PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -c "SELECT 1;" > /dev/null 2>&1; then
  __loge "ERROR: Cannot connect to source database ${INGESTION_DB}"
  exit 1
 fi
 
 # Validate target database connection
-if ! eval "${ANALYTICS_PSQL_CMD}" -c "SELECT 1;" > /dev/null 2>&1; then
+if ! PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -c "SELECT 1;" > /dev/null 2>&1; then
  __loge "ERROR: Cannot connect to target database ${ANALYTICS_DB}"
  exit 1
 fi
 
 # Create schema if not exists
 __logi "Ensuring public schema exists in target database"
-eval "${ANALYTICS_PSQL_CMD}" -c "CREATE SCHEMA IF NOT EXISTS public;" > /dev/null 2>&1 || true
+PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -c "CREATE SCHEMA IF NOT EXISTS public;" > /dev/null 2>&1 || true
 
 # Copy each table
 for table in "${TABLES[@]}"; do
  __logi "Copying table: ${table}"
 
  # Verify source database connection before checking table
- if ! eval "${INGESTION_PSQL_CMD}" -c "SELECT 1;" > /dev/null 2>&1; then
+ if ! PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -c "SELECT 1;" > /dev/null 2>&1; then
   __loge "ERROR: Cannot connect to source database ${INGESTION_DB} while copying table ${table}"
   __loge "Source database may have been dropped or is unavailable"
   exit 1
  fi
 
  # Check if table exists in source
- if ! eval "${INGESTION_PSQL_CMD}" -t -c \
+ if ! PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -c \
   "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '${table}';" \
   | grep -q 1; then
   __logw "Table ${table} does not exist in source database, skipping"
@@ -152,50 +163,48 @@ for table in "${TABLES[@]}"; do
  fi
 
  # Check if table already exists in target (should not happen, but handle gracefully)
- if eval "${ANALYTICS_PSQL_CMD}" -t -c \
+ if PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -t -c \
   "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '${table}';" \
   | grep -q 1; then
   __logw "Table ${table} already exists in target database, dropping first"
-  eval "${ANALYTICS_PSQL_CMD}" -c "DROP TABLE IF EXISTS public.${table} CASCADE;" > /dev/null 2>&1 || true
+  PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -c "DROP TABLE IF EXISTS public.${table} CASCADE;" > /dev/null 2>&1 || true
  fi
 
  # Get table structure and create in target
  __logi "Creating table structure for ${table}"
- # Build pg_dump command
+ # Build pg_dump command array
+ declare -a PGDUMP_ARGS
  if [[ -n "${TEST_DBHOST:-}" ]] || [[ -n "${PGHOST:-}" ]]; then
-  PGDUMP_HOST="${TEST_DBHOST:-${PGHOST:-localhost}}"
-  PGDUMP_PORT="${TEST_DBPORT:-${PGPORT:-5432}}"
-  PGDUMP_USER="${INGESTION_USER:-${TEST_DBUSER:-${PGUSER:-postgres}}}"
-  PGDUMP_PASSWORD="${TEST_DBPASSWORD:-${PGPASSWORD:-postgres}}"
-  PGDUMP_CMD="PGPASSWORD=\"${PGDUMP_PASSWORD}\" pg_dump -h ${PGDUMP_HOST} -p ${PGDUMP_PORT} -U ${PGDUMP_USER} -d ${INGESTION_DB}"
+  PGDUMP_ARGS=(-h "${TEST_DBHOST:-${PGHOST:-localhost}}" -p "${TEST_DBPORT:-${PGPORT:-5432}}" -U "${INGESTION_USER:-${TEST_DBUSER:-${PGUSER:-postgres}}}" -d "${INGESTION_DB}")
  else
-  PGDUMP_CMD="pg_dump -d ${INGESTION_DB} ${INGESTION_USER:+-U \"${INGESTION_USER}\"}"
+  PGDUMP_ARGS=(-d "${INGESTION_DB}")
+  [[ -n "${INGESTION_USER}" ]] && PGDUMP_ARGS+=(-U "${INGESTION_USER}")
  fi
 
- eval "${PGDUMP_CMD}" \
+ PGPASSWORD="${INGESTION_PGPASSWORD}" pg_dump "${PGDUMP_ARGS[@]}" \
   -t "public.${table}" \
   --schema-only \
   --no-owner --no-acl \
-  | eval "${ANALYTICS_PSQL_CMD}" -q > /dev/null 2>&1 || {
+  | PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -q > /dev/null 2>&1 || {
   __loge "ERROR: Failed to create table structure for ${table}"
   exit 1
  }
 
  # Copy data using COPY (fastest method)
  __logi "Copying data for ${table}"
- row_count=$(eval "${INGESTION_PSQL_CMD}" -t -c "SELECT COUNT(*) FROM public.${table};" | tr -d ' ')
+ row_count=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -c "SELECT COUNT(*) FROM public.${table};" | tr -d ' ')
  __logi "Copying ${row_count} rows from ${table}"
 
- if ! eval "${INGESTION_PSQL_CMD}" \
+ if ! PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" \
   -c "\COPY public.${table} TO STDOUT" 2> /dev/null \
-  | eval "${ANALYTICS_PSQL_CMD}" \
+  | PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" \
    -c "\COPY public.${table} FROM STDIN" > /dev/null 2>&1; then
   __loge "ERROR: Failed to copy data for ${table}"
   exit 1
  fi
 
  # Verify row count
- target_count=$(eval "${ANALYTICS_PSQL_CMD}" -t -c "SELECT COUNT(*) FROM public.${table};" | tr -d ' ')
+ target_count=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -t -c "SELECT COUNT(*) FROM public.${table};" | tr -d ' ')
  if [[ "${row_count}" != "${target_count}" ]]; then
   __loge "ERROR: Row count mismatch for ${table}: source=${row_count}, target=${target_count}"
   exit 1
@@ -204,15 +213,14 @@ for table in "${TABLES[@]}"; do
 
  # Create indexes (copy from source)
  __logi "Creating indexes for ${table}"
- eval "${INGESTION_PSQL_CMD}" -t -A -c "
-   SELECT 'CREATE INDEX IF NOT EXISTS ' || indexname || ' ON public.${table} ' ||
+ PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -A -c \
+  "SELECT 'CREATE INDEX IF NOT EXISTS ' || indexname || ' ON public.${table} ' ||
           regexp_replace(indexdef, '^CREATE (UNIQUE )?INDEX .* ON public\.${table} ', '') || ';'
    FROM pg_indexes
    WHERE tablename = '${table}' AND schemaname = 'public'
-   AND indexname NOT LIKE '%_pkey';
- " 2> /dev/null | while read -r index_sql; do
+   AND indexname NOT LIKE '%_pkey';" 2> /dev/null | while read -r index_sql; do
   if [[ -n "${index_sql}" ]]; then
-   eval "${ANALYTICS_PSQL_CMD}" -c "${index_sql}" > /dev/null 2>&1 || {
+   PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -c "${index_sql}" > /dev/null 2>&1 || {
     # shellcheck disable=SC2310  # Function invocation in || condition is intentional for error handling
     __logw "Warning: Failed to create index for ${table}, continuing..."
    }
@@ -221,7 +229,7 @@ for table in "${TABLES[@]}"; do
 
  # Analyze table for better query performance
  __logi "Analyzing table ${table}"
- eval "${ANALYTICS_PSQL_CMD}" -c "ANALYZE public.${table};" > /dev/null 2>&1 || true
+ PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -c "ANALYZE public.${table};" > /dev/null 2>&1 || true
 
  __logi "Table ${table} copied successfully"
 done
