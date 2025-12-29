@@ -173,7 +173,11 @@ if [[ -f "${SCRIPT_DIR}/run_mock_etl.sh" ]]; then
   log_success "Database connection verified"
  fi
 
- if bash "${SCRIPT_DIR}/run_mock_etl.sh"; then
+ log_info "Running mock ETL script..."
+ # Ensure all environment variables are exported for the child script
+ export TEST_DBNAME TEST_DBHOST TEST_DBPORT TEST_DBUSER TEST_DBPASSWORD
+ export PGHOST PGPORT PGUSER PGPASSWORD PGDATABASE
+ if bash "${SCRIPT_DIR}/run_mock_etl.sh" 2>&1; then
   log_success "Test database populated"
  else
   EXIT_CODE=$?

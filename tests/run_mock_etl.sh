@@ -37,27 +37,46 @@ fi
 # Build psql command based on environment (CI/CD vs local)
 if [[ -n "${TEST_DBHOST:-}" ]]; then
  # CI/CD environment - use explicit connection parameters
- if ! PGPASSWORD="${TEST_DBPASSWORD:-postgres}" psql -h "${TEST_DBHOST}" -p "${TEST_DBPORT:-5432}" -U "${TEST_DBUSER:-postgres}" -d "${DBNAME}" -c "SELECT 1;" > /dev/null 2>&1; then
+ echo "[MOCK-ETL] Verifying database connection (CI/CD mode)..."
+ CONNECTION_OUTPUT=$(PGPASSWORD="${TEST_DBPASSWORD:-postgres}" psql -h "${TEST_DBHOST}" -p "${TEST_DBPORT:-5432}" -U "${TEST_DBUSER:-postgres}" -d "${DBNAME}" -c "SELECT 1;" 2>&1)
+ CONNECTION_EXIT_CODE=$?
+ if [[ ${CONNECTION_EXIT_CODE} -ne 0 ]]; then
   echo "[MOCK-ETL] ERROR: Cannot connect to database ${DBNAME}" >&2
-  echo "[MOCK-ETL] Please verify database connection settings:" >&2
-  echo "[MOCK-ETL]   TEST_DBNAME=${TEST_DBNAME:-}" >&2
-  echo "[MOCK-ETL]   TEST_DBHOST=${TEST_DBHOST:-}" >&2
-  echo "[MOCK-ETL]   TEST_DBPORT=${TEST_DBPORT:-}" >&2
-  echo "[MOCK-ETL]   TEST_DBUSER=${TEST_DBUSER:-}" >&2
+  echo "[MOCK-ETL] Connection attempt failed with exit code: ${CONNECTION_EXIT_CODE}" >&2
+  echo "[MOCK-ETL] Connection details:" >&2
+  echo "[MOCK-ETL]   Host: ${TEST_DBHOST}" >&2
+  echo "[MOCK-ETL]   Port: ${TEST_DBPORT:-5432}" >&2
+  echo "[MOCK-ETL]   User: ${TEST_DBUSER:-postgres}" >&2
+  echo "[MOCK-ETL]   Database: ${DBNAME}" >&2
+  echo "[MOCK-ETL]   Password: ${TEST_DBPASSWORD:+***set***}" >&2
+  echo "[MOCK-ETL] Error output:" >&2
+  if [[ -n "${CONNECTION_OUTPUT}" ]]; then
+   echo "${CONNECTION_OUTPUT}" | sed 's/^/[MOCK-ETL]   /' | while IFS= read -r line || [[ -n "${line}" ]]; do
+    echo "${line}" >&2
+   done
+  fi
   exit 1
  fi
+ echo "[MOCK-ETL] Database connection verified"
  psql_cmd=(psql -h "${TEST_DBHOST}" -p "${TEST_DBPORT:-5432}" -U "${TEST_DBUSER:-postgres}" -d "${DBNAME}" -v ON_ERROR_STOP=1)
 else
  # Local environment - use peer authentication
- if ! psql -d "${DBNAME}" -c "SELECT 1;" > /dev/null 2>&1; then
+ echo "[MOCK-ETL] Verifying database connection (local mode)..."
+ CONNECTION_OUTPUT=$(psql -d "${DBNAME}" -c "SELECT 1;" 2>&1)
+ CONNECTION_EXIT_CODE=$?
+ if [[ ${CONNECTION_EXIT_CODE} -ne 0 ]]; then
   echo "[MOCK-ETL] ERROR: Cannot connect to database ${DBNAME}" >&2
-  echo "[MOCK-ETL] Please verify database connection settings:" >&2
-  echo "[MOCK-ETL]   TEST_DBNAME=${TEST_DBNAME:-}" >&2
-  echo "[MOCK-ETL]   TEST_DBHOST=${TEST_DBHOST:-}" >&2
-  echo "[MOCK-ETL]   TEST_DBPORT=${TEST_DBPORT:-}" >&2
-  echo "[MOCK-ETL]   TEST_DBUSER=${TEST_DBUSER:-}" >&2
+  echo "[MOCK-ETL] Connection attempt failed with exit code: ${CONNECTION_EXIT_CODE}" >&2
+  echo "[MOCK-ETL] Database: ${DBNAME}" >&2
+  echo "[MOCK-ETL] Error output:" >&2
+  if [[ -n "${CONNECTION_OUTPUT}" ]]; then
+   echo "${CONNECTION_OUTPUT}" | sed 's/^/[MOCK-ETL]   /' | while IFS= read -r line || [[ -n "${line}" ]]; do
+    echo "${line}" >&2
+   done
+  fi
   exit 1
  fi
+ echo "[MOCK-ETL] Database connection verified"
  psql_cmd=(psql -d "${DBNAME}" -v ON_ERROR_STOP=1)
 fi
 
