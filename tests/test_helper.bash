@@ -4,31 +4,53 @@
 # Author: Andres Gomez (AngocA)
 # Version: 2025-10-14
 
+# Helper function to build psql command with correct connection parameters
+# Usage: psql_cmd=$(build_psql_cmd "${dbname}")
+# Then use: ${psql_cmd} -c "SELECT 1;"
+build_psql_cmd() {
+ local dbname="${1:-${TEST_DBNAME:-${DBNAME:-}}}"
+
+ if [[ -n "${TEST_DBHOST:-}" ]] || [[ -n "${PGHOST:-}" ]]; then
+  # CI/CD or Docker environment - use TCP/IP connection
+  local host="${TEST_DBHOST:-${PGHOST:-localhost}}"
+  local port="${TEST_DBPORT:-${PGPORT:-5432}}"
+  local user="${TEST_DBUSER:-${PGUSER:-postgres}}"
+  echo "psql -h ${host} -p ${port} -U ${user} -d ${dbname}"
+ else
+  # Local environment - use peer authentication
+  echo "psql -d ${dbname}"
+ fi
+}
+
 # Function to setup test data
 setup_test_database() {
  local dbname="${DBNAME:-dwh}"
  echo "Setting up test database: ${dbname}" >&2
 
+ # Build psql command with correct connection parameters
+ local psql_cmd
+ psql_cmd=$(build_psql_cmd "${dbname}")
+
  # Load base tables data first (required for ETL to work)
  if [[ -f "${TEST_BASE_DIR}/tests/sql/setup_base_tables_data.sql" ]]; then
   echo "Loading base tables test data from setup_base_tables_data.sql" >&2
-  psql -d "${dbname}" -f "${TEST_BASE_DIR}/tests/sql/setup_base_tables_data.sql" > /dev/null 2>&1 || true
+  PGPASSWORD="${TEST_DBPASSWORD:-${PGPASSWORD:-postgres}}" ${psql_cmd} -f "${TEST_BASE_DIR}/tests/sql/setup_base_tables_data.sql" > /dev/null 2>&1 || true
  fi
 
  # Run setup SQL if it exists (for star schema data)
  if [[ -f "${TEST_BASE_DIR}/tests/sql/setup_test_data.sql" ]]; then
   echo "Loading test data from setup_test_data.sql" >&2
-  psql -d "${dbname}" -f "${TEST_BASE_DIR}/tests/sql/setup_test_data.sql" > /dev/null 2>&1 || true
+  PGPASSWORD="${TEST_DBPASSWORD:-${PGPASSWORD:-postgres}}" ${psql_cmd} -f "${TEST_BASE_DIR}/tests/sql/setup_test_data.sql" > /dev/null 2>&1 || true
  fi
 
  # Ensure temporal resolution JSON columns exist for datamarts (idempotent)
- psql -d "${dbname}" -tAc "SELECT 1 FROM information_schema.tables WHERE table_schema='dwh' AND table_name='datamartcountries'" > /dev/null 2>&1 \
-  && psql -d "${dbname}" -c "ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS resolution_by_year JSON; ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS resolution_by_month JSON;" > /dev/null 2>&1 || true
- psql -d "${dbname}" -tAc "SELECT 1 FROM information_schema.tables WHERE table_schema='dwh' AND table_name='datamartusers'" > /dev/null 2>&1 \
-  && psql -d "${dbname}" -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS resolution_by_year JSON; ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS resolution_by_month JSON;" > /dev/null 2>&1 || true
+ PGPASSWORD="${TEST_DBPASSWORD:-${PGPASSWORD:-postgres}}" ${psql_cmd} -tAc "SELECT 1 FROM information_schema.tables WHERE table_schema='dwh' AND table_name='datamartcountries'" > /dev/null 2>&1 \
+  && PGPASSWORD="${TEST_DBPASSWORD:-${PGPASSWORD:-postgres}}" ${psql_cmd} -c "ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS resolution_by_year JSON; ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS resolution_by_month JSON;" > /dev/null 2>&1 || true
+ PGPASSWORD="${TEST_DBPASSWORD:-${PGPASSWORD:-postgres}}" ${psql_cmd} -tAc "SELECT 1 FROM information_schema.tables WHERE table_schema='dwh' AND table_name='datamartusers'" > /dev/null 2>&1 \
+  && PGPASSWORD="${TEST_DBPASSWORD:-${PGPASSWORD:-postgres}}" ${psql_cmd} -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS resolution_by_year JSON; ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS resolution_by_month JSON;" > /dev/null 2>&1 || true
 
  # Create minimal datamart tables if missing (for unit tests that don't run full DDL)
- psql -d "${dbname}" -c "
+ PGPASSWORD="${TEST_DBPASSWORD:-${PGPASSWORD:-postgres}}" ${psql_cmd} -c "
   DO $$
   BEGIN
     IF NOT EXISTS (
@@ -247,8 +269,11 @@ setup() {
 
  # Ensure DWH schema and minimal datamarts/columns exist for tests that don't run full DDL
  if [[ -n "${DBNAME:-}" ]]; then
-  psql -d "${DBNAME}" -c "CREATE SCHEMA IF NOT EXISTS dwh;" > /dev/null 2>&1 || true
-  psql -d "${DBNAME}" -c "
+  # Build psql command with correct connection parameters
+  local psql_cmd
+  psql_cmd=$(build_psql_cmd "${DBNAME}")
+  PGPASSWORD="${TEST_DBPASSWORD:-${PGPASSWORD:-postgres}}" ${psql_cmd} -c "CREATE SCHEMA IF NOT EXISTS dwh;" > /dev/null 2>&1 || true
+  PGPASSWORD="${TEST_DBPASSWORD:-${PGPASSWORD:-postgres}}" ${psql_cmd} -c "
   DO $$
   BEGIN
     IF NOT EXISTS (
@@ -288,8 +313,8 @@ setup() {
       )';
     END IF;
   END$$;" > /dev/null 2>&1 || true
-  psql -d "${DBNAME}" -c "ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS resolution_by_year JSON; ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS resolution_by_month JSON;" > /dev/null 2>&1 || true
-  psql -d "${DBNAME}" -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS resolution_by_year JSON; ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS resolution_by_month JSON;" > /dev/null 2>&1 || true
+  PGPASSWORD="${TEST_DBPASSWORD:-${PGPASSWORD:-postgres}}" ${psql_cmd} -c "ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS resolution_by_year JSON; ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS resolution_by_month JSON;" > /dev/null 2>&1 || true
+  PGPASSWORD="${TEST_DBPASSWORD:-${PGPASSWORD:-postgres}}" ${psql_cmd} -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS resolution_by_year JSON; ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS resolution_by_month JSON;" > /dev/null 2>&1 || true
  fi
 
  # Mock external commands if needed
@@ -353,12 +378,20 @@ create_test_database() {
  local dbname="${1:-${TEST_DBNAME}}"
  echo "DEBUG: dbname = ${dbname}"
 
+ # Build psql command for postgres database
+ local psql_postgres_cmd
+ psql_postgres_cmd=$(build_psql_cmd "postgres")
+
  # Check if PostgreSQL is available
- if psql -d postgres -c "SELECT 1;" > /dev/null 2>&1; then
+ if PGPASSWORD="${TEST_DBPASSWORD:-${PGPASSWORD:-postgres}}" ${psql_postgres_cmd} -c "SELECT 1;" > /dev/null 2>&1; then
   echo "DEBUG: PostgreSQL available, using real database"
 
+  # Build psql command for target database
+  local psql_db_cmd
+  psql_db_cmd=$(build_psql_cmd "${dbname}")
+
   # Try to connect to the specified database first
-  if psql -d "${dbname}" -c "SELECT 1;" > /dev/null 2>&1; then
+  if PGPASSWORD="${TEST_DBPASSWORD:-${PGPASSWORD:-postgres}}" ${psql_db_cmd} -c "SELECT 1;" > /dev/null 2>&1; then
    echo "Test database ${dbname} already exists and is accessible"
   else
    echo "Test database ${dbname} does not exist, creating it..."
@@ -368,7 +401,7 @@ create_test_database() {
 
   # Create DWH schema
   echo "Creating DWH schema..."
-  psql -d "${dbname}" << 'EOF'
+  PGPASSWORD="${TEST_DBPASSWORD:-${PGPASSWORD:-postgres}}" ${psql_db_cmd} << 'EOF'
 -- Create DWH schema for Analytics
 CREATE SCHEMA IF NOT EXISTS dwh;
 
@@ -467,16 +500,13 @@ EOF
 drop_test_database() {
  local dbname="${1:-${TEST_DBNAME}}"
 
- # Detect if running in Docker or host
- if [[ -f "/app/bin/dwh/ETL.sh" ]]; then
-  # Running in Docker - actually drop the database to clean up between tests
-  echo "Dropping test database ${dbname}..."
-  psql -h "${TEST_DBHOST}" -U "${TEST_DBUSER}" -d "postgres" -c "DROP DATABASE IF EXISTS ${dbname};" 2> /dev/null || true
-  echo "Test database ${dbname} dropped successfully"
- else
-  # Running on host - simulate database drop
-  echo "Test database ${dbname} dropped (simulated)"
- fi
+ # Build psql command for postgres database
+ local psql_postgres_cmd
+ psql_postgres_cmd=$(build_psql_cmd "postgres")
+
+ echo "Dropping test database ${dbname}..."
+ PGPASSWORD="${TEST_DBPASSWORD:-${PGPASSWORD:-postgres}}" ${psql_postgres_cmd} -c "DROP DATABASE IF EXISTS ${dbname};" 2> /dev/null || true
+ echo "Test database ${dbname} dropped successfully"
 }
 
 # Helper function to run SQL file
@@ -485,16 +515,11 @@ run_sql_file() {
  local dbname="${2:-${TEST_DBNAME}}"
 
  if [[ -f "${sql_file}" ]]; then
-  # Detect if running in Docker or host
-  if [[ -f "/app/bin/dwh/ETL.sh" ]]; then
-   # Running in Docker - use real psql
-   psql -d "${dbname}" -f "${sql_file}" 2> /dev/null
-   return $?
-  else
-   # Running on host - simulate SQL execution
-   echo "SQL file ${sql_file} executed (simulated)"
-   return 0
-  fi
+  # Build psql command with correct connection parameters
+  local psql_cmd
+  psql_cmd=$(build_psql_cmd "${dbname}")
+  PGPASSWORD="${TEST_DBPASSWORD:-${PGPASSWORD:-postgres}}" ${psql_cmd} -f "${sql_file}" 2> /dev/null
+  return $?
  else
   echo "SQL file not found: ${sql_file}"
   return 1
@@ -507,21 +532,16 @@ table_exists() {
  local schema_name="${2:-public}"
  local dbname="${3:-${TEST_DBNAME}}"
 
- # Detect if running in Docker or host
- if [[ -f "/app/bin/dwh/ETL.sh" ]]; then
-  # Running in Docker - try to connect to real database
-  local result
-  result=$(psql -d "${dbname}" -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${schema_name}' AND table_name = '${table_name}';" 2> /dev/null | tr -d ' ')
+ # Build psql command with correct connection parameters
+ local psql_cmd
+ psql_cmd=$(build_psql_cmd "${dbname}")
+ local result
+ result=$(PGPASSWORD="${TEST_DBPASSWORD:-${PGPASSWORD:-postgres}}" ${psql_cmd} -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${schema_name}' AND table_name = '${table_name}';" 2> /dev/null | tr -d ' ')
 
-  if [[ -n "${result}" ]] && [[ "${result}" == "1" ]]; then
-   return 0
-  else
-   return 1
-  fi
- else
-  # Running on host - simulate table check
-  echo "Table ${table_name} exists (simulated)"
+ if [[ -n "${result}" ]] && [[ "${result}" == "1" ]]; then
   return 0
+ else
+  return 1
  fi
 }
 
@@ -530,15 +550,17 @@ count_rows() {
  local table_name="${1}"
  local dbname="${2:-${TEST_DBNAME}}"
 
- # Try to connect to real database first (both Docker and host)
+ # Build psql command with correct connection parameters
+ local psql_cmd
+ psql_cmd=$(build_psql_cmd "${dbname}")
  local result
- result=$(psql -U "${TEST_DBUSER:-$(whoami)}" -d "${dbname}" -t -c "SELECT COUNT(*) FROM ${table_name};" 2> /dev/null)
+ result=$(PGPASSWORD="${TEST_DBPASSWORD:-${PGPASSWORD:-postgres}}" ${psql_cmd} -t -c "SELECT COUNT(*) FROM ${table_name};" 2> /dev/null)
 
  if [[ -n "${result}" ]] && [[ "${result}" =~ ^[0-9]+$ ]]; then
   # Successfully connected to real database
   echo "${result// /}"
  else
-  # Running on host - simulate count
+  # Connection failed or no rows
   echo "0"
  fi
 }
@@ -548,21 +570,16 @@ function_exists() {
  local function_name="${1}"
  local dbname="${2:-${TEST_DBNAME}}"
 
- # Detect if running in Docker or host
- if [[ -f "/app/bin/dwh/ETL.sh" ]]; then
-  # Running in Docker - try to connect to real database
-  local result
-  result=$(psql -d "${dbname}" -t -c "SELECT COUNT(*) FROM information_schema.routines WHERE routine_name = '${function_name}';" 2> /dev/null | tr -d ' ')
+ # Build psql command with correct connection parameters
+ local psql_cmd
+ psql_cmd=$(build_psql_cmd "${dbname}")
+ local result
+ result=$(PGPASSWORD="${TEST_DBPASSWORD:-${PGPASSWORD:-postgres}}" ${psql_cmd} -t -c "SELECT COUNT(*) FROM information_schema.routines WHERE routine_name = '${function_name}';" 2> /dev/null | tr -d ' ')
 
-  if [[ "${result}" == "1" ]]; then
-   return 0
-  else
-   return 1
-  fi
- else
-  # Running on host - simulate function check
-  echo "Function ${function_name} exists (simulated)"
+ if [[ "${result}" == "1" ]]; then
   return 0
+ else
+  return 1
  fi
 }
 
@@ -571,21 +588,16 @@ procedure_exists() {
  local procedure_name="${1}"
  local dbname="${2:-${TEST_DBNAME}}"
 
- # Detect if running in Docker or host
- if [[ -f "/app/bin/dwh/ETL.sh" ]]; then
-  # Running in Docker - try to connect to real database
-  local result
-  result=$(psql -d "${dbname}" -t -c "SELECT COUNT(*) FROM information_schema.routines WHERE routine_name = '${procedure_name}' AND routine_type = 'PROCEDURE';" 2> /dev/null | tr -d ' ')
+ # Build psql command with correct connection parameters
+ local psql_cmd
+ psql_cmd=$(build_psql_cmd "${dbname}")
+ local result
+ result=$(PGPASSWORD="${TEST_DBPASSWORD:-${PGPASSWORD:-postgres}}" ${psql_cmd} -t -c "SELECT COUNT(*) FROM information_schema.routines WHERE routine_name = '${procedure_name}' AND routine_type = 'PROCEDURE';" 2> /dev/null | tr -d ' ')
 
-  if [[ "${result}" == "1" ]]; then
-   return 0
-  else
-   return 1
-  fi
- else
-  # Running on host - simulate procedure check
-  echo "Procedure ${procedure_name} exists (simulated)"
+ if [[ "${result}" == "1" ]]; then
   return 0
+ else
+  return 1
  fi
 }
 
