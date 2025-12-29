@@ -14,44 +14,44 @@ TEST_ANALYTICS_DB="osm_notes_dwh_test2"
 
 # Helper: Wait for database to be ready
 wait_for_db() {
- local dbname="$1"
- local max_attempts=10
- local attempt=0
- while [[ ${attempt} -lt ${max_attempts} ]]; do
-  if psql -d "${dbname}" -c "SELECT 1;" > /dev/null 2>&1; then
-   return 0
-  fi
-  sleep 0.2
-  attempt=$((attempt + 1))
- done
- return 1
+	local dbname="$1"
+	local max_attempts=10
+	local attempt=0
+	while [[ ${attempt} -lt ${max_attempts} ]]; do
+		if psql -d "${dbname}" -c "SELECT 1;" >/dev/null 2>&1; then
+			return 0
+		fi
+		sleep 0.2
+		attempt=$((attempt + 1))
+	done
+	return 1
 }
 
 setup() {
- # Setup test databases (order matters: ingestion first, then analytics)
- create_test_ingestion_db
- wait_for_db "${TEST_INGESTION_DB}" || skip "Cannot connect to test ingestion DB"
- populate_test_ingestion_data
- create_test_analytics_db
- wait_for_db "${TEST_ANALYTICS_DB}" || skip "Cannot connect to test analytics DB"
+	# Setup test databases (order matters: ingestion first, then analytics)
+	create_test_ingestion_db
+	wait_for_db "${TEST_INGESTION_DB}" || skip "Cannot connect to test ingestion DB"
+	populate_test_ingestion_data
+	create_test_analytics_db
+	wait_for_db "${TEST_ANALYTICS_DB}" || skip "Cannot connect to test analytics DB"
 }
 
 teardown() {
- # Cleanup test databases
- psql -d postgres -c "DROP DATABASE IF EXISTS ${TEST_INGESTION_DB};" 2> /dev/null || true
- psql -d postgres -c "DROP DATABASE IF EXISTS ${TEST_ANALYTICS_DB};" 2> /dev/null || true
+	# Cleanup test databases
+	psql -d postgres -c "DROP DATABASE IF EXISTS ${TEST_INGESTION_DB};" 2>/dev/null || true
+	psql -d postgres -c "DROP DATABASE IF EXISTS ${TEST_ANALYTICS_DB};" 2>/dev/null || true
 }
 
 # Helper: Create test ingestion database
 create_test_ingestion_db() {
- psql -d postgres -c "DROP DATABASE IF EXISTS ${TEST_INGESTION_DB};" 2> /dev/null || true
- psql -d postgres -c "CREATE DATABASE ${TEST_INGESTION_DB};" || skip "Cannot create test ingestion DB"
+	psql -d postgres -c "DROP DATABASE IF EXISTS ${TEST_INGESTION_DB};" 2>/dev/null || true
+	psql -d postgres -c "CREATE DATABASE ${TEST_INGESTION_DB};" || skip "Cannot create test ingestion DB"
 
- # Wait for database to be ready
- sleep 0.3
+	# Wait for database to be ready
+	sleep 0.3
 
- # Create base tables in ingestion DB
- psql -d "${TEST_INGESTION_DB}" << 'EOF' || skip "Cannot create tables in ingestion DB"
+	# Create base tables in ingestion DB
+	psql -d "${TEST_INGESTION_DB}" <<'EOF' || skip "Cannot create tables in ingestion DB"
   CREATE TABLE public.notes (
    note_id BIGINT PRIMARY KEY,
    latitude DECIMAL(10, 8),
@@ -93,19 +93,19 @@ EOF
 
 # Helper: Create test analytics database
 create_test_analytics_db() {
- psql -d postgres -c "DROP DATABASE IF EXISTS ${TEST_ANALYTICS_DB};" 2> /dev/null || true
- psql -d postgres -c "CREATE DATABASE ${TEST_ANALYTICS_DB};" || skip "Cannot create test analytics DB"
+	psql -d postgres -c "DROP DATABASE IF EXISTS ${TEST_ANALYTICS_DB};" 2>/dev/null || true
+	psql -d postgres -c "CREATE DATABASE ${TEST_ANALYTICS_DB};" || skip "Cannot create test analytics DB"
 
- # Wait for database to be ready
- sleep 0.3
+	# Wait for database to be ready
+	sleep 0.3
 
- # Create dwh schema
- psql -d "${TEST_ANALYTICS_DB}" -c "CREATE SCHEMA IF NOT EXISTS dwh;" || true
+	# Create dwh schema
+	psql -d "${TEST_ANALYTICS_DB}" -c "CREATE SCHEMA IF NOT EXISTS dwh;" || true
 }
 
 # Helper: Populate test data in ingestion DB
 populate_test_ingestion_data() {
- psql -d "${TEST_INGESTION_DB}" << 'EOF'
+	psql -d "${TEST_INGESTION_DB}" <<'EOF'
   -- Insert test countries
   INSERT INTO public.countries (country_id, country_name, country_name_en) VALUES
    (1, 'Colombia', 'Colombia'),
@@ -139,223 +139,230 @@ EOF
 
 # Test: copyBaseTables.sh copies all tables correctly
 @test "copyBaseTables.sh copies all base tables" {
- # Ensure databases are ready
- wait_for_db "${TEST_INGESTION_DB}" || skip "Ingestion DB not ready"
- wait_for_db "${TEST_ANALYTICS_DB}" || skip "Analytics DB not ready"
+	# Ensure databases are ready
+	wait_for_db "${TEST_INGESTION_DB}" || skip "Ingestion DB not ready"
+	wait_for_db "${TEST_ANALYTICS_DB}" || skip "Analytics DB not ready"
 
- # Set environment variables for script
- export DBNAME_INGESTION="${TEST_INGESTION_DB}"
- export DBNAME_DWH="${TEST_ANALYTICS_DB}"
- # Don't set DB_USER_* to use peer authentication in tests
- # Unset before running script to override defaults from etc/properties.sh
- unset DB_USER_INGESTION DB_USER_DWH DB_USER
+	# Set environment variables for script
+	export DBNAME_INGESTION="${TEST_INGESTION_DB}"
+	export DBNAME_DWH="${TEST_ANALYTICS_DB}"
+	# Don't set DB_USER_* to use peer authentication in tests
+	# Unset before running script to override defaults from etc/properties.sh
+	unset DB_USER_INGESTION DB_USER_DWH DB_USER
 
- # Run copy script
- run bash "${SCRIPT_BASE_DIRECTORY}/bin/dwh/copyBaseTables.sh"
- [ "${status}" -eq 0 ] || echo "Script exit status: ${status}"
+	# Run copy script
+	run bash "${SCRIPT_BASE_DIRECTORY}/bin/dwh/copyBaseTables.sh"
+	[ "${status}" -eq 0 ] || echo "Script exit status: ${status}"
 
- # Verify all tables were copied
- run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('notes', 'note_comments', 'note_comments_text', 'users', 'countries');"
- table_count="${output// /}"
- [ "${table_count}" = "5" ] || echo "Expected 5 tables, found: ${table_count}"
+	# Verify all tables were copied
+	run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('notes', 'note_comments', 'note_comments_text', 'users', 'countries');"
+	table_count="${output// /}"
+	[ "${table_count}" = "5" ] || echo "Expected 5 tables, found: ${table_count}"
 
- # Verify row counts match
- run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM public.notes;"
- local analytics_count="${output// /}"
- run psql -d "${TEST_INGESTION_DB}" -t -c "SELECT COUNT(*) FROM public.notes;"
- local ingestion_count="${output// /}"
- [ "${analytics_count}" = "${ingestion_count}" ]
+	# Verify row counts match
+	run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM public.notes;"
+	local analytics_count="${output// /}"
+	run psql -d "${TEST_INGESTION_DB}" -t -c "SELECT COUNT(*) FROM public.notes;"
+	local ingestion_count="${output// /}"
+	[ "${analytics_count}" = "${ingestion_count}" ]
 }
 
 # Test: copyBaseTables.sh handles missing tables gracefully
 @test "copyBaseTables.sh handles missing source tables" {
- # Ensure databases are ready
- wait_for_db "${TEST_INGESTION_DB}" || skip "Ingestion DB not ready"
- wait_for_db "${TEST_ANALYTICS_DB}" || skip "Analytics DB not ready"
+	# Ensure databases are ready
+	wait_for_db "${TEST_INGESTION_DB}" || skip "Ingestion DB not ready"
+	wait_for_db "${TEST_ANALYTICS_DB}" || skip "Analytics DB not ready"
 
- # Clean up any existing tables in analytics DB from previous tests
- psql -d "${TEST_ANALYTICS_DB}" -c "DROP TABLE IF EXISTS public.notes, public.note_comments, public.note_comments_text, public.users, public.countries CASCADE;" 2> /dev/null || true
+	# Clean up any existing tables in analytics DB from previous tests
+	psql -d "${TEST_ANALYTICS_DB}" -c "DROP TABLE IF EXISTS public.notes, public.note_comments, public.note_comments_text, public.users, public.countries CASCADE;" 2>/dev/null || true
 
- # Set environment variables
- export DBNAME_INGESTION="${TEST_INGESTION_DB}"
- export DBNAME_DWH="${TEST_ANALYTICS_DB}"
- # Don't set DB_USER_* to use peer authentication in tests
- unset DB_USER_INGESTION DB_USER_DWH DB_USER
+	# Set environment variables
+	export DBNAME_INGESTION="${TEST_INGESTION_DB}"
+	export DBNAME_DWH="${TEST_ANALYTICS_DB}"
+	# Don't set DB_USER_* to use peer authentication in tests
+	unset DB_USER_INGESTION DB_USER_DWH DB_USER
 
- # Drop one table from source
- psql -d "${TEST_INGESTION_DB}" -c "DROP TABLE IF EXISTS public.note_comments_text;" || true
+	# Drop one table from source
+	psql -d "${TEST_INGESTION_DB}" -c "DROP TABLE IF EXISTS public.note_comments_text;" || true
 
- # Run copy script (should continue with other tables)
- run bash "${SCRIPT_BASE_DIRECTORY}/bin/dwh/copyBaseTables.sh"
- [ "${status}" -eq 0 ]
+	# Run copy script (should continue with other tables)
+	run bash "${SCRIPT_BASE_DIRECTORY}/bin/dwh/copyBaseTables.sh"
+	[ "${status}" -eq 0 ]
 
- # Verify other tables were still copied
- run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('notes', 'note_comments', 'users', 'countries');"
- table_count="${output// /}"
- [ "${table_count}" = "4" ]
+	# Verify other tables were still copied
+	run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('notes', 'note_comments', 'users', 'countries');"
+	table_count="${output// /}"
+	[ "${table_count}" = "4" ]
 }
 
 # Test: dropCopiedBaseTables.sh drops all copied tables
 @test "dropCopiedBaseTables.sh drops all copied tables" {
- # Ensure databases are ready
- wait_for_db "${TEST_INGESTION_DB}" || skip "Ingestion DB not ready"
- wait_for_db "${TEST_ANALYTICS_DB}" || skip "Analytics DB not ready"
+	# Ensure databases are ready
+	wait_for_db "${TEST_INGESTION_DB}" || skip "Ingestion DB not ready"
+	wait_for_db "${TEST_ANALYTICS_DB}" || skip "Analytics DB not ready"
 
- # Clean up any existing tables in analytics DB from previous tests
- psql -d "${TEST_ANALYTICS_DB}" -c "DROP TABLE IF EXISTS public.notes, public.note_comments, public.note_comments_text, public.users, public.countries CASCADE;" 2> /dev/null || true
+	# Clean up any existing tables in analytics DB from previous tests
+	psql -d "${TEST_ANALYTICS_DB}" -c "DROP TABLE IF EXISTS public.notes, public.note_comments, public.note_comments_text, public.users, public.countries CASCADE;" 2>/dev/null || true
 
- # First copy tables
- export DBNAME_INGESTION="${TEST_INGESTION_DB}"
- export DBNAME_DWH="${TEST_ANALYTICS_DB}"
- # Don't set DB_USER_* to use peer authentication in tests
- unset DB_USER_INGESTION DB_USER_DWH DB_USER
+	# First copy tables
+	export DBNAME_INGESTION="${TEST_INGESTION_DB}"
+	export DBNAME_DWH="${TEST_ANALYTICS_DB}"
+	# Don't set DB_USER_* to use peer authentication in tests
+	unset DB_USER_INGESTION DB_USER_DWH DB_USER
 
- bash "${SCRIPT_BASE_DIRECTORY}/bin/dwh/copyBaseTables.sh" || skip "Failed to copy tables"
+	bash "${SCRIPT_BASE_DIRECTORY}/bin/dwh/copyBaseTables.sh" || skip "Failed to copy tables"
 
- # Verify tables exist
- run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('notes', 'note_comments', 'note_comments_text', 'users', 'countries');"
- table_count="${output// /}"
- [ "${table_count}" = "5" ]
+	# Verify tables exist
+	run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('notes', 'note_comments', 'note_comments_text', 'users', 'countries');"
+	table_count="${output// /}"
+	[ "${table_count}" = "5" ]
 
- # Run drop script
- run bash "${SCRIPT_BASE_DIRECTORY}/bin/dwh/dropCopiedBaseTables.sh"
- [ "${status}" -eq 0 ]
+	# Run drop script
+	run bash "${SCRIPT_BASE_DIRECTORY}/bin/dwh/dropCopiedBaseTables.sh"
+	[ "${status}" -eq 0 ]
 
- # Verify all tables were dropped
- run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('notes', 'note_comments', 'note_comments_text', 'users', 'countries');"
- table_count="${output// /}"
- [ "${table_count}" = "0" ]
+	# Verify all tables were dropped
+	run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('notes', 'note_comments', 'note_comments_text', 'users', 'countries');"
+	table_count="${output// /}"
+	[ "${table_count}" = "0" ]
 }
 
 # Test: FDW setup creates foreign tables correctly
 @test "ETL_60_setupFDW.sql creates foreign tables" {
- # Ensure databases are ready
- wait_for_db "${TEST_INGESTION_DB}" || skip "Ingestion DB not ready"
- wait_for_db "${TEST_ANALYTICS_DB}" || skip "Analytics DB not ready"
+	# Ensure databases are ready
+	wait_for_db "${TEST_INGESTION_DB}" || skip "Ingestion DB not ready"
+	wait_for_db "${TEST_ANALYTICS_DB}" || skip "Analytics DB not ready"
 
- # Setup requires ingestion DB to exist
- # Use current user for FDW (peer authentication)
- export FDW_INGESTION_HOST="localhost"
- export FDW_INGESTION_DBNAME="${TEST_INGESTION_DB}"
- export FDW_INGESTION_PORT="5432"
- export FDW_INGESTION_USER="${USER:-$(whoami)}"
- export FDW_INGESTION_PASSWORD=""
+	# Setup requires ingestion DB to exist
+	# Use current user for FDW (peer authentication)
+	export FDW_INGESTION_HOST="localhost"
+	export FDW_INGESTION_DBNAME="${TEST_INGESTION_DB}"
+	export FDW_INGESTION_PORT="5432"
+	export FDW_INGESTION_USER="${USER:-$(whoami)}"
+	export FDW_INGESTION_PASSWORD=""
 
- # Run FDW setup (ignore connection errors during ANALYZE, just verify tables are created)
- envsubst < "${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_60_setupFDW.sql" \
-  | psql -d "${TEST_ANALYTICS_DB}" -v ON_ERROR_STOP=0 2>&1 | grep -v "ERROR.*could not connect" || true
+	# Run FDW setup (ignore connection errors during ANALYZE, just verify tables are created)
+	envsubst <"${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_60_setupFDW.sql" |
+		psql -d "${TEST_ANALYTICS_DB}" -v ON_ERROR_STOP=0 2>&1 | grep -v "ERROR.*could not connect" || true
 
- # Verify foreign tables were created (even if connection fails)
- run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM information_schema.foreign_tables WHERE foreign_table_schema = 'public' AND foreign_table_name IN ('notes', 'note_comments', 'note_comments_text', 'users', 'countries');"
- table_count="${output// /}"
- [ "${table_count}" = "5" ]
+	# Verify foreign tables were created (even if connection fails)
+	run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM information_schema.foreign_tables WHERE foreign_table_schema = 'public' AND foreign_table_name IN ('notes', 'note_comments', 'note_comments_text', 'users', 'countries');"
+	table_count="${output// /}"
+	[ "${table_count}" = "5" ]
 
- # Verify foreign server exists
- run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM pg_foreign_server WHERE srvname = 'ingestion_server';"
- server_count="${output// /}"
- [ "${server_count}" = "1" ]
+	# Verify foreign server exists
+	run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM pg_foreign_server WHERE srvname = 'ingestion_server';"
+	server_count="${output// /}"
+	[ "${server_count}" = "1" ]
 }
 
 # Test: Foreign tables can query data from ingestion DB
 @test "Foreign tables can query data from ingestion DB" {
- # Ensure databases are ready
- wait_for_db "${TEST_INGESTION_DB}" || skip "Ingestion DB not ready"
- wait_for_db "${TEST_ANALYTICS_DB}" || skip "Analytics DB not ready"
+	# Ensure databases are ready
+	wait_for_db "${TEST_INGESTION_DB}" || skip "Ingestion DB not ready"
+	wait_for_db "${TEST_ANALYTICS_DB}" || skip "Analytics DB not ready"
 
- # Setup FDW
- # Use current user for FDW (peer authentication)
- export FDW_INGESTION_HOST="localhost"
- export FDW_INGESTION_DBNAME="${TEST_INGESTION_DB}"
- export FDW_INGESTION_PORT="5432"
- export FDW_INGESTION_USER="${USER:-$(whoami)}"
- export FDW_INGESTION_PASSWORD=""
+	# Setup FDW
+	# Use current user for FDW (peer authentication)
+	export FDW_INGESTION_HOST="localhost"
+	export FDW_INGESTION_DBNAME="${TEST_INGESTION_DB}"
+	export FDW_INGESTION_PORT="5432"
+	export FDW_INGESTION_USER="${USER:-$(whoami)}"
+	export FDW_INGESTION_PASSWORD=""
 
- envsubst < "${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_60_setupFDW.sql" \
-  | psql -d "${TEST_ANALYTICS_DB}" -v ON_ERROR_STOP=0 2>&1 | grep -v "ERROR.*could not connect" || true
+	envsubst <"${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_60_setupFDW.sql" |
+		psql -d "${TEST_ANALYTICS_DB}" -v ON_ERROR_STOP=0 2>&1 | grep -v "ERROR.*could not connect" || true
 
- # Verify foreign table exists (connection may fail, but table structure should be created)
- run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM information_schema.foreign_tables WHERE foreign_table_schema = 'public' AND foreign_table_name = 'notes';"
- table_count="${output// /}"
- [ "${table_count}" = "1" ]
+	# Verify foreign table exists (connection may fail, but table structure should be created)
+	run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM information_schema.foreign_tables WHERE foreign_table_schema = 'public' AND foreign_table_name = 'notes';"
+	table_count="${output// /}"
+	[ "${table_count}" = "1" ]
 
- # Verify foreign table structure exists
- run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'notes' AND column_name = 'note_id';"
- column_count="${output// /}"
- [ "${column_count}" = "1" ]
+	# Verify foreign table structure exists
+	run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'notes' AND column_name = 'note_id';"
+	column_count="${output// /}"
+	[ "${column_count}" = "1" ]
 }
 
 # Test: Initial load uses copied tables (not FDW)
 @test "Initial load uses copied local tables" {
- # Ensure databases are ready
- wait_for_db "${TEST_INGESTION_DB}" || skip "Ingestion DB not ready"
- wait_for_db "${TEST_ANALYTICS_DB}" || skip "Analytics DB not ready"
+	# Ensure databases are ready and have required tables
+	wait_for_db "${TEST_INGESTION_DB}" || skip "Ingestion DB not ready"
+	wait_for_db "${TEST_ANALYTICS_DB}" || skip "Analytics DB not ready"
 
- # Clean up any existing tables in analytics DB from previous tests
- psql -d "${TEST_ANALYTICS_DB}" -c "DROP TABLE IF EXISTS public.notes, public.note_comments, public.note_comments_text, public.users, public.countries CASCADE;" 2> /dev/null || true
+	# Verify ingestion DB has required tables, recreate if needed
+	if ! psql -d "${TEST_INGESTION_DB}" -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('notes', 'note_comments', 'note_comments_text', 'users', 'countries');" | grep -q "5"; then
+		# Recreate ingestion DB if tables are missing
+		create_test_ingestion_db || skip "Cannot recreate ingestion DB"
+		populate_test_ingestion_data || skip "Cannot populate ingestion DB"
+	fi
 
- # Copy tables first
- export DBNAME_INGESTION="${TEST_INGESTION_DB}"
- export DBNAME_DWH="${TEST_ANALYTICS_DB}"
- # Don't set DB_USER_* to use peer authentication in tests
- unset DB_USER_INGESTION DB_USER_DWH DB_USER
+	# Clean up any existing tables in analytics DB from previous tests
+	psql -d "${TEST_ANALYTICS_DB}" -c "DROP TABLE IF EXISTS public.notes, public.note_comments, public.note_comments_text, public.users, public.countries CASCADE;" 2>/dev/null || true
 
- bash "${SCRIPT_BASE_DIRECTORY}/bin/dwh/copyBaseTables.sh" || skip "Failed to copy tables"
+	# Copy tables first
+	export DBNAME_INGESTION="${TEST_INGESTION_DB}"
+	export DBNAME_DWH="${TEST_ANALYTICS_DB}"
+	# Don't set DB_USER_* to use peer authentication in tests
+	unset DB_USER_INGESTION DB_USER_DWH DB_USER
 
- # Verify tables are local (not foreign)
- run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'notes' AND table_type = 'BASE TABLE';"
- table_count="${output// /}"
- [ "${table_count}" = "1" ]
+	bash "${SCRIPT_BASE_DIRECTORY}/bin/dwh/copyBaseTables.sh" || skip "Failed to copy tables"
 
- # Verify no foreign tables exist yet
- run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM information_schema.foreign_tables WHERE foreign_table_schema = 'public';"
- foreign_count="${output// /}"
- [ "${foreign_count}" = "0" ]
+	# Verify tables are local (not foreign)
+	run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'notes' AND table_type = 'BASE TABLE';"
+	table_count="${output// /}"
+	[ "${table_count}" = "1" ]
+
+	# Verify no foreign tables exist yet
+	run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM information_schema.foreign_tables WHERE foreign_table_schema = 'public';"
+	foreign_count="${output// /}"
+	[ "${foreign_count}" = "0" ]
 }
 
 # Test: Incremental load uses FDW (not local tables)
 @test "Incremental load uses foreign tables" {
- # Ensure databases are ready
- wait_for_db "${TEST_INGESTION_DB}" || skip "Ingestion DB not ready"
- wait_for_db "${TEST_ANALYTICS_DB}" || skip "Analytics DB not ready"
+	# Ensure databases are ready
+	wait_for_db "${TEST_INGESTION_DB}" || skip "Ingestion DB not ready"
+	wait_for_db "${TEST_ANALYTICS_DB}" || skip "Analytics DB not ready"
 
- # Setup FDW for incremental
- # Use current user for FDW (peer authentication)
- export FDW_INGESTION_HOST="localhost"
- export FDW_INGESTION_DBNAME="${TEST_INGESTION_DB}"
- export FDW_INGESTION_PORT="5432"
- export FDW_INGESTION_USER="${USER:-$(whoami)}"
- export FDW_INGESTION_PASSWORD=""
+	# Setup FDW for incremental
+	# Use current user for FDW (peer authentication)
+	export FDW_INGESTION_HOST="localhost"
+	export FDW_INGESTION_DBNAME="${TEST_INGESTION_DB}"
+	export FDW_INGESTION_PORT="5432"
+	export FDW_INGESTION_USER="${USER:-$(whoami)}"
+	export FDW_INGESTION_PASSWORD=""
 
- envsubst < "${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_60_setupFDW.sql" \
-  | psql -d "${TEST_ANALYTICS_DB}" -v ON_ERROR_STOP=0 2>&1 | grep -v "ERROR.*could not connect" || true
+	envsubst <"${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_60_setupFDW.sql" |
+		psql -d "${TEST_ANALYTICS_DB}" -v ON_ERROR_STOP=0 2>&1 | grep -v "ERROR.*could not connect" || true
 
- # Verify foreign tables exist (even if connection fails)
- run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM information_schema.foreign_tables WHERE foreign_table_schema = 'public' AND foreign_table_name = 'note_comments';"
- table_count="${output// /}"
- [ "${table_count}" = "1" ]
+	# Verify foreign tables exist (even if connection fails)
+	run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM information_schema.foreign_tables WHERE foreign_table_schema = 'public' AND foreign_table_name = 'note_comments';"
+	table_count="${output// /}"
+	[ "${table_count}" = "1" ]
 
- # Verify foreign table structure exists
- run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'note_comments' AND column_name = 'note_id';"
- column_count="${output// /}"
- [ "${column_count}" = "1" ]
+	# Verify foreign table structure exists
+	run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'note_comments' AND column_name = 'note_id';"
+	column_count="${output// /}"
+	[ "${column_count}" = "1" ]
 }
 
 # Test: FDW setup is skipped when databases are the same
 @test "FDW setup is skipped when DBNAME_INGESTION equals DBNAME_DWH" {
- # Ensure databases are ready
- wait_for_db "${TEST_ANALYTICS_DB}" || skip "Analytics DB not ready"
+	# Ensure databases are ready
+	wait_for_db "${TEST_ANALYTICS_DB}" || skip "Analytics DB not ready"
 
- # Create DWH schema if it doesn't exist
- psql -d "${TEST_ANALYTICS_DB}" -c "CREATE SCHEMA IF NOT EXISTS dwh;" || true
+	# Create DWH schema if it doesn't exist
+	psql -d "${TEST_ANALYTICS_DB}" -c "CREATE SCHEMA IF NOT EXISTS dwh;" || true
 
- # Set both databases to the same value
- export DBNAME_INGESTION="${TEST_ANALYTICS_DB}"
- export DBNAME_DWH="${TEST_ANALYTICS_DB}"
- # Don't set DB_USER_* to use peer authentication in tests
- unset DB_USER_INGESTION DB_USER_DWH DB_USER
+	# Set both databases to the same value
+	export DBNAME_INGESTION="${TEST_ANALYTICS_DB}"
+	export DBNAME_DWH="${TEST_ANALYTICS_DB}"
+	# Don't set DB_USER_* to use peer authentication in tests
+	unset DB_USER_INGESTION DB_USER_DWH DB_USER
 
- # Create a minimal DWH structure to simulate incremental execution
- psql -d "${TEST_ANALYTICS_DB}" << 'EOF' || true
+	# Create a minimal DWH structure to simulate incremental execution
+	psql -d "${TEST_ANALYTICS_DB}" <<'EOF' || true
   -- Create a minimal facts table to simulate existing DWH
   CREATE TABLE IF NOT EXISTS dwh.facts (
    fact_id BIGSERIAL PRIMARY KEY,
@@ -365,12 +372,12 @@ EOF
   INSERT INTO dwh.facts (note_id, created_at) VALUES (1, NOW());
 EOF
 
- # Run ETL processNotesETL function logic (simulating incremental execution)
- # This should skip FDW setup since databases are the same
- export DBNAME="${TEST_ANALYTICS_DB}"
+	# Run ETL processNotesETL function logic (simulating incremental execution)
+	# This should skip FDW setup since databases are the same
+	export DBNAME="${TEST_ANALYTICS_DB}"
 
- # Capture ETL output to verify FDW skip message
- run bash -c "
+	# Capture ETL output to verify FDW skip message
+	run bash -c "
   source ${SCRIPT_BASE_DIRECTORY}/lib/osm-common/commonFunctions.sh 2>/dev/null || true
   source ${SCRIPT_BASE_DIRECTORY}/lib/osm-common/bash_logger.sh 2>/dev/null || true
   cd ${SCRIPT_BASE_DIRECTORY}
@@ -388,16 +395,16 @@ EOF
   fi
  "
 
- [ "${status}" -eq 0 ]
- [[ "${output}" == *"FDW setup skipped - databases are the same"* ]]
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"FDW setup skipped - databases are the same"* ]]
 
- # Verify no foreign tables were created (since FDW was skipped)
- run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM information_schema.foreign_tables WHERE foreign_table_schema = 'public';"
- foreign_count="${output// /}"
- [ "${foreign_count}" = "0" ]
+	# Verify no foreign tables were created (since FDW was skipped)
+	run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM information_schema.foreign_tables WHERE foreign_table_schema = 'public';"
+	foreign_count="${output// /}"
+	[ "${foreign_count}" = "0" ]
 
- # Verify no foreign server was created
- run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM pg_foreign_server WHERE srvname = 'ingestion_server';"
- server_count="${output// /}"
- [ "${server_count}" = "0" ]
+	# Verify no foreign server was created
+	run psql -d "${TEST_ANALYTICS_DB}" -t -c "SELECT COUNT(*) FROM pg_foreign_server WHERE srvname = 'ingestion_server';"
+	server_count="${output// /}"
+	[ "${server_count}" = "0" ]
 }

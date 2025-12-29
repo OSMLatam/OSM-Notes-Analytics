@@ -94,6 +94,13 @@ psql -d "${ANALYTICS_DB}" ${ANALYTICS_USER:+-U "${ANALYTICS_USER}"} -c "CREATE S
 for table in "${TABLES[@]}"; do
  __logi "Copying table: ${table}"
 
+ # Verify source database connection before checking table
+ if ! psql -d "${INGESTION_DB}" ${INGESTION_USER:+-U "${INGESTION_USER}"} -c "SELECT 1;" > /dev/null 2>&1; then
+  __loge "ERROR: Cannot connect to source database ${INGESTION_DB} while copying table ${table}"
+  __loge "Source database may have been dropped or is unavailable"
+  exit 1
+ fi
+
  # Check if table exists in source
  if ! psql -d "${INGESTION_DB}" ${INGESTION_USER:+-U "${INGESTION_USER}"} -t -c \
   "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '${table}';" \
