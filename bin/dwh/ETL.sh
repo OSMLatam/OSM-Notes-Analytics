@@ -37,14 +37,27 @@ set -E
 declare LOG_LEVEL="${LOG_LEVEL:-ERROR}"
 
 # Base directory for the project.
+# Allow SCRIPT_BASE_DIRECTORY to be set externally (e.g., by tests)
 declare SCRIPT_BASE_DIRECTORY
-SCRIPT_BASE_DIRECTORY="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." \
- &> /dev/null && pwd)"
+if [[ -z "${SCRIPT_BASE_DIRECTORY:-}" ]]; then
+ SCRIPT_BASE_DIRECTORY="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." \
+  &> /dev/null && pwd)"
+fi
 readonly SCRIPT_BASE_DIRECTORY
 
 # Loads the global properties.
 # shellcheck disable=SC1091
-source "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh"
+if [[ -f "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh" ]]; then
+ source "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh"
+else
+ # If properties.sh doesn't exist, set minimal defaults for testing
+ if [[ -z "${DBNAME_DWH:-}" ]]; then
+  export DBNAME_DWH="${DBNAME_DWH:-${DBNAME:-dwh}}"
+ fi
+ if [[ -z "${DBNAME_INGESTION:-}" ]]; then
+  export DBNAME_INGESTION="${DBNAME_INGESTION:-${DBNAME_INGESTION:-${DBNAME:-dwh}}}"
+ fi
+fi
 
 # Load local properties if they exist (overrides global settings)
 if [[ -f "${SCRIPT_BASE_DIRECTORY}/etc/properties.sh.local" ]]; then

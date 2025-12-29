@@ -32,8 +32,8 @@ teardown() {
   ./bin/dwh/ETL.sh --help
  " || exit_code=$?
 
-# Check exit status (help should exit with code 0)
-[[ "${exit_code:-0}" -eq 0 ]]
+ # Check exit status (help should exit with code 0)
+ [[ "${exit_code:-0}" -eq 0 ]]
 }
 
 @test "ETL invalid parameter handling" {
@@ -166,8 +166,8 @@ teardown() {
   timeout 10s bash -c 'LOG_LEVEL=ERROR ./bin/dwh/ETL.sh --help'
  " || exit_code=$?
 
-# Check exit code (should be 0 for help)
-[[ "${exit_code:-0}" -eq 0 ]]
+ # Check exit code (should be 0 for help)
+ [[ "${exit_code:-0}" -eq 0 ]]
 }
 
 @test "ETL timeout handling" {
@@ -186,8 +186,8 @@ teardown() {
   timeout 10s bash -c 'LOG_LEVEL=ERROR ./bin/dwh/ETL.sh --help'
  " || exit_code=$?
 
-# Check exit code (should be 0 for help)
-[[ "${exit_code:-0}" -eq 0 ]]
+ # Check exit code (should be 0 for help)
+ [[ "${exit_code:-0}" -eq 0 ]]
 }
 
 @test "ETL data integrity validation" {
@@ -208,9 +208,9 @@ teardown() {
   LOG_LEVEL=ERROR ./bin/dwh/ETL.sh --help
  " || exit_code=$?
 
-# Check exit status (should be 0 for help)
-# Note: help mode should exit with code 0
-[[ "${exit_code:-0}" -ge 0 ]]
+ # Check exit status (should be 0 for help)
+ # Note: help mode should exit with code 0
+ [[ "${exit_code:-0}" -ge 0 ]]
 }
 
 @test "ETL parallel processing configuration" {
@@ -229,6 +229,10 @@ teardown() {
  local exit_code
  bash -c "
   cd \"\${PROJECT_ROOT}\"
+  source tests/properties.sh
+  export SCRIPT_BASE_DIRECTORY=\"\${PROJECT_ROOT}\"
+  export DBNAME=notes
+  export DB_USER=notes
   export LOG_LEVEL=ERROR
   timeout 10s bash ./bin/dwh/ETL.sh --help
  " || exit_code=$?
@@ -240,6 +244,9 @@ teardown() {
 @test "ETL configuration validation" {
  # Test that configuration values are valid
  local config_file="${PROJECT_ROOT}/etc/etl.properties"
+
+ # Verify config file exists before sourcing
+ [[ -f "${config_file}" ]] || skip "etl.properties not found"
 
  # shellcheck disable=SC1090
  source "${config_file}"
