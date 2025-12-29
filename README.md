@@ -171,6 +171,15 @@ This guide walks you through the complete process from scratch to having exporta
 
 ### Prerequisites Check
 
+Before starting, ensure you have:
+
+1. **PostgreSQL 12+** installed and running
+2. **PostGIS extension** installed in the Analytics database (`notes_dwh`)
+   - Required for copying the `countries` table during initial load
+   - The ETL process doesn't use PostGIS functions, but the table structure requires it
+   - Install with: `CREATE EXTENSION IF NOT EXISTS postgis;` in the Analytics database
+3. **Base tables** populated by OSM-Notes-Ingestion (see Step 3)
+
 ### Step 1: Clone Repository
 
 ```bash
@@ -222,10 +231,29 @@ psql -d "${DBNAME:-notes_dwh}" -U "${DB_USER:-notes}" -c "SELECT version();"
 PostgreSQL 12.x or higher
 ```
 
+**Install PostGIS extension:**
+
+The Analytics database (`notes_dwh`) requires PostGIS extension to be installed. This is needed because the `countries` table includes a `geometry` column, even though the ETL process doesn't use PostGIS functions.
+
+```bash
+# Connect to your Analytics database
+psql -d "${DBNAME:-notes_dwh}" -U "${DB_USER:-notes}"
+
+# Install PostGIS extension
+CREATE EXTENSION IF NOT EXISTS postgis;
+
+# Verify installation
+SELECT extname FROM pg_extension WHERE extname = 'postgis';
+# Should return: postgis
+```
+
+**Note:** If you're using separate databases for ingestion (`notes`) and analytics (`notes_dwh`), PostGIS only needs to be installed in the Analytics database (`notes_dwh`).
+
 **Troubleshooting:**
 - If connection fails, check PostgreSQL is running: `sudo systemctl status postgresql`
 - Verify database exists: `psql -l | grep osm_notes`
 - Check user permissions: `psql -d osm_notes -c "SELECT current_user;"`
+- If PostGIS installation fails, install the PostGIS package: `sudo apt-get install postgresql-14-postgis-3` (adjust version as needed)
 
 ### Step 3: Verify Base Tables
 
