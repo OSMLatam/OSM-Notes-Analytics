@@ -585,7 +585,6 @@ Scripts monitor system resources:
 ### Required
 
 - PostgreSQL 12+
-- PostGIS 3.0+
 - Bash 4.0+
 - Base tables populated by OSM-Notes-Ingestion system
 

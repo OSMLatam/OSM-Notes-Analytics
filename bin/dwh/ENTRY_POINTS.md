@@ -25,9 +25,6 @@ These are the **only scripts** that should be executed directly:
      - **Subsequent runs**: Processes only incremental updates (5-15 minutes)
    - **Prerequisites**: 
      - Base tables must exist (populated by OSM-Notes-Ingestion)
-     - PostGIS extension must be installed in the Analytics database (`notes_dwh`)
-       - Required for copying the `countries` table during initial load
-       - Install with: `CREATE EXTENSION IF NOT EXISTS postgis;` in the Analytics database
    - **Example**:
      ```bash
      # First time or regular updates (same command for both)

@@ -3,7 +3,6 @@
 ![Tests](https://github.com/OSMLatam/OSM-Notes-Analytics/workflows/Tests/badge.svg)
 ![Quality Checks](https://github.com/OSMLatam/OSM-Notes-Analytics/workflows/Quality%20Checks/badge.svg)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-12%2B-blue)](https://www.postgresql.org/)
-[![PostGIS](https://img.shields.io/badge/PostGIS-3.0%2B-green)](https://postgis.net/)
 [![Bash](https://img.shields.io/badge/Bash-4.0%2B-orange)](https://www.gnu.org/software/bash/)
 
 Data Warehouse, ETL, and Analytics for OpenStreetMap Notes
@@ -116,7 +115,6 @@ For complete navigation by role, see [docs/README.md](docs/README.md#recommended
 ## Prerequisites
 
 - **PostgreSQL** 12 or higher
-- **PostGIS** 3.0 or higher
 - **Bash** 4.0 or higher
 - **OSM Notes Ingestion Database**: This analytics system reads from the base notes tables populated
   by the [OSM-Notes-Ingestion](https://github.com/OSMLatam/OSM-Notes-Ingestion) ingestion system
@@ -174,11 +172,7 @@ This guide walks you through the complete process from scratch to having exporta
 Before starting, ensure you have:
 
 1. **PostgreSQL 12+** installed and running
-2. **PostGIS extension** installed in the Analytics database (`notes_dwh`)
-   - Required for copying the `countries` table during initial load
-   - The ETL process doesn't use PostGIS functions, but the table structure requires it
-   - Install with: `CREATE EXTENSION IF NOT EXISTS postgis;` in the Analytics database
-3. **Base tables** populated by OSM-Notes-Ingestion (see Step 3)
+2. **Base tables** populated by OSM-Notes-Ingestion (see Step 3)
 
 ### Step 1: Clone Repository
 
@@ -231,29 +225,10 @@ psql -d "${DBNAME:-notes_dwh}" -U "${DB_USER:-notes}" -c "SELECT version();"
 PostgreSQL 12.x or higher
 ```
 
-**Install PostGIS extension:**
-
-The Analytics database (`notes_dwh`) requires PostGIS extension to be installed. This is needed because the `countries` table includes a `geometry` column, even though the ETL process doesn't use PostGIS functions.
-
-```bash
-# Connect to your Analytics database
-psql -d "${DBNAME:-notes_dwh}" -U "${DB_USER:-notes}"
-
-# Install PostGIS extension
-CREATE EXTENSION IF NOT EXISTS postgis;
-
-# Verify installation
-SELECT extname FROM pg_extension WHERE extname = 'postgis';
-# Should return: postgis
-```
-
-**Note:** If you're using separate databases for ingestion (`notes`) and analytics (`notes_dwh`), PostGIS only needs to be installed in the Analytics database (`notes_dwh`).
-
 **Troubleshooting:**
 - If connection fails, check PostgreSQL is running: `sudo systemctl status postgresql`
 - Verify database exists: `psql -l | grep osm_notes`
 - Check user permissions: `psql -d osm_notes -c "SELECT current_user;"`
-- If PostGIS installation fails, install the PostGIS package: `sudo apt-get install postgresql-14-postgis-3` (adjust version as needed)
 
 ### Step 3: Verify Base Tables
 

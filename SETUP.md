@@ -48,25 +48,7 @@ nano etc/etl.properties
 ETL_TEST_MODE=true  # Process only 2013-2014
 ```
 
-### 5. Install PostGIS extension
-
-The Analytics database (`notes_dwh`) requires PostGIS extension to be installed. This is needed because the `countries` table includes a `geometry` column, even though the ETL process doesn't use PostGIS functions.
-
-```bash
-# Connect to your Analytics database
-psql -d notes_dwh -U your_database_user
-
-# Install PostGIS extension
-CREATE EXTENSION IF NOT EXISTS postgis;
-
-# Verify installation
-SELECT extname FROM pg_extension WHERE extname = 'postgis';
-# Should return: postgis
-```
-
-**Note:** If you're using separate databases for ingestion (`notes`) and analytics (`notes_dwh`), PostGIS only needs to be installed in the Analytics database (`notes_dwh`).
-
-### 6. Run the ETL
+### 5. Run the ETL
 
 ```bash
 # First time setup (creates data warehouse automatically)

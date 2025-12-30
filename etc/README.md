@@ -567,7 +567,6 @@ Create database:
 
 ```bash
 createdb "${DBNAME}"
-psql -d "${DBNAME}" -c "CREATE EXTENSION postgis;"
 ```
 
 ### "Permission denied"

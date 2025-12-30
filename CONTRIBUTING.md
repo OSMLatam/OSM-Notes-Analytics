@@ -92,7 +92,7 @@ Processing Layer:
     └─▶ datamartGlobal.sh (global analytics)
 
 Storage Layer:
-    └─▶ PostgreSQL/PostGIS Database
+    └─▶ PostgreSQL Database
         └─▶ Schema: dwh (data warehouse)
             ├─▶ facts (partitioned by year)
             ├─▶ dimension_* (dimension tables)
@@ -320,7 +320,7 @@ Before contributing, ensure you have the required tools:
 sudo apt-get install shellcheck shfmt bats
 
 # Install database tools
-sudo apt-get install postgresql postgis
+sudo apt-get install postgresql
 
 # Install XML processing tools
 sudo apt-get install libxml2-utils xsltproc xmlstarlet
@@ -399,7 +399,7 @@ tests covering all system components, including DWH functionality.
 
 - **Code Quality**: Shellcheck linting, shfmt formatting, code conventions
 - **Configuration**: Validation of properties files and SQL syntax
-- **Database**: PostgreSQL and PostGIS extension checks
+- **Database**: PostgreSQL extension checks
 
 ### DWH Enhanced Testing Requirements
 
@@ -493,7 +493,7 @@ Tests are automatically run in GitHub Actions workflows:
   - Runs on every push and pull request
 - **Tests** (`.github/workflows/tests.yml`):
   - Quality tests (no database required)
-  - DWH tests (with PostgreSQL/PostGIS setup)
+  - DWH tests (with PostgreSQL setup)
   - Integration tests
   - Runs on push to main branch
 - **Dependency Check** (`.github/workflows/dependency-check.yml`):
@@ -869,12 +869,11 @@ test(api): add integration tests for new endpoints
 
 #### Database Setup
 
-For local testing, you need PostgreSQL with PostGIS:
+For local testing, you need PostgreSQL:
 
 ```bash
 # Create test database
 createdb dwh
-psql -d dwh -c "CREATE EXTENSION postgis;"
 psql -d dwh -c "CREATE EXTENSION btree_gist;"
 
 # Configure connection in tests/properties.sh

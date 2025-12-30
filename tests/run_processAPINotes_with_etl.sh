@@ -892,12 +892,33 @@ main() {
  source "${INGESTION_ROOT}/etc/properties.sh"
  local INGESTION_DBNAME="${DBNAME:-osm_notes}"
 
- # Clean DWH schema to start from scratch
- log_info "Cleaning DWH schema to start from scratch..."
+ # Ensure PostGIS extension is installed in ingestion database
+ # This is required by processAPINotes.sh (from OSM-Notes-Ingestion system)
+ # Note: The ETL itself does NOT need PostGIS as it only copies necessary columns (without geom)
+ log_info "Ensuring PostGIS extension is installed in ingestion database (required by processAPINotes.sh)..."
  local PSQL_CMD="psql"
  if [[ -n "${DB_HOST:-}" ]]; then
   PSQL_CMD="${PSQL_CMD} -h ${DB_HOST} -p ${DB_PORT}"
  fi
+ if [[ -n "${DB_USER:-}" ]]; then
+  PSQL_CMD="${PSQL_CMD} -U ${DB_USER}"
+ fi
+
+ # Install PostGIS extension if not already installed
+ if ! ${PSQL_CMD} -d "${INGESTION_DBNAME}" -tAc "SELECT 1 FROM pg_extension WHERE extname = 'postgis';" 2> /dev/null | grep -q 1; then
+  log_info "Installing PostGIS extension in ${INGESTION_DBNAME}..."
+  if ${PSQL_CMD} -d "${INGESTION_DBNAME}" -c "CREATE EXTENSION IF NOT EXISTS postgis;" > /dev/null 2>&1; then
+   log_success "PostGIS extension installed successfully"
+  else
+   log_error "Failed to install PostGIS extension"
+   exit 1
+  fi
+ else
+  log_success "PostGIS extension already installed"
+ fi
+
+ # Clean DWH schema to start from scratch
+ log_info "Cleaning DWH schema to start from scratch..."
 
  # Force disconnect any active connections to the dwh schema
  # This ensures DROP SCHEMA can complete successfully
