@@ -233,9 +233,9 @@ for table in "${TABLES[@]}"; do
  copy_errors=$(mktemp)
  # Capture both stdout and stderr from the pipeline
  PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" \
-  -c "\COPY public.${table} TO STDOUT" 2>&1 | \
- PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" \
-  -c "\COPY public.${table} FROM STDIN" > "${copy_errors}" 2>&1
+  -c "\COPY public.${table} TO STDOUT" 2>&1 \
+  | PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" \
+   -c "\COPY public.${table} FROM STDIN" > "${copy_errors}" 2>&1
  # Capture PIPESTATUS immediately after the pipeline (it resets after each command)
  copy_exit_code_1=${PIPESTATUS[0]}
  copy_exit_code_2=${PIPESTATUS[1]}
