@@ -223,6 +223,78 @@ function __execute_cleanup_script {
  fi
 }
 
+# Removes copied base tables from public schema if they are regular tables (not foreign tables).
+# These tables are created during initial load and should be removed if the DWH was never completed.
+function __cleanup_copied_base_tables {
+ __log_start
+ local target_db="${1}"
+
+ __logi "=== CHECKING FOR COPIED BASE TABLES IN PUBLIC SCHEMA ==="
+
+ # Tables that are copied during initial load
+ local COPIED_TABLES=("countries" "users" "notes" "note_comments" "note_comments_text")
+
+ # Check if we're in different databases (tables would be copies)
+ # If same database, these are original tables and should NOT be dropped
+ local ingestion_db="${DBNAME_INGESTION:-notes}"
+ local analytics_db="${DBNAME_DWH:-notes_dwh}"
+
+ if [[ "${ingestion_db}" == "${analytics_db}" ]]; then
+  __logi "Ingestion and Analytics use same database (${analytics_db})"
+  __logi "Tables in public schema are original tables, not copies - skipping removal"
+  __log_finish
+  return 0
+ fi
+
+ __logi "Databases are different (${ingestion_db} != ${analytics_db})"
+ __logi "Checking for copied base tables in public schema..."
+
+ local dropped_count=0
+
+ for table in "${COPIED_TABLES[@]}"; do
+  # Check if table exists as a regular table (not foreign table)
+  local is_regular_table
+  is_regular_table=$(psql -d "${target_db}" -t -A -c "
+   SELECT CASE
+    WHEN EXISTS (
+     SELECT 1 FROM information_schema.tables
+     WHERE table_schema = 'public' AND table_name = '${table}'
+     AND table_type = 'BASE TABLE'
+    ) AND NOT EXISTS (
+     SELECT 1 FROM information_schema.foreign_tables
+     WHERE foreign_table_schema = 'public' AND foreign_table_name = '${table}'
+    ) THEN 'true'
+    ELSE 'false'
+   END;
+  " 2> /dev/null | tr -d ' ' || echo "false")
+
+  if [[ "${is_regular_table}" == "true" ]]; then
+   __logi "Found copied table: public.${table} (regular table, not foreign table)"
+   local row_count
+   row_count=$(psql -d "${target_db}" -t -A -c "SELECT COUNT(*) FROM public.${table};" 2> /dev/null | tr -d ' ' || echo "0")
+   __logi "Dropping public.${table} (${row_count} rows)"
+
+   if psql -d "${target_db}" -c "DROP TABLE IF EXISTS public.${table} CASCADE;" > /dev/null 2>&1; then
+    __logi "Successfully dropped public.${table}"
+    dropped_count=$((dropped_count + 1))
+   else
+    __logw "Warning: Failed to drop public.${table}"
+   fi
+  else
+   __logd "Table public.${table} is either a foreign table or doesn't exist - skipping"
+  fi
+ done
+
+ if [[ ${dropped_count} -gt 0 ]]; then
+  __logi "Dropped ${dropped_count} copied base table(s) from public schema"
+ else
+  __logi "No copied base tables found in public schema (or they are foreign tables)"
+ fi
+
+ __logi "=== COPIED BASE TABLES CHECK COMPLETED ==="
+ __log_finish
+}
+
 # Removes DWH schema and all objects.
 function __cleanup_dwh_schema {
  __log_start
@@ -245,6 +317,10 @@ function __cleanup_dwh_schema {
  # Remove Foreign Data Wrapper objects (foreign tables and foreign server)
  __logi "Step 4: Removing Foreign Data Wrapper objects"
  __execute_cleanup_script "${target_db}" "${SQL_REMOVE_FDW}" "Foreign Data Wrapper Objects"
+
+ # Remove copied base tables from public schema (if they exist as regular tables)
+ __logi "Step 5: Checking for copied base tables in public schema"
+ __cleanup_copied_base_tables "${target_db}"
 
  __logi "=== DWH CLEANUP COMPLETED ==="
  __log_finish
@@ -313,6 +389,10 @@ function __dry_run {
   echo "6. Remove Foreign Data Wrapper objects (${SQL_REMOVE_FDW})"
   echo "   - Foreign tables: note_comments, notes, note_comments_text, users, countries"
   echo "   - Foreign server: ingestion_server"
+  echo "7. Remove copied base tables from public schema (if they exist as regular tables)"
+  echo "   - Only removes if databases are different (tables are copies)"
+  echo "   - Tables: countries, users, notes, note_comments, note_comments_text"
+  echo "   - Only drops regular tables, NOT foreign tables"
   echo
  fi
 
