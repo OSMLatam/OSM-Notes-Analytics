@@ -288,8 +288,9 @@ for table in "${TABLES[@]}"; do
   | PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" \
    -c "\COPY public.${table} FROM STDIN" > "${copy_errors}" 2>&1
  # Capture PIPESTATUS immediately after the pipeline (it resets after each command)
- copy_exit_code_1=${PIPESTATUS[0]}
- copy_exit_code_2=${PIPESTATUS[1]}
+ # Use default values if PIPESTATUS array doesn't have enough elements
+ copy_exit_code_1=${PIPESTATUS[0]:-1}
+ copy_exit_code_2=${PIPESTATUS[1]:-1}
  copy_error_content=$(cat "${copy_errors}")
  rm -f "${copy_errors}"
  set -e
