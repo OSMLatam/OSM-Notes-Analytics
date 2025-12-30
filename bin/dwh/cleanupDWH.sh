@@ -116,6 +116,7 @@ __start_logger
 declare -r SQL_REMOVE_STAGING="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_removeStagingObjects.sql"
 declare -r SQL_REMOVE_DATAMARTS="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_12_removeDatamartObjects.sql"
 declare -r SQL_REMOVE_DWH="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_13_removeDWHObjects.sql"
+declare -r SQL_REMOVE_FDW="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_14_removeFDWObjects.sql"
 
 ###########
 # FUNCTIONS
@@ -241,6 +242,10 @@ function __cleanup_dwh_schema {
  __logi "Step 3: Removing DWH schema"
  __execute_cleanup_script "${target_db}" "${SQL_REMOVE_DWH}" "DWH Schema"
 
+ # Remove Foreign Data Wrapper objects (foreign tables and foreign server)
+ __logi "Step 4: Removing Foreign Data Wrapper objects"
+ __execute_cleanup_script "${target_db}" "${SQL_REMOVE_FDW}" "Foreign Data Wrapper Objects"
+
  __logi "=== DWH CLEANUP COMPLETED ==="
  __log_finish
 }
@@ -305,6 +310,9 @@ function __dry_run {
   echo "   - Tables: facts, dimension_*, iso_country_codes"
   echo "   - Functions: get_*, update_*, refresh_*"
   echo "   - Triggers: update_days_to_resolution"
+  echo "6. Remove Foreign Data Wrapper objects (${SQL_REMOVE_FDW})"
+  echo "   - Foreign tables: note_comments, notes, note_comments_text, users, countries"
+  echo "   - Foreign server: ingestion_server"
   echo
  fi
 
@@ -340,6 +348,7 @@ function __checkPrereqs {
   "${SQL_REMOVE_STAGING}"
   "${SQL_REMOVE_DATAMARTS}"
   "${SQL_REMOVE_DWH}"
+  "${SQL_REMOVE_FDW}"
  )
 
  for SQL_FILE in "${SQL_FILES[@]}"; do

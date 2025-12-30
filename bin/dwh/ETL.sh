@@ -1161,11 +1161,13 @@ function __initialFactsParallel {
 
  while [[ ${verification_retries} -lt ${max_retries} ]] && [[ "${verification_success}" == "false" ]]; do
   set +e
-  __psql_with_appname -d "${DBNAME_DWH}" -c "
+  local verify_output
+  verify_output=$(__psql_with_appname -d "${DBNAME_DWH}" -c "
    DO \$\$
    DECLARE
     schema_exists BOOLEAN;
     function_exists BOOLEAN;
+    procedure_count INTEGER;
    BEGIN
     -- Check staging schema exists
     SELECT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname = 'staging') INTO schema_exists;
@@ -1184,25 +1186,33 @@ function __initialFactsParallel {
     END IF;
 
     -- Check at least one procedure exists
-    IF NOT EXISTS(
-     SELECT 1 FROM pg_proc p
-     JOIN pg_namespace n ON p.pronamespace = n.oid
-     WHERE n.nspname = 'staging' AND p.proname LIKE 'process_initial_load_by_year_%'
-    ) THEN
-     RAISE EXCEPTION 'No staging procedures found';
+    SELECT COUNT(*) INTO procedure_count
+    FROM pg_proc p
+    JOIN pg_namespace n ON p.pronamespace = n.oid
+    WHERE n.nspname = 'staging' AND p.proname LIKE 'process_initial_load_by_year_%';
+
+    IF procedure_count = 0 THEN
+     RAISE EXCEPTION 'No staging procedures found. Expected procedures matching pattern process_initial_load_by_year_% but found 0';
     END IF;
+
+    RAISE NOTICE 'Verification successful: Found % procedures', procedure_count;
    END \$\$;
-  " > /dev/null 2>&1
+  " 2>&1)
   local verify_exit_code=$?
   set -e
 
   if [[ ${verify_exit_code} -eq 0 ]]; then
    verification_success=true
    __logi "Critical objects verified successfully"
+   if [[ -n "${verify_output}" ]]; then
+    __logd "Verification output: ${verify_output}"
+   fi
   else
    verification_retries=$((verification_retries + 1))
+   __loge "Verification failed (attempt ${verification_retries}/${max_retries})"
+   __loge "Verification error output: ${verify_output}"
    if [[ ${verification_retries} -lt ${max_retries} ]]; then
-    __logw "Verification failed (attempt ${verification_retries}/${max_retries}), retrying in 1 second..."
+    __logw "Retrying in 1 second..."
     sleep 1
    else
     __loge "ERROR: Failed to verify critical objects after ${max_retries} attempts"
@@ -1222,6 +1232,11 @@ function __initialFactsParallel {
       JOIN pg_namespace n ON p.pronamespace = n.oid
       WHERE n.nspname = 'staging' AND p.proname LIKE 'process_initial_load_by_year_%'
       LIMIT 5;
+      SELECT 'All staging procedures:' as info;
+      SELECT n.nspname, p.proname, p.prokind FROM pg_proc p
+      JOIN pg_namespace n ON p.pronamespace = n.oid
+      WHERE n.nspname = 'staging'
+      ORDER BY p.proname;
      "
     } 2>&1 || true
     exit 1
