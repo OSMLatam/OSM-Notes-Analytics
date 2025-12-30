@@ -892,10 +892,10 @@ main() {
  source "${INGESTION_ROOT}/etc/properties.sh"
  local INGESTION_DBNAME="${DBNAME:-osm_notes}"
 
- # Ensure PostGIS extension is installed in ingestion database
- # This is required by processAPINotes.sh (from OSM-Notes-Ingestion system)
- # Note: The ETL itself does NOT need PostGIS as it only copies necessary columns (without geom)
- log_info "Ensuring PostGIS extension is installed in ingestion database (required by processAPINotes.sh)..."
+ # Ensure required extensions are installed in ingestion database
+ # These are required by processAPINotes.sh (from OSM-Notes-Ingestion system)
+ # Note: The ETL itself does NOT need these extensions as it only copies necessary columns (without geom)
+ log_info "Ensuring required extensions are installed in ingestion database (required by processAPINotes.sh)..."
  local PSQL_CMD="psql"
  if [[ -n "${DB_HOST:-}" ]]; then
   PSQL_CMD="${PSQL_CMD} -h ${DB_HOST} -p ${DB_PORT}"
@@ -915,6 +915,19 @@ main() {
   fi
  else
   log_success "PostGIS extension already installed"
+ fi
+
+ # Install btree_gist extension if not already installed
+ if ! ${PSQL_CMD} -d "${INGESTION_DBNAME}" -tAc "SELECT 1 FROM pg_extension WHERE extname = 'btree_gist';" 2> /dev/null | grep -q 1; then
+  log_info "Installing btree_gist extension in ${INGESTION_DBNAME}..."
+  if ${PSQL_CMD} -d "${INGESTION_DBNAME}" -c "CREATE EXTENSION IF NOT EXISTS btree_gist;" > /dev/null 2>&1; then
+   log_success "btree_gist extension installed successfully"
+  else
+   log_error "Failed to install btree_gist extension"
+   exit 1
+  fi
+ else
+  log_success "btree_gist extension already installed"
  fi
 
  # Clean DWH schema to start from scratch
