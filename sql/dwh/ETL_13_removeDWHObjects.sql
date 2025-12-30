@@ -73,6 +73,7 @@ DROP FUNCTION IF EXISTS dwh.get_season_id CASCADE;
 DROP TABLE IF EXISTS dwh.properties CASCADE;
 DROP TABLE IF EXISTS dwh.facts CASCADE;
 DROP TABLE IF EXISTS dwh.fact_hashtags CASCADE;
+DROP TABLE IF EXISTS dwh.note_current_status CASCADE;
 DROP TABLE IF EXISTS dwh.dimension_hours_of_week CASCADE;
 DROP TABLE IF EXISTS dwh.dimension_time_of_week CASCADE;
 DROP TABLE IF EXISTS dwh.dimension_days CASCADE;
@@ -89,6 +90,29 @@ DROP TABLE IF EXISTS dwh.dimension_automation_level CASCADE;
 DROP TABLE IF EXISTS dwh.dimension_experience_levels CASCADE;
 DROP TABLE IF EXISTS dwh.iso_country_codes CASCADE;
 DROP TABLE IF EXISTS dwh.datamart_performance_log CASCADE;
+
+-- Drop custom types created by this repository
+-- note_event_enum is created in public schema (no schema prefix in CREATE TYPE)
+-- Only drop if it exists and was created by this repository
+-- Note: This type might be used by other systems, so we check if it's safe to drop
+DO $$
+BEGIN
+  -- Only drop note_event_enum if no tables are using it
+  -- This is a conservative approach - if other tables use it, we don't drop it
+  IF EXISTS (
+    SELECT 1 FROM pg_type t
+    WHERE t.typname = 'note_event_enum'
+    AND NOT EXISTS (
+      SELECT 1 FROM pg_attribute a
+      JOIN pg_class c ON a.attrelid = c.oid
+      JOIN pg_namespace n ON c.relnamespace = n.oid
+      WHERE a.atttypid = t.oid
+      AND n.nspname != 'dwh'  -- Only check tables outside dwh schema
+    )
+  ) THEN
+    DROP TYPE IF EXISTS note_event_enum CASCADE;
+  END IF;
+END $$;
 
 -- Drop the entire schema (this will remove anything that remains)
 DROP SCHEMA IF EXISTS dwh CASCADE;
