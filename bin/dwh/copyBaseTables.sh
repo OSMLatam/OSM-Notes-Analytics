@@ -316,11 +316,17 @@ for table in "${TABLES[@]}"; do
   rm -f "${copy_errors}"
   set -e
 
-  if [[ ${copy_exit_code_1} -ne 0 ]] || [[ ${copy_exit_code_2} -ne 0 ]]; then
+  # Verify row count first - if it matches, COPY was successful regardless of exit code
+  # (psql may return non-zero exit code even on successful COPY if there are warnings/notices)
+  target_count=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -t -c "SELECT COUNT(*) FROM public.${table};" 2>&1 | tr -d ' ' || echo "0")
+  if [[ "${row_count}" == "${target_count}" ]]; then
+   __logi "COPY successful: ${target_count} rows copied (verified by row count)"
+  elif [[ ${copy_exit_code_1} -ne 0 ]] || [[ ${copy_exit_code_2} -ne 0 ]]; then
    __loge "ERROR: Failed to copy data for ${table}"
    __loge "COPY TO STDOUT exit code: ${copy_exit_code_1}"
    __loge "COPY FROM STDIN exit code: ${copy_exit_code_2}"
    __loge "COPY error details: ${copy_error_content}"
+   __loge "Row count mismatch: source=${row_count}, target=${target_count}"
    exit 1
   fi
  else
@@ -340,22 +346,30 @@ for table in "${TABLES[@]}"; do
   rm -f "${copy_errors}"
   set -e
 
-  if [[ ${copy_exit_code_1} -ne 0 ]] || [[ ${copy_exit_code_2} -ne 0 ]]; then
+  # Verify row count first - if it matches, COPY was successful regardless of exit code
+  # (psql may return non-zero exit code even on successful COPY if there are warnings/notices)
+  target_count=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -t -c "SELECT COUNT(*) FROM public.${table};" 2>&1 | tr -d ' ' || echo "0")
+  if [[ "${row_count}" == "${target_count}" ]]; then
+   __logi "COPY successful: ${target_count} rows copied (verified by row count)"
+  elif [[ ${copy_exit_code_1} -ne 0 ]] || [[ ${copy_exit_code_2} -ne 0 ]]; then
    __loge "ERROR: Failed to copy data for ${table}"
    __loge "COPY TO STDOUT exit code: ${copy_exit_code_1}"
    __loge "COPY FROM STDIN exit code: ${copy_exit_code_2}"
    __loge "COPY error details: ${copy_error_content}"
+   __loge "Row count mismatch: source=${row_count}, target=${target_count}"
    exit 1
   fi
  fi
 
- # Verify row count
- target_count=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -t -c "SELECT COUNT(*) FROM public.${table};" | tr -d ' ')
- if [[ "${row_count}" != "${target_count}" ]]; then
-  __loge "ERROR: Row count mismatch for ${table}: source=${row_count}, target=${target_count}"
-  exit 1
+ # Verify row count (if not already verified above)
+ if [[ "${table}" != "countries" ]]; then
+  target_count=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -t -c "SELECT COUNT(*) FROM public.${table};" 2>&1 | tr -d ' ' || echo "0")
+  if [[ "${row_count}" != "${target_count}" ]]; then
+   __loge "ERROR: Row count mismatch for ${table}: source=${row_count}, target=${target_count}"
+   exit 1
+  fi
+  __logi "Verified: ${target_count} rows copied for ${table}"
  fi
- __logi "Verified: ${target_count} rows copied for ${table}"
 
  # Create indexes (copy from source)
  __logi "Creating indexes for ${table}"

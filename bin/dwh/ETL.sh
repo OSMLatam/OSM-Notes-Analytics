@@ -404,8 +404,19 @@ function __psql_with_appname {
    done
    return "${exit_code}"
   else
-   # No -f or -c found, set timeouts in a separate command
-   PGAPPNAME="${appname}" psql -c "${timeout_sql}" "$@"
+   # No -f or -c found, but we have timeouts
+   # If input is from stdin (pipe), prepend timeouts to stdin
+   # Otherwise, set timeouts in a separate command
+   if [[ -t 0 ]]; then
+    # No stdin, set timeouts in a separate command
+    PGAPPNAME="${appname}" psql -c "${timeout_sql}" "$@"
+   else
+    # Input from stdin, prepend timeouts
+    {
+     echo "${timeout_sql}"
+     cat
+    } | PGAPPNAME="${appname}" psql "$@"
+   fi
   fi
  else
   # No timeouts configured, execute normally
@@ -1122,16 +1133,33 @@ function __initialFactsParallel {
  while [[ ${year} -le ${current_year} ]]; do
   __logi "Creating procedure for year ${year}..."
   set +e
-  YEAR=${year} envsubst < "${POSTGRES_34_INITIAL_FACTS_LOAD_PARALLEL}" \
-   | __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 2>&1
-  local proc_create_exit_code=$?
+  local proc_output
+  proc_output=$(YEAR=${year} envsubst < "${POSTGRES_34_INITIAL_FACTS_LOAD_PARALLEL}" \
+   | __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 2>&1)
+  # Capture exit code from the pipeline
+  # Use default value if PIPESTATUS array doesn't have enough elements
+  local proc_create_exit_code=${PIPESTATUS[1]:-1}
   set -e
 
-  if [[ ${proc_create_exit_code} -ne 0 ]]; then
+  # Verify procedure was actually created (check database, not just exit code)
+  # This handles cases where psql returns non-zero exit code even on successful CREATE PROCEDURE
+  local proc_exists
+  proc_exists=$(psql -d "${DBNAME_DWH}" -tAc "SELECT COUNT(*) FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid WHERE n.nspname = 'staging' AND p.proname = 'process_initial_load_by_year_${year}';" 2>&1 | tr -d ' ' || echo "0")
+
+  if [[ "${proc_exists}" == "1" ]]; then
+   __logd "Successfully created procedure for year ${year} (verified in database)"
+   if [[ -n "${proc_output}" ]]; then
+    __logd "Procedure creation output: ${proc_output}"
+   fi
+  elif [[ ${proc_create_exit_code} -ne 0 ]]; then
    __loge "ERROR: Failed to create procedure for year ${year} (exit code: ${proc_create_exit_code})"
+   __loge "Procedure creation output: ${proc_output}"
    failed_procedures=$((failed_procedures + 1))
   else
-   __logd "Successfully created procedure for year ${year}"
+   # Exit code is 0 but procedure doesn't exist - this shouldn't happen
+   __loge "ERROR: Procedure process_initial_load_by_year_${year} was not created (exit code: ${proc_create_exit_code}, found ${proc_exists} procedures)"
+   __loge "Procedure creation output: ${proc_output}"
+   failed_procedures=$((failed_procedures + 1))
   fi
 
   year=$((year + 1))
@@ -1189,10 +1217,10 @@ function __initialFactsParallel {
     SELECT COUNT(*) INTO procedure_count
     FROM pg_proc p
     JOIN pg_namespace n ON p.pronamespace = n.oid
-    WHERE n.nspname = 'staging' AND p.proname LIKE 'process_initial_load_by_year_%';
+    WHERE n.nspname = 'staging' AND p.proname LIKE 'process_initial_load_by_year_%%';
 
     IF procedure_count = 0 THEN
-     RAISE EXCEPTION 'No staging procedures found. Expected procedures matching pattern process_initial_load_by_year_% but found 0';
+     RAISE EXCEPTION 'No staging procedures found. Expected procedures matching pattern process_initial_load_by_year_%% but found 0';
     END IF;
 
     RAISE NOTICE 'Verification successful: Found % procedures', procedure_count;

@@ -286,6 +286,7 @@ setup_hybrid_environment() {
  export HYBRID_MOCK_MODE=true
  export TEST_MODE=true
  export SEND_ALERT_EMAIL="${SEND_ALERT_EMAIL:-false}"
+ # Set SCRIPT_BASE_DIRECTORY for ingestion scripts (processAPINotes.sh)
  export SCRIPT_BASE_DIRECTORY="${INGESTION_ROOT}"
  export MOCK_FIXTURES_DIR="${INGESTION_ROOT}/tests/fixtures/command/extra"
  export SKIP_XML_VALIDATION="${SKIP_XML_VALIDATION:-true}"
@@ -640,6 +641,10 @@ run_etl() {
 
  # Change to analytics root directory
  cd "${ANALYTICS_ROOT}"
+
+ # Set SCRIPT_BASE_DIRECTORY for ETL to point to analytics root
+ # This ensures ETL finds SQL files in the correct location
+ export SCRIPT_BASE_DIRECTORY="${ANALYTICS_ROOT}"
 
  # Load DBNAME from ingestion properties to ensure ETL uses the same database
  # In hybrid test mode, both Ingestion and Analytics use the same database
