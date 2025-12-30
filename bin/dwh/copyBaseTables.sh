@@ -7,7 +7,7 @@
 # After DWH population, these tables will be dropped by dropCopiedBaseTables.sh
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2025-10-27
+# Version: 2025-12-29
 
 set -euo pipefail
 
@@ -128,14 +128,24 @@ else
 fi
 
 # Validate source database connection
-if ! PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -c "SELECT 1;" > /dev/null 2>&1; then
+set +e
+connection_output=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -c "SELECT 1;" 2>&1)
+connection_exit_code=$?
+set -e
+if [[ ${connection_exit_code} -ne 0 ]]; then
  __loge "ERROR: Cannot connect to source database ${INGESTION_DB}"
+ __loge "Connection error: ${connection_output}"
  exit 1
 fi
 
 # Validate target database connection
-if ! PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -c "SELECT 1;" > /dev/null 2>&1; then
+set +e
+connection_output=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -c "SELECT 1;" 2>&1)
+connection_exit_code=$?
+set -e
+if [[ ${connection_exit_code} -ne 0 ]]; then
  __loge "ERROR: Cannot connect to target database ${ANALYTICS_DB}"
+ __loge "Connection error: ${connection_output}"
  exit 1
 fi
 
@@ -148,9 +158,14 @@ for table in "${TABLES[@]}"; do
  __logi "Copying table: ${table}"
 
  # Verify source database connection before checking table
- if ! PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -c "SELECT 1;" > /dev/null 2>&1; then
+ set +e
+ connection_output=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -c "SELECT 1;" 2>&1)
+ connection_exit_code=$?
+ set -e
+ if [[ ${connection_exit_code} -ne 0 ]]; then
   __loge "ERROR: Cannot connect to source database ${INGESTION_DB} while copying table ${table}"
   __loge "Source database may have been dropped or is unavailable"
+  __loge "Connection error: ${connection_output}"
   exit 1
  fi
 
@@ -167,7 +182,13 @@ for table in "${TABLES[@]}"; do
   "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '${table}';" \
   | grep -q 1; then
   __logw "Table ${table} already exists in target database, dropping first"
-  PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -c "DROP TABLE IF EXISTS public.${table} CASCADE;" > /dev/null 2>&1 || true
+  set +e
+  drop_output=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -c "DROP TABLE IF EXISTS public.${table} CASCADE;" 2>&1)
+  drop_exit_code=$?
+  set -e
+  if [[ ${drop_exit_code} -ne 0 ]]; then
+   __logw "Warning: Failed to drop existing table ${table}: ${drop_output}"
+  fi
  fi
 
  # Get table structure and create in target
@@ -181,25 +202,52 @@ for table in "${TABLES[@]}"; do
   [[ -n "${INGESTION_USER}" ]] && PGDUMP_ARGS+=(-U "${INGESTION_USER}")
  fi
 
- PGPASSWORD="${INGESTION_PGPASSWORD}" pg_dump "${PGDUMP_ARGS[@]}" \
+ set +e
+ schema_output=$(PGPASSWORD="${INGESTION_PGPASSWORD}" pg_dump "${PGDUMP_ARGS[@]}" \
   -t "public.${table}" \
   --schema-only \
   --no-owner --no-acl \
-  | PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -q > /dev/null 2>&1 || {
+  2>&1 | PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -q 2>&1)
+ schema_exit_code=${PIPESTATUS[0]}
+ set -e
+ if [[ ${schema_exit_code} -ne 0 ]]; then
   __loge "ERROR: Failed to create table structure for ${table}"
+  __loge "Schema creation error: ${schema_output}"
   exit 1
- }
+ fi
 
  # Copy data using COPY (fastest method)
  __logi "Copying data for ${table}"
- row_count=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -c "SELECT COUNT(*) FROM public.${table};" | tr -d ' ')
+ set +e
+ row_count=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -c "SELECT COUNT(*) FROM public.${table};" 2>&1 | tr -d ' ')
+ row_count_exit_code=$?
+ set -e
+ if [[ ${row_count_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to get row count for ${table}"
+  exit 1
+ fi
  __logi "Copying ${row_count} rows from ${table}"
 
- if ! PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" \
-  -c "\COPY public.${table} TO STDOUT" 2> /dev/null \
-  | PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" \
-   -c "\COPY public.${table} FROM STDIN" > /dev/null 2>&1; then
+ # Capture errors from both psql commands in the pipeline
+ set +e
+ copy_errors=$(mktemp)
+ # Capture both stdout and stderr from the pipeline
+ PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" \
+  -c "\COPY public.${table} TO STDOUT" 2>&1 | \
+ PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" \
+  -c "\COPY public.${table} FROM STDIN" > "${copy_errors}" 2>&1
+ # Capture PIPESTATUS immediately after the pipeline (it resets after each command)
+ copy_exit_code_1=${PIPESTATUS[0]}
+ copy_exit_code_2=${PIPESTATUS[1]}
+ copy_error_content=$(cat "${copy_errors}")
+ rm -f "${copy_errors}"
+ set -e
+
+ if [[ ${copy_exit_code_1} -ne 0 ]] || [[ ${copy_exit_code_2} -ne 0 ]]; then
   __loge "ERROR: Failed to copy data for ${table}"
+  __loge "COPY TO STDOUT exit code: ${copy_exit_code_1}"
+  __loge "COPY FROM STDIN exit code: ${copy_exit_code_2}"
+  __loge "COPY error details: ${copy_error_content}"
   exit 1
  fi
 
@@ -213,23 +261,39 @@ for table in "${TABLES[@]}"; do
 
  # Create indexes (copy from source)
  __logi "Creating indexes for ${table}"
- PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -A -c \
+ set +e
+ index_list=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -A -c \
   "SELECT 'CREATE INDEX IF NOT EXISTS ' || indexname || ' ON public.${table} ' ||
           regexp_replace(indexdef, '^CREATE (UNIQUE )?INDEX .* ON public\.${table} ', '') || ';'
    FROM pg_indexes
    WHERE tablename = '${table}' AND schemaname = 'public'
-   AND indexname NOT LIKE '%_pkey';" 2> /dev/null | while read -r index_sql; do
-  if [[ -n "${index_sql}" ]]; then
-   PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -c "${index_sql}" > /dev/null 2>&1 || {
-    # shellcheck disable=SC2310  # Function invocation in || condition is intentional for error handling
-    __logw "Warning: Failed to create index for ${table}, continuing..."
-   }
-  fi
- done || true
+   AND indexname NOT LIKE '%_pkey';" 2>&1)
+ index_list_exit_code=$?
+ set -e
+ if [[ ${index_list_exit_code} -eq 0 ]] && [[ -n "${index_list}" ]]; then
+  while IFS= read -r index_sql; do
+   if [[ -n "${index_sql}" ]]; then
+    set +e
+    index_output=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -c "${index_sql}" 2>&1)
+    index_exit_code=$?
+    set -e
+    if [[ ${index_exit_code} -ne 0 ]]; then
+     # shellcheck disable=SC2310  # Function invocation in || condition is intentional for error handling
+     __logw "Warning: Failed to create index for ${table}: ${index_output}"
+    fi
+   fi
+  done <<< "${index_list}"
+ fi
 
  # Analyze table for better query performance
  __logi "Analyzing table ${table}"
- PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -c "ANALYZE public.${table};" > /dev/null 2>&1 || true
+ set +e
+ analyze_output=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -c "ANALYZE public.${table};" 2>&1)
+ analyze_exit_code=$?
+ set -e
+ if [[ ${analyze_exit_code} -ne 0 ]]; then
+  __logw "Warning: Failed to analyze table ${table}: ${analyze_output}"
+ fi
 
  __logi "Table ${table} copied successfully"
 done
