@@ -244,27 +244,49 @@ for table in "${TABLES[@]}"; do
 
  # Get table structure and create in target
  __logi "Creating table structure for ${table}"
- # Build pg_dump command array
- declare -a PGDUMP_ARGS
- if [[ -n "${TEST_DBHOST:-}" ]] || [[ -n "${PGHOST:-}" ]]; then
-  PGDUMP_ARGS=(-h "${TEST_DBHOST:-${PGHOST:-localhost}}" -p "${TEST_DBPORT:-${PGPORT:-5432}}" -U "${INGESTION_USER:-${TEST_DBUSER:-${PGUSER:-postgres}}}" -d "${INGESTION_DB}")
- else
-  PGDUMP_ARGS=(-d "${INGESTION_DB}")
-  [[ -n "${INGESTION_USER}" ]] && PGDUMP_ARGS+=(-U "${INGESTION_USER}")
- fi
 
- set +e
- schema_output=$(PGPASSWORD="${INGESTION_PGPASSWORD}" pg_dump "${PGDUMP_ARGS[@]}" \
-  -t "public.${table}" \
-  --schema-only \
-  --no-owner --no-acl \
-  2>&1 | PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -q 2>&1)
- schema_exit_code=${PIPESTATUS[0]}
- set -e
- if [[ ${schema_exit_code} -ne 0 ]]; then
-  __loge "ERROR: Failed to create table structure for ${table}"
-  __loge "Schema creation error: ${schema_output}"
-  exit 1
+ # Special handling for countries table: only copy needed columns (no geom, no zone columns)
+ if [[ "${table}" == "countries" ]]; then
+  __logi "Creating countries table with only required columns (excluding geom and zone columns)"
+  set +e
+  create_output=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -c "
+  CREATE TABLE IF NOT EXISTS public.countries (
+   country_id INTEGER NOT NULL,
+   country_name VARCHAR(100) NOT NULL,
+   country_name_es VARCHAR(100),
+   country_name_en VARCHAR(100)
+  );
+ " 2>&1)
+  create_exit_code=$?
+  set -e
+  if [[ ${create_exit_code} -ne 0 ]]; then
+   __loge "ERROR: Failed to create table structure for ${table}"
+   __loge "Schema creation error: ${create_output}"
+   exit 1
+  fi
+ else
+  # Build pg_dump command array
+  declare -a PGDUMP_ARGS
+  if [[ -n "${TEST_DBHOST:-}" ]] || [[ -n "${PGHOST:-}" ]]; then
+   PGDUMP_ARGS=(-h "${TEST_DBHOST:-${PGHOST:-localhost}}" -p "${TEST_DBPORT:-${PGPORT:-5432}}" -U "${INGESTION_USER:-${TEST_DBUSER:-${PGUSER:-postgres}}}" -d "${INGESTION_DB}")
+  else
+   PGDUMP_ARGS=(-d "${INGESTION_DB}")
+   [[ -n "${INGESTION_USER}" ]] && PGDUMP_ARGS+=(-U "${INGESTION_USER}")
+  fi
+
+  set +e
+  schema_output=$(PGPASSWORD="${INGESTION_PGPASSWORD}" pg_dump "${PGDUMP_ARGS[@]}" \
+   -t "public.${table}" \
+   --schema-only \
+   --no-owner --no-acl \
+   2>&1 | PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -q 2>&1)
+  schema_exit_code=${PIPESTATUS[0]}
+  set -e
+  if [[ ${schema_exit_code} -ne 0 ]]; then
+   __loge "ERROR: Failed to create table structure for ${table}"
+   __loge "Schema creation error: ${schema_output}"
+   exit 1
+  fi
  fi
 
  # Copy data using COPY (fastest method)
@@ -279,28 +301,52 @@ for table in "${TABLES[@]}"; do
  fi
  __logi "Copying ${row_count} rows from ${table}"
 
- # Capture errors from both psql commands in the pipeline
- set +e
- copy_errors=$(mktemp)
- # Capture both stdout and stderr from the pipeline
- PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" \
-  -c "\COPY public.${table} TO STDOUT" 2>&1 \
-  | PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" \
-   -c "\COPY public.${table} FROM STDIN" > "${copy_errors}" 2>&1
- # Capture PIPESTATUS immediately after the pipeline (it resets after each command)
- # Use default values if PIPESTATUS array doesn't have enough elements
- copy_exit_code_1=${PIPESTATUS[0]:-1}
- copy_exit_code_2=${PIPESTATUS[1]:-1}
- copy_error_content=$(cat "${copy_errors}")
- rm -f "${copy_errors}"
- set -e
+ # Special handling for countries table: copy only required columns
+ if [[ "${table}" == "countries" ]]; then
+  set +e
+  copy_errors=$(mktemp)
+  # Copy only the columns we need (no geom, no zone columns)
+  PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" \
+   -c "\COPY (SELECT country_id, country_name, country_name_es, country_name_en FROM public.${table}) TO STDOUT" 2>&1 \
+   | PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" \
+    -c "\COPY public.${table} (country_id, country_name, country_name_es, country_name_en) FROM STDIN" > "${copy_errors}" 2>&1
+  copy_exit_code_1=${PIPESTATUS[0]:-1}
+  copy_exit_code_2=${PIPESTATUS[1]:-1}
+  copy_error_content=$(cat "${copy_errors}")
+  rm -f "${copy_errors}"
+  set -e
 
- if [[ ${copy_exit_code_1} -ne 0 ]] || [[ ${copy_exit_code_2} -ne 0 ]]; then
-  __loge "ERROR: Failed to copy data for ${table}"
-  __loge "COPY TO STDOUT exit code: ${copy_exit_code_1}"
-  __loge "COPY FROM STDIN exit code: ${copy_exit_code_2}"
-  __loge "COPY error details: ${copy_error_content}"
-  exit 1
+  if [[ ${copy_exit_code_1} -ne 0 ]] || [[ ${copy_exit_code_2} -ne 0 ]]; then
+   __loge "ERROR: Failed to copy data for ${table}"
+   __loge "COPY TO STDOUT exit code: ${copy_exit_code_1}"
+   __loge "COPY FROM STDIN exit code: ${copy_exit_code_2}"
+   __loge "COPY error details: ${copy_error_content}"
+   exit 1
+  fi
+ else
+  # Capture errors from both psql commands in the pipeline
+  set +e
+  copy_errors=$(mktemp)
+  # Capture both stdout and stderr from the pipeline
+  PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" \
+   -c "\COPY public.${table} TO STDOUT" 2>&1 \
+   | PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" \
+    -c "\COPY public.${table} FROM STDIN" > "${copy_errors}" 2>&1
+  # Capture PIPESTATUS immediately after the pipeline (it resets after each command)
+  # Use default values if PIPESTATUS array doesn't have enough elements
+  copy_exit_code_1=${PIPESTATUS[0]:-1}
+  copy_exit_code_2=${PIPESTATUS[1]:-1}
+  copy_error_content=$(cat "${copy_errors}")
+  rm -f "${copy_errors}"
+  set -e
+
+  if [[ ${copy_exit_code_1} -ne 0 ]] || [[ ${copy_exit_code_2} -ne 0 ]]; then
+   __loge "ERROR: Failed to copy data for ${table}"
+   __loge "COPY TO STDOUT exit code: ${copy_exit_code_1}"
+   __loge "COPY FROM STDIN exit code: ${copy_exit_code_2}"
+   __loge "COPY error details: ${copy_error_content}"
+   exit 1
+  fi
  fi
 
  # Verify row count
