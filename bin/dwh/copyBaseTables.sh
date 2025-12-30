@@ -153,6 +153,57 @@ fi
 __logi "Ensuring public schema exists in target database"
 PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -c "CREATE SCHEMA IF NOT EXISTS public;" > /dev/null 2>&1 || true
 
+# Copy enum types and custom types before copying tables
+# pg_dump with -t only copies table structure, not the types they depend on
+__logi "Copying enum types and custom types from source database"
+set +e
+# Extract and copy all enum types from the source database
+enum_types=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -A -c "
+ SELECT DISTINCT t.typname
+ FROM pg_type t
+ JOIN pg_enum e ON t.oid = e.enumtypid
+ JOIN pg_namespace n ON t.typnamespace = n.oid
+ WHERE n.nspname = 'public'
+ ORDER BY t.typname;
+" 2>&1)
+enum_exit_code=$?
+set -e
+
+if [[ ${enum_exit_code} -eq 0 ]] && [[ -n "${enum_types}" ]]; then
+ while IFS= read -r enum_type; do
+  if [[ -n "${enum_type}" ]]; then
+   __logi "Copying enum type: ${enum_type}"
+   # Check if enum already exists in target
+   enum_exists=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -t -c \
+    "SELECT EXISTS(SELECT 1 FROM pg_type WHERE typname = '${enum_type}');" 2>&1 | tr -d ' ')
+   if [[ "${enum_exists}" != "t" ]]; then
+    # Create enum type with all its values
+    enum_values=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -A -c "
+     SELECT quote_literal(enumlabel)
+     FROM pg_enum e
+     JOIN pg_type t ON e.enumtypid = t.oid
+     WHERE t.typname = '${enum_type}'
+     ORDER BY e.enumsortorder;
+    " 2>&1 | tr '\n' ',' | sed 's/,$//')
+    if [[ -n "${enum_values}" ]]; then
+     create_enum_sql="CREATE TYPE ${enum_type} AS ENUM (${enum_values});"
+     set +e
+     create_output=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -c "${create_enum_sql}" 2>&1)
+     create_exit_code=$?
+     set -e
+     if [[ ${create_exit_code} -ne 0 ]]; then
+      __logw "Warning: Failed to create enum type ${enum_type}: ${create_output}"
+     else
+      __logi "Enum type ${enum_type} created successfully"
+     fi
+    fi
+   else
+    __logi "Enum type ${enum_type} already exists in target database"
+   fi
+  fi
+ done <<< "${enum_types}"
+fi
+
 # Copy each table
 for table in "${TABLES[@]}"; do
  __logi "Copying table: ${table}"
