@@ -38,7 +38,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
    m_local_action_id_date INTEGER;
    m_local_action_id_hour_of_week INTEGER;
    m_season_id SMALLINT;
-   m_fact_id INTEGER;
+  m_fact_id INTEGER;
    m_latitude DECIMAL;
    m_longitude DECIMAL;
   m_comment_length INTEGER;
@@ -47,8 +47,13 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
   rec_note_action RECORD;
   notes_on_day REFCURSOR;
   index_exists BOOLEAN;
-
+  max_note_id_snapshot INTEGER; -- Snapshot of MAX(note_id) to ensure consistency
  BEGIN
+  -- Capture MAX(note_id) at the start to ensure consistency between notes and note_comments
+  -- This prevents race conditions where new notes are inserted while processing
+  SELECT COALESCE(MAX(note_id), 0)
+    INTO max_note_id_snapshot
+  FROM notes;
 --  RAISE NOTICE 'Day % started.', max_processed_timestamp;
 
 --RAISE NOTICE 'Flag 1: %', CLOCK_TIMESTAMP();
@@ -77,6 +82,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
       SELECT note_id, id_user
       FROM note_comments
       WHERE event::text = ''opened''
+       AND note_id <= ' || max_note_id_snapshot || '
      ) o
      ON (n.note_id = o.note_id)
      LEFT JOIN note_comments_text t
@@ -84,7 +90,8 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
 
     WHERE c.created_at >= ''' || max_processed_timestamp
     || '''  AND DATE(c.created_at) = ''' || DATE(max_processed_timestamp) -- Notes for the same date.
-    || ''' ORDER BY c.note_id, c.sequence_action
+    || '''  AND c.note_id <= ' || max_note_id_snapshot || ' -- Ensure consistency
+    ORDER BY c.note_id, c.sequence_action
     ');
   ELSE
 --RAISE NOTICE 'Processing greater than';
@@ -101,6 +108,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
       SELECT note_id, id_user
       FROM note_comments
       WHERE event::text = ''opened''
+       AND note_id <= ' || max_note_id_snapshot || '
      ) o
      ON (n.note_id = o.note_id)
      LEFT JOIN note_comments_text t
@@ -108,7 +116,8 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
 
     WHERE c.created_at > ''' || max_processed_timestamp
     || '''  AND DATE(c.created_at) = ''' || DATE(max_processed_timestamp) -- Notes for the same date.
-    || ''' ORDER BY c.note_id, c.sequence_action
+    || '''  AND c.note_id <= ' || max_note_id_snapshot || ' -- Ensure consistency
+    ORDER BY c.note_id, c.sequence_action
     ');
   END IF;
   LOOP
@@ -402,7 +411,16 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
   initial_load_flag TEXT;
   use_equals BOOLEAN;
   start_of_day TIMESTAMP;
+  max_note_id_snapshot INTEGER; -- Snapshot of MAX(note_id) to ensure consistency
  BEGIN
+  -- Capture MAX(note_id) at the start to ensure consistency between notes and note_comments
+  -- This prevents race conditions where new notes are inserted while processing
+  SELECT COALESCE(MAX(note_id), 0)
+    INTO max_note_id_snapshot
+  FROM notes;
+
+  -- Use this snapshot for all queries to ensure referential integrity
+  -- All note_comments processed will have their corresponding notes
   -- Base case, when at least the first day of notes is processed.
   -- There are 231 note actions this day: 2013-04-24 (Epoch's OSM notes).
 --RAISE NOTICE '1Flag 1: %', CLOCK_TIMESTAMP();
@@ -434,14 +452,18 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
    -- Initial load: process all historical data using the same incremental logic
    -- but starting from 2013-04-24
    -- Get the date of the most recent note action from base tables
+   -- Filter by max_note_id_snapshot to ensure consistency
    SELECT /* Notes-staging */ MAX(DATE(created_at))
     INTO max_note_action_date
-   FROM note_comments;
+   FROM note_comments
+   WHERE note_id <= max_note_id_snapshot;
 
    -- Start from the first date with comments
+   -- Filter by max_note_id_snapshot to ensure consistency
    SELECT /* Notes-staging */ MIN(DATE(created_at))
     INTO max_processed_date
-   FROM note_comments;
+   FROM note_comments
+   WHERE note_id <= max_note_id_snapshot;
 
    -- Process all dates from first date until the latest date (skip empty days)
    WHILE (max_processed_date <= max_note_action_date) LOOP
@@ -456,11 +478,13 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
     END IF;
 
     -- Count notes to process on this date
+    -- Filter by max_note_id_snapshot to ensure consistency
     SELECT /* Notes-staging */ COUNT(1)
      INTO qty_notes_on_date
     FROM note_comments
     WHERE DATE(created_at) = max_processed_date
-     AND created_at > max_note_on_dwh_timestamp;
+     AND created_at > max_note_on_dwh_timestamp
+     AND note_id <= max_note_id_snapshot;
 
     -- Process notes for this date if there are any
     IF (qty_notes_on_date > 0) THEN
@@ -469,10 +493,12 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
     END IF;
 
     -- Find next date that actually has comments (skip empty days)
+    -- Filter by max_note_id_snapshot to ensure consistency
     SELECT /* Notes-staging */ MIN(DATE(created_at))
      INTO max_processed_date
     FROM note_comments
-    WHERE DATE(created_at) > max_processed_date;
+    WHERE DATE(created_at) > max_processed_date
+     AND note_id <= max_note_id_snapshot;
 
     -- If no more dates with comments, exit loop
     IF (max_processed_date IS NULL OR max_processed_date > max_note_action_date) THEN
@@ -511,9 +537,11 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
   END IF;
 
   -- Get the date of the most recent note action from base tables
+  -- Filter by max_note_id_snapshot to ensure consistency
   SELECT /* Notes-staging */ MAX(DATE(created_at))
    INTO max_note_action_date
-  FROM note_comments;
+  FROM note_comments
+  WHERE note_id <= max_note_id_snapshot;
 --RAISE NOTICE 'Max date with comments in base tables: %', max_note_action_date;
 --RAISE NOTICE '1Flag 4: %', CLOCK_TIMESTAMP();
 
@@ -557,11 +585,13 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
 
    -- Gets the number of notes that have not being processed on the date being
    -- processed.
+   -- Filter by max_note_id_snapshot to ensure consistency
    SELECT /* Notes-staging */ COUNT(1)
     INTO qty_notes_on_date
    FROM note_comments
    WHERE DATE(created_at) = max_processed_date
-    AND created_at > max_note_on_dwh_timestamp;
+    AND created_at > max_note_on_dwh_timestamp
+    AND note_id <= max_note_id_snapshot;
 --RAISE NOTICE 'count notes to process on date %: %.', max_processed_date,
 --qty_notes_on_date;
 --RAISE NOTICE '1Flag 7: %', CLOCK_TIMESTAMP();
@@ -571,10 +601,12 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
    IF (qty_notes_on_date = 0) THEN
     -- Find next date that actually has comments (skip empty days)
     -- We only need to check if the date is greater, not the timestamp
+    -- Filter by max_note_id_snapshot to ensure consistency
     SELECT /* Notes-staging */ MIN(DATE(created_at))
      INTO max_processed_date
     FROM note_comments
-    WHERE DATE(created_at) > max_processed_date;
+    WHERE DATE(created_at) > max_processed_date
+     AND note_id <= max_note_id_snapshot;
 
     -- If no more dates with comments, exit loop
     IF (max_processed_date IS NULL OR max_processed_date > max_note_action_date) THEN
@@ -612,11 +644,13 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
 
    -- Gets the number of notes that have not being processed on the new date
    -- being processed.
+   -- Filter by max_note_id_snapshot to ensure consistency
     SELECT /* Notes-staging */ COUNT(1)
      INTO qty_notes_on_date
     FROM note_comments
     WHERE DATE(created_at) = max_processed_date
-     AND created_at > max_note_on_dwh_timestamp;
+     AND created_at > max_note_on_dwh_timestamp
+     AND note_id <= max_note_id_snapshot;
 --RAISE NOTICE 'Notes to process for %: %.', max_processed_date,
 --qty_notes_on_date;
 --RAISE NOTICE '1Flag 8: %', CLOCK_TIMESTAMP();

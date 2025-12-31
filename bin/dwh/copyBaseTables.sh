@@ -204,6 +204,21 @@ if [[ ${enum_exit_code} -eq 0 ]] && [[ -n "${enum_types}" ]]; then
  done <<< "${enum_types}"
 fi
 
+# Capture maximum note_id at the start to ensure consistency between notes and note_comments
+# This prevents race conditions where new notes are inserted while copying tables
+__logi "Capturing maximum note_id for consistent snapshot"
+set +e
+MAX_NOTE_ID=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -c "SELECT COALESCE(MAX(note_id), 0) FROM public.notes;" 2>&1 | tr -d ' ')
+max_note_id_exit_code=$?
+set -e
+if [[ ${max_note_id_exit_code} -ne 0 ]] || [[ -z "${MAX_NOTE_ID}" ]]; then
+ __loge "ERROR: Failed to get maximum note_id from source database"
+ __loge "This is required to ensure consistency between notes and note_comments"
+ exit 1
+fi
+__logi "Maximum note_id captured: ${MAX_NOTE_ID}"
+__logi "All tables will be copied with note_id <= ${MAX_NOTE_ID} to ensure referential integrity"
+
 # Copy each table
 for table in "${TABLES[@]}"; do
  __logi "Copying table: ${table}"
@@ -292,7 +307,14 @@ for table in "${TABLES[@]}"; do
  # Copy data using COPY (fastest method)
  __logi "Copying data for ${table}"
  set +e
- row_count=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -c "SELECT COUNT(*) FROM public.${table};" 2>&1 | tr -d ' ')
+ # For notes and note_comments, use MAX_NOTE_ID to ensure consistency
+ if [[ "${table}" == "notes" ]]; then
+  row_count=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -c "SELECT COUNT(*) FROM public.${table} WHERE note_id <= ${MAX_NOTE_ID};" 2>&1 | tr -d ' ')
+ elif [[ "${table}" == "note_comments" ]]; then
+  row_count=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -c "SELECT COUNT(*) FROM public.${table} WHERE note_id <= ${MAX_NOTE_ID};" 2>&1 | tr -d ' ')
+ else
+  row_count=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -c "SELECT COUNT(*) FROM public.${table};" 2>&1 | tr -d ' ')
+ fi
  row_count_exit_code=$?
  set -e
  if [[ ${row_count_exit_code} -ne 0 ]]; then
@@ -333,11 +355,26 @@ for table in "${TABLES[@]}"; do
   # Capture errors from both psql commands in the pipeline
   set +e
   copy_errors=$(mktemp)
-  # Capture both stdout and stderr from the pipeline
-  PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" \
-   -c "\COPY public.${table} TO STDOUT" 2>&1 \
-   | PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" \
-    -c "\COPY public.${table} FROM STDIN" > "${copy_errors}" 2>&1
+  # For notes and note_comments, filter by MAX_NOTE_ID to ensure consistency
+  if [[ "${table}" == "notes" ]]; then
+   # Copy notes with note_id <= MAX_NOTE_ID
+   PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" \
+    -c "\COPY (SELECT * FROM public.${table} WHERE note_id <= ${MAX_NOTE_ID}) TO STDOUT" 2>&1 \
+    | PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" \
+     -c "\COPY public.${table} FROM STDIN" > "${copy_errors}" 2>&1
+  elif [[ "${table}" == "note_comments" ]]; then
+   # Copy note_comments with note_id <= MAX_NOTE_ID
+   PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" \
+    -c "\COPY (SELECT * FROM public.${table} WHERE note_id <= ${MAX_NOTE_ID}) TO STDOUT" 2>&1 \
+    | PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" \
+     -c "\COPY public.${table} FROM STDIN" > "${copy_errors}" 2>&1
+  else
+   # For other tables, copy all rows
+   PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" \
+    -c "\COPY public.${table} TO STDOUT" 2>&1 \
+    | PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" \
+     -c "\COPY public.${table} FROM STDIN" > "${copy_errors}" 2>&1
+  fi
   # Capture PIPESTATUS immediately after the pipeline (it resets after each command)
   # Use default values if PIPESTATUS array doesn't have enough elements
   copy_exit_code_1=${PIPESTATUS[0]:-1}
@@ -410,6 +447,36 @@ for table in "${TABLES[@]}"; do
  __logi "Table ${table} copied successfully"
 done
 
+# Save MAX_NOTE_ID to properties table for incremental processing
+# This ensures the next incremental ETL knows where to start
+__logi "Saving maximum note_id (${MAX_NOTE_ID}) to properties table for incremental processing"
+set +e
+# Ensure properties table exists (it should, but be safe)
+PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -c "
+CREATE SCHEMA IF NOT EXISTS dwh;
+CREATE TABLE IF NOT EXISTS dwh.properties (
+ key VARCHAR(16) PRIMARY KEY,
+ value VARCHAR(26)
+);
+" > /dev/null 2>&1 || true
+
+# Save MAX_NOTE_ID to properties
+save_properties_output=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -c "
+INSERT INTO dwh.properties (key, value)
+VALUES ('max_note_id', '${MAX_NOTE_ID}')
+ON CONFLICT (key) DO UPDATE SET value = '${MAX_NOTE_ID}';
+" 2>&1)
+save_properties_exit_code=$?
+set -e
+if [[ ${save_properties_exit_code} -ne 0 ]]; then
+ __logw "Warning: Failed to save MAX_NOTE_ID to properties table: ${save_properties_output}"
+ __logw "Incremental processing may not know where to start"
+else
+ __logi "MAX_NOTE_ID saved successfully to dwh.properties"
+fi
+
 __logi "=== BASE TABLES COPY COMPLETED ==="
+__logi "Maximum note_id processed: ${MAX_NOTE_ID}"
+__logi "Next incremental ETL will process notes with note_id > ${MAX_NOTE_ID}"
 __log_finish
 exit 0
