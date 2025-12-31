@@ -876,8 +876,15 @@ function __processNotesETL {
    export FDW_INGESTION_HOST="${FDW_INGESTION_HOST:-localhost}" 2> /dev/null || true
    export FDW_INGESTION_DBNAME="${DBNAME_INGESTION}" 2> /dev/null || true
    export FDW_INGESTION_PORT="${FDW_INGESTION_PORT:-5432}" 2> /dev/null || true
-   export FDW_INGESTION_USER="${FDW_INGESTION_USER:-analytics_readonly}" 2> /dev/null || true
-   export FDW_INGESTION_PASSWORD="${FDW_INGESTION_PASSWORD:-}" 2> /dev/null || true
+   export FDW_INGESTION_USER="${FDW_INGESTION_USER:-${DB_USER_INGESTION:-${DB_USER:-notes}}}" 2> /dev/null || true
+   # Try to get password from multiple sources:
+   # 1. FDW_INGESTION_PASSWORD (explicit FDW password)
+   # 2. PGPASSWORD (general PostgreSQL password)
+   # 3. DB_PASSWORD (database password from properties)
+   # 4. Empty string (will use .pgpass or peer authentication if available)
+   if [[ -z "${FDW_INGESTION_PASSWORD:-}" ]]; then
+    export FDW_INGESTION_PASSWORD="${PGPASSWORD:-${DB_PASSWORD:-}}"
+   fi
    set -e
 
    # Use envsubst to replace variables in SQL file
@@ -1878,8 +1885,15 @@ function main() {
     export FDW_INGESTION_HOST="${FDW_INGESTION_HOST:-localhost}" 2> /dev/null || true
     export FDW_INGESTION_DBNAME="${DBNAME_INGESTION}" 2> /dev/null || true
     export FDW_INGESTION_PORT="${FDW_INGESTION_PORT:-5432}" 2> /dev/null || true
-    export FDW_INGESTION_USER="${FDW_INGESTION_USER:-analytics_readonly}" 2> /dev/null || true
-    export FDW_INGESTION_PASSWORD="${FDW_INGESTION_PASSWORD:-}" 2> /dev/null || true
+    export FDW_INGESTION_USER="${FDW_INGESTION_USER:-${DB_USER_INGESTION:-${DB_USER:-notes}}}" 2> /dev/null || true
+    # Try to get password from multiple sources:
+    # 1. FDW_INGESTION_PASSWORD (explicit FDW password)
+    # 2. PGPASSWORD (general PostgreSQL password)
+    # 3. DB_PASSWORD (database password from properties)
+    # 4. Empty string (will use .pgpass or peer authentication if available)
+    if [[ -z "${FDW_INGESTION_PASSWORD:-}" ]]; then
+     export FDW_INGESTION_PASSWORD="${PGPASSWORD:-${DB_PASSWORD:-}}"
+    fi
     set -e
     # shellcheck disable=SC2310  # Function invocation in || condition is intentional for error handling
     envsubst < "${POSTGRES_60_SETUP_FDW}" \

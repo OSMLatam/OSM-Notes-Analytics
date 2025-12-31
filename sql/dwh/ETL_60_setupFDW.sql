@@ -32,12 +32,21 @@ OPTIONS (
 
 -- Create user mapping
 -- Note: Password should be set via environment variable or .pgpass file
-CREATE USER MAPPING IF NOT EXISTS FOR CURRENT_USER
-SERVER ingestion_server
-OPTIONS (
-  user '${FDW_INGESTION_USER}',
-  password '${FDW_INGESTION_PASSWORD}'
-);
+-- If password is empty, PostgreSQL will use .pgpass or peer authentication
+DO $$
+BEGIN
+  -- Drop existing user mapping if it exists
+  DROP USER MAPPING IF EXISTS FOR CURRENT_USER SERVER ingestion_server;
+  
+  -- Create user mapping with or without password
+  IF '${FDW_INGESTION_PASSWORD}' = '' THEN
+    -- No password provided - PostgreSQL will use .pgpass or peer authentication
+    EXECUTE format('CREATE USER MAPPING FOR CURRENT_USER SERVER ingestion_server OPTIONS (user %L)', '${FDW_INGESTION_USER}');
+  ELSE
+    -- Password provided - include it in the user mapping
+    EXECUTE format('CREATE USER MAPPING FOR CURRENT_USER SERVER ingestion_server OPTIONS (user %L, password %L)', '${FDW_INGESTION_USER}', '${FDW_INGESTION_PASSWORD}');
+  END IF;
+END $$;
 
 -- Drop existing foreign tables if they exist (for idempotency)
 -- Use DO block to handle errors gracefully if tables are not foreign tables
