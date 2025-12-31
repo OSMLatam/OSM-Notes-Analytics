@@ -74,11 +74,13 @@ END $$;
 -- Create foreign table: note_comments
 -- This is the most important table for ETL processing
 CREATE FOREIGN TABLE public.note_comments (
-  note_id BIGINT,
+  id INTEGER,
+  note_id INTEGER,
   sequence_action INTEGER,
   event TEXT,
-  id_user BIGINT,
-  created_at TIMESTAMP WITH TIME ZONE
+  processing_time TIMESTAMP WITHOUT TIME ZONE,
+  created_at TIMESTAMP WITHOUT TIME ZONE,
+  id_user INTEGER
 ) SERVER ingestion_server
 OPTIONS (schema_name 'public', table_name 'note_comments');
 
@@ -87,12 +89,15 @@ COMMENT ON FOREIGN TABLE public.note_comments IS
 
 -- Create foreign table: notes
 CREATE FOREIGN TABLE public.notes (
-  note_id BIGINT,
-  latitude DECIMAL(10, 8),
-  longitude DECIMAL(11, 8),
-  created_at TIMESTAMP WITH TIME ZONE,
+  note_id INTEGER,
+  latitude NUMERIC,
+  longitude NUMERIC,
+  created_at TIMESTAMP WITHOUT TIME ZONE,
+  status TEXT,
+  closed_at TIMESTAMP WITHOUT TIME ZONE,
   id_country INTEGER,
-  id_user BIGINT
+  insert_time TIMESTAMP WITHOUT TIME ZONE,
+  update_time TIMESTAMP WITHOUT TIME ZONE
 ) SERVER ingestion_server
 OPTIONS (schema_name 'public', table_name 'notes');
 
@@ -101,8 +106,10 @@ COMMENT ON FOREIGN TABLE public.notes IS
 
 -- Create foreign table: note_comments_text
 CREATE FOREIGN TABLE public.note_comments_text (
-  note_id BIGINT,
+  id INTEGER,
+  note_id INTEGER,
   sequence_action INTEGER,
+  processing_time TIMESTAMP WITHOUT TIME ZONE,
   body TEXT
 ) SERVER ingestion_server
 OPTIONS (schema_name 'public', table_name 'note_comments_text');
@@ -112,8 +119,8 @@ COMMENT ON FOREIGN TABLE public.note_comments_text IS
 
 -- Create foreign table: users
 CREATE FOREIGN TABLE public.users (
-  user_id BIGINT,
-  username TEXT
+  user_id INTEGER,
+  username VARCHAR(256)
 ) SERVER ingestion_server
 OPTIONS (schema_name 'public', table_name 'users');
 
@@ -123,9 +130,9 @@ COMMENT ON FOREIGN TABLE public.users IS
 -- Create foreign table: countries
 CREATE FOREIGN TABLE public.countries (
   country_id INTEGER,
-  country_name TEXT,
-  country_name_es TEXT,
-  country_name_en TEXT
+  country_name VARCHAR(100),
+  country_name_es VARCHAR(100),
+  country_name_en VARCHAR(100)
 ) SERVER ingestion_server
 OPTIONS (schema_name 'public', table_name 'countries');
 
