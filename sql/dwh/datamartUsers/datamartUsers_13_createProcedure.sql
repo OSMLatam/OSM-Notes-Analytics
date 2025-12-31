@@ -206,8 +206,12 @@ AS $proc$
    FROM dwh.facts f
     JOIN dwh.dimension_days d
     ON f.action_dimension_id_date = d.dimension_day_id
-    JOIN note_comments nc
-    ON (f.id_note = nc.note_id AND nc.event::text = 'closed')
+    JOIN (
+     SELECT note_id, sequence_action, id_user
+     FROM note_comments
+     WHERE event::text = 'closed'
+    ) nc
+    ON (f.id_note = nc.note_id)
     JOIN note_comments_text nct
     ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
    WHERE f.action_dimension_id_user = m_dimension_user_id
@@ -878,8 +882,12 @@ AS $proc$
   SELECT /* Notes-datamartUsers */ COUNT(1)
    INTO m_history_whole_closed_with_comment
   FROM dwh.facts f
-   JOIN note_comments nc
-   ON (f.id_note = nc.note_id AND nc.event::text = 'closed')
+   JOIN (
+    SELECT note_id, sequence_action, id_user
+    FROM note_comments
+    WHERE event::text = 'closed'
+   ) nc
+   ON (f.id_note = nc.note_id)
    JOIN note_comments_text nct
    ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
   WHERE f.action_dimension_id_user = m_dimension_user_id
@@ -930,8 +938,12 @@ AS $proc$
   FROM dwh.facts f
    JOIN dwh.dimension_days d
    ON (f.action_dimension_id_date = d.dimension_day_id)
-   JOIN note_comments nc
-   ON (f.id_note = nc.note_id AND nc.event::text = 'closed')
+   JOIN (
+    SELECT note_id, sequence_action, id_user
+    FROM note_comments
+    WHERE event::text = 'closed'
+   ) nc
+   ON (f.id_note = nc.note_id)
    JOIN note_comments_text nct
    ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
   WHERE f.action_dimension_id_user = m_dimension_user_id
@@ -989,8 +1001,12 @@ AS $proc$
   FROM dwh.facts f
    JOIN dwh.dimension_days d
    ON (f.action_dimension_id_date = d.dimension_day_id)
-   JOIN note_comments nc
-   ON (f.id_note = nc.note_id AND nc.event::text = 'closed')
+   JOIN (
+    SELECT note_id, sequence_action, id_user
+    FROM note_comments
+    WHERE event::text = 'closed'
+   ) nc
+   ON (f.id_note = nc.note_id)
    JOIN note_comments_text nct
    ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
   WHERE f.action_dimension_id_user = m_dimension_user_id
@@ -1053,8 +1069,12 @@ AS $proc$
   FROM dwh.facts f
    JOIN dwh.dimension_days d
    ON (f.action_dimension_id_date = d.dimension_day_id)
-   JOIN note_comments nc
-   ON (f.id_note = nc.note_id AND nc.event::text = 'closed')
+   JOIN (
+    SELECT note_id, sequence_action, id_user
+    FROM note_comments
+    WHERE event::text = 'closed'
+   ) nc
+   ON (f.id_note = nc.note_id)
    JOIN note_comments_text nct
    ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
   WHERE f.action_dimension_id_user = m_dimension_user_id
