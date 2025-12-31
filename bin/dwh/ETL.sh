@@ -878,22 +878,55 @@ function __processNotesETL {
    export FDW_INGESTION_PORT="${FDW_INGESTION_PORT:-5432}" 2> /dev/null || true
    export FDW_INGESTION_USER="${FDW_INGESTION_USER:-${DB_USER_INGESTION:-${DB_USER:-notes}}}" 2> /dev/null || true
    # Try to get password from multiple sources:
-   # 1. FDW_INGESTION_PASSWORD (explicit FDW password)
+   # 1. FDW_INGESTION_PASSWORD (explicit FDW password, may be readonly)
    # 2. PGPASSWORD (general PostgreSQL password)
    # 3. DB_PASSWORD (database password from properties)
    # 4. Empty string (will use .pgpass or peer authentication if available)
-   if [[ -z "${FDW_INGESTION_PASSWORD:-}" ]]; then
-    export FDW_INGESTION_PASSWORD="${PGPASSWORD:-${DB_PASSWORD:-}}"
+   # Use a temporary variable to avoid readonly issues
+   # Read readonly variable using parameter expansion (works even if readonly)
+   local fdw_password_value
+   # Try to read FDW_INGESTION_PASSWORD (may be readonly, but we can read its value)
+   fdw_password_value="${FDW_INGESTION_PASSWORD:-}"
+   # If FDW_INGESTION_PASSWORD is empty or unset, try other sources
+   if [[ -z "${fdw_password_value}" ]]; then
+    fdw_password_value="${PGPASSWORD:-${DB_PASSWORD:-}}"
+   fi
+   # Export as non-readonly variable for envsubst
+   export FDW_INGESTION_PASSWORD_VALUE="${fdw_password_value}"
+   # Debug: log password status (without showing the actual password)
+   if [[ -n "${fdw_password_value}" ]]; then
+    __logd "FDW password configured (length: ${#fdw_password_value} characters)"
+   else
+    __logd "FDW password not configured - will try .pgpass or peer authentication"
    fi
    set -e
 
    # Use envsubst to replace variables in SQL file
    # shellcheck disable=SC2310  # Function invocation in || condition is intentional for error handling
-   envsubst < "${POSTGRES_60_SETUP_FDW}" \
-    | __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 2>&1 || {
+   local fdw_output
+   fdw_output=$(mktemp)
+   if ! envsubst < "${POSTGRES_60_SETUP_FDW}" \
+    | __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 > "${fdw_output}" 2>&1; then
     __loge "ERROR: Failed to setup Foreign Data Wrappers"
+    __loge "FDW setup output:"
+    cat "${fdw_output}" >&2
+    # Check if it's a password-related error
+    if grep -q "no password supplied\|password authentication failed\|could not connect" "${fdw_output}" 2> /dev/null; then
+     __loge ""
+     __loge "PASSWORD CONFIGURATION REQUIRED:"
+     __loge "Foreign Data Wrappers require a password to connect to the source database."
+     __loge "Options:"
+     __loge "  1. Set FDW_INGESTION_PASSWORD in etc/properties.sh"
+     __loge "  2. Set PGPASSWORD environment variable"
+     __loge "  3. Configure ~/.pgpass file for user 'notes'"
+     __loge "     Format: localhost:5432:notes:notes:your_password"
+     __loge "     Permissions: chmod 600 ~/.pgpass"
+    fi
+    rm -f "${fdw_output}"
     exit 1
-   }
+   fi
+   cat "${fdw_output}"
+   rm -f "${fdw_output}"
    __logi "Foreign Data Wrappers setup completed"
   else
    __loge "ERROR: FDW setup script not found: ${POSTGRES_60_SETUP_FDW}"
