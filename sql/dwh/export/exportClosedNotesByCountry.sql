@@ -96,7 +96,7 @@ WITH cleaned_comments AS (
         JOIN note_comments_text nct
           ON nc.note_id = nct.note_id
           AND nc.sequence_action = nct.sequence_action
-      WHERE nc.event = 'opened'
+      WHERE nc.event::text = 'opened'
       ORDER BY nc.note_id, nc.sequence_action ASC
     ) opening_text
       ON closed_fact.id_note = opening_text.note_id

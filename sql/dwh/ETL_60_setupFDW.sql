@@ -38,7 +38,7 @@ DO $$
 BEGIN
   -- Drop existing user mapping if it exists
   DROP USER MAPPING IF EXISTS FOR CURRENT_USER SERVER ingestion_server;
-  
+
   -- Create user mapping with or without password
   IF '${FDW_INGESTION_PASSWORD_VALUE}' = '' THEN
     -- No password provided - PostgreSQL will use .pgpass or peer authentication
@@ -73,6 +73,7 @@ END $$;
 
 -- Create foreign table: note_comments
 -- This is the most important table for ETL processing
+-- Note: event is note_event_enum in source, but FDW maps it as TEXT for compatibility
 CREATE FOREIGN TABLE public.note_comments (
   id INTEGER,
   note_id INTEGER,
