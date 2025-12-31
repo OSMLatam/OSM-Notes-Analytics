@@ -852,7 +852,7 @@ AS $proc$
    INTO m_history_whole_closed_with_comment
   FROM dwh.facts f
    JOIN note_comments nc
-   ON (f.id_note = nc.note_id AND nc.event = 'closed')
+   ON (f.id_note = nc.note_id AND nc.event::text = 'closed')
    JOIN note_comments_text nct
    ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
   WHERE f.dimension_id_country = m_dimension_id_country
@@ -905,7 +905,7 @@ AS $proc$
    JOIN dwh.dimension_days d
    ON (f.action_dimension_id_date = d.dimension_day_id)
    JOIN note_comments nc
-   ON (f.id_note = nc.note_id AND nc.event = 'closed')
+   ON (f.id_note = nc.note_id AND nc.event::text = 'closed')
    JOIN note_comments_text nct
    ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
   WHERE f.dimension_id_country = m_dimension_id_country
@@ -964,7 +964,7 @@ AS $proc$
    JOIN dwh.dimension_days d
    ON (f.action_dimension_id_date = d.dimension_day_id)
    JOIN note_comments nc
-   ON (f.id_note = nc.note_id AND nc.event = 'closed')
+   ON (f.id_note = nc.note_id AND nc.event::text = 'closed')
    JOIN note_comments_text nct
    ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
   WHERE f.dimension_id_country = m_dimension_id_country
@@ -1028,7 +1028,7 @@ AS $proc$
    JOIN dwh.dimension_days d
    ON (f.action_dimension_id_date = d.dimension_day_id)
    JOIN note_comments nc
-   ON (f.id_note = nc.note_id AND nc.event = 'closed')
+   ON (f.id_note = nc.note_id AND nc.event::text = 'closed')
    JOIN note_comments_text nct
    ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
   WHERE f.dimension_id_country = m_dimension_id_country
