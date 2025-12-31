@@ -661,13 +661,13 @@ function __checkIngestionBaseTables {
  __psql_with_appname -d "${DBNAME_INGESTION}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_10_CHECK_BASE_TABLES}" 2>&1
  RET=${?}
- set -e
+ # Keep set +e here - we're returning the exit code manually
  __logi "Base tables check result code: ${RET}"
  if [[ "${RET}" -ne 0 ]]; then
   __loge "Base ingestion tables validation failed. Please check the error message above."
   __loge "This usually means tables or required columns are missing."
   __loge "Please ensure OSM-Notes-Ingestion system has created the tables with correct schema."
-  __log_finish
+  __log_finish || true
   return 1
  fi
 
@@ -923,14 +923,14 @@ function __processNotesETL {
      __loge "     Permissions: chmod 600 ~/.pgpass"
     fi
     rm -f "${fdw_output}"
-    exit 1
+    return 1
    fi
    cat "${fdw_output}"
    rm -f "${fdw_output}"
    __logi "Foreign Data Wrappers setup completed"
   else
    __loge "ERROR: FDW setup script not found: ${POSTGRES_60_SETUP_FDW}"
-   exit 1
+   return 1
   fi
  else
   __logi "Step 1: Ingestion and Analytics use same database (${DBNAME_DWH}), skipping FDW setup"
@@ -1093,11 +1093,11 @@ function __initialFactsParallel {
    __logi "Dimensions updated successfully"
   else
    __loge "ERROR: Failed to copy base tables. Initial load cannot proceed."
-   exit 1
+   return 1
   fi
  else
   __loge "ERROR: Copy base tables script not found: ${COPY_BASE_TABLES_SCRIPT}"
-  exit 1
+  return 1
  fi
 
  # Create initial facts base objects.
@@ -1212,7 +1212,7 @@ function __initialFactsParallel {
  if [[ ${failed_procedures} -gt 0 ]]; then
   __loge "ERROR: Failed to create ${failed_procedures} procedure(s) out of $((current_year - start_year + 1)) total"
   __loge "Cannot proceed with parallel execution. Please check the errors above."
-  exit 1
+  return 1
  fi
 
  # Disable note activity metrics trigger for performance during bulk load
@@ -1307,7 +1307,7 @@ function __initialFactsParallel {
       ORDER BY p.proname;
      "
     } 2>&1 || true
-    exit 1
+    return 1
    fi
   fi
  done
@@ -1583,8 +1583,16 @@ function __initialFactsParallel {
   __log_finish
   return 1
  fi
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -c "CALL dwh.initialize_note_current_status();" 2>&1
+ local status_init_exit_code=$?
+ set -e # Restore error handling after capturing exit code
+ if [[ ${status_init_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to initialize note current status (exit code: ${status_init_exit_code})"
+  __log_finish
+  return 1
+ fi
  local STATUS_END_TIME
  STATUS_END_TIME=$(date +%s)
  local status_duration=$((STATUS_END_TIME - STATUS_START_TIME))
@@ -1594,7 +1602,8 @@ function __initialFactsParallel {
  __logi "⏱️  TIME: === __initialFactsParallel TOTAL TIME: ${initial_facts_total_duration} seconds ==="
  __logi "════════════════════════════════════════════════════════════"
 
- __log_finish
+ __log_finish || true
+ return 0
 }
 
 # Creates initial facts for all years.
@@ -1780,7 +1789,7 @@ function __setupLockFile {
    __loge "Lock file contents:"
    cat "${LOCK}" >&2 || true
   fi
-  exit 1
+  return 1
  fi
  export ONLY_EXECUTION="yes"
 
@@ -1828,23 +1837,47 @@ function __trapOn() {
 # MAIN
 
 function main() {
+ # Temporarily disable exit on error at the start of main to allow graceful error handling
+ # This ensures we can capture exit codes and return them explicitly
+ # Also disable ERR trap temporarily to prevent it from interfering with error handling
+ set +e
+ trap - ERR # Disable ERR trap temporarily
+
  # Only log errors during initialization - normal startup is silent
+ # shellcheck disable=SC2317
+ # These commands are reachable when PROCESS_TYPE is -h or --help
  if [[ "${PROCESS_TYPE}" == "-h" ]] || [[ "${PROCESS_TYPE}" == "--help" ]]; then
   __show_help
+  set -e   # Re-enable exit on error before returning
+  __trapOn # Re-enable trap before returning
+  return 0
  fi
 
  # Sets the trap in case of any signal.
+ # But keep ERR trap disabled since we're handling errors manually with set +e
+ # The trap will be set but won't interfere because set +e prevents immediate exit
  __trapOn
+ trap - ERR # Immediately disable ERR trap again to prevent interference
  __setupLockFile
+ local lock_exit_code=$?
+ if [[ ${lock_exit_code} -ne 0 ]]; then
+  __loge "Lock file check failed. ETL cannot proceed."
+  return 1
+ fi
 
  __checkPrereqs
 
  # Validate base ingestion tables and columns before processing
  __logi "Validating base ingestion tables and columns..."
  # shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
- if ! __checkIngestionBaseTables; then
+ set +e # Temporarily disable exit on error to check function return code
+ __checkIngestionBaseTables
+ local check_tables_exit_code=$?
+ # Note: We keep set +e here because main() is designed to handle errors manually
+ # The function started with set +e at line 1843, so we maintain that mode
+ if [[ ${check_tables_exit_code} -ne 0 ]]; then
   __loge "Base ingestion tables validation failed. ETL cannot proceed."
-  exit 1
+  return 1
  fi
 
  __logi "PROCESS_TYPE value: '${PROCESS_TYPE}'"
@@ -1855,9 +1888,17 @@ function main() {
  local detection_output
  detection_output=$(__detectFirstExecution)
  # Log the full detection output
+ # Use set +e around the pipe to prevent pipefail from causing exit on grep failure
+ # Also disable pipefail temporarily to prevent grep failure from propagating
+ set +e
+ set +o pipefail
  echo "${detection_output}" | grep -v "^$" | while IFS= read -r line; do
   __logi "${line}"
  done
+ # Re-enable pipefail but keep set +e to prevent grep failure from causing exit
+ set -o pipefail
+ # Keep set +e here - we're ignoring grep exit code anyway
+ # Ignore grep exit code - it's OK if grep finds no matches
  # Extract the result (last line)
  local is_first_execution
  is_first_execution=$(echo "${detection_output}" | tail -1)
@@ -1878,6 +1919,12 @@ function main() {
   set -E
   __logi "About to call __initialFactsParallel"
   __initialFactsParallel # Use parallel version
+  local initial_facts_exit_code=$?
+  if [[ ${initial_facts_exit_code} -ne 0 ]]; then
+   __loge "ERROR: Initial facts parallel load failed (exit code: ${initial_facts_exit_code})"
+   set -e # Re-enable exit on error before returning
+   return 1
+  fi
   __logi "Finished calling __initialFactsParallel"
 
   local MAINTENANCE_START_TIME
@@ -1932,12 +1979,12 @@ function main() {
     envsubst < "${POSTGRES_60_SETUP_FDW}" \
      | __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 2>&1 || {
      __loge "ERROR: Failed to setup Foreign Data Wrappers for datamart processing"
-     exit 1
+     return 1
     }
     __logi "Foreign Data Wrappers setup completed for datamart processing"
    else
     __loge "ERROR: FDW setup script not found: ${POSTGRES_60_SETUP_FDW}"
-    exit 1
+    return 1
    fi
   else
    __logi "Ingestion and Analytics use same database (${DBNAME_DWH}), tables are directly accessible"
@@ -2025,6 +2072,12 @@ function main() {
   set -E
   __logi "About to call __processNotesETL"
   __processNotesETL
+  local process_notes_exit_code=$?
+  if [[ ${process_notes_exit_code} -ne 0 ]]; then
+   __loge "ERROR: Process notes ETL failed (exit code: ${process_notes_exit_code})"
+   set -e # Re-enable exit on error before returning
+   return 1
+  fi
   __logi "Finished calling __processNotesETL"
   __perform_database_maintenance
 
@@ -2091,7 +2144,7 @@ function main() {
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_56_GENERATE_ETL_REPORT}" > "${report_file}" 2>&1
  local report_exit_code=$?
- set -e
+ # Keep set +e here - report generation failures are non-critical
  if [[ ${report_exit_code} -eq 0 ]]; then
   __logi "ETL Report generated successfully:"
   # Display report in log
@@ -2111,7 +2164,7 @@ function main() {
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_57_VALIDATE_ETL_INTEGRITY}" 2>&1
  local validation_exit_code=$?
- set -e
+ # Keep set +e here - validation failures are non-critical and we're continuing anyway
  if [[ ${validation_exit_code} -eq 0 ]]; then
   __logi "ETL integrity validations passed successfully"
  else
@@ -2123,14 +2176,23 @@ function main() {
  __logw "Ending process."
 
  # Remove lock file on successful completion
- rm -f "${LOCK}"
+ # Use || true to prevent this from causing exit code 1 if file doesn't exist
+ rm -f "${LOCK}" || true
 
- __log_finish
+ # Call __log_finish but don't let it cause exit if it fails
+ # Use || true to prevent this from causing exit code 1 if it fails
+ __log_finish || true
+
+ # Explicitly return success to ensure exit code is 0
+ # Don't re-enable trap ERR or set -e here, as they might interfere with the return
+ # The caller will handle error checking
+ return 0
 }
 
 # Allows to other user read the directory (skip if sourced for testing)
+# Use || true to prevent this from causing exit code 1 if directory doesn't exist or permission denied
 if [[ "${SKIP_MAIN:-}" != "true" ]] && [[ -n "${TMP_DIR:-}" ]] && [[ -d "${TMP_DIR:-}" ]]; then
- chmod go+x "${TMP_DIR}"
+ chmod go+x "${TMP_DIR}" 2> /dev/null || true
 fi
 
 # Logger already initialized, log file already set if running from cron
@@ -2138,13 +2200,25 @@ fi
 if [[ "${SKIP_MAIN:-}" != "true" ]]; then
  if [[ ! -t 1 ]]; then
   # Running from cron: output already redirected via exec, just call main
+  set +e     # Temporarily disable exit on error to capture exit code
+  trap - ERR # Disable ERR trap to prevent interference
   main
+  EXIT_CODE=$?
+  trap - ERR # Keep ERR trap disabled to prevent interference
+  set +e     # Keep exit on error disabled during cleanup and exit
   if [[ -n "${CLEAN}" ]] && [[ "${CLEAN}" = true ]]; then
-   mv "${LOG_FILENAME}" "/tmp/${BASENAME}_$(date +%Y-%m-%d_%H-%M-%S || true).log"
+   mv "${LOG_FILENAME}" "/tmp/${BASENAME}_$(date +%Y-%m-%d_%H-%M-%S || true).log" || true
    rmdir "${TMP_DIR}" 2> /dev/null || rm -rf "${TMP_DIR}" 2> /dev/null || true
   fi
+  exit "${EXIT_CODE}"
  else
   # Running interactively: output to terminal
+  set +e     # Temporarily disable exit on error to capture exit code
+  trap - ERR # Disable ERR trap to prevent interference
   main
+  EXIT_CODE=$?
+  trap - ERR # Keep ERR trap disabled to prevent interference
+  set +e     # Keep exit on error disabled during exit
+  exit "${EXIT_CODE}"
  fi
 fi

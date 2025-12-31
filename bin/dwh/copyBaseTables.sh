@@ -209,7 +209,8 @@ fi
 __logi "Capturing maximum note_id for consistent snapshot"
 set +e
 MAX_NOTE_ID=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -c "SELECT COALESCE(MAX(note_id), 0) FROM public.notes;" 2>&1 | tr -d ' ')
-max_note_id_exit_code=$?
+status=("${PIPESTATUS[@]}")
+max_note_id_exit_code=${status[0]}
 set -e
 if [[ ${max_note_id_exit_code} -ne 0 ]] || [[ -z "${MAX_NOTE_ID}" ]]; then
  __loge "ERROR: Failed to get maximum note_id from source database"
@@ -310,14 +311,18 @@ for table in "${TABLES[@]}"; do
  # For notes, note_comments, and note_comments_text, use MAX_NOTE_ID to ensure consistency
  if [[ "${table}" == "notes" ]]; then
   row_count=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -c "SELECT COUNT(*) FROM public.${table} WHERE note_id <= ${MAX_NOTE_ID};" 2>&1 | tr -d ' ')
+  status=("${PIPESTATUS[@]}")
  elif [[ "${table}" == "note_comments" ]]; then
   row_count=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -c "SELECT COUNT(*) FROM public.${table} WHERE note_id <= ${MAX_NOTE_ID};" 2>&1 | tr -d ' ')
+  status=("${PIPESTATUS[@]}")
  elif [[ "${table}" == "note_comments_text" ]]; then
   row_count=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -c "SELECT COUNT(*) FROM public.${table} WHERE note_id <= ${MAX_NOTE_ID};" 2>&1 | tr -d ' ')
+  status=("${PIPESTATUS[@]}")
  else
   row_count=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -c "SELECT COUNT(*) FROM public.${table};" 2>&1 | tr -d ' ')
+  status=("${PIPESTATUS[@]}")
  fi
- row_count_exit_code=$?
+ row_count_exit_code=${status[0]}
  set -e
  if [[ ${row_count_exit_code} -ne 0 ]]; then
   __loge "ERROR: Failed to get row count for ${table}"

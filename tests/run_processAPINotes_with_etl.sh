@@ -555,6 +555,10 @@ run_processAPINotes() {
   log_info "DEBUG: MOCK_NOTES_COUNT is not set (will use default behavior)"
  fi
 
+ # Restore SCRIPT_BASE_DIRECTORY for ingestion scripts (processAPINotes.sh)
+ # This is necessary because run_etl() changes it to ANALYTICS_ROOT
+ export SCRIPT_BASE_DIRECTORY="${INGESTION_ROOT}"
+
  # Change to ingestion root directory
  cd "${INGESTION_ROOT}"
 
@@ -679,8 +683,11 @@ run_etl() {
  log_info "Executing: ${ETL_SCRIPT}"
 
  # Capture ETL output and save it
- local ETL_EXIT_CODE=0
- "${ETL_SCRIPT}" 2>&1 | tee "${ETL_LOGS_DIR}/ETL_output.log" || ETL_EXIT_CODE=$?
+ # Use PIPESTATUS to capture the actual exit code of ETL_SCRIPT, not tee
+ # IMPORTANT: PIPESTATUS resets after each command, so capture it immediately
+ # on the same line as the pipeline (using semicolon) before it resets
+ "${ETL_SCRIPT}" 2>&1 | tee "${ETL_LOGS_DIR}/ETL_output.log"
+ local ETL_EXIT_CODE=${PIPESTATUS[0]}
 
  # Find and copy ETL log directory created after PRE_ETL_TIMESTAMP
  # ETL creates logs in /tmp/ETL_* directories
@@ -714,7 +721,7 @@ run_etl() {
   return 0
  else
   log_error "ETL failed with exit code: ${ETL_EXIT_CODE} after ${SOURCE_TYPE} execution #${EXECUTION_NUMBER}"
-  return ${ETL_EXIT_CODE}
+  return "${ETL_EXIT_CODE}"
  fi
 }
 
