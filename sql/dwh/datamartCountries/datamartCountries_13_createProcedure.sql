@@ -10,6 +10,7 @@ CREATE OR REPLACE PROCEDURE dwh.insert_datamart_country (
   m_dimension_country_id INTEGER
 )
 LANGUAGE plpgsql
+SECURITY DEFINER
 AS $proc$
  DECLARE
   m_country_id INTEGER;
@@ -158,6 +159,7 @@ CREATE OR REPLACE PROCEDURE dwh.update_datamart_country_activity_year (
   m_year SMALLINT
 )
 LANGUAGE plpgsql
+SECURITY DEFINER
 AS $proc$
  DECLARE
   m_history_year_open INTEGER;
@@ -223,7 +225,7 @@ AS $proc$
     JOIN dwh.dimension_days d
     ON (f.action_dimension_id_date = d.dimension_day_id)
     JOIN note_comments nc
-    ON (f.id_note = nc.note_id AND nc.event = 'closed')
+    ON (f.id_note = nc.note_id AND nc.event::text = 'closed')
     JOIN note_comments_text nct
     ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
    WHERE f.dimension_id_country = m_dimension_country_id
@@ -319,6 +321,7 @@ CREATE OR REPLACE PROCEDURE dwh.update_datamart_country (
   m_dimension_id_country INTEGER
 )
 LANGUAGE plpgsql
+SECURITY DEFINER
 AS $proc$
  DECLARE
   qty INTEGER;
