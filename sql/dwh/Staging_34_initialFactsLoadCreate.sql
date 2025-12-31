@@ -435,15 +435,15 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_staging_${YEAR} (
     FROM note_comments
     WHERE DATE(created_at) > max_processed_date
      AND EXTRACT(YEAR FROM created_at) = ${YEAR};
-    
+
     -- If no more dates with comments, exit loop
     IF (max_processed_date IS NULL OR max_processed_date > max_note_action_date) THEN
      EXIT;
     END IF;
-    
+
     -- Reset timestamp for new date to start of day
     max_note_on_dwh_timestamp := max_processed_date::TIMESTAMP;
-    
+
 --RAISE NOTICE 'Skipped to next date with comments: %.', max_processed_date;
 
    -- Gets the number of notes that have not being processed on the new date
