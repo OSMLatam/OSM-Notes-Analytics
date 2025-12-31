@@ -92,13 +92,86 @@ DBNAME="osm_notes"
 
 ### Create Read-Only User for FDW
 
+**Important:** This step must be completed **before** running the ETL when using separate databases. The FDW user needs read-only access to the Ingestion database tables.
+
+**Step 1: Create the user (if it doesn't exist)**
+
 ```sql
--- In Ingestion DB
-CREATE USER analytics_readonly WITH PASSWORD 'secure_password';
-GRANT CONNECT ON DATABASE osm_notes TO analytics_readonly;
-GRANT USAGE ON SCHEMA public TO analytics_readonly;
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO analytics_readonly;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO analytics_readonly;
+-- Connect to the Ingestion database
+\c notes  -- or whatever your DBNAME_INGESTION is
+
+-- Create the FDW user (replace 'secure_password' with a strong password)
+-- Replace 'osm_notes_ingestion_user' with your FDW_INGESTION_USER value
+CREATE USER osm_notes_ingestion_user WITH PASSWORD 'secure_password';
+```
+
+**Step 2: Grant read-only permissions**
+
+```sql
+-- Grant connection to the database
+GRANT CONNECT ON DATABASE notes TO osm_notes_ingestion_user;
+
+-- Grant usage on the public schema
+GRANT USAGE ON SCHEMA public TO osm_notes_ingestion_user;
+
+-- Grant SELECT on all existing tables
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO osm_notes_ingestion_user;
+
+-- Grant SELECT on future tables (so permissions persist for new tables)
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO osm_notes_ingestion_user;
+```
+
+**Step 3: Verify permissions**
+
+```sql
+-- Verify the user exists
+SELECT usename, usecreatedb, usesuper FROM pg_user WHERE usename = 'osm_notes_ingestion_user';
+
+-- Verify permissions on required tables
+SELECT grantee, privilege_type, table_name 
+FROM information_schema.role_table_grants 
+WHERE table_schema = 'public' 
+  AND table_name IN ('note_comments', 'notes', 'note_comments_text', 'users', 'countries')
+  AND grantee = 'osm_notes_ingestion_user'
+ORDER BY table_name, privilege_type;
+```
+
+**Note:** If the user already exists, skip Step 1 and only run Steps 2 and 3. The `GRANT` statements are idempotent and safe to run multiple times.
+
+**Complete example script:**
+
+```sql
+-- Setup FDW user for Analytics ETL
+-- Run this in the Ingestion database (DBNAME_INGESTION)
+
+-- Create user if it doesn't exist
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_user WHERE usename = 'osm_notes_ingestion_user') THEN
+    CREATE USER osm_notes_ingestion_user WITH PASSWORD 'secure_password';
+    RAISE NOTICE 'User osm_notes_ingestion_user created';
+  ELSE
+    RAISE NOTICE 'User osm_notes_ingestion_user already exists';
+  END IF;
+END $$;
+
+-- Grant permissions
+GRANT CONNECT ON DATABASE notes TO osm_notes_ingestion_user;
+GRANT USAGE ON SCHEMA public TO osm_notes_ingestion_user;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO osm_notes_ingestion_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO osm_notes_ingestion_user;
+
+-- Verify
+SELECT 
+  'User exists: ' || EXISTS(SELECT 1 FROM pg_user WHERE usename = 'osm_notes_ingestion_user') as status
+UNION ALL
+SELECT 
+  'Has SELECT on note_comments: ' || EXISTS(
+    SELECT 1 FROM information_schema.role_table_grants 
+    WHERE grantee = 'osm_notes_ingestion_user' 
+      AND table_name = 'note_comments' 
+      AND privilege_type = 'SELECT'
+  ) as status;
 ```
 
 ---
@@ -142,9 +215,24 @@ Auto-detects incremental execution and:
 ### Error: "Failed to setup Foreign Data Wrappers"
 
 **Solution:**
-- Verify that `analytics_readonly` user exists in Ingestion DB
-- Verify read permissions
+- Verify that the FDW user (value of `FDW_INGESTION_USER`) exists in Ingestion DB
+- Verify read permissions (see "Create Read-Only User for FDW" section above)
 - Verify `FDW_INGESTION_*` variables in `etc/properties.sh`
+- Check that `FDW_INGESTION_PASSWORD` is set correctly or `.pgpass` is configured
+
+### Error: "permission denied for table note_comments"
+
+**Solution:** The FDW user doesn't have SELECT permissions. Run the permission grants:
+
+```sql
+-- In Ingestion DB
+GRANT CONNECT ON DATABASE notes TO osm_notes_ingestion_user;
+GRANT USAGE ON SCHEMA public TO osm_notes_ingestion_user;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO osm_notes_ingestion_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO osm_notes_ingestion_user;
+```
+
+Replace `osm_notes_ingestion_user` with your `FDW_INGESTION_USER` value and `notes` with your `DBNAME_INGESTION` value.
 
 ### Error: "Table already exists in target database"
 
