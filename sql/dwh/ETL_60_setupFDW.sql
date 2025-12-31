@@ -27,7 +27,7 @@ OPTIONS (
   dbname '${FDW_INGESTION_DBNAME}',
   port '${FDW_INGESTION_PORT}',
   fetch_size '10000',
-  use_remote_estimate 'true'
+  use_remote_estimate 'false'
 );
 
 -- Create user mapping
