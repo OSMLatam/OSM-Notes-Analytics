@@ -145,6 +145,7 @@ DO $$
 DECLARE
   server_was_recreated BOOLEAN := FALSE;
   table_exists BOOLEAN;
+  current_event_type TEXT;
 BEGIN
   -- Check if foreign tables exist (if server was recreated, they won't exist)
   -- We'll recreate them only if they don't exist
@@ -156,20 +157,34 @@ BEGIN
     WHERE foreign_table_schema = 'public' AND foreign_table_name = 'note_comments'
   ) INTO table_exists;
 
+  -- Check if event column type needs to be updated (from TEXT to note_event_enum)
+  IF table_exists THEN
+    SELECT udt_name INTO current_event_type
+    FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'note_comments' AND column_name = 'event';
+    
+    -- If event column is TEXT instead of note_event_enum, recreate the foreign table
+    IF current_event_type = 'text' THEN
+      RAISE NOTICE 'Foreign table public.note_comments exists but event column is TEXT. Recreating with note_event_enum type.';
+      EXECUTE 'DROP FOREIGN TABLE IF EXISTS public.note_comments CASCADE';
+      table_exists := FALSE;
+    ELSE
+      RAISE NOTICE 'Foreign table public.note_comments already exists with correct type. Skipping recreation.';
+    END IF;
+  END IF;
+
   IF NOT table_exists THEN
     EXECUTE 'CREATE FOREIGN TABLE public.note_comments (
       id INTEGER,
       note_id INTEGER,
       sequence_action INTEGER,
-      event TEXT,
+      event note_event_enum,
       processing_time TIMESTAMP WITHOUT TIME ZONE,
       created_at TIMESTAMP WITHOUT TIME ZONE,
       id_user INTEGER
     ) SERVER ingestion_server OPTIONS (schema_name ''public'', table_name ''note_comments'')';
     EXECUTE 'COMMENT ON FOREIGN TABLE public.note_comments IS ''Foreign table pointing to note_comments in Ingestion DB. Used for incremental ETL processing.''';
     RAISE NOTICE 'Created foreign table: public.note_comments';
-  ELSE
-    RAISE NOTICE 'Foreign table public.note_comments already exists. Skipping creation.';
   END IF;
 
   -- Check notes
