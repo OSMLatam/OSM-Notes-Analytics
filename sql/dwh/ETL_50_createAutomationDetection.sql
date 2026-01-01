@@ -291,13 +291,11 @@ BEGIN
     m_updated_count := m_updated_count + 1;
 
     IF m_updated_count % 100 = 0 THEN
-      COMMIT;
-      RAISE NOTICE 'Updated automation levels for % users...', m_updated_count;
+      RAISE NOTICE 'Processing automation levels for % users...', m_updated_count;
     END IF;
   END LOOP;
 
-  COMMIT;
-  RAISE NOTICE 'Completed automation level detection. Updated % users.', m_updated_count;
+  RAISE NOTICE 'Completed automation level detection. Processed % users.', m_updated_count;
 END;
 $proc$;
 
