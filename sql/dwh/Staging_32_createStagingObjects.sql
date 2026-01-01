@@ -81,7 +81,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
      JOIN (
       SELECT note_id, id_user
       FROM note_comments
-      WHERE event::text = ''opened''
+      WHERE CAST(event AS text) = ''opened''
        AND note_id <= ' || max_note_id_snapshot || '
      ) o
      ON (n.note_id = o.note_id)
@@ -107,7 +107,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
      JOIN (
       SELECT note_id, id_user
       FROM note_comments
-      WHERE event::text = ''opened''
+      WHERE CAST(event AS text) = ''opened''
        AND note_id <= ' || max_note_id_snapshot || '
      ) o
      ON (n.note_id = o.note_id)

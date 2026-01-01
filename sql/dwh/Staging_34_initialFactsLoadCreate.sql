@@ -83,7 +83,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date_${YEAR} (
      JOIN (
       SELECT note_id, id_user
       FROM note_comments
-      WHERE event::text = ''opened''
+      WHERE CAST(event AS text) = ''opened''
      ) o
      ON (n.note_id = o.note_id)
      LEFT JOIN note_comments_text t
@@ -107,7 +107,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date_${YEAR} (
      JOIN (
       SELECT note_id, id_user
       FROM note_comments
-      WHERE event::text = ''opened''
+      WHERE CAST(event AS text) = ''opened''
      ) o
      ON (n.note_id = o.note_id)
      LEFT JOIN note_comments_text t

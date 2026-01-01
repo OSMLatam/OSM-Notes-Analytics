@@ -96,7 +96,7 @@ WITH cleaned_comments AS (
         JOIN note_comments_text nct
           ON nc.note_id = nct.note_id
           AND nc.sequence_action = nct.sequence_action
-      WHERE nc.event::text = 'opened'
+      WHERE CAST(nc.event AS text) = 'opened'
       ORDER BY nc.note_id, nc.sequence_action ASC
     ) opening_text
       ON closed_fact.id_note = opening_text.note_id
@@ -109,7 +109,7 @@ WITH cleaned_comments AS (
         JOIN note_comments_text nct
           ON nc.note_id = nct.note_id
           AND nc.sequence_action = nct.sequence_action
-      WHERE nc.event::text = 'closed'
+      WHERE CAST(nc.event AS text) = 'closed'
       ORDER BY nc.note_id, nc.sequence_action DESC
     ) closing_text
       ON closed_fact.id_note = closing_text.note_id

@@ -227,7 +227,7 @@ AS $proc$
     JOIN (
      SELECT note_id, sequence_action, id_user
      FROM note_comments
-     WHERE event::text = 'closed'
+     WHERE CAST(event AS text) = 'closed'
     ) nc
     ON (f.id_note = nc.note_id)
     JOIN note_comments_text nct
@@ -861,7 +861,7 @@ AS $proc$
    JOIN (
     SELECT note_id, sequence_action, id_user
     FROM note_comments
-    WHERE event::text = 'closed'
+    WHERE CAST(event AS text) = 'closed'
    ) nc
    ON (f.id_note = nc.note_id)
    JOIN note_comments_text nct
@@ -918,7 +918,7 @@ AS $proc$
    JOIN (
     SELECT note_id, sequence_action, id_user
     FROM note_comments
-    WHERE event::text = 'closed'
+    WHERE CAST(event AS text) = 'closed'
    ) nc
    ON (f.id_note = nc.note_id)
    JOIN note_comments_text nct
@@ -981,7 +981,7 @@ AS $proc$
    JOIN (
     SELECT note_id, sequence_action, id_user
     FROM note_comments
-    WHERE event::text = 'closed'
+    WHERE CAST(event AS text) = 'closed'
    ) nc
    ON (f.id_note = nc.note_id)
    JOIN note_comments_text nct
@@ -1049,7 +1049,7 @@ AS $proc$
    JOIN (
     SELECT note_id, sequence_action, id_user
     FROM note_comments
-    WHERE event::text = 'closed'
+    WHERE CAST(event AS text) = 'closed'
    ) nc
    ON (f.id_note = nc.note_id)
    JOIN note_comments_text nct
