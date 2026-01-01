@@ -678,6 +678,7 @@ function __checkIngestionBaseTables {
   __loge "Base ingestion tables validation failed. Please check the error message above."
   __loge "This usually means tables or required columns are missing."
   __loge "Please ensure OSM-Notes-Ingestion system has created the tables with correct schema."
+  # shellcheck disable=SC2310  # Function invocation in || condition is intentional - we don't want log_finish to cause exit
   __log_finish || true
   return 1
  fi
@@ -913,9 +914,9 @@ function __processNotesETL {
    set -e
 
    # Use envsubst to replace variables in SQL file
-   # shellcheck disable=SC2310  # Function invocation in || condition is intentional for error handling
    local fdw_output
    fdw_output=$(mktemp)
+   # shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
    if ! envsubst < "${POSTGRES_60_SETUP_FDW}" \
     | __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 > "${fdw_output}" 2>&1; then
     __loge "ERROR: Failed to setup Foreign Data Wrappers"
@@ -1759,6 +1760,7 @@ function __initialFactsParallel {
  __logi "⏱️  TIME: === __initialFactsParallel TOTAL TIME: ${initial_facts_total_duration} seconds ==="
  __logi "════════════════════════════════════════════════════════════"
 
+ # shellcheck disable=SC2310  # Function invocation in || condition is intentional - we don't want log_finish to cause exit
  __log_finish || true
  return 0
 }
@@ -2338,6 +2340,7 @@ function main() {
 
  # Call __log_finish but don't let it cause exit if it fails
  # Use || true to prevent this from causing exit code 1 if it fails
+ # shellcheck disable=SC2310  # Function invocation in || condition is intentional - we don't want log_finish to cause exit
  __log_finish || true
 
  # Explicitly return success to ensure exit code is 0

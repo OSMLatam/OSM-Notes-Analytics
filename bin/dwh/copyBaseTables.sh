@@ -129,23 +129,23 @@ fi
 
 # Validate source database connection
 set +e
-connection_output=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -c "SELECT 1;" 2>&1)
-connection_exit_code=$?
+CONNECTION_OUTPUT=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -c "SELECT 1;" 2>&1)
+CONNECTION_EXIT_CODE=$?
 set -e
-if [[ ${connection_exit_code} -ne 0 ]]; then
+if [[ ${CONNECTION_EXIT_CODE} -ne 0 ]]; then
  __loge "ERROR: Cannot connect to source database ${INGESTION_DB}"
- __loge "Connection error: ${connection_output}"
+ __loge "Connection error: ${CONNECTION_OUTPUT}"
  exit 1
 fi
 
 # Validate target database connection
 set +e
-connection_output=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -c "SELECT 1;" 2>&1)
-connection_exit_code=$?
+CONNECTION_OUTPUT=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -c "SELECT 1;" 2>&1)
+CONNECTION_EXIT_CODE=$?
 set -e
-if [[ ${connection_exit_code} -ne 0 ]]; then
+if [[ ${CONNECTION_EXIT_CODE} -ne 0 ]]; then
  __loge "ERROR: Cannot connect to target database ${ANALYTICS_DB}"
- __loge "Connection error: ${connection_output}"
+ __loge "Connection error: ${CONNECTION_OUTPUT}"
  exit 1
 fi
 
@@ -158,7 +158,7 @@ PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -c "CREATE
 __logi "Copying enum types and custom types from source database"
 set +e
 # Extract and copy all enum types from the source database
-enum_types=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -A -c "
+ENUM_TYPES=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -A -c "
  SELECT DISTINCT t.typname
  FROM pg_type t
  JOIN pg_enum e ON t.oid = e.enumtypid
@@ -166,33 +166,33 @@ enum_types=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]
  WHERE n.nspname = 'public'
  ORDER BY t.typname;
 " 2>&1)
-enum_exit_code=$?
+ENUM_EXIT_CODE=$?
 set -e
 
-if [[ ${enum_exit_code} -eq 0 ]] && [[ -n "${enum_types}" ]]; then
+if [[ ${ENUM_EXIT_CODE} -eq 0 ]] && [[ -n "${ENUM_TYPES}" ]]; then
  while IFS= read -r enum_type; do
   if [[ -n "${enum_type}" ]]; then
    __logi "Copying enum type: ${enum_type}"
    # Check if enum already exists in target
-   enum_exists=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -t -c \
+   ENUM_EXISTS=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -t -c \
     "SELECT EXISTS(SELECT 1 FROM pg_type WHERE typname = '${enum_type}');" 2>&1 | tr -d ' ')
-   if [[ "${enum_exists}" != "t" ]]; then
+   if [[ "${ENUM_EXISTS}" != "t" ]]; then
     # Create enum type with all its values
-    enum_values=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -A -c "
+    ENUM_VALUES=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -A -c "
      SELECT quote_literal(enumlabel)
      FROM pg_enum e
      JOIN pg_type t ON e.enumtypid = t.oid
      WHERE t.typname = '${enum_type}'
      ORDER BY e.enumsortorder;
     " 2>&1 | tr '\n' ',' | sed 's/,$//')
-    if [[ -n "${enum_values}" ]]; then
-     create_enum_sql="CREATE TYPE ${enum_type} AS ENUM (${enum_values});"
+    if [[ -n "${ENUM_VALUES}" ]]; then
+     CREATE_ENUM_SQL="CREATE TYPE ${enum_type} AS ENUM (${ENUM_VALUES});"
      set +e
-     create_output=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -c "${create_enum_sql}" 2>&1)
-     create_exit_code=$?
+     CREATE_OUTPUT=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -c "${CREATE_ENUM_SQL}" 2>&1)
+     CREATE_EXIT_CODE=$?
      set -e
-     if [[ ${create_exit_code} -ne 0 ]]; then
-      __logw "Warning: Failed to create enum type ${enum_type}: ${create_output}"
+     if [[ ${CREATE_EXIT_CODE} -ne 0 ]]; then
+      __logw "Warning: Failed to create enum type ${enum_type}: ${CREATE_OUTPUT}"
      else
       __logi "Enum type ${enum_type} created successfully"
      fi
@@ -201,7 +201,7 @@ if [[ ${enum_exit_code} -eq 0 ]] && [[ -n "${enum_types}" ]]; then
     __logi "Enum type ${enum_type} already exists in target database"
    fi
   fi
- done <<< "${enum_types}"
+ done <<< "${ENUM_TYPES}"
 fi
 
 # Capture maximum note_id at the start to ensure consistency between notes, note_comments, and note_comments_text
@@ -209,10 +209,10 @@ fi
 __logi "Capturing maximum note_id for consistent snapshot"
 set +e
 MAX_NOTE_ID=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -c "SELECT COALESCE(MAX(note_id), 0) FROM public.notes;" 2>&1 | tr -d ' ')
-status=("${PIPESTATUS[@]}")
-max_note_id_exit_code=${status[0]}
+STATUS=("${PIPESTATUS[@]}")
+MAX_NOTE_ID_EXIT_CODE=${STATUS[0]}
 set -e
-if [[ ${max_note_id_exit_code} -ne 0 ]] || [[ -z "${MAX_NOTE_ID}" ]]; then
+if [[ ${MAX_NOTE_ID_EXIT_CODE} -ne 0 ]] || [[ -z "${MAX_NOTE_ID}" ]]; then
  __loge "ERROR: Failed to get maximum note_id from source database"
  __loge "This is required to ensure consistency between notes, note_comments, and note_comments_text"
  exit 1
@@ -226,13 +226,13 @@ for table in "${TABLES[@]}"; do
 
  # Verify source database connection before checking table
  set +e
- connection_output=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -c "SELECT 1;" 2>&1)
- connection_exit_code=$?
+ CONNECTION_OUTPUT=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -c "SELECT 1;" 2>&1)
+ CONNECTION_EXIT_CODE=$?
  set -e
- if [[ ${connection_exit_code} -ne 0 ]]; then
+ if [[ ${CONNECTION_EXIT_CODE} -ne 0 ]]; then
   __loge "ERROR: Cannot connect to source database ${INGESTION_DB} while copying table ${table}"
   __loge "Source database may have been dropped or is unavailable"
-  __loge "Connection error: ${connection_output}"
+  __loge "Connection error: ${CONNECTION_OUTPUT}"
   exit 1
  fi
 
@@ -250,11 +250,11 @@ for table in "${TABLES[@]}"; do
   | grep -q 1; then
   __logw "Table ${table} already exists in target database, dropping first"
   set +e
-  drop_output=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -c "DROP TABLE IF EXISTS public.${table} CASCADE;" 2>&1)
-  drop_exit_code=$?
+  DROP_OUTPUT=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -c "DROP TABLE IF EXISTS public.${table} CASCADE;" 2>&1)
+  DROP_EXIT_CODE=$?
   set -e
-  if [[ ${drop_exit_code} -ne 0 ]]; then
-   __logw "Warning: Failed to drop existing table ${table}: ${drop_output}"
+  if [[ ${DROP_EXIT_CODE} -ne 0 ]]; then
+   __logw "Warning: Failed to drop existing table ${table}: ${DROP_OUTPUT}"
   fi
  fi
 
@@ -265,7 +265,7 @@ for table in "${TABLES[@]}"; do
  if [[ "${table}" == "countries" ]]; then
   __logi "Creating countries table with only required columns (excluding geom and zone columns)"
   set +e
-  create_output=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -c "
+  CREATE_OUTPUT=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -c "
   CREATE TABLE IF NOT EXISTS public.countries (
    country_id INTEGER NOT NULL,
    country_name VARCHAR(100) NOT NULL,
@@ -273,11 +273,11 @@ for table in "${TABLES[@]}"; do
    country_name_en VARCHAR(100)
   );
  " 2>&1)
-  create_exit_code=$?
+  CREATE_EXIT_CODE=$?
   set -e
-  if [[ ${create_exit_code} -ne 0 ]]; then
+  if [[ ${CREATE_EXIT_CODE} -ne 0 ]]; then
    __loge "ERROR: Failed to create table structure for ${table}"
-   __loge "Schema creation error: ${create_output}"
+   __loge "Schema creation error: ${CREATE_OUTPUT}"
    exit 1
   fi
  else
@@ -291,16 +291,16 @@ for table in "${TABLES[@]}"; do
   fi
 
   set +e
-  schema_output=$(PGPASSWORD="${INGESTION_PGPASSWORD}" pg_dump "${PGDUMP_ARGS[@]}" \
+  SCHEMA_OUTPUT=$(PGPASSWORD="${INGESTION_PGPASSWORD}" pg_dump "${PGDUMP_ARGS[@]}" \
    -t "public.${table}" \
    --schema-only \
    --no-owner --no-acl \
    2>&1 | PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -q 2>&1)
-  schema_exit_code=${PIPESTATUS[0]}
+  SCHEMA_EXIT_CODE=${PIPESTATUS[0]}
   set -e
-  if [[ ${schema_exit_code} -ne 0 ]]; then
+  if [[ ${SCHEMA_EXIT_CODE} -ne 0 ]]; then
    __loge "ERROR: Failed to create table structure for ${table}"
-   __loge "Schema creation error: ${schema_output}"
+   __loge "Schema creation error: ${SCHEMA_OUTPUT}"
    exit 1
   fi
  fi
@@ -310,115 +310,115 @@ for table in "${TABLES[@]}"; do
  set +e
  # For notes, note_comments, and note_comments_text, use MAX_NOTE_ID to ensure consistency
  if [[ "${table}" == "notes" ]]; then
-  row_count=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -c "SELECT COUNT(*) FROM public.${table} WHERE note_id <= ${MAX_NOTE_ID};" 2>&1 | tr -d ' ')
-  status=("${PIPESTATUS[@]}")
+  ROW_COUNT=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -c "SELECT COUNT(*) FROM public.${table} WHERE note_id <= ${MAX_NOTE_ID};" 2>&1 | tr -d ' ')
+  STATUS=("${PIPESTATUS[@]}")
  elif [[ "${table}" == "note_comments" ]]; then
-  row_count=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -c "SELECT COUNT(*) FROM public.${table} WHERE note_id <= ${MAX_NOTE_ID};" 2>&1 | tr -d ' ')
-  status=("${PIPESTATUS[@]}")
+  ROW_COUNT=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -c "SELECT COUNT(*) FROM public.${table} WHERE note_id <= ${MAX_NOTE_ID};" 2>&1 | tr -d ' ')
+  STATUS=("${PIPESTATUS[@]}")
  elif [[ "${table}" == "note_comments_text" ]]; then
-  row_count=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -c "SELECT COUNT(*) FROM public.${table} WHERE note_id <= ${MAX_NOTE_ID};" 2>&1 | tr -d ' ')
-  status=("${PIPESTATUS[@]}")
+  ROW_COUNT=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -c "SELECT COUNT(*) FROM public.${table} WHERE note_id <= ${MAX_NOTE_ID};" 2>&1 | tr -d ' ')
+  STATUS=("${PIPESTATUS[@]}")
  else
-  row_count=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -c "SELECT COUNT(*) FROM public.${table};" 2>&1 | tr -d ' ')
-  status=("${PIPESTATUS[@]}")
+  ROW_COUNT=$(PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" -t -c "SELECT COUNT(*) FROM public.${table};" 2>&1 | tr -d ' ')
+  STATUS=("${PIPESTATUS[@]}")
  fi
- row_count_exit_code=${status[0]}
+ ROW_COUNT_EXIT_CODE=${STATUS[0]}
  set -e
- if [[ ${row_count_exit_code} -ne 0 ]]; then
+ if [[ ${ROW_COUNT_EXIT_CODE} -ne 0 ]]; then
   __loge "ERROR: Failed to get row count for ${table}"
   exit 1
  fi
- __logi "Copying ${row_count} rows from ${table}"
+ __logi "Copying ${ROW_COUNT} rows from ${table}"
 
  # Special handling for countries table: copy only required columns
  if [[ "${table}" == "countries" ]]; then
   set +e
-  copy_errors=$(mktemp)
+  COPY_ERRORS=$(mktemp)
   # Copy only the columns we need (no geom, no zone columns)
   PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" \
    -c "\COPY (SELECT country_id, country_name, country_name_es, country_name_en FROM public.${table}) TO STDOUT" 2>&1 \
    | PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" \
-    -c "\COPY public.${table} (country_id, country_name, country_name_es, country_name_en) FROM STDIN" > "${copy_errors}" 2>&1
-  copy_exit_code_1=${PIPESTATUS[0]:-1}
-  copy_exit_code_2=${PIPESTATUS[1]:-1}
-  copy_error_content=$(cat "${copy_errors}")
-  rm -f "${copy_errors}"
+    -c "\COPY public.${table} (country_id, country_name, country_name_es, country_name_en) FROM STDIN" > "${COPY_ERRORS}" 2>&1
+  COPY_EXIT_CODE_1=${PIPESTATUS[0]:-1}
+  COPY_EXIT_CODE_2=${PIPESTATUS[1]:-1}
+  COPY_ERROR_CONTENT=$(cat "${COPY_ERRORS}")
+  rm -f "${COPY_ERRORS}"
   set -e
 
   # Verify row count first - if it matches, COPY was successful regardless of exit code
   # (psql may return non-zero exit code even on successful COPY if there are warnings/notices)
-  target_count=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -t -c "SELECT COUNT(*) FROM public.${table};" 2>&1 | tr -d ' ' || echo "0")
-  if [[ "${row_count}" == "${target_count}" ]]; then
-   __logi "COPY successful: ${target_count} rows copied (verified by row count)"
-  elif [[ ${copy_exit_code_1} -ne 0 ]] || [[ ${copy_exit_code_2} -ne 0 ]]; then
+  TARGET_COUNT=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -t -c "SELECT COUNT(*) FROM public.${table};" 2>&1 | tr -d ' ' || echo "0")
+  if [[ "${ROW_COUNT}" == "${TARGET_COUNT}" ]]; then
+   __logi "COPY successful: ${TARGET_COUNT} rows copied (verified by row count)"
+  elif [[ ${COPY_EXIT_CODE_1} -ne 0 ]] || [[ ${COPY_EXIT_CODE_2} -ne 0 ]]; then
    __loge "ERROR: Failed to copy data for ${table}"
-   __loge "COPY TO STDOUT exit code: ${copy_exit_code_1}"
-   __loge "COPY FROM STDIN exit code: ${copy_exit_code_2}"
-   __loge "COPY error details: ${copy_error_content}"
-   __loge "Row count mismatch: source=${row_count}, target=${target_count}"
+   __loge "COPY TO STDOUT exit code: ${COPY_EXIT_CODE_1}"
+   __loge "COPY FROM STDIN exit code: ${COPY_EXIT_CODE_2}"
+   __loge "COPY error details: ${COPY_ERROR_CONTENT}"
+   __loge "Row count mismatch: source=${ROW_COUNT}, target=${TARGET_COUNT}"
    exit 1
   fi
  else
   # Capture errors from both psql commands in the pipeline
   set +e
-  copy_errors=$(mktemp)
+  COPY_ERRORS=$(mktemp)
   # For notes, note_comments, and note_comments_text, filter by MAX_NOTE_ID to ensure consistency
   if [[ "${table}" == "notes" ]]; then
    # Copy notes with note_id <= MAX_NOTE_ID
    PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" \
     -c "\COPY (SELECT * FROM public.${table} WHERE note_id <= ${MAX_NOTE_ID}) TO STDOUT" 2>&1 \
     | PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" \
-     -c "\COPY public.${table} FROM STDIN" > "${copy_errors}" 2>&1
+     -c "\COPY public.${table} FROM STDIN" > "${COPY_ERRORS}" 2>&1
   elif [[ "${table}" == "note_comments" ]]; then
    # Copy note_comments with note_id <= MAX_NOTE_ID
    PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" \
     -c "\COPY (SELECT * FROM public.${table} WHERE note_id <= ${MAX_NOTE_ID}) TO STDOUT" 2>&1 \
     | PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" \
-     -c "\COPY public.${table} FROM STDIN" > "${copy_errors}" 2>&1
+     -c "\COPY public.${table} FROM STDIN" > "${COPY_ERRORS}" 2>&1
   elif [[ "${table}" == "note_comments_text" ]]; then
    # Copy note_comments_text with note_id <= MAX_NOTE_ID to ensure referential integrity
    PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" \
     -c "\COPY (SELECT * FROM public.${table} WHERE note_id <= ${MAX_NOTE_ID}) TO STDOUT" 2>&1 \
     | PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" \
-     -c "\COPY public.${table} FROM STDIN" > "${copy_errors}" 2>&1
+     -c "\COPY public.${table} FROM STDIN" > "${COPY_ERRORS}" 2>&1
   else
    # For other tables, copy all rows
    PGPASSWORD="${INGESTION_PGPASSWORD}" psql "${INGESTION_PSQL_ARGS[@]}" \
     -c "\COPY public.${table} TO STDOUT" 2>&1 \
     | PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" \
-     -c "\COPY public.${table} FROM STDIN" > "${copy_errors}" 2>&1
+     -c "\COPY public.${table} FROM STDIN" > "${COPY_ERRORS}" 2>&1
   fi
   # Capture PIPESTATUS immediately after the pipeline (it resets after each command)
   # Use default values if PIPESTATUS array doesn't have enough elements
-  copy_exit_code_1=${PIPESTATUS[0]:-1}
-  copy_exit_code_2=${PIPESTATUS[1]:-1}
-  copy_error_content=$(cat "${copy_errors}")
-  rm -f "${copy_errors}"
+  COPY_EXIT_CODE_1=${PIPESTATUS[0]:-1}
+  COPY_EXIT_CODE_2=${PIPESTATUS[1]:-1}
+  COPY_ERROR_CONTENT=$(cat "${COPY_ERRORS}")
+  rm -f "${COPY_ERRORS}"
   set -e
 
   # Verify row count first - if it matches, COPY was successful regardless of exit code
   # (psql may return non-zero exit code even on successful COPY if there are warnings/notices)
-  target_count=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -t -c "SELECT COUNT(*) FROM public.${table};" 2>&1 | tr -d ' ' || echo "0")
-  if [[ "${row_count}" == "${target_count}" ]]; then
-   __logi "COPY successful: ${target_count} rows copied (verified by row count)"
-  elif [[ ${copy_exit_code_1} -ne 0 ]] || [[ ${copy_exit_code_2} -ne 0 ]]; then
+  TARGET_COUNT=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -t -c "SELECT COUNT(*) FROM public.${table};" 2>&1 | tr -d ' ' || echo "0")
+  if [[ "${ROW_COUNT}" == "${TARGET_COUNT}" ]]; then
+   __logi "COPY successful: ${TARGET_COUNT} rows copied (verified by row count)"
+  elif [[ ${COPY_EXIT_CODE_1} -ne 0 ]] || [[ ${COPY_EXIT_CODE_2} -ne 0 ]]; then
    __loge "ERROR: Failed to copy data for ${table}"
-   __loge "COPY TO STDOUT exit code: ${copy_exit_code_1}"
-   __loge "COPY FROM STDIN exit code: ${copy_exit_code_2}"
-   __loge "COPY error details: ${copy_error_content}"
-   __loge "Row count mismatch: source=${row_count}, target=${target_count}"
+   __loge "COPY TO STDOUT exit code: ${COPY_EXIT_CODE_1}"
+   __loge "COPY FROM STDIN exit code: ${COPY_EXIT_CODE_2}"
+   __loge "COPY error details: ${COPY_ERROR_CONTENT}"
+   __loge "Row count mismatch: source=${ROW_COUNT}, target=${TARGET_COUNT}"
    exit 1
   fi
  fi
 
  # Verify row count (if not already verified above)
  if [[ "${table}" != "countries" ]]; then
-  target_count=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -t -c "SELECT COUNT(*) FROM public.${table};" 2>&1 | tr -d ' ' || echo "0")
-  if [[ "${row_count}" != "${target_count}" ]]; then
-   __loge "ERROR: Row count mismatch for ${table}: source=${row_count}, target=${target_count}"
+  TARGET_COUNT=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -t -c "SELECT COUNT(*) FROM public.${table};" 2>&1 | tr -d ' ' || echo "0")
+  if [[ "${ROW_COUNT}" != "${TARGET_COUNT}" ]]; then
+   __loge "ERROR: Row count mismatch for ${table}: source=${ROW_COUNT}, target=${TARGET_COUNT}"
    exit 1
   fi
-  __logi "Verified: ${target_count} rows copied for ${table}"
+  __logi "Verified: ${TARGET_COUNT} rows copied for ${table}"
  fi
 
  # Create indexes (copy from source)
@@ -474,15 +474,15 @@ CREATE TABLE IF NOT EXISTS dwh.properties (
 " > /dev/null 2>&1 || true
 
 # Save MAX_NOTE_ID to properties
-save_properties_output=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -c "
+SAVE_PROPERTIES_OUTPUT=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -c "
 INSERT INTO dwh.properties (key, value)
 VALUES ('max_note_id', '${MAX_NOTE_ID}')
 ON CONFLICT (key) DO UPDATE SET value = '${MAX_NOTE_ID}';
 " 2>&1)
-save_properties_exit_code=$?
+SAVE_PROPERTIES_EXIT_CODE=$?
 set -e
-if [[ ${save_properties_exit_code} -ne 0 ]]; then
- __logw "Warning: Failed to save MAX_NOTE_ID to properties table: ${save_properties_output}"
+if [[ ${SAVE_PROPERTIES_EXIT_CODE} -ne 0 ]]; then
+ __logw "Warning: Failed to save MAX_NOTE_ID to properties table: ${SAVE_PROPERTIES_OUTPUT}"
  __logw "Incremental processing may not know where to start"
 else
  __logi "MAX_NOTE_ID saved successfully to dwh.properties"

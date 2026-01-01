@@ -161,33 +161,33 @@ WHERE f.action_comment = 'closed'
 ORDER BY COALESCE(c.country_name, 'Unknown');
 EOF
 
-total_countries=0
-exported_countries=0
-total_notes=0
+TOTAL_COUNTRIES=0
+EXPORTED_COUNTRIES=0
+TOTAL_NOTES=0
 
 while IFS='|' read -r country_id country_name; do
  if [[ -n "${country_id}" && -n "${country_name}" ]]; then
-  total_countries=$((total_countries + 1))
+  TOTAL_COUNTRIES=$((TOTAL_COUNTRIES + 1))
 
   # shellcheck disable=SC2310  # Function invocation in condition is intentional for error handling
   if __export_country_notes "${country_id}" "${country_name}"; then
-   exported_countries=$((exported_countries + 1))
+   EXPORTED_COUNTRIES=$((EXPORTED_COUNTRIES + 1))
    # Count notes in the file
    file_notes=$(wc -l < "${TEMP_CSV_DIR}/${country_id}_$(__sanitize_filename "${country_name}").csv" | tr -d ' ')
    file_notes=$((file_notes - 1)) # Subtract header
-   total_notes=$((total_notes + file_notes))
+   TOTAL_NOTES=$((TOTAL_NOTES + file_notes))
   fi
  fi
 done < "${COUNTRY_LIST}"
 
 rm -f "${COUNTRY_LIST}"
 
-if [[ ${exported_countries} -eq 0 ]]; then
+if [[ ${EXPORTED_COUNTRIES} -eq 0 ]]; then
  print_warn "No CSV files were exported"
  exit 0
 fi
 
-print_success "Export completed: ${exported_countries} countries, ${total_notes} total notes"
+print_success "Export completed: ${EXPORTED_COUNTRIES} countries, ${TOTAL_NOTES} total notes"
 
 # Step 2: Copy to data repository
 print_info "Step 2: Copying CSV files to data repository..."
