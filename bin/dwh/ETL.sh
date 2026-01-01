@@ -393,34 +393,45 @@ function __psql_with_appname {
   done
 
   if [[ "${modified}" == "true" ]]; then
-   local exit_code=0
+   local EXIT_CODE=0
    # Execute psql and capture exit code
    set +e
-   PGAPPNAME="${appname}" psql "${new_args[@]}" || exit_code=$?
+   PGAPPNAME="${appname}" psql "${new_args[@]}" || EXIT_CODE=$?
    set -e
    # Clean up temp files (always clean up, even on error)
    for temp_file in "${temp_files[@]}"; do
     rm -f "${temp_file}" 2> /dev/null || true
    done
-   return "${exit_code}"
+   return "${EXIT_CODE}"
   else
    # No -f or -c found, but we have timeouts
    # If input is from stdin (pipe), prepend timeouts to stdin
    # Otherwise, set timeouts in a separate command
+   local EXIT_CODE=0
    if [[ -t 0 ]]; then
     # No stdin, set timeouts in a separate command
-    PGAPPNAME="${appname}" psql -c "${timeout_sql}" "$@"
+    set +e
+    PGAPPNAME="${appname}" psql -c "${timeout_sql}" "$@" || EXIT_CODE=$?
+    set -e
    else
     # Input from stdin, prepend timeouts
+    set +e
     {
      echo "${timeout_sql}"
      cat
-    } | PGAPPNAME="${appname}" psql "$@"
+    } | PGAPPNAME="${appname}" psql "$@" || EXIT_CODE=$?
+    set -e
    fi
+   return "${EXIT_CODE}"
   fi
  else
   # No timeouts configured, execute normally
-  PGAPPNAME="${appname}" psql "$@"
+  # Capture exit code to ensure it's returned properly
+  local EXIT_CODE=0
+  set +e
+  PGAPPNAME="${appname}" psql "$@" || EXIT_CODE=$?
+  set -e
+  return "${EXIT_CODE}"
  fi
 }
 
@@ -1006,53 +1017,199 @@ function __processNotesETL {
 
  # Create hashtag analysis views.
  __logi "Creating hashtag analysis views."
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_53_CREATE_HASHTAG_VIEWS}" 2>&1
+ local hashtag_views_exit_code=$?
+ set -e
+ if [[ ${hashtag_views_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to create hashtag analysis views (exit code: ${hashtag_views_exit_code})"
+  __log_finish
+  return 1
+ fi
 
  # Enhance datamarts with hashtag metrics.
  __logi "Enhancing datamarts with hashtag metrics."
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_53A_ENHANCE_DATAMARTS_HASHTAGS}" 2>&1
+ local enhance_hashtags_exit_code=$?
+ set -e
+ if [[ ${enhance_hashtags_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to enhance datamarts with hashtag metrics (exit code: ${enhance_hashtags_exit_code})"
+  __log_finish
+  return 1
+ fi
 
  # Create specialized hashtag indexes.
  __logi "Creating specialized hashtag indexes."
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_53B_CREATE_HASHTAG_INDEXES}" 2>&1
+ local hashtag_indexes_exit_code=$?
+ set -e
+ if [[ ${hashtag_indexes_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to create specialized hashtag indexes (exit code: ${hashtag_indexes_exit_code})"
+  __log_finish
+  return 1
+ fi
 
  # Complete hashtag analysis functions (DM-002).
  __logi "Creating complete hashtag analysis functions."
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_63_COMPLETE_HASHTAG_ANALYSIS}" 2>&1
+ local complete_hashtag_exit_code=$?
+ set -e
+ if [[ ${complete_hashtag_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to create complete hashtag analysis functions (exit code: ${complete_hashtag_exit_code})"
+  __log_finish
+  return 1
+ fi
 
  # Ensure automation detection system exists (needed for update procedures).
  __logi "Ensuring automation detection system exists."
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_50_CREATE_AUTOMATION_DETECTION}" 2>&1
+ local automation_exit_code=$?
+ set -e
+ if [[ ${automation_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to create automation detection system (exit code: ${automation_exit_code})"
+  __log_finish
+  return 1
+ fi
 
  # Ensure experience levels system exists (needed for update procedures).
  __logi "Ensuring experience levels system exists."
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_51_CREATE_EXPERIENCE_LEVELS}" 2>&1
+ local experience_exit_code=$?
+ set -e
+ if [[ ${experience_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to create experience levels system (exit code: ${experience_exit_code})"
+  __log_finish
+  return 1
+ fi
 
  # Update automation levels for modified users.
- __logi "Updating automation levels for modified users."
- __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
-  -c "CALL dwh.update_automation_levels_for_modified_users();" 2>&1
+ # Process in batches of 100 users per transaction to avoid long-running transactions
+ # and reduce lock contention. Each batch commits separately.
+ __logi "Updating automation levels for modified users (processing in batches of 100)..."
+ local AUTOMATION_BATCH_SIZE=100
+ local AUTOMATION_TOTAL_PROCESSED=0
+ local AUTOMATION_BATCH_NUM=1
+ local AUTOMATION_HAS_MORE=true
+ while [[ "${AUTOMATION_HAS_MORE}" == "true" ]]; do
+  # Execute batch within a transaction
+  set +e
+  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -c "
+   BEGIN;
+    CALL dwh.update_automation_levels_for_modified_users(${AUTOMATION_BATCH_SIZE});
+   COMMIT;
+  " 2>&1
+  local UPDATE_AUTOMATION_EXIT_CODE=$?
+  set -e
+  if [[ ${UPDATE_AUTOMATION_EXIT_CODE} -ne 0 ]]; then
+   __loge "ERROR: Failed to update automation levels for batch ${AUTOMATION_BATCH_NUM} (exit code: ${UPDATE_AUTOMATION_EXIT_CODE})"
+   __log_finish
+   return 1
+  fi
+  # Check if there are more users to process
+  set +e
+  local REMAINING_COUNT
+  REMAINING_COUNT=$(__psql_with_appname -d "${DBNAME_DWH}" -t -c "
+   SELECT COUNT(*) FROM dwh.facts
+   WHERE dimension_id_automation IS NULL
+     AND action_dimension_id_user IS NOT NULL
+     AND action_at > NOW() - INTERVAL '7 days';
+  " 2>&1 | tr -d ' ')
+  local CHECK_EXIT_CODE=$?
+  set -e
+  if [[ ${CHECK_EXIT_CODE} -ne 0 ]]; then
+   __logw "Warning: Failed to check remaining automation users count, continuing anyway"
+  fi
+  AUTOMATION_TOTAL_PROCESSED=$((AUTOMATION_TOTAL_PROCESSED + AUTOMATION_BATCH_SIZE))
+  __logi "Automation batch ${AUTOMATION_BATCH_NUM} completed. Total processed: ${AUTOMATION_TOTAL_PROCESSED}"
+  if [[ -z "${REMAINING_COUNT}" ]] || [[ "${REMAINING_COUNT}" == "0" ]]; then
+   AUTOMATION_HAS_MORE=false
+  else
+   AUTOMATION_BATCH_NUM=$((AUTOMATION_BATCH_NUM + 1))
+  fi
+ done
+ __logi "Completed automation level detection. Total users processed: ${AUTOMATION_TOTAL_PROCESSED}"
 
  # Update experience levels for modified users.
- __logi "Updating experience levels for modified users."
- __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
-  -c "CALL dwh.update_experience_levels_for_modified_users();" 2>&1
+ # Process in batches of 500 users per transaction to avoid long-running transactions
+ # and reduce lock contention. Each batch commits separately.
+ __logi "Updating experience levels for modified users (processing in batches of 500)..."
+ local EXPERIENCE_BATCH_SIZE=500
+ local EXPERIENCE_TOTAL_PROCESSED=0
+ local EXPERIENCE_BATCH_NUM=1
+ local EXPERIENCE_HAS_MORE=true
+ while [[ "${EXPERIENCE_HAS_MORE}" == "true" ]]; do
+  # Execute batch within a transaction
+  set +e
+  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -c "
+   BEGIN;
+    CALL dwh.update_experience_levels_for_modified_users(${EXPERIENCE_BATCH_SIZE});
+   COMMIT;
+  " 2>&1
+  local UPDATE_EXPERIENCE_EXIT_CODE=$?
+  set -e
+  if [[ ${UPDATE_EXPERIENCE_EXIT_CODE} -ne 0 ]]; then
+   __loge "ERROR: Failed to update experience levels for batch ${EXPERIENCE_BATCH_NUM} (exit code: ${UPDATE_EXPERIENCE_EXIT_CODE})"
+   __log_finish
+   return 1
+  fi
+  # Check if there are more users to process
+  set +e
+  local REMAINING_COUNT
+  REMAINING_COUNT=$(__psql_with_appname -d "${DBNAME_DWH}" -t -c "
+   SELECT COUNT(*) FROM dwh.dimension_users
+   WHERE modified = TRUE AND experience_level_id IS NULL;
+  " 2>&1 | tr -d ' ')
+  local CHECK_EXIT_CODE=$?
+  set -e
+  if [[ ${CHECK_EXIT_CODE} -ne 0 ]]; then
+   __logw "Warning: Failed to check remaining experience users count, continuing anyway"
+  fi
+  EXPERIENCE_TOTAL_PROCESSED=$((EXPERIENCE_TOTAL_PROCESSED + EXPERIENCE_BATCH_SIZE))
+  __logi "Experience batch ${EXPERIENCE_BATCH_NUM} completed. Total processed: ${EXPERIENCE_TOTAL_PROCESSED}"
+  if [[ -z "${REMAINING_COUNT}" ]] || [[ "${REMAINING_COUNT}" == "0" ]]; then
+   EXPERIENCE_HAS_MORE=false
+  else
+   EXPERIENCE_BATCH_NUM=$((EXPERIENCE_BATCH_NUM + 1))
+  fi
+ done
+ __logi "Completed experience level calculation. Total users processed: ${EXPERIENCE_TOTAL_PROCESSED}"
 
  # Create note current status table and procedures (ETL-003, ETL-004)
  __logi "Creating note current status table and procedures."
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -f "${POSTGRES_55_CREATE_NOTE_CURRENT_STATUS}" 2>&1
+ local note_status_create_exit_code=$?
+ set -e
+ if [[ ${note_status_create_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to create note current status table and procedures (exit code: ${note_status_create_exit_code})"
+  __log_finish
+  return 1
+ fi
 
  # Update note current status (for incremental updates)
  __logi "Updating note current status."
+ set +e
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
   -c "CALL dwh.update_note_current_status();" 2>&1
+ local update_note_status_exit_code=$?
+ set -e
+ if [[ ${update_note_status_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to update note current status (exit code: ${update_note_status_exit_code})"
+  __log_finish
+  return 1
+ fi
 
  __log_finish
 }
