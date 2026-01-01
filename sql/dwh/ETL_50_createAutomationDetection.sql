@@ -259,7 +259,9 @@ SELECT /* Notes-ETL */ clock_timestamp() AS Processing,
  'Creating automation update procedures' AS Task;
 
 -- Procedure to update automation levels for modified users
-CREATE OR REPLACE PROCEDURE dwh.update_automation_levels_for_modified_users()
+CREATE OR REPLACE PROCEDURE dwh.update_automation_levels_for_modified_users(
+  p_batch_size INTEGER DEFAULT 100
+)
 LANGUAGE plpgsql
 AS $proc$
 DECLARE
@@ -269,7 +271,7 @@ DECLARE
   m_criteria JSONB;
   m_updated_count INTEGER := 0;
 BEGIN
-  RAISE NOTICE 'Starting automation level detection for modified users...';
+  RAISE NOTICE 'Starting automation level detection for modified users (batch size: %)...', p_batch_size;
 
   FOR rec_user IN
     SELECT DISTINCT action_dimension_id_user as user_id
@@ -277,7 +279,7 @@ BEGIN
     WHERE dimension_id_automation IS NULL
       AND action_dimension_id_user IS NOT NULL
       AND action_at > NOW() - INTERVAL '7 days'
-    LIMIT 1000
+    LIMIT p_batch_size
   LOOP
     SELECT automation_id, confidence_score, detection_criteria
     INTO m_automation_id, m_confidence, m_criteria
@@ -289,13 +291,9 @@ BEGIN
       AND dimension_id_automation IS NULL;
 
     m_updated_count := m_updated_count + 1;
-
-    IF m_updated_count % 100 = 0 THEN
-      RAISE NOTICE 'Processing automation levels for % users...', m_updated_count;
-    END IF;
   END LOOP;
 
-  RAISE NOTICE 'Completed automation level detection. Processed % users.', m_updated_count;
+  RAISE NOTICE 'Completed automation level detection batch. Processed % users.', m_updated_count;
 END;
 $proc$;
 

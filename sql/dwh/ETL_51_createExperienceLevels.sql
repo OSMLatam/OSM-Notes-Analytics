@@ -171,32 +171,30 @@ SELECT /* Notes-ETL */ clock_timestamp() AS Processing,
  'Creating experience update procedures' AS Task;
 
 -- Procedure to update experience levels for modified users
-CREATE OR REPLACE PROCEDURE dwh.update_experience_levels_for_modified_users()
+CREATE OR REPLACE PROCEDURE dwh.update_experience_levels_for_modified_users(
+  p_batch_size INTEGER DEFAULT 500
+)
 LANGUAGE plpgsql
 AS $proc$
 DECLARE
   rec_user RECORD;
   m_updated_count INTEGER := 0;
 BEGIN
-  RAISE NOTICE 'Starting experience level calculation for modified users...';
+  RAISE NOTICE 'Starting experience level calculation for modified users (batch size: %)...', p_batch_size;
 
   FOR rec_user IN
     SELECT DISTINCT dimension_user_id
     FROM dwh.dimension_users
     WHERE modified = TRUE
       AND experience_level_id IS NULL
-    LIMIT 5000
+    LIMIT p_batch_size
   LOOP
     PERFORM dwh.calculate_user_experience(rec_user.dimension_user_id);
 
     m_updated_count := m_updated_count + 1;
-
-    IF m_updated_count % 500 = 0 THEN
-      RAISE NOTICE 'Processing experience levels for % users...', m_updated_count;
-    END IF;
   END LOOP;
 
-  RAISE NOTICE 'Completed experience level calculation. Processed % users.', m_updated_count;
+  RAISE NOTICE 'Completed experience level calculation batch. Processed % users.', m_updated_count;
 END;
 $proc$;
 
