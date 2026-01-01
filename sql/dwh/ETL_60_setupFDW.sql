@@ -11,6 +11,23 @@
 SELECT /* Notes-ETL-FDW */ clock_timestamp() AS Processing,
  'Setting up Foreign Data Wrappers for incremental processing' AS Task;
 
+-- Create note_event_enum type if it doesn't exist (required for foreign table definition)
+-- This type must exist before creating foreign tables that reference it
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'note_event_enum') THEN
+    CREATE TYPE note_event_enum AS ENUM (
+      'opened',
+      'closed',
+      'commented',
+      'reopened',
+      'hidden'
+    );
+    COMMENT ON TYPE note_event_enum IS 'Types of events that can occur on an OSM note';
+  END IF;
+END
+$$;
+
 -- Create extension if not exists
 CREATE EXTENSION IF NOT EXISTS postgres_fdw;
 
