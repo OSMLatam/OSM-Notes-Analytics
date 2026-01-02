@@ -2226,6 +2226,11 @@ function main() {
 
  if [[ "${is_first_execution}" == "true" ]]; then
   __logi "AUTO-DETECTED FIRST EXECUTION - Performing initial load"
+  # Adjust timeouts for initial load (longer operations expected)
+  if [[ -z "${PSQL_STATEMENT_TIMEOUT:-}" ]] || [[ "${PSQL_STATEMENT_TIMEOUT}" == "30min" ]]; then
+   __logi "Adjusting statement timeout for initial load: 4 hours (recommended for large datasets)"
+   export PSQL_STATEMENT_TIMEOUT="${PSQL_STATEMENT_TIMEOUT:-4h}"
+  fi
   set +E
   # shellcheck disable=SC2310
   if ! __checkBaseTables; then
@@ -2417,6 +2422,16 @@ function main() {
   __logi "⏱️  TIME: All datamart scripts total time: ${datamart_duration} seconds"
  else
   __logi "AUTO-DETECTED INCREMENTAL EXECUTION - Processing only new data"
+  # Check data volume to adjust timeout if needed for large incrementals
+  local existing_facts_count
+  existing_facts_count=$(__psql_with_appname -d "${DBNAME_DWH}" -Atq -c "SELECT COUNT(*) FROM dwh.facts;" 2> /dev/null || echo "0")
+  # If timeout is default (30min) and we have significant data, suggest longer timeout
+  if [[ -z "${PSQL_STATEMENT_TIMEOUT:-}" ]] || [[ "${PSQL_STATEMENT_TIMEOUT}" == "30min" ]]; then
+   if [[ "${existing_facts_count}" -gt 10000000 ]]; then
+    __logw "Large dataset detected (${existing_facts_count} facts). Consider increasing PSQL_STATEMENT_TIMEOUT to 2h for large incremental updates."
+    __logw "Current timeout: ${PSQL_STATEMENT_TIMEOUT:-30min}. Large updates may exceed this timeout."
+   fi
+  fi
   set +E
   # shellcheck disable=SC2310
   if ! __checkBaseTables; then
