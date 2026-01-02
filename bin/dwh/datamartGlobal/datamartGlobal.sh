@@ -320,8 +320,8 @@ if [[ "${SKIP_MAIN:-}" != "true" ]]; then
   main >> "${LOG_FILENAME}"
   EXIT_CODE=$?
   if [[ -n "${CLEAN}" ]] && [[ "${CLEAN}" = true ]]; then
-   mv "${LOG_FILENAME}" "/tmp/${BASENAME}_$(date +%Y-%m-%d_%H-%M-%S \
-    || true).log"
+   log_timestamp=$(date +%Y-%m-%d_%H-%M-%S 2> /dev/null || date +%Y%m%d_%H%M%S)
+   mv "${LOG_FILENAME}" "/tmp/${BASENAME}_${log_timestamp}.log"
    rmdir "${TMP_DIR}"
   fi
   exit "${EXIT_CODE}"

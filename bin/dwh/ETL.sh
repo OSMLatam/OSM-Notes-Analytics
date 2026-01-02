@@ -247,6 +247,8 @@ declare -r DATAMART_USERS_SCRIPT="${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartUsers
 declare -r DATAMART_GLOBAL_SCRIPT="${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartGlobal/datamartGlobal.sh"
 # Create datamart performance log table.
 declare -r POSTGRES_DATAMART_PERFORMANCE_CREATE_TABLE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartPerformance/datamartPerformance_11_createTable.sql"
+# Create logs table for debugging (only needed when Ingestion and Analytics databases are different).
+declare -r POSTGRES_CREATE_LOGS_TABLE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_54_createLogsTable.sql"
 
 ###########
 # FUNCTIONS
@@ -879,7 +881,21 @@ function __processNotesETL {
  __logi "Checking database configuration: DBNAME_INGESTION='${DBNAME_INGESTION}', DBNAME_DWH='${DBNAME_DWH}'"
 
  if [[ "${DBNAME_INGESTION}" != "${DBNAME_DWH}" ]]; then
-  __logi "Databases are different, setting up FDW"
+  __logi "Databases are different, setting up FDW and logs table"
+  # Create logs table for debugging dynamic SQL queries in datamart procedures
+  __logi "Creating logs table for debugging (databases are different)..."
+  set +e
+  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
+   -f "${POSTGRES_CREATE_LOGS_TABLE}" 2>&1
+  local logs_table_exit_code=$?
+  set -e
+  if [[ ${logs_table_exit_code} -ne 0 ]]; then
+   __loge "ERROR: Failed to create logs table (exit code: ${logs_table_exit_code})"
+   # Don't fail the ETL, but warn that datamarts may fail
+   __logw "Continuing anyway (datamart procedures may fail if they try to log)"
+  else
+   __logi "Logs table created successfully"
+  fi
   __logi "Step 1: Setting up Foreign Data Wrappers for incremental processing (different databases)..."
   if [[ -f "${POSTGRES_60_SETUP_FDW}" ]]; then
    # Export FDW configuration variables if not set (required for envsubst)
@@ -2239,6 +2255,23 @@ function main() {
   local maintenance_duration=$((MAINTENANCE_END_TIME - MAINTENANCE_START_TIME))
   __logi "⏱️  TIME: Database maintenance took ${maintenance_duration} seconds"
 
+  # Create logs table if databases are different (needed for debugging in datamart procedures)
+  if [[ "${DBNAME_INGESTION}" != "${DBNAME_DWH}" ]]; then
+   __logi "Creating logs table for debugging (databases are different)..."
+   set +e
+   __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
+    -f "${POSTGRES_CREATE_LOGS_TABLE}" 2>&1
+   local logs_table_exit_code=$?
+   set -e
+   if [[ ${logs_table_exit_code} -ne 0 ]]; then
+    __loge "ERROR: Failed to create logs table (exit code: ${logs_table_exit_code})"
+    # Don't fail the ETL, but warn that datamarts may fail
+    __logw "Continuing anyway (datamart procedures may fail if they try to log)"
+   else
+    __logi "Logs table created successfully"
+   fi
+  fi
+
   # Create datamart performance log table before executing datamarts
   # This table is required by datamartCountries and datamartUsers procedures
   __logi "Creating datamart performance log table..."
@@ -2405,6 +2438,23 @@ function main() {
   fi
   __logi "Finished calling __processNotesETL"
   __perform_database_maintenance
+
+  # Create logs table if databases are different (needed for debugging in datamart procedures)
+  if [[ "${DBNAME_INGESTION}" != "${DBNAME_DWH}" ]]; then
+   __logi "Ensuring logs table exists for debugging (databases are different)..."
+   set +e
+   __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
+    -f "${POSTGRES_CREATE_LOGS_TABLE}" 2>&1
+   local logs_table_exit_code=$?
+   set -e
+   if [[ ${logs_table_exit_code} -ne 0 ]]; then
+    __loge "ERROR: Failed to create logs table (exit code: ${logs_table_exit_code})"
+    # Don't fail the ETL, but warn that datamarts may fail
+    __logw "Continuing anyway (datamart procedures may fail if they try to log)"
+   else
+    __logi "Logs table ensured successfully"
+   fi
+  fi
 
   # Ensure datamart performance log table exists before executing datamarts
   # This table is required by datamartCountries and datamartUsers procedures
