@@ -62,6 +62,157 @@ readonly ETL_SCRIPT
 PROCESS_API_SCRIPT="${INGESTION_ROOT}/bin/process/processAPINotes.sh"
 readonly PROCESS_API_SCRIPT
 
+# Database names for hybrid test with separate databases
+readonly ANALYTICS_DBNAME="osm_notes_analytics_remote_test"
+
+# Backup directory for database snapshots
+readonly BACKUP_DIR="${SCRIPT_DIR}/backups"
+
+# Function to backup databases
+backup_databases() {
+ local step="${1:-}"
+
+ # Load DBNAME from ingestion properties to get ingestion database name
+ # shellcheck disable=SC1090
+ source "${INGESTION_ROOT}/etc/properties.sh"
+ local INGESTION_DBNAME="${DBNAME:-osm_notes_ingestion_test}"
+ local backup_name
+ backup_name="step_${step}_$(date +%Y%m%d_%H%M%S)"
+ local backup_path="${BACKUP_DIR}/${backup_name}"
+
+ log_info "Creating database backup: ${backup_name}..."
+ mkdir -p "${backup_path}"
+
+ # Load database connection parameters
+ # shellcheck disable=SC1090
+ source "${INGESTION_ROOT}/etc/properties.sh" 2> /dev/null || true
+ local INGESTION_DBNAME="${DBNAME:-osm_notes_ingestion_test}"
+
+ local PSQL_CMD="psql"
+ if [[ -n "${DB_HOST:-}" ]]; then
+  PSQL_CMD="${PSQL_CMD} -h ${DB_HOST} -p ${DB_PORT:-5432}"
+ fi
+ if [[ -n "${DB_USER_INGESTION:-}" ]]; then
+  PSQL_CMD="${PSQL_CMD} -U ${DB_USER_INGESTION}"
+ fi
+
+ # Backup ingestion database
+ log_info "Backing up ingestion database: ${INGESTION_DBNAME}..."
+ if PGPASSWORD="${DB_PASSWORD:-}" pg_dump ${DB_HOST:+-h ${DB_HOST}} ${DB_PORT:+-p ${DB_PORT}} ${DB_USER_INGESTION:+-U ${DB_USER_INGESTION}} -Fc -d "${INGESTION_DBNAME}" -f "${backup_path}/ingestion.dump" 2>&1; then
+  log_success "Ingestion database backed up successfully"
+ else
+  log_error "Failed to backup ingestion database"
+  return 1
+ fi
+
+ # Backup analytics database
+ log_info "Backing up analytics database: ${ANALYTICS_DBNAME}..."
+ local ANALYTICS_PSQL_CMD="${PSQL_CMD}"
+ if [[ -n "${DB_USER_DWH:-}" ]]; then
+  ANALYTICS_PSQL_CMD="psql"
+  if [[ -n "${DB_HOST:-}" ]]; then
+   ANALYTICS_PSQL_CMD="${ANALYTICS_PSQL_CMD} -h ${DB_HOST} -p ${DB_PORT:-5432}"
+  fi
+  ANALYTICS_PSQL_CMD="${ANALYTICS_PSQL_CMD} -U ${DB_USER_DWH}"
+ fi
+
+ if PGPASSWORD="${DB_PASSWORD:-}" pg_dump ${DB_HOST:+-h ${DB_HOST}} ${DB_PORT:+-p ${DB_PORT}} ${DB_USER_DWH:+-U ${DB_USER_DWH}} -Fc -d "${ANALYTICS_DBNAME}" -f "${backup_path}/analytics.dump" 2>&1; then
+  log_success "Analytics database backed up successfully"
+ else
+  log_error "Failed to backup analytics database"
+  return 1
+ fi
+
+ # Save metadata
+ cat > "${backup_path}/metadata.txt" << EOF
+Step: ${step}
+Timestamp: $(date)
+Ingestion DB: ${INGESTION_DBNAME}
+Analytics DB: ${ANALYTICS_DBNAME}
+EOF
+
+ log_success "Database backup completed: ${backup_name}"
+ echo "${backup_name}"
+}
+
+# Function to restore databases from backup
+restore_databases() {
+ local backup_name="${1:-}"
+
+ if [[ -z "${backup_name}" ]]; then
+  log_error "Backup name is required"
+  log_info "Available backups:"
+  # shellcheck disable=SC2012  # find is more complex here, ls is acceptable for directory listing
+  find "${BACKUP_DIR}" -mindepth 1 -maxdepth 1 -type d 2> /dev/null | head -10 | xargs -r basename -a || log_info "  (no backups found)"
+  return 1
+ fi
+
+ local backup_path="${BACKUP_DIR}/${backup_name}"
+ if [[ ! -d "${backup_path}" ]]; then
+  log_error "Backup not found: ${backup_name}"
+  log_info "Available backups:"
+  # shellcheck disable=SC2012  # find is more complex here, ls is acceptable for directory listing
+  find "${BACKUP_DIR}" -mindepth 1 -maxdepth 1 -type d 2> /dev/null | head -10 | xargs -r basename -a || log_info "  (no backups found)"
+  return 1
+ fi
+
+ log_info "Restoring databases from backup: ${backup_name}..."
+
+ # Load database connection parameters
+ # shellcheck disable=SC1090
+ source "${INGESTION_ROOT}/etc/properties.sh" 2> /dev/null || true
+ # Use the actual test database name for hybrid test (not production name from properties.sh)
+ local INGESTION_DBNAME="osm_notes_ingestion_test"
+
+ local PSQL_CMD="psql"
+ if [[ -n "${DB_HOST:-}" ]]; then
+  PSQL_CMD="${PSQL_CMD} -h ${DB_HOST} -p ${DB_PORT:-5432}"
+ fi
+ if [[ -n "${DB_USER_INGESTION:-}" ]]; then
+  PSQL_CMD="${PSQL_CMD} -U ${DB_USER_INGESTION}"
+ fi
+
+ # Restore ingestion database
+ log_info "Restoring ingestion database: ${INGESTION_DBNAME}..."
+ # Terminate connections
+ ${PSQL_CMD} -d postgres -c "SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = '${INGESTION_DBNAME}' AND pid <> pg_backend_pid();" > /dev/null 2>&1 || true
+ sleep 1
+
+ if PGPASSWORD="${DB_PASSWORD:-}" pg_restore ${DB_HOST:+-h ${DB_HOST}} ${DB_PORT:+-p ${DB_PORT}} ${DB_USER_INGESTION:+-U ${DB_USER_INGESTION}} -d "${INGESTION_DBNAME}" --clean --if-exists "${backup_path}/ingestion.dump" 2>&1; then
+  log_success "Ingestion database restored successfully"
+ else
+  log_error "Failed to restore ingestion database"
+  return 1
+ fi
+
+ # Restore analytics database
+ log_info "Restoring analytics database: ${ANALYTICS_DBNAME}..."
+ local ANALYTICS_PSQL_CMD="${PSQL_CMD}"
+ if [[ -n "${DB_USER_DWH:-}" ]]; then
+  ANALYTICS_PSQL_CMD="psql"
+  if [[ -n "${DB_HOST:-}" ]]; then
+   ANALYTICS_PSQL_CMD="${ANALYTICS_PSQL_CMD} -h ${DB_HOST} -p ${DB_PORT:-5432}"
+  fi
+  ANALYTICS_PSQL_CMD="${ANALYTICS_PSQL_CMD} -U ${DB_USER_DWH}"
+ fi
+
+ # Terminate connections
+ ${ANALYTICS_PSQL_CMD} -d postgres -c "SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = '${ANALYTICS_DBNAME}' AND pid <> pg_backend_pid();" > /dev/null 2>&1 || true
+ sleep 1
+
+ # Drop dwh schema before restore to avoid conflicts
+ ${ANALYTICS_PSQL_CMD} -d "${ANALYTICS_DBNAME}" -c "DROP SCHEMA IF EXISTS dwh CASCADE;" > /dev/null 2>&1 || true
+ sleep 1
+ if PGPASSWORD="${DB_PASSWORD:-}" pg_restore ${DB_HOST:+-h ${DB_HOST}} ${DB_PORT:+-p ${DB_PORT}} ${DB_USER_DWH:+-U ${DB_USER_DWH}} -d "${ANALYTICS_DBNAME}" --clean --if-exists "${backup_path}/analytics.dump" 2>&1; then
+  log_success "Analytics database restored successfully"
+ else
+  log_error "Failed to restore analytics database"
+  return 1
+ fi
+
+ log_success "Databases restored successfully from backup: ${backup_name}"
+}
+
 # Function to show help
 show_help() {
  cat << 'EOF'
@@ -69,14 +220,17 @@ Script to run processAPINotes.sh with ETL after each execution (controlled mode)
 
 This script provides step-by-step control over the execution:
   1 - Drop base tables and run processAPINotes.sh (planet/base)
-  2 - Run ETL after step 1
+  2 - Run ETL after step 1 (creates backup automatically)
   3 - Run processAPINotes.sh (API, 5 notes)
-  4 - Run ETL after step 3
+  4 - Run ETL after step 3 (creates backup automatically)
   5 - Run processAPINotes.sh (API, 20 notes)
-  6 - Run ETL after step 5
+  6 - Run ETL after step 5 (creates backup automatically)
   7 - Run processAPINotes.sh (API, 0 notes)
-  8 - Run ETL after step 7
+  8 - Run ETL after step 7 (creates backup automatically)
   all - Run all steps sequentially
+  backup - Create manual backup of current state
+  restore <backup_name> - Restore databases from backup
+  list-backups - List available backups
 
 Usage:
   ./run_processAPINotes_with_etl_controlled.sh [step]
@@ -91,6 +245,18 @@ Examples:
   # Run steps 3 and 4
   ./run_processAPINotes_with_etl_controlled.sh 3
   ./run_processAPINotes_with_etl_controlled.sh 4
+
+  # Create manual backup
+  ./run_processAPINotes_with_etl_controlled.sh backup
+
+  # List available backups
+  ./run_processAPINotes_with_etl_controlled.sh list-backups
+
+  # Restore from backup
+  ./run_processAPINotes_with_etl_controlled.sh restore step_2_20260101_131500
+
+Note: Backups are automatically created after each successful ETL execution.
+      Use restore to quickly reset to a previous state without starting from scratch.
 EOF
 }
 
@@ -115,6 +281,64 @@ check_prerequisites() {
  chmod +x "${ETL_SCRIPT}"
 
  log_success "Prerequisites check passed"
+ return 0
+}
+
+# Function to setup analytics database
+# Creates the analytics database if it doesn't exist and ensures it's ready for ETL
+setup_analytics_database() {
+ log_info "Setting up analytics database: ${ANALYTICS_DBNAME}..."
+
+ # Load database connection parameters from ingestion properties
+ # shellcheck disable=SC1090
+ source "${INGESTION_ROOT}/etc/properties.sh"
+
+ local PSQL_CMD="psql"
+ if [[ -n "${DB_HOST:-}" ]]; then
+  PSQL_CMD="${PSQL_CMD} -h ${DB_HOST} -p ${DB_PORT:-5432}"
+ fi
+ # Use DB_USER_DWH if available (for analytics DB), otherwise DB_USER_INGESTION
+ if [[ -n "${DB_USER_DWH:-}" ]]; then
+  PSQL_CMD="${PSQL_CMD} -U ${DB_USER_DWH}"
+ elif [[ -n "${DB_USER_INGESTION:-}" ]]; then
+  PSQL_CMD="${PSQL_CMD} -U ${DB_USER_INGESTION}"
+ fi
+
+ # Check if analytics database exists
+ if ! ${PSQL_CMD} -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '${ANALYTICS_DBNAME}';" 2> /dev/null | grep -q 1; then
+  log_info "Creating analytics database: ${ANALYTICS_DBNAME}..."
+  if ! ${PSQL_CMD} -d postgres -c "CREATE DATABASE ${ANALYTICS_DBNAME};" 2>&1; then
+   log_error "Failed to create analytics database: ${ANALYTICS_DBNAME}"
+   return 1
+  fi
+  log_success "Analytics database created successfully"
+ else
+  log_info "Analytics database already exists: ${ANALYTICS_DBNAME}"
+ fi
+
+ # Ensure dwh schema exists in analytics database
+ log_info "Ensuring dwh schema exists in analytics database..."
+ if ! ${PSQL_CMD} -d "${ANALYTICS_DBNAME}" -c "CREATE SCHEMA IF NOT EXISTS dwh;" 2>&1; then
+  log_error "Failed to create dwh schema in analytics database"
+  return 1
+ fi
+
+ # Clean dwh schema to start from scratch
+ log_info "Cleaning dwh schema in analytics database..."
+ # Force disconnect any active connections
+ ${PSQL_CMD} -d "${ANALYTICS_DBNAME}" -c "
+  SELECT pg_terminate_backend(pg_stat_activity.pid)
+  FROM pg_stat_activity
+  WHERE pg_stat_activity.datname = '${ANALYTICS_DBNAME}'
+   AND pid <> pg_backend_pid()
+   AND state = 'active';
+ " > /dev/null 2>&1 || true
+
+ # Drop the schema
+ ${PSQL_CMD} -d "${ANALYTICS_DBNAME}" -c "DROP SCHEMA IF EXISTS dwh CASCADE;" > /dev/null 2>&1 || true
+ ${PSQL_CMD} -d "${ANALYTICS_DBNAME}" -c "CREATE SCHEMA IF NOT EXISTS dwh;" > /dev/null 2>&1 || true
+
+ log_success "Analytics database ready: ${ANALYTICS_DBNAME}"
  return 0
 }
 
@@ -382,6 +606,38 @@ drop_base_tables() {
  else
   log_info "Base tables don't exist (already clean)"
  fi
+
+ # Ensure enum types exist before processAPINotes.sh runs
+ # The drop script removes them, but processPlanetNotes.sh --base should recreate them
+ # However, to avoid timing issues, we create them explicitly here
+ log_info "Ensuring enum types exist before processAPINotes.sh execution..."
+ ${psql_cmd} -d "${DBNAME}" -f "${INGESTION_ROOT}/sql/process/processPlanetNotes_21_createBaseTables_enum.sql" > /dev/null 2>&1 || true
+ log_success "Enum types ensured"
+
+ # Ensure procedures exist before processAPINotes.sh runs
+ # The drop script removes them, but processPlanetNotes.sh --base should recreate them
+ # However, to avoid timing issues, we create them explicitly here
+ # Note: We only create the properties table and procedures (put_lock, remove_lock), NOT the other tables
+ # The other tables (notes, note_comments, etc.) will be created by processPlanetNotes.sh --base with data
+ log_info "Ensuring properties table and lock procedures exist before processAPINotes.sh execution..."
+ # Create properties table first (required by the procedures)
+ ${psql_cmd} -d "${DBNAME}" -c "
+  CREATE TABLE IF NOT EXISTS properties (
+   key VARCHAR(32) PRIMARY KEY,
+   value VARCHAR(32),
+   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+ " > /dev/null 2>&1 || true
+ # Create procedures by executing the relevant part of the SQL file
+ # We'll use a temporary SQL file with just the procedures
+ local TEMP_SQL_FILE
+ TEMP_SQL_FILE=$(mktemp)
+ # Extract procedures from the original SQL file (lines 188-280 approximately)
+ sed -n '188,280p' "${INGESTION_ROOT}/sql/process/processPlanetNotes_22_createBaseTables_tables.sql" > "${TEMP_SQL_FILE}" 2> /dev/null || true
+ # Execute the procedures SQL
+ ${psql_cmd} -d "${DBNAME}" -f "${TEMP_SQL_FILE}" > /dev/null 2>&1 || true
+ rm -f "${TEMP_SQL_FILE}"
+ log_success "Lock procedures ensured"
 }
 
 # Function to run processAPINotes directly
@@ -403,12 +659,12 @@ run_processAPINotes() {
  1)
   # First execution: drop tables (will call processPlanetNotes.sh --base)
   log_info "=== EXECUTION #1: Setting up for processPlanetNotes.sh --base ==="
-  # Ensure countries are loaded before dropping tables
-  ensure_countries_loaded
   drop_base_tables
   unset MOCK_NOTES_COUNT
   export MOCK_NOTES_COUNT=""
   log_info "Execution #1: Will load processPlanetNotes.sh --base (MOCK_NOTES_COUNT unset)"
+  # Note: We don't need to truncate tables here because drop_base_tables() already dropped them
+  # processPlanetNotes.sh --base will create them fresh with data
   ;;
  3)
   # Third execution: 5 notes for sequential processing
@@ -488,15 +744,42 @@ run_etl() {
  # Change to analytics root directory
  cd "${ANALYTICS_ROOT}"
 
- # Load DBNAME from ingestion properties to ensure ETL uses the same database
+ # Set SCRIPT_BASE_DIRECTORY for ETL to point to analytics root
+ # This ensures ETL finds SQL files in the correct location
+ export SCRIPT_BASE_DIRECTORY="${ANALYTICS_ROOT}"
+
+ # Load DBNAME from ingestion properties to get ingestion database name
  # shellcheck disable=SC1090
  source "${INGESTION_ROOT}/etc/properties.sh"
- export DBNAME="${DBNAME:-osm_notes}"
+ local INGESTION_DBNAME="${DBNAME:-osm_notes_ingestion_test}"
+
+ # Export database configuration for ETL
+ # In hybrid test mode with separate databases:
+ # - Ingestion uses the database from properties.sh
+ # - Analytics uses a separate database for testing FDW functionality
+ export DBNAME="${INGESTION_DBNAME}"
+ export DBNAME_INGESTION="${INGESTION_DBNAME}"
+ export DBNAME_DWH="${ANALYTICS_DBNAME}"
+
+ # Export FDW configuration variables if needed
+ # These are used by ETL_60_setupFDW.sql when databases are different
+ # Use 127.0.0.1 instead of localhost to avoid IPv6 issues with FDW
+ export FDW_INGESTION_HOST="${DB_HOST:-127.0.0.1}"
+ export FDW_INGESTION_DBNAME="${INGESTION_DBNAME}"
+ export FDW_INGESTION_PORT="${DB_PORT:-5432}"
+ # For hybrid test, use dedicated FDW user with password
+ # This user was created specifically for FDW connections in test environment
+ # User: osm_notes_test_remote_user, Password: osm_notes_test_remote_user
+ export FDW_INGESTION_USER="${FDW_INGESTION_USER:-osm_notes_test_remote_user}"
+ export FDW_INGESTION_PASSWORD_VALUE="${FDW_INGESTION_PASSWORD_VALUE:-osm_notes_test_remote_user}"
 
  # Set logging level if not already set
  export LOG_LEVEL="${LOG_LEVEL:-INFO}"
 
- log_info "ETL will use database: ${DBNAME}"
+ log_info "ETL configuration:"
+ log_info "  Ingestion database: ${DBNAME_INGESTION}"
+ log_info "  Analytics database: ${DBNAME_DWH}"
+ log_info "  FDW will be configured to connect ingestion → analytics"
 
  # Ensure required columns exist (for existing DWH that was created before these columns were added)
  # This is a one-time migration for existing databases
@@ -531,6 +814,13 @@ run_etl() {
  log_info "Executing: ${ETL_SCRIPT}"
  if "${ETL_SCRIPT}"; then
   log_success "ETL completed successfully after execution #${execution_number}"
+  # Create backup after successful ETL
+  log_info "Creating backup after successful ETL execution #${execution_number}..."
+  if backup_databases "${execution_number}" > /dev/null 2>&1; then
+   log_success "Backup created successfully after execution #${execution_number}"
+  else
+   log_warn "Failed to create backup after execution #${execution_number} (continuing anyway)"
+  fi
   return 0
  else
   local exit_code=$?
@@ -542,6 +832,7 @@ run_etl() {
 # Function to run a specific step
 run_step() {
  local step="${1}"
+ local arg2="${2:-}"
  local exit_code=0
 
  case "${step}" in
@@ -555,6 +846,65 @@ run_step() {
   ;;
  2)
   log_info "=== STEP 2: Run ETL after step 1 ==="
+  # Clean dwh schema JUST BEFORE ETL to ensure INITIAL LOAD is executed
+  # This must be done right before the ETL to prevent any process from recreating the schema
+  log_info "Cleaning dwh schema JUST BEFORE ETL #1 to ensure INITIAL LOAD..."
+  # Load DB connection parameters from properties file
+  # shellcheck disable=SC1090
+  source "${INGESTION_ROOT}/etc/properties.sh"
+  local PSQL_CMD="psql"
+  if [[ -n "${DB_HOST:-}" ]]; then
+   PSQL_CMD="${PSQL_CMD} -h ${DB_HOST} -p ${DB_PORT:-5432}"
+  fi
+  # Use DB_USER_DWH if available (for analytics DB), otherwise DB_USER_INGESTION
+  if [[ -n "${DB_USER_DWH:-}" ]]; then
+   PSQL_CMD="${PSQL_CMD} -U ${DB_USER_DWH}"
+  elif [[ -n "${DB_USER_INGESTION:-}" ]]; then
+   PSQL_CMD="${PSQL_CMD} -U ${DB_USER_INGESTION}"
+  fi
+  # Use analytics database (where dwh schema exists)
+  # Force disconnect any active connections
+  ${PSQL_CMD} -d "${ANALYTICS_DBNAME}" -c "
+   SELECT pg_terminate_backend(pg_stat_activity.pid)
+   FROM pg_stat_activity
+   WHERE pg_stat_activity.datname = '${ANALYTICS_DBNAME}'
+    AND pid <> pg_backend_pid()
+    AND state = 'active';
+  " > /dev/null 2>&1 || true
+  # Drop the schema (CASCADE will also drop dwh.properties)
+  # First, verify schema exists
+  local SCHEMA_EXISTS_BEFORE
+  SCHEMA_EXISTS_BEFORE=$(${PSQL_CMD} -d "${ANALYTICS_DBNAME}" -tAqc "
+   SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = 'dwh';
+  " 2> /dev/null || echo "0")
+  if [[ "${SCHEMA_EXISTS_BEFORE}" != "0" ]]; then
+   log_info "dwh schema exists in analytics database, dropping it..."
+   # Drop the schema with explicit error handling
+   if ! ${PSQL_CMD} -d "${ANALYTICS_DBNAME}" -c "DROP SCHEMA dwh CASCADE;" 2>&1; then
+    log_error "Failed to drop dwh schema, trying again after terminating connections..."
+    # Terminate all connections again
+    ${PSQL_CMD} -d "${ANALYTICS_DBNAME}" -c "
+     SELECT pg_terminate_backend(pg_stat_activity.pid)
+     FROM pg_stat_activity
+     WHERE pg_stat_activity.datname = '${ANALYTICS_DBNAME}'
+      AND pid <> pg_backend_pid();
+    " > /dev/null 2>&1 || true
+    sleep 1
+    ${PSQL_CMD} -d "${ANALYTICS_DBNAME}" -c "DROP SCHEMA dwh CASCADE;" > /dev/null 2>&1 || true
+   fi
+  fi
+  # Verify the schema was actually dropped
+  local SCHEMA_EXISTS_AFTER
+  SCHEMA_EXISTS_AFTER=$(${PSQL_CMD} -d "${ANALYTICS_DBNAME}" -tAqc "
+   SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = 'dwh';
+  " 2> /dev/null || echo "1")
+  if [[ "${SCHEMA_EXISTS_AFTER}" != "0" ]]; then
+   log_error "dwh schema still exists after DROP (count: ${SCHEMA_EXISTS_AFTER})"
+   log_error "This may prevent INITIAL LOAD from executing"
+  else
+   log_success "dwh schema successfully dropped from analytics database"
+  fi
+  log_success "dwh schema cleaned before ETL #1"
   if ! run_etl 1; then
    log_error "Step 2 failed"
    return 1
@@ -623,6 +973,40 @@ run_step() {
   done
   log_success "All steps completed successfully"
   ;;
+ backup)
+  log_info "=== Creating manual backup ==="
+  if backup_databases "manual"; then
+   log_success "Manual backup created successfully"
+  else
+   log_error "Failed to create manual backup"
+   return 1
+  fi
+  ;;
+ restore)
+  local backup_name="${arg2:-}"
+  if [[ -z "${backup_name}" ]]; then
+   log_error "Backup name is required for restore"
+   log_info "Usage: $0 restore <backup_name>"
+   log_info "Use 'list-backups' to see available backups"
+   return 1
+  fi
+  log_info "=== Restoring databases from backup ==="
+  if restore_databases "${backup_name}"; then
+   log_success "Databases restored successfully"
+  else
+   log_error "Failed to restore databases"
+   return 1
+  fi
+  ;;
+ list-backups)
+  log_info "=== Available backups ==="
+  if [[ -d "${BACKUP_DIR}" ]] && [[ -n "$(ls -A "${BACKUP_DIR}" 2> /dev/null)" ]]; then
+   # shellcheck disable=SC2012  # find with stat is more complex, ls -lh provides better formatting
+   ls -lh "${BACKUP_DIR}" | tail -n +2 | awk '{print $9, "(" $5 ")"}'
+  else
+   log_info "No backups found in ${BACKUP_DIR}"
+  fi
+  ;;
  *)
   log_error "Invalid step: ${step}"
   show_help
@@ -651,19 +1035,38 @@ main() {
   exit 1
  fi
 
- # Setup trap for cleanup
- trap cleanup_environment EXIT SIGINT SIGTERM
+ # Create backup directory if it doesn't exist
+ mkdir -p "${BACKUP_DIR}"
 
- # Setup hybrid environment
- if ! setup_hybrid_environment; then
-  log_error "Failed to setup hybrid environment"
-  exit 1
- fi
+ # Handle special commands that don't need hybrid environment
+ case "${step}" in
+ restore | list-backups)
+  # These commands don't need hybrid environment setup
+  ;;
+ *)
+  # Setup trap for cleanup
+  trap cleanup_environment EXIT SIGINT SIGTERM
+
+  # Setup hybrid environment for other steps
+  if ! setup_hybrid_environment; then
+   log_error "Failed to setup hybrid environment"
+   exit 1
+  fi
+  ;;
+ esac
 
  # Run the requested step
- if ! run_step "${step}"; then
-  log_error "Step ${step} failed"
-  exit 1
+ # For restore command, pass the backup name as second argument
+ if [[ "${step}" == "restore" ]]; then
+  if ! run_step "${step}" "${2:-}"; then
+   log_error "Step ${step} failed"
+   exit 1
+  fi
+ else
+  if ! run_step "${step}"; then
+   log_error "Step ${step} failed"
+   exit 1
+  fi
  fi
 
  log_success "All operations completed successfully"

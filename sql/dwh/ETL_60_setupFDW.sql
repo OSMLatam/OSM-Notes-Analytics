@@ -146,8 +146,10 @@ BEGIN
 
     -- Create user mapping with or without password
     IF expected_password = '' THEN
-      -- No password provided - PostgreSQL will use .pgpass or peer authentication
-      EXECUTE format('CREATE USER MAPPING FOR CURRENT_USER SERVER ingestion_server OPTIONS (user %L)', expected_user);
+      -- No password provided - explicitly set empty password to allow FDW to use .pgpass
+      -- FDW always uses TCP/IP connections, so it cannot use peer authentication
+      -- Setting password='' explicitly allows PostgreSQL to fall back to .pgpass file
+      EXECUTE format('CREATE USER MAPPING FOR CURRENT_USER SERVER ingestion_server OPTIONS (user %L, password %L)', expected_user, '');
     ELSE
       -- Password provided - include it in the user mapping
       EXECUTE format('CREATE USER MAPPING FOR CURRENT_USER SERVER ingestion_server OPTIONS (user %L, password %L)', expected_user, expected_password);

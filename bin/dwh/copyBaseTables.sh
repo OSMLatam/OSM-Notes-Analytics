@@ -244,9 +244,23 @@ for table in "${TABLES[@]}"; do
   continue
  fi
 
- # Check if table already exists in target (should not happen, but handle gracefully)
+ # Check if table or foreign table already exists in target (should not happen, but handle gracefully)
+ # First check for foreign tables (from previous FDW setup)
  if PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -t -c \
-  "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '${table}';" \
+  "SELECT 1 FROM information_schema.foreign_tables WHERE foreign_table_schema = 'public' AND foreign_table_name = '${table}';" \
+  | grep -q 1; then
+  __logw "Foreign table ${table} already exists in target database, dropping first"
+  set +e
+  DROP_OUTPUT=$(PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -c "DROP FOREIGN TABLE IF EXISTS public.${table} CASCADE;" 2>&1)
+  DROP_EXIT_CODE=$?
+  set -e
+  if [[ ${DROP_EXIT_CODE} -ne 0 ]]; then
+   __logw "Warning: Failed to drop existing foreign table ${table}: ${DROP_OUTPUT}"
+  fi
+ fi
+ # Then check for regular tables
+ if PGPASSWORD="${ANALYTICS_PGPASSWORD}" psql "${ANALYTICS_PSQL_ARGS[@]}" -t -c \
+  "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '${table}' AND table_type = 'BASE TABLE';" \
   | grep -q 1; then
   __logw "Table ${table} already exists in target database, dropping first"
   set +e

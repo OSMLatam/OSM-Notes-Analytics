@@ -53,6 +53,9 @@ readonly ETL_SCRIPT
 PROCESS_API_SCRIPT="${INGESTION_ROOT}/bin/process/processAPINotes.sh"
 readonly PROCESS_API_SCRIPT
 
+# Database names for hybrid test with separate databases
+readonly ANALYTICS_DBNAME="osm_notes_analytics_remote_test"
+
 # Function to show help
 show_help() {
  cat << 'EOF'
@@ -77,10 +80,19 @@ Environment variables:
                  Default: INFO
   CLEAN          Clean temporary files after execution (true/false)
                  Default: false
-  DBNAME         Database name
-  DB_USER        Database user
+  DBNAME         Ingestion database name (from properties.sh)
+  DB_USER_INGESTION  Database user for Ingestion database
+  DB_USER_DWH    Database user for Analytics database
   DB_HOST        Database host
   DB_PORT        Database port (default: 5432)
+
+  Note: DB_USER is NOT used in this project (it's only valid in OSM-Notes-Ingestion project)
+
+Note: This script uses TWO separate databases:
+  - Ingestion DB: Uses DBNAME from properties.sh (default: osm_notes)
+  - Analytics DB: osm_notes_analytics_remote_test (created automatically)
+
+This configuration enables testing of Foreign Data Wrappers (FDW) functionality.
 
 Examples:
   # Run with default settings
@@ -115,6 +127,62 @@ check_prerequisites() {
  chmod +x "${ETL_SCRIPT}"
 
  log_success "Prerequisites check passed"
+ return 0
+}
+
+# Function to setup analytics database
+# Creates the analytics database if it doesn't exist and ensures it's ready for ETL
+setup_analytics_database() {
+ log_info "Setting up analytics database: ${ANALYTICS_DBNAME}..."
+
+ # Load database connection parameters from ingestion properties
+ # shellcheck disable=SC1090
+ source "${INGESTION_ROOT}/etc/properties.sh"
+
+ local PSQL_CMD="psql"
+ if [[ -n "${DB_HOST:-}" ]]; then
+  PSQL_CMD="${PSQL_CMD} -h ${DB_HOST} -p ${DB_PORT:-5432}"
+ fi
+ # Use DB_USER_INGESTION if available, otherwise use current user for peer auth
+ if [[ -n "${DB_USER_INGESTION:-}" ]]; then
+  PSQL_CMD="${PSQL_CMD} -U ${DB_USER_INGESTION}"
+ fi
+
+ # Check if analytics database exists
+ if ! ${PSQL_CMD} -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '${ANALYTICS_DBNAME}';" 2> /dev/null | grep -q 1; then
+  log_info "Creating analytics database: ${ANALYTICS_DBNAME}..."
+  if ! ${PSQL_CMD} -d postgres -c "CREATE DATABASE ${ANALYTICS_DBNAME};" 2>&1; then
+   log_error "Failed to create analytics database: ${ANALYTICS_DBNAME}"
+   return 1
+  fi
+  log_success "Analytics database created successfully"
+ else
+  log_info "Analytics database already exists: ${ANALYTICS_DBNAME}"
+ fi
+
+ # Ensure dwh schema exists in analytics database
+ log_info "Ensuring dwh schema exists in analytics database..."
+ if ! ${PSQL_CMD} -d "${ANALYTICS_DBNAME}" -c "CREATE SCHEMA IF NOT EXISTS dwh;" 2>&1; then
+  log_error "Failed to create dwh schema in analytics database"
+  return 1
+ fi
+
+ # Clean dwh schema to start from scratch
+ log_info "Cleaning dwh schema in analytics database..."
+ # Force disconnect any active connections
+ ${PSQL_CMD} -d "${ANALYTICS_DBNAME}" -c "
+  SELECT pg_terminate_backend(pg_stat_activity.pid)
+  FROM pg_stat_activity
+  WHERE pg_stat_activity.datname = '${ANALYTICS_DBNAME}'
+   AND pid <> pg_backend_pid()
+   AND state = 'active';
+ " > /dev/null 2>&1 || true
+
+ # Drop the schema
+ ${PSQL_CMD} -d "${ANALYTICS_DBNAME}" -c "DROP SCHEMA IF EXISTS dwh CASCADE;" > /dev/null 2>&1 || true
+ ${PSQL_CMD} -d "${ANALYTICS_DBNAME}" -c "CREATE SCHEMA IF NOT EXISTS dwh;" > /dev/null 2>&1 || true
+
+ log_success "Analytics database ready: ${ANALYTICS_DBNAME}"
  return 0
 }
 
@@ -650,23 +718,38 @@ run_etl() {
  # This ensures ETL finds SQL files in the correct location
  export SCRIPT_BASE_DIRECTORY="${ANALYTICS_ROOT}"
 
- # Load DBNAME from ingestion properties to ensure ETL uses the same database
- # In hybrid test mode, both Ingestion and Analytics use the same database
+ # Load DBNAME from ingestion properties to get ingestion database name
  # shellcheck disable=SC1090
  source "${INGESTION_ROOT}/etc/properties.sh"
  local INGESTION_DBNAME="${DBNAME:-osm_notes}"
 
  # Export database configuration for ETL
- # In hybrid test mode, both databases are the same
+ # In hybrid test mode with separate databases:
+ # - Ingestion uses the database from properties.sh
+ # - Analytics uses a separate database for testing FDW functionality
  export DBNAME="${INGESTION_DBNAME}"
  export DBNAME_INGESTION="${INGESTION_DBNAME}"
- export DBNAME_DWH="${INGESTION_DBNAME}"
+ export DBNAME_DWH="${ANALYTICS_DBNAME}"
+
+ # Export FDW configuration variables if needed
+ # These are used by ETL_60_setupFDW.sql when databases are different
+ # Use 127.0.0.1 instead of localhost to avoid IPv6 issues with FDW
+ export FDW_INGESTION_HOST="${DB_HOST:-127.0.0.1}"
+ export FDW_INGESTION_DBNAME="${INGESTION_DBNAME}"
+ export FDW_INGESTION_PORT="${DB_PORT:-5432}"
+ # For hybrid test, use dedicated FDW user with password
+ # This user was created specifically for FDW connections in test environment
+ # User: osm_notes_test_remote_user, Password: osm_notes_test_remote_user
+ export FDW_INGESTION_USER="${FDW_INGESTION_USER:-osm_notes_test_remote_user}"
+ export FDW_INGESTION_PASSWORD_VALUE="${FDW_INGESTION_PASSWORD_VALUE:-osm_notes_test_remote_user}"
 
  # Set logging level if not already set
  export LOG_LEVEL="${LOG_LEVEL:-INFO}"
 
- log_info "ETL will use database: ${DBNAME}"
- log_info "Configuration: DBNAME_INGESTION='${DBNAME_INGESTION}', DBNAME_DWH='${DBNAME_DWH}'"
+ log_info "ETL configuration:"
+ log_info "  Ingestion database: ${DBNAME_INGESTION}"
+ log_info "  Analytics database: ${DBNAME_DWH}"
+ log_info "  FDW will be configured to connect ingestion → analytics"
 
  # Create directory to save ETL logs permanently
  local TIMESTAMP
@@ -773,53 +856,60 @@ execute_processAPINotes_and_etl() {
  # This must be done right before the ETL to prevent any process from recreating the schema
  if [[ ${EXECUTION_NUMBER} -eq 1 ]]; then
   log_info "Cleaning dwh schema JUST BEFORE ETL #1 to ensure INITIAL LOAD..."
-  # Load DBNAME from properties file
+  # Load DB connection parameters from properties file
   # shellcheck disable=SC1090
   source "${INGESTION_ROOT}/etc/properties.sh"
   local PSQL_CMD="psql"
   if [[ -n "${DB_HOST:-}" ]]; then
-   PSQL_CMD="${PSQL_CMD} -h ${DB_HOST} -p ${DB_PORT}"
+   PSQL_CMD="${PSQL_CMD} -h ${DB_HOST} -p ${DB_PORT:-5432}"
   fi
+  # Use DB_USER_DWH if available (for analytics DB), otherwise DB_USER_INGESTION
+  if [[ -n "${DB_USER_DWH:-}" ]]; then
+   PSQL_CMD="${PSQL_CMD} -U ${DB_USER_DWH}"
+  elif [[ -n "${DB_USER_INGESTION:-}" ]]; then
+   PSQL_CMD="${PSQL_CMD} -U ${DB_USER_INGESTION}"
+  fi
+  # Use analytics database (where dwh schema exists)
   # Force disconnect any active connections
-  ${PSQL_CMD} -d "${DBNAME}" -c "
+  ${PSQL_CMD} -d "${ANALYTICS_DBNAME}" -c "
    SELECT pg_terminate_backend(pg_stat_activity.pid)
    FROM pg_stat_activity
-   WHERE pg_stat_activity.datname = '${DBNAME}'
+   WHERE pg_stat_activity.datname = '${ANALYTICS_DBNAME}'
     AND pid <> pg_backend_pid()
     AND state = 'active';
   " > /dev/null 2>&1 || true
   # Drop the schema (CASCADE will also drop dwh.properties)
   # First, verify schema exists
   local SCHEMA_EXISTS_BEFORE
-  SCHEMA_EXISTS_BEFORE=$(${PSQL_CMD} -d "${DBNAME}" -tAqc "
+  SCHEMA_EXISTS_BEFORE=$(${PSQL_CMD} -d "${ANALYTICS_DBNAME}" -tAqc "
    SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = 'dwh';
   " 2> /dev/null || echo "0")
   if [[ "${SCHEMA_EXISTS_BEFORE}" != "0" ]]; then
-   log_info "dwh schema exists, dropping it..."
+   log_info "dwh schema exists in analytics database, dropping it..."
    # Drop the schema with explicit error handling
-   if ! ${PSQL_CMD} -d "${DBNAME}" -c "DROP SCHEMA dwh CASCADE;" 2>&1; then
+   if ! ${PSQL_CMD} -d "${ANALYTICS_DBNAME}" -c "DROP SCHEMA dwh CASCADE;" 2>&1; then
     log_error "Failed to drop dwh schema, trying again after terminating connections..."
     # Terminate all connections again
-    ${PSQL_CMD} -d "${DBNAME}" -c "
+    ${PSQL_CMD} -d "${ANALYTICS_DBNAME}" -c "
      SELECT pg_terminate_backend(pg_stat_activity.pid)
      FROM pg_stat_activity
-     WHERE pg_stat_activity.datname = '${DBNAME}'
+     WHERE pg_stat_activity.datname = '${ANALYTICS_DBNAME}'
       AND pid <> pg_backend_pid();
     " > /dev/null 2>&1 || true
     sleep 1
-    ${PSQL_CMD} -d "${DBNAME}" -c "DROP SCHEMA dwh CASCADE;" > /dev/null 2>&1 || true
+    ${PSQL_CMD} -d "${ANALYTICS_DBNAME}" -c "DROP SCHEMA dwh CASCADE;" > /dev/null 2>&1 || true
    fi
   fi
   # Verify the schema was actually dropped
   local SCHEMA_EXISTS_AFTER
-  SCHEMA_EXISTS_AFTER=$(${PSQL_CMD} -d "${DBNAME}" -tAqc "
+  SCHEMA_EXISTS_AFTER=$(${PSQL_CMD} -d "${ANALYTICS_DBNAME}" -tAqc "
    SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = 'dwh';
   " 2> /dev/null || echo "1")
   if [[ "${SCHEMA_EXISTS_AFTER}" != "0" ]]; then
    log_error "dwh schema still exists after DROP (count: ${SCHEMA_EXISTS_AFTER})"
    log_error "This may prevent INITIAL LOAD from executing"
   else
-   log_success "dwh schema successfully dropped"
+   log_success "dwh schema successfully dropped from analytics database"
   fi
   log_success "dwh schema cleaned before ETL #1"
  fi
@@ -883,6 +973,11 @@ main() {
  log_info "  3. processAPINotes (API, 20 notes) → ETL"
  log_info "  4. processAPINotes (API, 0 notes) → ETL"
  log_info ""
+ log_info "Database configuration:"
+ log_info "  Ingestion DB: Uses DBNAME from properties.sh"
+ log_info "  Analytics DB: ${ANALYTICS_DBNAME} (separate database)"
+ log_info "  FDW: Enabled (databases are different)"
+ log_info ""
 
  # Setup trap for cleanup
  trap cleanup_environment EXIT SIGINT SIGTERM
@@ -910,10 +1005,11 @@ main() {
  log_info "Ensuring required extensions are installed in ingestion database (required by processAPINotes.sh)..."
  local PSQL_CMD="psql"
  if [[ -n "${DB_HOST:-}" ]]; then
-  PSQL_CMD="${PSQL_CMD} -h ${DB_HOST} -p ${DB_PORT}"
+  PSQL_CMD="${PSQL_CMD} -h ${DB_HOST} -p ${DB_PORT:-5432}"
  fi
- if [[ -n "${DB_USER:-}" ]]; then
-  PSQL_CMD="${PSQL_CMD} -U ${DB_USER}"
+ # Use DB_USER_INGESTION if available
+ if [[ -n "${DB_USER_INGESTION:-}" ]]; then
+  PSQL_CMD="${PSQL_CMD} -U ${DB_USER_INGESTION}"
  fi
 
  # Install PostGIS extension if not already installed
@@ -942,39 +1038,13 @@ main() {
   log_success "btree_gist extension already installed"
  fi
 
- # Clean DWH schema to start from scratch
- log_info "Cleaning DWH schema to start from scratch..."
-
- # Force disconnect any active connections to the dwh schema
- # This ensures DROP SCHEMA can complete successfully
- log_info "Terminating active connections to dwh schema..."
- ${PSQL_CMD} -d "${INGESTION_DBNAME}" -c "
-  SELECT pg_terminate_backend(pg_stat_activity.pid)
-  FROM pg_stat_activity
-  WHERE pg_stat_activity.datname = '${INGESTION_DBNAME}'
-   AND pid <> pg_backend_pid()
-   AND state = 'active';
- " > /dev/null 2>&1 || true
-
- # Drop the schema
- log_info "Dropping dwh schema..."
- if ! ${PSQL_CMD} -d "${INGESTION_DBNAME}" -c "DROP SCHEMA IF EXISTS dwh CASCADE;" 2>&1; then
-  log_error "Failed to drop dwh schema"
+ # Setup analytics database (separate from ingestion database)
+ # This enables testing of FDW functionality
+ log_info "Setting up separate analytics database for hybrid test..."
+ if ! setup_analytics_database; then
+  log_error "Failed to setup analytics database"
   exit 1
  fi
-
- # Verify the schema was actually dropped
- local SCHEMA_EXISTS
- SCHEMA_EXISTS=$(${PSQL_CMD} -d "${INGESTION_DBNAME}" -tAqc "
-  SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = 'dwh';
- " 2> /dev/null || echo "1")
-
- if [[ "${SCHEMA_EXISTS}" != "0" ]]; then
-  log_error "dwh schema still exists after DROP - cleanup failed"
-  exit 1
- fi
-
- log_success "DWH schema cleaned (ready for fresh creation)"
 
  # Clean ingestion base tables to start from scratch
  # This ensures no residual data from previous failed executions

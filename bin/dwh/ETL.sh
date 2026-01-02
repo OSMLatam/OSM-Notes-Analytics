@@ -885,23 +885,36 @@ function __processNotesETL {
    # Export FDW configuration variables if not set (required for envsubst)
    # Temporarily disable exit on error to handle readonly variables gracefully
    set +e
-   export FDW_INGESTION_HOST="${FDW_INGESTION_HOST:-localhost}" 2> /dev/null || true
+   # Use 127.0.0.1 instead of localhost to avoid IPv6 issues with FDW
+   # Force IPv4 even if FDW_INGESTION_HOST is already set to localhost
+   if [[ "${FDW_INGESTION_HOST:-}" == "localhost" ]]; then
+    export FDW_INGESTION_HOST="127.0.0.1" 2> /dev/null || true
+   else
+    export FDW_INGESTION_HOST="${FDW_INGESTION_HOST:-127.0.0.1}" 2> /dev/null || true
+   fi
    export FDW_INGESTION_DBNAME="${DBNAME_INGESTION}" 2> /dev/null || true
    export FDW_INGESTION_PORT="${FDW_INGESTION_PORT:-5432}" 2> /dev/null || true
-   export FDW_INGESTION_USER="${FDW_INGESTION_USER:-${DB_USER_INGESTION:-${DB_USER:-notes}}}" 2> /dev/null || true
+   export FDW_INGESTION_USER="${FDW_INGESTION_USER:-${DB_USER_INGESTION:-notes}}" 2> /dev/null || true
    # Try to get password from multiple sources:
-   # 1. FDW_INGESTION_PASSWORD (explicit FDW password, may be readonly)
-   # 2. PGPASSWORD (general PostgreSQL password)
-   # 3. DB_PASSWORD (database password from properties)
-   # 4. Empty string (will use .pgpass or peer authentication if available)
+   # 1. FDW_INGESTION_PASSWORD_VALUE (already set by calling script, e.g., hybrid test)
+   # 2. FDW_INGESTION_PASSWORD (explicit FDW password, may be readonly)
+   # 3. PGPASSWORD (general PostgreSQL password)
+   # 4. DB_PASSWORD (database password from properties)
+   # 5. Empty string (will use .pgpass or peer authentication if available)
    # Use a temporary variable to avoid readonly issues
    # Read readonly variable using parameter expansion (works even if readonly)
    local fdw_password_value
-   # Try to read FDW_INGESTION_PASSWORD (may be readonly, but we can read its value)
-   fdw_password_value="${FDW_INGESTION_PASSWORD:-}"
-   # If FDW_INGESTION_PASSWORD is empty or unset, try other sources
-   if [[ -z "${fdw_password_value}" ]]; then
-    fdw_password_value="${PGPASSWORD:-${DB_PASSWORD:-}}"
+   # Check if FDW_INGESTION_PASSWORD_VALUE is already set (e.g., by hybrid test script)
+   if [[ -n "${FDW_INGESTION_PASSWORD_VALUE:-}" ]]; then
+    # Already set by calling script (e.g., hybrid test)
+    fdw_password_value="${FDW_INGESTION_PASSWORD_VALUE}"
+   else
+    # Try to read FDW_INGESTION_PASSWORD (may be readonly, but we can read its value)
+    fdw_password_value="${FDW_INGESTION_PASSWORD:-}"
+    # If FDW_INGESTION_PASSWORD is empty or unset, try other sources
+    if [[ -z "${fdw_password_value}" ]]; then
+     fdw_password_value="${PGPASSWORD:-${DB_PASSWORD:-}}"
+    fi
    fi
    # Export as non-readonly variable for envsubst
    export FDW_INGESTION_PASSWORD_VALUE="${fdw_password_value}"
@@ -1103,6 +1116,23 @@ function __processNotesETL {
  local AUTOMATION_BATCH_NUM=1
  local AUTOMATION_HAS_MORE=true
  while [[ "${AUTOMATION_HAS_MORE}" == "true" ]]; do
+  # Count remaining users BEFORE processing batch to calculate actual processed count
+  # Note: Count all users without automation, not just those from last 7 days
+  # The procedure processes users from last 7 days, but we need to count all to detect completion
+  set +e
+  local REMAINING_BEFORE
+  REMAINING_BEFORE=$(__psql_with_appname -d "${DBNAME_DWH}" -t -c "
+   SELECT COUNT(DISTINCT action_dimension_id_user) FROM dwh.facts
+   WHERE dimension_id_automation IS NULL
+     AND action_dimension_id_user IS NOT NULL;
+  " 2>&1 | tr -d ' ' || echo "0")
+  local CHECK_BEFORE_EXIT_CODE=$?
+  set -e
+  # Ensure REMAINING_BEFORE has a valid numeric value
+  if [[ ${CHECK_BEFORE_EXIT_CODE} -ne 0 ]] || [[ -z "${REMAINING_BEFORE}" ]] || ! [[ "${REMAINING_BEFORE}" =~ ^[0-9]+$ ]]; then
+   __logw "Warning: Failed to check remaining automation users count before batch, using batch size estimate"
+   REMAINING_BEFORE="${AUTOMATION_BATCH_SIZE}"
+  fi
   # Execute batch within a transaction
   set +e
   __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -c "
@@ -1118,23 +1148,64 @@ function __processNotesETL {
    return 1
   fi
   # Check if there are more users to process
+  # Note: Count all users without automation, not just those from last 7 days
+  # The procedure processes users from last 7 days, but we need to count all to detect completion
   set +e
   local REMAINING_COUNT
   REMAINING_COUNT=$(__psql_with_appname -d "${DBNAME_DWH}" -t -c "
-   SELECT COUNT(*) FROM dwh.facts
+   SELECT COUNT(DISTINCT action_dimension_id_user) FROM dwh.facts
+   WHERE dimension_id_automation IS NULL
+     AND action_dimension_id_user IS NOT NULL;
+  " 2>&1 | tr -d ' ' || echo "0")
+  local CHECK_EXIT_CODE=$?
+  set -e
+  # Ensure REMAINING_COUNT has a valid numeric value
+  local ACTUAL_PROCESSED=0
+  if [[ ${CHECK_EXIT_CODE} -ne 0 ]] || [[ -z "${REMAINING_COUNT}" ]] || ! [[ "${REMAINING_COUNT}" =~ ^[0-9]+$ ]]; then
+   __logw "Warning: Failed to check remaining automation users count, continuing anyway"
+   # If we can't get remaining count, try to calculate from REMAINING_BEFORE if available
+   if [[ -n "${REMAINING_BEFORE}" ]] && [[ "${REMAINING_BEFORE}" =~ ^[0-9]+$ ]]; then
+    # Estimate: assume we processed at least some users (use min of batch size and remaining before)
+    if [[ ${REMAINING_BEFORE} -gt 0 ]]; then
+     ACTUAL_PROCESSED=$((REMAINING_BEFORE < AUTOMATION_BATCH_SIZE ? REMAINING_BEFORE : AUTOMATION_BATCH_SIZE))
+    fi
+   else
+    # Last resort: use batch size as estimate (may be inaccurate)
+    ACTUAL_PROCESSED="${AUTOMATION_BATCH_SIZE}"
+   fi
+  else
+   # Ensure REMAINING_BEFORE is set and numeric before calculation
+   if [[ -z "${REMAINING_BEFORE}" ]] || ! [[ "${REMAINING_BEFORE}" =~ ^[0-9]+$ ]]; then
+    REMAINING_BEFORE="${REMAINING_COUNT}"
+   fi
+   # Calculate actual processed count: before - after
+   ACTUAL_PROCESSED=$((REMAINING_BEFORE - REMAINING_COUNT))
+   # Ensure non-negative (shouldn't happen, but safety check)
+   if [[ ${ACTUAL_PROCESSED} -lt 0 ]]; then
+    ACTUAL_PROCESSED=0
+   fi
+   # Cap at batch size (shouldn't exceed batch size, but safety check)
+   if [[ ${ACTUAL_PROCESSED} -gt ${AUTOMATION_BATCH_SIZE} ]]; then
+    ACTUAL_PROCESSED="${AUTOMATION_BATCH_SIZE}"
+   fi
+  fi
+  AUTOMATION_TOTAL_PROCESSED=$((AUTOMATION_TOTAL_PROCESSED + ACTUAL_PROCESSED))
+  __logi "Automation batch ${AUTOMATION_BATCH_NUM} completed. Processed: ${ACTUAL_PROCESSED}, Total processed: ${AUTOMATION_TOTAL_PROCESSED}"
+  # Check if there are more users to process (only from last 7 days, as that's what the procedure processes)
+  # The procedure only processes users from last 7 days, so we check that specific subset
+  set +e
+  local REMAINING_7DAYS
+  REMAINING_7DAYS=$(__psql_with_appname -d "${DBNAME_DWH}" -t -c "
+   SELECT COUNT(DISTINCT action_dimension_id_user) FROM dwh.facts
    WHERE dimension_id_automation IS NULL
      AND action_dimension_id_user IS NOT NULL
      AND action_at > NOW() - INTERVAL '7 days';
-  " 2>&1 | tr -d ' ')
-  local CHECK_EXIT_CODE=$?
+  " 2>&1 | tr -d ' ' || echo "0")
+  local CHECK_7DAYS_EXIT_CODE=$?
   set -e
-  if [[ ${CHECK_EXIT_CODE} -ne 0 ]]; then
-   __logw "Warning: Failed to check remaining automation users count, continuing anyway"
-  fi
-  AUTOMATION_TOTAL_PROCESSED=$((AUTOMATION_TOTAL_PROCESSED + AUTOMATION_BATCH_SIZE))
-  __logi "Automation batch ${AUTOMATION_BATCH_NUM} completed. Total processed: ${AUTOMATION_TOTAL_PROCESSED}"
-  if [[ -z "${REMAINING_COUNT}" ]] || [[ "${REMAINING_COUNT}" == "0" ]]; then
+  if [[ ${CHECK_7DAYS_EXIT_CODE} -ne 0 ]] || [[ -z "${REMAINING_7DAYS}" ]] || ! [[ "${REMAINING_7DAYS}" =~ ^[0-9]+$ ]] || [[ "${REMAINING_7DAYS}" == "0" ]]; then
    AUTOMATION_HAS_MORE=false
+   __logi "No more users to process in last 7 days. Automation level detection completed."
   else
    AUTOMATION_BATCH_NUM=$((AUTOMATION_BATCH_NUM + 1))
   fi
@@ -1150,6 +1221,19 @@ function __processNotesETL {
  local EXPERIENCE_BATCH_NUM=1
  local EXPERIENCE_HAS_MORE=true
  while [[ "${EXPERIENCE_HAS_MORE}" == "true" ]]; do
+  # Count remaining users BEFORE processing batch to calculate actual processed count
+  set +e
+  local REMAINING_BEFORE
+  REMAINING_BEFORE=$(__psql_with_appname -d "${DBNAME_DWH}" -t -c "
+   SELECT COUNT(*) FROM dwh.dimension_users
+   WHERE modified = TRUE AND experience_level_id IS NULL;
+  " 2>&1 | tr -d ' ' || echo "0")
+  local CHECK_BEFORE_EXIT_CODE=$?
+  set -e
+  if [[ ${CHECK_BEFORE_EXIT_CODE} -ne 0 ]]; then
+   __logw "Warning: Failed to check remaining experience users count before batch, using batch size estimate"
+   REMAINING_BEFORE="${EXPERIENCE_BATCH_SIZE}"
+  fi
   # Execute batch within a transaction
   set +e
   __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -c "
@@ -1170,18 +1254,55 @@ function __processNotesETL {
   REMAINING_COUNT=$(__psql_with_appname -d "${DBNAME_DWH}" -t -c "
    SELECT COUNT(*) FROM dwh.dimension_users
    WHERE modified = TRUE AND experience_level_id IS NULL;
-  " 2>&1 | tr -d ' ')
+  " 2>&1 | tr -d ' ' || echo "0")
   local CHECK_EXIT_CODE=$?
   set -e
-  if [[ ${CHECK_EXIT_CODE} -ne 0 ]]; then
+  # Ensure REMAINING_COUNT has a valid numeric value
+  local ACTUAL_PROCESSED=0
+  if [[ ${CHECK_EXIT_CODE} -ne 0 ]] || [[ -z "${REMAINING_COUNT}" ]] || ! [[ "${REMAINING_COUNT}" =~ ^[0-9]+$ ]]; then
    __logw "Warning: Failed to check remaining experience users count, continuing anyway"
-  fi
-  EXPERIENCE_TOTAL_PROCESSED=$((EXPERIENCE_TOTAL_PROCESSED + EXPERIENCE_BATCH_SIZE))
-  __logi "Experience batch ${EXPERIENCE_BATCH_NUM} completed. Total processed: ${EXPERIENCE_TOTAL_PROCESSED}"
-  if [[ -z "${REMAINING_COUNT}" ]] || [[ "${REMAINING_COUNT}" == "0" ]]; then
-   EXPERIENCE_HAS_MORE=false
+   # If we can't get remaining count, try to calculate from REMAINING_BEFORE if available
+   if [[ -n "${REMAINING_BEFORE}" ]] && [[ "${REMAINING_BEFORE}" =~ ^[0-9]+$ ]]; then
+    # Estimate: assume we processed at least some users (use min of batch size and remaining before)
+    if [[ ${REMAINING_BEFORE} -gt 0 ]]; then
+     ACTUAL_PROCESSED=$((REMAINING_BEFORE < EXPERIENCE_BATCH_SIZE ? REMAINING_BEFORE : EXPERIENCE_BATCH_SIZE))
+    fi
+   else
+    # Last resort: use batch size as estimate (may be inaccurate)
+    ACTUAL_PROCESSED="${EXPERIENCE_BATCH_SIZE}"
+   fi
   else
-   EXPERIENCE_BATCH_NUM=$((EXPERIENCE_BATCH_NUM + 1))
+   # Ensure REMAINING_BEFORE is set and numeric before calculation
+   if [[ -z "${REMAINING_BEFORE}" ]] || ! [[ "${REMAINING_BEFORE}" =~ ^[0-9]+$ ]]; then
+    REMAINING_BEFORE="${REMAINING_COUNT}"
+   fi
+   # Calculate actual processed count: before - after
+   ACTUAL_PROCESSED=$((REMAINING_BEFORE - REMAINING_COUNT))
+   # Ensure non-negative (shouldn't happen, but safety check)
+   if [[ ${ACTUAL_PROCESSED} -lt 0 ]]; then
+    ACTUAL_PROCESSED=0
+   fi
+   # Cap at batch size (shouldn't exceed batch size, but safety check)
+   if [[ ${ACTUAL_PROCESSED} -gt ${EXPERIENCE_BATCH_SIZE} ]]; then
+    ACTUAL_PROCESSED="${EXPERIENCE_BATCH_SIZE}"
+   fi
+  fi
+  EXPERIENCE_TOTAL_PROCESSED=$((EXPERIENCE_TOTAL_PROCESSED + ACTUAL_PROCESSED))
+  __logi "Experience batch ${EXPERIENCE_BATCH_NUM} completed. Processed: ${ACTUAL_PROCESSED}, Total processed: ${EXPERIENCE_TOTAL_PROCESSED}"
+  # Check if there are more users to process
+  # The procedure processes users with modified=TRUE and experience_level_id IS NULL
+  # If REMAINING_COUNT is 0 or invalid, we're done
+  if [[ -z "${REMAINING_COUNT}" ]] || [[ "${REMAINING_COUNT}" == "0" ]] || ! [[ "${REMAINING_COUNT}" =~ ^[0-9]+$ ]]; then
+   EXPERIENCE_HAS_MORE=false
+   __logi "No more users to process. Experience level detection completed."
+  else
+   # If we processed 0 users but REMAINING_COUNT > 0, something is wrong - stop to avoid infinite loop
+   if [[ ${ACTUAL_PROCESSED} -eq 0 ]] && [[ ${REMAINING_COUNT} -gt 0 ]]; then
+    __logw "Warning: Procedure processed 0 users but ${REMAINING_COUNT} users remain. This may indicate an issue. Stopping to avoid infinite loop."
+    EXPERIENCE_HAS_MORE=false
+   else
+    EXPERIENCE_BATCH_NUM=$((EXPERIENCE_BATCH_NUM + 1))
+   fi
   fi
  done
  __logi "Completed experience level calculation. Total users processed: ${EXPERIENCE_TOTAL_PROCESSED}"
@@ -1227,6 +1348,23 @@ function __initialFactsParallel {
  local STEP1_START_TIME
  STEP1_START_TIME=$(date +%s)
  __logi "Step 1: Copying base tables from Ingestion DB for initial load..."
+
+ # Before copying base tables, ensure no foreign tables exist that could interfere
+ # Foreign tables from previous FDW setup need to be dropped before copying local tables
+ __logi "Step 1a: Dropping any existing foreign tables that might interfere with base table copy..."
+ set +e
+ for table in notes note_comments note_comments_text users countries; do
+  if __psql_with_appname -d "${DBNAME_DWH}" -t -c "
+   SELECT 1 FROM information_schema.foreign_tables
+   WHERE foreign_table_schema = 'public' AND foreign_table_name = '${table}';
+  " 2>&1 | grep -q 1; then
+   __logi "Dropping foreign table: ${table}"
+   __psql_with_appname -d "${DBNAME_DWH}" -c "DROP FOREIGN TABLE IF EXISTS public.${table} CASCADE;" > /dev/null 2>&1 || true
+  fi
+ done
+ set -e
+ __logi "Foreign tables cleanup completed"
+
  if [[ -f "${COPY_BASE_TABLES_SCRIPT}" ]]; then
   if bash "${COPY_BASE_TABLES_SCRIPT}"; then
    local STEP1_END_TIME
@@ -2121,18 +2259,39 @@ function main() {
     # Export FDW configuration variables if not set (required for envsubst)
     # Temporarily disable exit on error to handle readonly variables gracefully
     set +e
-    export FDW_INGESTION_HOST="${FDW_INGESTION_HOST:-localhost}" 2> /dev/null || true
+    # Use 127.0.0.1 instead of localhost to avoid IPv6 issues with FDW
+    # Force IPv4 even if FDW_INGESTION_HOST is already set to localhost
+    if [[ "${FDW_INGESTION_HOST:-}" == "localhost" ]]; then
+     export FDW_INGESTION_HOST="127.0.0.1" 2> /dev/null || true
+    else
+     export FDW_INGESTION_HOST="${FDW_INGESTION_HOST:-127.0.0.1}" 2> /dev/null || true
+    fi
     export FDW_INGESTION_DBNAME="${DBNAME_INGESTION}" 2> /dev/null || true
     export FDW_INGESTION_PORT="${FDW_INGESTION_PORT:-5432}" 2> /dev/null || true
-    export FDW_INGESTION_USER="${FDW_INGESTION_USER:-${DB_USER_INGESTION:-${DB_USER:-notes}}}" 2> /dev/null || true
+    export FDW_INGESTION_USER="${FDW_INGESTION_USER:-${DB_USER_INGESTION:-notes}}" 2> /dev/null || true
     # Try to get password from multiple sources:
-    # 1. FDW_INGESTION_PASSWORD (explicit FDW password)
+    # 1. FDW_INGESTION_PASSWORD (explicit FDW password, may be readonly)
     # 2. PGPASSWORD (general PostgreSQL password)
     # 3. DB_PASSWORD (database password from properties)
     # 4. Empty string (will use .pgpass or peer authentication if available)
-    if [[ -z "${FDW_INGESTION_PASSWORD:-}" ]]; then
-     export FDW_INGESTION_PASSWORD="${PGPASSWORD:-${DB_PASSWORD:-}}"
+    # Use FDW_INGESTION_PASSWORD_VALUE to avoid readonly variable issues
+    # Check if FDW_INGESTION_PASSWORD_VALUE is already set (e.g., by hybrid test script)
+    local fdw_password_value
+    if [[ -n "${FDW_INGESTION_PASSWORD_VALUE:-}" ]]; then
+     # Already set by calling script (e.g., hybrid test)
+     fdw_password_value="${FDW_INGESTION_PASSWORD_VALUE}"
+    else
+     # Try to get password from multiple sources:
+     # 1. FDW_INGESTION_PASSWORD (explicit FDW password, may be readonly)
+     # 2. PGPASSWORD (general PostgreSQL password)
+     # 3. DB_PASSWORD (database password from properties)
+     # 4. Empty string (will use .pgpass or peer authentication if available)
+     fdw_password_value="${FDW_INGESTION_PASSWORD:-}"
+     if [[ -z "${fdw_password_value}" ]]; then
+      fdw_password_value="${PGPASSWORD:-${DB_PASSWORD:-}}"
+     fi
     fi
+    export FDW_INGESTION_PASSWORD_VALUE="${fdw_password_value}"
     set -e
     # shellcheck disable=SC2310  # Function invocation in || condition is intentional for error handling
     envsubst < "${POSTGRES_60_SETUP_FDW}" \

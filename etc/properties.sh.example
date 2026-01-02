@@ -23,19 +23,17 @@ fi
 if [[ -z "${DBNAME_DWH:-}" ]]; then
  declare -r DBNAME_DWH="${DBNAME_DWH:-notes_dwh}"
 fi
-# shellcheck disable=SC2034
-if [[ -z "${DB_USER:-}" ]]; then
- declare -r DB_USER="${DB_USER:-notes}"
-fi
-
-# Database users for separate databases (optional, defaults to DB_USER)
+# Database users for separate databases
+# DB_USER_INGESTION: User for connecting to Ingestion database
+# DB_USER_DWH: User for connecting to Analytics/DWH database
+# Note: DB_USER is NOT used in this project (it's only valid in OSM-Notes-Ingestion project)
 # shellcheck disable=SC2034
 if [[ -z "${DB_USER_INGESTION:-}" ]]; then
- declare -r DB_USER_INGESTION="${DB_USER_INGESTION:-${DB_USER}}"
+ declare -r DB_USER_INGESTION="${DB_USER_INGESTION:-notes}"
 fi
 # shellcheck disable=SC2034
 if [[ -z "${DB_USER_DWH:-}" ]]; then
- declare -r DB_USER_DWH="${DB_USER_DWH:-${DB_USER}}"
+ declare -r DB_USER_DWH="${DB_USER_DWH:-notes}"
 fi
 
 # Foreign Data Wrapper configuration (for accessing Ingestion DB from Analytics DB)
@@ -54,10 +52,13 @@ if [[ -z "${FDW_INGESTION_PORT:-}" ]]; then
 fi
 # shellcheck disable=SC2034
 if [[ -z "${FDW_INGESTION_USER:-}" ]]; then
- declare -r FDW_INGESTION_USER="${FDW_INGESTION_USER:-analytics_readonly}"
+ # Default to same user as ingestion database (can be overridden for separate FDW user)
+ declare -r FDW_INGESTION_USER="${FDW_INGESTION_USER:-${DB_USER_INGESTION:-notes}}"
 fi
 # shellcheck disable=SC2034
 if [[ -z "${FDW_INGESTION_PASSWORD:-}" ]]; then
+ # Default to empty (will use .pgpass file or peer authentication if available)
+ # Set this if you need a specific password for FDW connections
  declare -r FDW_INGESTION_PASSWORD="${FDW_INGESTION_PASSWORD:-}"
 fi
 
