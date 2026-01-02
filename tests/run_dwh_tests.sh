@@ -46,6 +46,13 @@ else
  exit 1
 fi
 
+# Ensure critical variables have defaults after loading properties
+export TEST_DBNAME="${TEST_DBNAME:-dwh}"
+export TEST_DBHOST="${TEST_DBHOST:-localhost}"
+export TEST_DBPORT="${TEST_DBPORT:-5432}"
+export TEST_DBUSER="${TEST_DBUSER:-postgres}"
+export TEST_DBPASSWORD="${TEST_DBPASSWORD:-postgres}"
+
 # Check if BATS is installed
 if ! command -v bats &> /dev/null; then
  log_error "BATS is not installed. Please install it first:"
@@ -64,7 +71,7 @@ fi
 
 log_info "Starting DWH and ETL tests..."
 echo "Project Root: ${PROJECT_ROOT}"
-echo "Test Database: ${TEST_DBNAME}"
+echo "Test Database: ${TEST_DBNAME:-not set}"
 echo "Test DB Host: ${TEST_DBHOST:-localhost}"
 echo "Test DB Port: ${TEST_DBPORT:-5432}"
 echo "Test DB User: ${TEST_DBUSER:-postgres}"
@@ -83,11 +90,17 @@ run_test_suite() {
 
  log_info "Running ${test_name}..."
 
- if bats "${test_file}"; then
+ # Temporarily disable exit on error to allow test failures to be captured
+ set +e
+ bats "${test_file}"
+ local bats_exit_code=$?
+ set -e
+
+ if [[ ${bats_exit_code} -eq 0 ]]; then
   log_success "${test_name} passed"
   PASSED_TESTS=$((PASSED_TESTS + 1))
  else
-  log_error "${test_name} failed"
+  log_error "${test_name} failed (exit code: ${bats_exit_code})"
   FAILED_TESTS=$((FAILED_TESTS + 1))
  fi
 
@@ -230,6 +243,18 @@ echo "======================================"
 echo "Total Test Suites: ${TOTAL_TESTS}"
 echo "Passed: ${PASSED_TESTS} ✅"
 echo "Failed: ${FAILED_TESTS} ❌"
+
+# Save summary to file for CI/CD
+{
+ echo "======================================"
+ echo "DWH Tests Summary"
+ echo "======================================"
+ echo "Total Test Suites: ${TOTAL_TESTS}"
+ echo "Passed: ${PASSED_TESTS}"
+ echo "Failed: ${FAILED_TESTS}"
+ echo ""
+ echo "Test completed at: $(date)"
+} > /tmp/all_tests_output.txt 2>&1 || true
 
 if [[ ${FAILED_TESTS} -eq 0 ]]; then
  log_success "All tests passed!"
