@@ -387,7 +387,7 @@ flowchart TD
 - Creates all partitions
 - Populates all dimensions
 - Loads all facts
-- **Time**: ~30 hours (see [ETL Execution Times](ETL_Execution_Times.md) for detailed breakdown)
+- **Time**: ~30 hours
 - **Trigger**: `ETL.sh` (auto-detects first execution)
 - **Longest stage**: Loading facts in parallel (20-25 hours)
 
@@ -398,7 +398,7 @@ flowchart TD
 - Updates affected datamarts
 - **Time**: 5-15 minutes (normal) to 30-60 minutes (large updates)
 - **Trigger**: `ETL.sh` (auto-detects incremental execution)
-- **Note**: Large incrementals may require increased timeout (see [ETL Execution Times](ETL_Execution_Times.md))
+- **Note**: Large incrementals may require `PSQL_STATEMENT_TIMEOUT=2h` (see [Environment Variables](bin/dwh/ENVIRONMENT_VARIABLES.md))
 
 ## Parallel Processing
 

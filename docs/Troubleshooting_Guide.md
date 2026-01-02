@@ -189,14 +189,26 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT pid, application_name, state, now() - 
 
 **Solutions:**
 
-1. **Increase parallelism:**
+1. **Increase timeouts for large operations:**
+   ```bash
+   # For large incremental updates (> 100K facts)
+   export PSQL_STATEMENT_TIMEOUT=2h
+   
+   # For initial load
+   export PSQL_STATEMENT_TIMEOUT=4h
+   export ETL_TIMEOUT=129600  # 36 hours
+   
+   # See bin/dwh/ENVIRONMENT_VARIABLES.md for details
+   ```
+
+2. **Increase parallelism:**
    ```bash
    # Edit etc/etl.properties
    ETL_MAX_PARALLEL_JOBS=8  # Increase for more CPU cores
    ETL_BATCH_SIZE=5000     # Increase for better throughput
    ```
 
-2. **Optimize base tables:**
+3. **Optimize base tables:**
    ```bash
    # Run VACUUM ANALYZE on base tables
    psql -d "${DBNAME:-osm_notes}" -c "VACUUM ANALYZE notes;"
@@ -215,6 +227,54 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT pid, application_name, state, now() - 
    # Same command works for both initial setup and incremental updates
    ./bin/dwh/ETL.sh
    ```
+
+### Problem: Statement Timeout Error
+
+**Symptoms:**
+- Error: `canceling statement due to statement timeout`
+- ETL fails during `process_notes_actions_into_dwh()` stage
+- Process runs for ~30 minutes then fails
+
+**Diagnosis:**
+
+```bash
+# Check current timeout setting
+grep PSQL_STATEMENT_TIMEOUT etc/properties.sh
+
+# Check how many facts are being processed
+psql -d "${DBNAME_DWH:-notes_dwh}" -c "SELECT COUNT(*) FROM dwh.facts;"
+
+# Check latest processed timestamp
+psql -d "${DBNAME_DWH:-notes_dwh}" -c "SELECT MAX(action_at) FROM dwh.facts;"
+```
+
+**Solutions:**
+
+1. **Increase statement timeout for large operations:**
+   ```bash
+   # For large incremental updates (> 100K facts)
+   export PSQL_STATEMENT_TIMEOUT=2h
+   ./bin/dwh/ETL.sh
+   
+   # For initial load
+   export PSQL_STATEMENT_TIMEOUT=4h
+   export ETL_TIMEOUT=129600  # 36 hours
+   ./bin/dwh/ETL.sh
+   ```
+
+2. **Configure permanently in properties file:**
+   ```bash
+   # Edit etc/properties.sh
+   export PSQL_STATEMENT_TIMEOUT=2h  # For large incrementals
+   # or
+   export PSQL_STATEMENT_TIMEOUT=4h  # For initial loads
+   ```
+
+3. **Check if this should be an initial load instead:**
+   - If processing > 1M facts, consider doing initial load
+   - Initial load has longer timeouts and better parallelization
+
+**See also:** [Environment Variables](bin/dwh/ENVIRONMENT_VARIABLES.md) for timeout configuration details.
 
 ### Problem: ETL Fails Mid-Execution
 

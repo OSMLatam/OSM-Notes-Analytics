@@ -320,10 +320,9 @@ the `dwh.facts` table exists and has data.
 **Time estimates:**
 - **Initial load**: ~30 hours (processes all years from 2013 to present)
   - Longest stage: Loading facts in parallel (20-25 hours)
-  - See [ETL Execution Times](docs/ETL_Execution_Times.md) for detailed breakdown
 - **Incremental update**: 5-15 minutes (normal) to 30-60 minutes (large updates)
   - Depends on volume of new data since last run
-  - May require increased timeout for large backlogs (see [ETL Execution Times](docs/ETL_Execution_Times.md))
+  - Large updates (> 100K facts) may require `PSQL_STATEMENT_TIMEOUT=2h` (see [Environment Variables](bin/dwh/ENVIRONMENT_VARIABLES.md))
 
 **Monitor progress:**
 ```bash

@@ -49,7 +49,9 @@ This will:
 5. Create indexes and constraints
 6. Update datamarts
 
-**Expected Duration**: ~30 hours (see [ETL Execution Times](ETL_Execution_Times.md) for detailed breakdown)
+**Expected Duration**: ~30 hours
+- **Longest stage**: Loading facts in parallel (20-25 hours)
+- Other stages: Table creation (5-15 min), dimensions (5-10 min), constraints/indexes (1-3 hours), datamarts (20-30 min)
 
 #### Incremental Update (Regular Operations)
 
@@ -65,7 +67,9 @@ This will:
 4. Much faster than initial load
 
 **Expected Duration**: 5-15 minutes (normal) to 30-60 minutes (large updates)
-- See [ETL Execution Times](ETL_Execution_Times.md) for detailed breakdown and timeout recommendations
+- **Normal**: Processes only new data since last run
+- **Large updates**: When significant backlog exists (> 100K facts)
+- **Timeout note**: Large incrementals may require `PSQL_STATEMENT_TIMEOUT=2h` (see [Environment Variables](bin/dwh/ENVIRONMENT_VARIABLES.md))
 
 ### ETL Process Types
 

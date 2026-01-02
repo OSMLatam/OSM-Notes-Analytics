@@ -180,9 +180,34 @@ These variables control the ETL process behavior:
 - **Values**: Integer in seconds (e.g., `3600`, `7200`)
 - **Default**: `7200` (2 hours)
 - **Usage**: Increase for initial loads, decrease for quick validations
+- **Recommendations**:
+  - **Incremental updates**: 2 hours (default OK)
+  - **Initial load**: 36 hours (`export ETL_TIMEOUT=129600`)
 - **Example**: 
   ```bash
-  export ETL_TIMEOUT=14400  # 4 hours for initial load
+  export ETL_TIMEOUT=129600  # 36 hours for initial load
+  ./bin/dwh/ETL.sh
+  ```
+
+#### `PSQL_STATEMENT_TIMEOUT`
+
+- **Purpose**: Maximum time a single SQL statement can run (prevents long-running queries from hanging)
+- **Values**: PostgreSQL interval format (e.g., `30min`, `2h`, `4h`)
+- **Default**: `30min` (configured in `etc/properties.sh`)
+- **Usage**: Critical for preventing timeout errors during ETL execution
+- **Recommendations**:
+  - **Normal incremental**: 30 minutes (default OK)
+  - **Large incremental** (> 10M facts): 2 hours (`export PSQL_STATEMENT_TIMEOUT=2h`)
+  - **Initial load**: 4 hours (`export PSQL_STATEMENT_TIMEOUT=4h`)
+- **Common issue**: Large incremental updates can exceed 30min timeout, causing `canceling statement due to statement timeout` errors
+- **Example**:
+  ```bash
+  # For large incremental updates
+  export PSQL_STATEMENT_TIMEOUT=2h
+  ./bin/dwh/ETL.sh
+  
+  # For initial load
+  export PSQL_STATEMENT_TIMEOUT=4h
   ./bin/dwh/ETL.sh
   ```
 
