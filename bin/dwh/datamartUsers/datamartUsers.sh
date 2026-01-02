@@ -330,24 +330,24 @@ function __processOldUsers {
 __get_next_user_from_queue() {
  local result_file="${work_queue_file}.result.$$"
  local user_id=""
- 
+
  # Ensure queue file exists before attempting to read
  if [[ ! -f "${work_queue_file}" ]]; then
   echo ""
   return 0
  fi
- 
+
  (
   # Try to acquire lock (non-blocking)
   # If lock cannot be acquired, return empty (another thread is accessing)
   if ! flock -n 200; then
    exit 1
   fi
-  
+
   # Read first line (next user to process)
   if [[ -f "${work_queue_file}" ]] && [[ -s "${work_queue_file}" ]]; then
    head -n 1 "${work_queue_file}" 2> /dev/null > "${result_file}" || echo "" > "${result_file}"
-   
+
    # If we got a user ID, remove it from queue
    if [[ -s "${result_file}" ]]; then
     # Remove first line from queue atomically
@@ -360,13 +360,13 @@ __get_next_user_from_queue() {
   fi
   exit 0
  ) 200> "${queue_lock_file}"
- 
+
  # Read result and clean up
  if [[ -f "${result_file}" ]]; then
   user_id=$(cat "${result_file}" 2> /dev/null || echo "")
   rm -f "${result_file}" 2> /dev/null || true
  fi
- 
+
  echo "${user_id}"
 }
 
@@ -536,7 +536,7 @@ function __processNotesUser {
   ) &
   pids+=($!)
   __logi "Started worker thread ${thread_num} (PID: ${!})"
-  
+
   # Small delay between thread starts to reduce lock contention
   # This helps prevent all threads from trying to acquire the lock simultaneously
   if [[ ${thread_num} -lt ${adjusted_threads} ]]; then
