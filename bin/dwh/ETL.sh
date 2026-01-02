@@ -1121,6 +1121,7 @@ function __processNotesETL {
   # The procedure processes users from last 7 days, but we need to count all to detect completion
   set +e
   local REMAINING_BEFORE
+  # shellcheck disable=SC2310  # Function invocation in || condition is intentional for error handling
   REMAINING_BEFORE=$(__psql_with_appname -d "${DBNAME_DWH}" -t -c "
    SELECT COUNT(DISTINCT action_dimension_id_user) FROM dwh.facts
    WHERE dimension_id_automation IS NULL
@@ -1152,6 +1153,7 @@ function __processNotesETL {
   # The procedure processes users from last 7 days, but we need to count all to detect completion
   set +e
   local REMAINING_COUNT
+  # shellcheck disable=SC2310  # Function invocation in || condition is intentional for error handling
   REMAINING_COUNT=$(__psql_with_appname -d "${DBNAME_DWH}" -t -c "
    SELECT COUNT(DISTINCT action_dimension_id_user) FROM dwh.facts
    WHERE dimension_id_automation IS NULL
@@ -1195,6 +1197,7 @@ function __processNotesETL {
   # The procedure only processes users from last 7 days, so we check that specific subset
   set +e
   local REMAINING_7DAYS
+  # shellcheck disable=SC2310  # Function invocation in || condition is intentional for error handling
   REMAINING_7DAYS=$(__psql_with_appname -d "${DBNAME_DWH}" -t -c "
    SELECT COUNT(DISTINCT action_dimension_id_user) FROM dwh.facts
    WHERE dimension_id_automation IS NULL
@@ -1224,6 +1227,7 @@ function __processNotesETL {
   # Count remaining users BEFORE processing batch to calculate actual processed count
   set +e
   local REMAINING_BEFORE
+  # shellcheck disable=SC2310  # Function invocation in || condition is intentional for error handling
   REMAINING_BEFORE=$(__psql_with_appname -d "${DBNAME_DWH}" -t -c "
    SELECT COUNT(*) FROM dwh.dimension_users
    WHERE modified = TRUE AND experience_level_id IS NULL;
@@ -1251,6 +1255,7 @@ function __processNotesETL {
   # Check if there are more users to process
   set +e
   local REMAINING_COUNT
+  # shellcheck disable=SC2310  # Function invocation in || condition is intentional for error handling
   REMAINING_COUNT=$(__psql_with_appname -d "${DBNAME_DWH}" -t -c "
    SELECT COUNT(*) FROM dwh.dimension_users
    WHERE modified = TRUE AND experience_level_id IS NULL;
@@ -1354,11 +1359,13 @@ function __initialFactsParallel {
  __logi "Step 1a: Dropping any existing foreign tables that might interfere with base table copy..."
  set +e
  for table in notes note_comments note_comments_text users countries; do
+  # shellcheck disable=SC2310  # Function invocation in if condition is intentional for error handling
   if __psql_with_appname -d "${DBNAME_DWH}" -t -c "
    SELECT 1 FROM information_schema.foreign_tables
    WHERE foreign_table_schema = 'public' AND foreign_table_name = '${table}';
   " 2>&1 | grep -q 1; then
    __logi "Dropping foreign table: ${table}"
+   # shellcheck disable=SC2310  # Function invocation in || condition is intentional for error handling
    __psql_with_appname -d "${DBNAME_DWH}" -c "DROP FOREIGN TABLE IF EXISTS public.${table} CASCADE;" > /dev/null 2>&1 || true
   fi
  done
