@@ -387,16 +387,18 @@ flowchart TD
 - Creates all partitions
 - Populates all dimensions
 - Loads all facts
-- **Time**: ~30 hours
+- **Time**: ~30 hours (see [ETL Execution Times](ETL_Execution_Times.md) for detailed breakdown)
 - **Trigger**: `ETL.sh` (auto-detects first execution)
+- **Longest stage**: Loading facts in parallel (20-25 hours)
 
 ### Incremental Load
 - Processes only new data since last run
 - Updates dimensions if needed
 - Loads only new facts
 - Updates affected datamarts
-- **Time**: 5-15 minutes
+- **Time**: 5-15 minutes (normal) to 30-60 minutes (large updates)
 - **Trigger**: `ETL.sh` (auto-detects incremental execution)
+- **Note**: Large incrementals may require increased timeout (see [ETL Execution Times](ETL_Execution_Times.md))
 
 ## Parallel Processing
 

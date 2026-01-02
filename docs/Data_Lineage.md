@@ -641,7 +641,7 @@ Similar to User Datamart but:
 | Process | Execution Time | Frequency | Dependencies |
 |---------|----------------|----------|--------------|
 | ETL (Full) | ~30 hours | Initial load | Base tables |
-| ETL (Incremental) | 5-15 minutes | Every 15 minutes | Base tables |
+| ETL (Incremental) | 5-15 minutes (normal) to 30-60 minutes (large) | Every 15 minutes | Base tables |
 | User Datamart | ~20 minutes | Daily | Facts + Dimensions |
 | Country Datamart | ~5 minutes | Daily | Facts + Dimensions |
 | JSON Export | ~10 minutes | Every 15 minutes | Datamarts |

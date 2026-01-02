@@ -49,7 +49,7 @@ This will:
 5. Create indexes and constraints
 6. Update datamarts
 
-**Expected Duration**: Several hours (depends on data volume)
+**Expected Duration**: ~30 hours (see [ETL Execution Times](ETL_Execution_Times.md) for detailed breakdown)
 
 #### Incremental Update (Regular Operations)
 
@@ -64,7 +64,8 @@ This will:
 3. Update affected datamarts
 4. Much faster than initial load
 
-**Expected Duration**: 15-30 minutes
+**Expected Duration**: 5-15 minutes (normal) to 30-60 minutes (large updates)
+- See [ETL Execution Times](ETL_Execution_Times.md) for detailed breakdown and timeout recommendations
 
 ### ETL Process Types
 
