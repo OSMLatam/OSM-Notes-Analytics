@@ -2,10 +2,11 @@
 
 # Creates a datamart for user data with pre-computed analytics.
 #
-# DM-005: Implements intelligent prioritization and parallel processing:
+# DM-005/DM-006: Implements intelligent prioritization and parallel processing:
 # - Users with recent activity (last 7/30/90 days) processed first
 # - High-activity users (>100 actions) prioritized
-# - Parallel processing with nproc-1 threads
+# - Parallel processing with work queue (nproc-1 threads) for dynamic load balancing
+# - Better CPU utilization: fast users don't leave threads idle
 # - Atomic transactions ensure data consistency
 #
 # To follow the progress you can execute:
@@ -128,10 +129,11 @@ function __show_help {
  echo "This script populates the user datamart with pre-computed analytics."
  echo "The datamart aggregates note statistics by user from the fact table."
  echo
- echo "DM-005: Intelligent Prioritization and Parallel Processing"
+ echo "DM-005/DM-006: Intelligent Prioritization and Parallel Processing"
  echo "  - Users with recent activity (last 7/30/90 days) processed first"
  echo "  - High-activity users (>100 actions) prioritized"
- echo "  - Parallel processing with nproc-1 threads"
+ echo "  - Parallel processing with work queue (nproc-1 threads)"
+ echo "  - Dynamic load balancing for optimal CPU utilization"
  echo "  - Processes all modified users (no limit)"
  echo
  echo "Documentation: See PARALLEL_PROCESSING.md for detailed information"
@@ -320,12 +322,40 @@ function __processOldUsers {
  fi
  return 0
 }
-# Processes the notes and comments.
+# Thread-safe function to get next user from shared work queue.
+# Uses file locking (flock) to ensure atomic queue operations.
+# This function is used by worker threads to get the next user to process.
+# Usage: user_id=$(__get_next_user_from_queue)
+__get_next_user_from_queue() {
+ local result_file="${work_queue_file}.result.$$"
+ (
+  flock -n 200 || exit 1
+  # Read first line (next user to process)
+  head -n 1 "${work_queue_file}" 2> /dev/null > "${result_file}" || echo "" > "${result_file}"
+  if [[ -s "${result_file}" ]]; then
+   # Remove first line from queue
+   if tail -n +2 "${work_queue_file}" > "${work_queue_file}.tmp" 2> /dev/null; then
+    mv "${work_queue_file}.tmp" "${work_queue_file}" 2> /dev/null || true
+   fi
+  fi
+  exit 0
+ ) 200> "${queue_lock_file}"
+ cat "${result_file}" 2> /dev/null || echo ""
+ rm -f "${result_file}" 2> /dev/null || true
+}
+
+# Processes users in parallel using a shared work queue for dynamic load balancing.
+# Each worker thread takes the next available user from the queue after finishing one.
+# This ensures better load balancing: fast users don't leave threads idle while
+# slow users are being processed by other threads.
+# DM-006: Migrated from static pool to work queue for optimal CPU utilization.
 function __processNotesUser {
  __log_start
  if [[ "${PROCESS_OLD_USERS}" == "yes" ]]; then
   __processOldUsers
  fi
+
+ __logi "=== PROCESSING USERS IN PARALLEL (WORK QUEUE) ==="
 
  # Get MAX_THREADS for parallel processing
  local MAX_THREADS="${MAX_THREADS:-$(nproc)}"
@@ -334,7 +364,7 @@ function __processNotesUser {
  if [[ "${adjusted_threads}" -lt 1 ]]; then
   adjusted_threads=1
  fi
- __logi "Using ${adjusted_threads} parallel threads for user processing"
+ __logi "Using ${adjusted_threads} parallel threads (nproc-1: ${MAX_THREADS} - 1)"
 
  # Get list of modified users to process with intelligent prioritization
  # DM-005: Prioritize users by relevance using refined criteria:
@@ -347,7 +377,7 @@ function __processNotesUser {
  __logi "Fetching modified users with intelligent prioritization..."
  local user_ids
  user_ids=$(__psql_with_appname -d "${DBNAME_DWH}" -Atq -c "
-  SELECT
+  SELECT /* Notes-datamartUsers-parallel */
    f.action_dimension_id_user
   FROM dwh.facts f
    JOIN dwh.dimension_users u
@@ -374,76 +404,114 @@ function __processNotesUser {
  total_users=$(echo "${user_ids}" | grep -c . || echo "0")
  __logi "Found ${total_users} users to process (prioritized by relevance)"
 
+ if [[ "${total_users}" -eq 0 ]]; then
+  __logi "No users to process"
+  __log_finish
+  return 0
+ fi
+
+ # Create shared work queue file
+ local work_queue_file="${TMP_DIR}/user_work_queue.txt"
+ echo "${user_ids}" > "${work_queue_file}"
+
+ # Create lock file for queue access
+ local queue_lock_file="${TMP_DIR}/user_queue.lock"
+
+ # Export variables for use in subshells (functions are automatically inherited)
+ export work_queue_file queue_lock_file
+
  local pids=()
- local count=0
- local failed_count=0
+ local start_time
+ start_time=$(date +%s)
 
- # Process users in parallel with transaction for atomicity
- # DM-005: Use explicit transaction to ensure atomicity between
- # update_datamart_user() and setting modified = FALSE
- # Process in batches to handle large volumes efficiently
- local batch_size=1000
- local processed=0
- local batch_num=1
+ # Start worker threads
+ __logi "Starting ${adjusted_threads} parallel worker threads..."
+ for ((thread_num = 1; thread_num <= adjusted_threads; thread_num++)); do
+  (
+   local thread_processed=0
+   local thread_failed=0
+   local user_id
 
- for user_id in ${user_ids}; do
-  if [[ -n "${user_id}" ]]; then
-   (
-    # Use transaction to ensure atomicity
+   while true; do
+    # Get next user from shared queue (thread-safe)
+    # Functions and exported variables are automatically available in subshells
+    user_id=$(__get_next_user_from_queue)
+
+    # If queue is empty, exit worker thread
+    if [[ -z "${user_id}" ]]; then
+     break
+    fi
+
+    # Process user in atomic transaction
     # shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
-    if ! __psql_with_appname "datamartUsers-user-${user_id}" -d "${DBNAME_DWH}" -c "
-     BEGIN;
-      CALL dwh.update_datamart_user(${user_id});
-      UPDATE dwh.dimension_users SET modified = FALSE WHERE dimension_user_id = ${user_id};
-     COMMIT;
+    if ! __psql_with_appname "datamartUsers-user-${user_id}-thread${thread_num}" \
+     -d "${DBNAME_DWH}" -c "
+      BEGIN;
+       CALL dwh.update_datamart_user(${user_id});
+       UPDATE dwh.dimension_users
+        SET modified = FALSE
+        WHERE dimension_user_id = ${user_id};
+      COMMIT;
     " 2>&1; then
-     __loge "ERROR: Failed to process user ${user_id}"
-     exit 1
+     thread_failed=$((thread_failed + 1))
+     __loge "Thread ${thread_num}: ERROR: Failed to process user ${user_id}"
+    else
+     thread_processed=$((thread_processed + 1))
+     # Log every 100 users per thread
+     if [[ $((thread_processed % 100)) -eq 0 ]]; then
+      __logi "Thread ${thread_num}: Processed ${thread_processed} users (current: user ${user_id})"
+     fi
     fi
-   ) &
-   pids+=($!)
-   count=$((count + 1))
-   processed=$((processed + 1))
+   done
 
-   # Limit concurrent processes
-   if [[ ${#pids[@]} -ge ${adjusted_threads} ]]; then
-    local first_pid="${pids[0]}"
-    pids=("${pids[@]:1}")
-    if ! wait "${first_pid}"; then
-     failed_count=$((failed_count + 1))
-    fi
+   # Report thread completion
+   if [[ ${thread_failed} -eq 0 ]]; then
+    __logi "Thread ${thread_num}: Completed successfully (${thread_processed} users processed)"
+   else
+    __loge "Thread ${thread_num}: Completed with ${thread_failed} failures (${thread_processed} users processed)"
    fi
 
-   # Log progress every batch_size users
-   if [[ $((processed % batch_size)) -eq 0 ]]; then
-    __logi "Progress: Processed ${processed}/${total_users} users (batch ${batch_num})"
-    batch_num=$((batch_num + 1))
-   fi
-  fi
+   exit ${thread_failed}
+  ) &
+  pids+=($!)
+  __logi "Started worker thread ${thread_num} (PID: ${!})"
  done
 
- # Wait for remaining processes and check for errors
+ # Wait for all worker threads to complete
  __logi "Waiting for all user processing to complete..."
- local failed_count=0
+ local total_failed=0
  for pid in "${pids[@]}"; do
   if ! wait "${pid}"; then
-   failed_count=$((failed_count + 1))
+   local thread_exit_code=$?
+   total_failed=$((total_failed + thread_exit_code))
   fi
  done
 
- if [[ ${failed_count} -eq 0 ]]; then
+ local end_time
+ end_time=$(date +%s)
+ local total_time=$((end_time - start_time))
+
+ # Count total processed (check remaining queue)
+ local remaining_users
+ remaining_users=$(wc -l < "${work_queue_file}" 2> /dev/null || echo "0")
+ local actually_processed=$((total_users - remaining_users))
+
+ if [[ ${total_failed} -eq 0 ]]; then
   __logi "SUCCESS: Datamart users population completed successfully"
-  __logi "Processed ${count} users in parallel (${total_users} total)"
+  __logi "Processed ${actually_processed} users in parallel (${total_users} total)"
   __logi "All users processed with intelligent prioritization (recent → active → inactive)"
+  __logi "⏱️  TIME: Parallel user processing took ${total_time} seconds"
+  __log_finish
+  rm -f "${work_queue_file}" "${queue_lock_file}" 2> /dev/null || true
+  return 0
  else
-  __loge "ERROR: Datamart users population had ${failed_count} failed processes out of ${count} total"
-  __loge "Check the log file for details on failed user processing"
- fi
- __log_finish
- if [[ ${failed_count} -gt 0 ]]; then
+  __loge "ERROR: Datamart users population had ${total_failed} failed user(s)"
+  __loge "Processed ${actually_processed}/${total_users} users successfully"
+  __loge "⏱️  TIME: Parallel user processing took ${total_time} seconds (with ${total_failed} failures)"
+  __log_finish
+  rm -f "${work_queue_file}" "${queue_lock_file}" 2> /dev/null || true
   return 1
  fi
- return 0
 }
 
 # Function that activates the error trap.

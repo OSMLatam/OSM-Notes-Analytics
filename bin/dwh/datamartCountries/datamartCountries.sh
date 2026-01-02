@@ -2,6 +2,15 @@
 
 # Creates a datamart for country data with pre-computed analytics.
 #
+# DM-006: Implements parallel processing with work queue for dynamic load balancing:
+# - Countries processed in parallel using nproc-2 threads
+# - Shared work queue: each thread takes next available country after finishing one
+# - Better load balancing: fast countries don't leave threads idle
+# - Atomic transactions ensure data consistency
+#
+# Documentation: See PARALLEL_PROCESSING.md for detailed information about
+#                 the work queue and parallel processing system.
+#
 # To follow the progress you can execute:
 #   tail -40f $(ls -1rtd /tmp/datamartCountries_* | tail -1)/datamartCountries.log
 #
@@ -232,20 +241,199 @@ function __addYears {
  __log_finish
 }
 
-# Processes the notes and comments.
-function __processNotesCountries {
+# Thread-safe function to get next country from shared work queue.
+# Uses file locking (flock) to ensure atomic queue operations.
+# This function is used by worker threads to get the next country to process.
+# Usage: country_id=$(__get_next_country_from_queue)
+__get_next_country_from_queue() {
+ local result_file="${work_queue_file}.result.$$"
+ (
+  flock -n 200 || exit 1
+  # Read first line (next country to process)
+  head -n 1 "${work_queue_file}" 2> /dev/null > "${result_file}" || echo "" > "${result_file}"
+  if [[ -s "${result_file}" ]]; then
+   # Remove first line from queue
+   if tail -n +2 "${work_queue_file}" > "${work_queue_file}.tmp" 2> /dev/null; then
+    mv "${work_queue_file}.tmp" "${work_queue_file}" 2> /dev/null || true
+   fi
+  fi
+  exit 0
+ ) 200> "${queue_lock_file}"
+ cat "${result_file}" 2> /dev/null || echo ""
+ rm -f "${result_file}" 2> /dev/null || true
+}
+
+# Processes countries in parallel using a shared work queue for dynamic load balancing.
+# Each worker thread takes the next available country from the queue after finishing one.
+# This ensures better load balancing: fast countries don't leave threads idle while
+# slow countries are being processed by other threads.
+function __processNotesCountriesParallel {
  __log_start
- # shellcheck disable=SC2310  # Function invocation in condition is intentional for error handling
- if __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -f "${POPULATE_FILE}" 2>&1; then
-  __logi "SUCCESS: Datamart countries population completed successfully"
+ __logi "=== PROCESSING COUNTRIES IN PARALLEL (WORK QUEUE) ==="
+
+ # Get MAX_THREADS for parallel processing
+ local MAX_THREADS="${MAX_THREADS:-$(nproc)}"
+ local adjusted_threads
+ if [[ "${MAX_THREADS}" -gt 2 ]]; then
+  adjusted_threads=$((MAX_THREADS - 2))
+  __logi "Using ${adjusted_threads} parallel threads (nproc-2: ${MAX_THREADS} - 2)"
+ else
+  adjusted_threads=1
+  __logi "Using 1 thread (insufficient CPUs for parallel processing)"
+ fi
+
+ # First, handle the "move day" operation (must be done before parallel processing)
+ # This updates last_year_activity for all countries
+ __logi "Updating last_year_activity for all countries..."
+ set +e
+ __psql_with_appname -d "${DBNAME_DWH}" -c "
+  DO \$\$
+  DECLARE
+   max_date DATE;
+  BEGIN
+   SELECT date INTO max_date FROM dwh.max_date_countries_processed;
+   IF (max_date < CURRENT_DATE) THEN
+    RAISE NOTICE 'Moving activities.';
+    UPDATE dwh.datamartCountries
+     SET last_year_activity = dwh.move_day(last_year_activity);
+    UPDATE dwh.max_date_countries_processed
+     SET date = CURRENT_DATE;
+   END IF;
+  END
+  \$\$;
+ " 2>&1
+ local move_day_exit_code=$?
+ set -e
+ if [[ ${move_day_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to update last_year_activity (exit code: ${move_day_exit_code})"
+  __log_finish
+  return 1
+ fi
+
+ # Get list of modified countries (ordered by recent activity - most active first)
+ __logi "Fetching modified countries..."
+ local country_ids
+ country_ids=$(__psql_with_appname -d "${DBNAME_DWH}" -Atq -c "
+  SELECT /* Notes-datamartCountries-parallel */
+   f.dimension_id_country AS dimension_id_country
+  FROM dwh.facts f
+   JOIN dwh.dimension_countries c
+   ON (f.dimension_id_country = c.dimension_country_id)
+  WHERE c.modified = TRUE
+  GROUP BY f.dimension_id_country
+  ORDER BY MAX(f.action_at) DESC
+ " 2>&1)
+
+ local total_countries
+ total_countries=$(echo "${country_ids}" | grep -c . || echo "0")
+ __logi "Found ${total_countries} countries to process"
+
+ if [[ "${total_countries}" -eq 0 ]]; then
+  __logi "No countries to process"
   __log_finish
   return 0
- else
-  local exit_code=$?
-  __loge "ERROR: Datamart countries population failed with exit code ${exit_code}"
-  __loge "Check the SQL errors above for details"
+ fi
+
+ # Create shared work queue file
+ local work_queue_file="${TMP_DIR}/country_work_queue.txt"
+ echo "${country_ids}" > "${work_queue_file}"
+
+ # Create lock file for queue access
+ local queue_lock_file="${TMP_DIR}/country_queue.lock"
+
+ # Export variables for use in subshells (functions are automatically inherited)
+ export work_queue_file queue_lock_file
+
+ local pids=()
+ local start_time
+ start_time=$(date +%s)
+
+ # Start worker threads
+ __logi "Starting ${adjusted_threads} parallel worker threads..."
+ for ((thread_num = 1; thread_num <= adjusted_threads; thread_num++)); do
+  (
+   local thread_processed=0
+   local thread_failed=0
+   local country_id
+
+   while true; do
+    # Get next country from shared queue (thread-safe)
+    # Functions and exported variables are automatically available in subshells
+    country_id=$(__get_next_country_from_queue)
+
+    # If queue is empty, exit worker thread
+    if [[ -z "${country_id}" ]]; then
+     break
+    fi
+
+    # Process country in atomic transaction
+    # shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
+    if ! __psql_with_appname "datamartCountries-country-${country_id}-thread${thread_num}" \
+     -d "${DBNAME_DWH}" -c "
+      BEGIN;
+       CALL dwh.update_datamart_country(${country_id});
+       UPDATE dwh.dimension_countries
+        SET modified = FALSE
+        WHERE dimension_country_id = ${country_id};
+      COMMIT;
+    " 2>&1; then
+     thread_failed=$((thread_failed + 1))
+     __loge "Thread ${thread_num}: ERROR: Failed to process country ${country_id}"
+    else
+     thread_processed=$((thread_processed + 1))
+     # Log every 5 countries per thread
+     if [[ $((thread_processed % 5)) -eq 0 ]]; then
+      __logi "Thread ${thread_num}: Processed ${thread_processed} countries (current: country ${country_id})"
+     fi
+    fi
+   done
+
+   # Report thread completion
+   if [[ ${thread_failed} -eq 0 ]]; then
+    __logi "Thread ${thread_num}: Completed successfully (${thread_processed} countries processed)"
+   else
+    __loge "Thread ${thread_num}: Completed with ${thread_failed} failures (${thread_processed} countries processed)"
+   fi
+
+   exit ${thread_failed}
+  ) &
+  pids+=($!)
+  __logi "Started worker thread ${thread_num} (PID: ${!})"
+ done
+
+ # Wait for all worker threads to complete
+ __logi "Waiting for all worker threads to complete..."
+ local total_failed=0
+ for pid in "${pids[@]}"; do
+  if ! wait "${pid}"; then
+   local thread_exit_code=$?
+   total_failed=$((total_failed + thread_exit_code))
+  fi
+ done
+
+ local end_time
+ end_time=$(date +%s)
+ local total_time=$((end_time - start_time))
+
+ # Count total processed (check remaining queue)
+ local remaining_countries
+ remaining_countries=$(wc -l < "${work_queue_file}" 2> /dev/null || echo "0")
+ local actually_processed=$((total_countries - remaining_countries))
+
+ if [[ ${total_failed} -eq 0 ]]; then
+  __logi "SUCCESS: Datamart countries population completed successfully"
+  __logi "Processed ${actually_processed} countries in parallel (${total_countries} total)"
+  __logi "⏱️  TIME: Parallel country processing took ${total_time} seconds"
   __log_finish
-  return "${exit_code}"
+  rm -f "${work_queue_file}" "${queue_lock_file}" 2> /dev/null || true
+  return 0
+ else
+  __loge "ERROR: Datamart countries population had ${total_failed} failed country(ies)"
+  __loge "Processed ${actually_processed}/${total_countries} countries successfully"
+  __loge "⏱️  TIME: Parallel country processing took ${total_time} seconds (with ${total_failed} failures)"
+  __log_finish
+  rm -f "${work_queue_file}" "${queue_lock_file}" 2> /dev/null || true
+  return 1
  fi
 }
 
@@ -353,7 +541,8 @@ function main() {
  # Add new columns for years after 2013.
  __addYears
  set -E
- __processNotesCountries
+ # Process countries in parallel using work queue for dynamic load balancing
+ __processNotesCountriesParallel
 
  __logw "Ending process."
  __log_finish

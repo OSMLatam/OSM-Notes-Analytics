@@ -63,14 +63,18 @@ This will:
 - Database maintenance (VACUUM ANALYZE): 40 seconds
 - **Total initial load**: ~25 minutes (1,487 seconds)
 
-**Datamarts**: 45-60 minutes total
-- **datamartCountries**: 30-45 minutes
+**Datamarts**: 10-20 minutes total (with parallel processing)
+- **datamartCountries**: 5-10 minutes (parallel processing with work queue, nproc-2 threads)
+  - **Sequential mode (legacy)**: 30-45 minutes
+  - **Parallel mode (default)**: 5-10 minutes (3-6x faster)
   - Processing time per country varies by fact count:
     - Countries with < 100K facts: ~1.5-2 minutes (e.g., 58K facts = 1.6 min)
     - Countries with 100K-500K facts: ~2-2.5 minutes (e.g., 164K facts = 1.8 min, 394K facts = 2.1 min)
     - Countries with 500K-1M facts: ~2.5-4 minutes (e.g., 748K facts = 3.3 min, 949K facts = 2.4 min)
     - Countries with > 1M facts: ~3-6 minutes (e.g., 1.49M facts = 2.9 min, 924K facts = 5.7 min)
-- **datamartUsers**: 15-20 minutes
+  - See `bin/dwh/datamartCountries/PARALLEL_PROCESSING.md` for details
+- **datamartUsers**: 15-20 minutes (parallel processing with prioritization, nproc-1 threads)
+  - See `bin/dwh/datamartUsers/PARALLEL_PROCESSING.md` for details
 - **datamartGlobal**: < 1 minute
 
 **Total ETL time**: ~1-1.5 hours for typical production dataset (~5-6M facts)
@@ -217,10 +221,10 @@ Datamarts are **automatically updated** during ETL execution. No manual interven
 ### Manual Update (If Needed)
 
 ```bash
-# Update country datamart
+# Update country datamart (parallel processing with work queue, nproc-2 threads)
 ./bin/dwh/datamartCountries/datamartCountries.sh
 
-# Update user datamart
+# Update user datamart (parallel processing with prioritization, nproc-1 threads)
 ./bin/dwh/datamartUsers/datamartUsers.sh
 ```
 

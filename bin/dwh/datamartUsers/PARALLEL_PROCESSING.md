@@ -11,10 +11,12 @@ The datamart user processing system implements an **intelligent prioritization**
 - Active users waiting hours/days for updated data
 - Inactive users consuming valuable resources
 
-**Now:** With intelligent prioritization and parallel processing:
+**Now:** With intelligent prioritization and work queue parallel processing:
 - Active users processed in minutes
 - Fresh data available quickly for queries
 - Inactive users processed in background without affecting active users
+- **Optimal CPU utilization:** Fast users don't leave threads idle
+- **Dynamic load balancing:** Threads always stay busy
 
 ## Prioritization System
 
@@ -98,9 +100,9 @@ ORDER BY
 
 ## Parallel Processing
 
-### Architecture
+### Architecture (Work Queue System)
 
-The system processes users in parallel using multiple bash processes, each executing an independent PostgreSQL transaction.
+The system processes users in parallel using a **shared work queue** for dynamic load balancing. Each worker thread takes the next available user from the queue after finishing one, ensuring optimal CPU utilization.
 
 ```
 ┌─────────────────────────────────────────┐
@@ -110,37 +112,51 @@ The system processes users in parallel using multiple bash processes, each execu
                │
                ▼
 ┌─────────────────────────────────────────┐
-│  Parallel Process Pool                   │
-│  (Maximum: nproc - 1 threads)            │
+│  Shared Work Queue File                 │
+│  (Thread-safe with flock)               │
 └──────────────┬──────────────────────────┘
                │
        ┌───────┴───────┐
        │               │
        ▼               ▼
 ┌──────────┐    ┌──────────┐
-│ Process 1│    │ Process 2│    ...
-│ User A   │    │ User B   │
+│ Thread 1 │    │ Thread 2 │    ...
+│          │    │          │
+│ Takes A  │    │ Takes B  │
+│ Takes E  │    │ Takes C  │
+│ Takes H  │    │ Takes D  │
+│ ...      │    │ ...      │
 └──────────┘    └──────────┘
 ```
 
-### Concurrency Control
+### Work Queue Implementation
 
 ```bash
-# Adjust threads based on available CPU
-adjusted_threads=$((MAX_THREADS - 1))
+# Create shared work queue file
+work_queue_file="${TMP_DIR}/user_work_queue.txt"
+echo "${user_ids}" > "${work_queue_file}"  # Already ordered by priority
 
-# Limit concurrent processes
-if [[ ${#pids[@]} -ge ${adjusted_threads} ]]; then
-  wait "${pids[0]}"  # Wait for oldest
-  pids=("${pids[@]:1}")  # Remove from pool
-fi
+# Threads persistentes que toman trabajo de la cola
+for ((thread_num=1; thread_num<=adjusted_threads; thread_num++)); do
+  (
+    while true; do
+      # Get next user from queue (thread-safe)
+      user_id=$(__get_next_user_from_queue)
+      if [[ -z "${user_id}" ]]; then
+        break  # Queue empty
+      fi
+      # Process user...
+    done
+  ) &
+done
 ```
 
 **Features:**
 - Uses `nproc - 1` threads to leave one core free
-- Dynamic process pool with limit
-- Processes users in priority order
-- Waits for completed processes before starting new ones
+- **Work queue:** Threads pull work as they become available
+- **Dynamic load balancing:** Fast users don't leave threads idle
+- **Maintains prioritization:** Queue is created with users already ordered
+- **Persistent threads:** Each thread processes multiple users
 
 ### Atomic Transactions
 
@@ -217,22 +233,30 @@ done
    Using Y parallel threads for user processing
    ```
 
-2. **Progress (every 1000 users):**
+2. **Progress (every 100 users per thread):**
    ```
-   Progress: Processed 1000/5000 users (batch 1)
-   Progress: Processed 2000/5000 users (batch 2)
+   Thread 1: Processed 100 users (current: user 12345)
+   Thread 2: Processed 200 users (current: user 67890)
    ```
 
 3. **Individual Errors:**
    ```
-   ERROR: Failed to process user 12345
+   Thread 1: ERROR: Failed to process user 12345
    ```
 
-4. **Final Summary:**
+4. **Thread Completion:**
+   ```
+   Thread 1: Completed successfully (1250 users processed)
+   Thread 2: Completed successfully (1248 users processed)
+   Thread 3: Completed successfully (1252 users processed)
+   ```
+
+5. **Final Summary:**
    ```
    SUCCESS: Datamart users population completed successfully
    Processed 5000 users in parallel (5000 total)
-   All users processed with intelligent prioritization
+   All users processed with intelligent prioritization (recent → active → inactive)
+   ⏱️  TIME: Parallel user processing took 1800 seconds
    ```
 
 ### Recommended Metrics
@@ -304,9 +328,10 @@ batch_size=1000
 ### Mitigations
 
 1. **Concurrency limit:** `nproc - 1` threads
-2. **Batch processing:** Avoids overload
+2. **Work queue:** Dynamic load balancing prevents idle threads
 3. **Short transactions:** Each user is independent
 4. **Error handling:** Doesn't stop entire process
+5. **File locking:** Thread-safe queue access with `flock`
 
 ## Troubleshooting
 
@@ -376,8 +401,8 @@ batch_size=1000
 - **Population SQL:** `sql/dwh/datamartUsers/datamartUsers_32_populateDatamartUsersTable.sql`
 - **Procedure:** `sql/dwh/datamartUsers/datamartUsers_13_createProcedure.sql`
 
-## Version
+## Version History
 
-- **Implemented:** 2025-12-27
+- **v1.0 (2025-12-27):** Initial implementation with static pool
+- **v2.0 (2025-01-XX):** Migrated to work queue for dynamic load balancing (DM-006)
 - **Author:** Andres Gomez (AngocA)
-- **Version:** 1.0
