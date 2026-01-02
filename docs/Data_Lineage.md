@@ -640,10 +640,10 @@ Similar to User Datamart but:
 
 | Process | Execution Time | Frequency | Dependencies |
 |---------|----------------|----------|--------------|
-| ETL (Full) | ~30 hours | Initial load | Base tables |
+| ETL (Full) | ~1-1.5 hours (typical production: ~5-6M facts) | Initial load | Base tables |
 | ETL (Incremental) | 5-15 minutes (normal) to 30-60 minutes (large) | Every 15 minutes | Base tables |
-| User Datamart | ~20 minutes | Daily | Facts + Dimensions |
-| Country Datamart | ~5 minutes | Daily | Facts + Dimensions |
+| User Datamart | 15-20 minutes | Daily | Facts + Dimensions |
+| Country Datamart | 30-40 minutes (1.5-3 min per country) | Daily | Facts + Dimensions |
 | JSON Export | ~10 minutes | Every 15 minutes | Datamarts |
 
 ### Destination Metadata

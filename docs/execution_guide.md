@@ -49,9 +49,31 @@ This will:
 5. Create indexes and constraints
 6. Update datamarts
 
-**Expected Duration**: ~30 hours
-- **Longest stage**: Loading facts in parallel (20-25 hours)
-- Other stages: Table creation (5-15 min), dimensions (5-10 min), constraints/indexes (1-3 hours), datamarts (20-30 min)
+**Expected Duration**: ~1-1.5 hours for typical production dataset (~5-6M facts)
+
+**Carga inicial (Initial Load)**: ~25 minutes
+- Copy base tables: 6 minutes (363 seconds)
+- Create base objects: < 1 second
+- Creating procedures: 1 second
+- **Phase 1 - Parallel load by year**: 12 minutes (718 seconds) - **longest stage**
+- Phase 2 - Update recent_opened: 3 minutes (186 seconds)
+- Constraints/indexes: 3.4 minutes (203 seconds)
+- Automation/Experience systems: < 1 second
+- Note current status: 17 seconds
+- Database maintenance (VACUUM ANALYZE): 40 seconds
+- **Total initial load**: ~25 minutes (1,487 seconds)
+
+**Datamarts**: 45-60 minutes total
+- **datamartCountries**: 30-45 minutes
+  - Processing time per country varies by fact count:
+    - Countries with < 100K facts: ~1.5-2 minutes (e.g., 58K facts = 1.6 min)
+    - Countries with 100K-500K facts: ~2-2.5 minutes (e.g., 164K facts = 1.8 min, 394K facts = 2.1 min)
+    - Countries with 500K-1M facts: ~2.5-4 minutes (e.g., 748K facts = 3.3 min, 949K facts = 2.4 min)
+    - Countries with > 1M facts: ~3-6 minutes (e.g., 1.49M facts = 2.9 min, 924K facts = 5.7 min)
+- **datamartUsers**: 15-20 minutes
+- **datamartGlobal**: < 1 minute
+
+**Total ETL time**: ~1-1.5 hours for typical production dataset (~5-6M facts)
 
 #### Incremental Update (Regular Operations)
 

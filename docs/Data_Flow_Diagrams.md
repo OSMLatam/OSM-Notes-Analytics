@@ -387,9 +387,12 @@ flowchart TD
 - Creates all partitions
 - Populates all dimensions
 - Loads all facts
-- **Time**: ~30 hours
+- **Time**: ~1-1.5 hours for typical production dataset (~5-6M facts)
+  - Initial load: ~25-30 minutes
+  - Datamarts: 45-60 minutes (Countries: 30-40 min, Users: 15-20 min, Global: < 1 min)
 - **Trigger**: `ETL.sh` (auto-detects first execution)
-- **Longest stage**: Loading facts in parallel (20-25 hours)
+- **Longest stage**: Loading facts in parallel (12-15 minutes)
+- **datamartCountries timing**: 1.5-3 minutes per country (depends on fact count per country)
 
 ### Incremental Load
 - Processes only new data since last run
