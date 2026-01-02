@@ -10,15 +10,17 @@
 # Detect if running in CI/CD environment
 
 # First, check if variables are already set (e.g., by GitHub Actions)
-if [[ -n "${TEST_DBNAME:-}" ]] && [[ -n "${TEST_DBUSER:-}" ]]; then
+# Only use CI/CD mode if TEST_DBHOST is explicitly set or we're in a CI environment
+if [[ -n "${TEST_DBHOST:-}" ]] || { [[ -n "${TEST_DBNAME:-}" ]] && [[ -n "${TEST_DBUSER:-}" ]] && { [[ "${CI:-}" == "true" ]] || [[ "${GITHUB_ACTIONS:-}" == "true" ]]; }; }; then
  # Variables already set by external environment (e.g., GitHub Actions)
  if [[ "${TEST_DEBUG:-}" == "true" ]]; then
   echo "DEBUG: Using environment-provided database configuration" >&2
-  echo "DEBUG: TEST_DBNAME=${TEST_DBNAME}" >&2
-  echo "DEBUG: TEST_DBUSER=${TEST_DBUSER}" >&2
+  echo "DEBUG: TEST_DBNAME=${TEST_DBNAME:-}" >&2
+  echo "DEBUG: TEST_DBUSER=${TEST_DBUSER:-}" >&2
+  echo "DEBUG: TEST_DBHOST=${TEST_DBHOST:-}" >&2
  fi
  # Ensure all variables are exported
- export TEST_DBNAME
+ export TEST_DBNAME="${TEST_DBNAME:-osm_notes_analytics_test}"
  export TEST_DBUSER="${TEST_DBUSER:-postgres}"
  export TEST_DBPASSWORD="${TEST_DBPASSWORD:-postgres}"
  export TEST_DBHOST="${TEST_DBHOST:-localhost}"

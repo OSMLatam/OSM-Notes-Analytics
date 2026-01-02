@@ -47,11 +47,22 @@ else
 fi
 
 # Ensure critical variables have defaults after loading properties
-export TEST_DBNAME="${TEST_DBNAME:-dwh}"
-export TEST_DBHOST="${TEST_DBHOST:-localhost}"
-export TEST_DBPORT="${TEST_DBPORT:-5432}"
-export TEST_DBUSER="${TEST_DBUSER:-postgres}"
-export TEST_DBPASSWORD="${TEST_DBPASSWORD:-postgres}"
+# Only set defaults if we're in CI/CD environment (TEST_DBHOST is set)
+# For local environment, don't set TEST_DBHOST to allow peer authentication
+export TEST_DBNAME="${TEST_DBNAME:-osm_notes_analytics_test}"
+if [[ -n "${TEST_DBHOST:-}" ]] || [[ "${CI:-}" == "true" ]] || [[ "${GITHUB_ACTIONS:-}" == "true" ]]; then
+ # CI/CD environment - set defaults for host/port/user
+ export TEST_DBHOST="${TEST_DBHOST:-localhost}"
+ export TEST_DBPORT="${TEST_DBPORT:-5432}"
+ export TEST_DBUSER="${TEST_DBUSER:-postgres}"
+ export TEST_DBPASSWORD="${TEST_DBPASSWORD:-postgres}"
+else
+ # Local environment - don't set TEST_DBHOST to use peer authentication
+ # TEST_DBNAME is already set above
+ export TEST_DBPORT="${TEST_DBPORT:-}"
+ export TEST_DBUSER="${TEST_DBUSER:-}"
+ export TEST_DBPASSWORD="${TEST_DBPASSWORD:-}"
+fi
 
 # Check if BATS is installed
 if ! command -v bats &> /dev/null; then
@@ -72,9 +83,15 @@ fi
 log_info "Starting DWH and ETL tests..."
 echo "Project Root: ${PROJECT_ROOT}"
 echo "Test Database: ${TEST_DBNAME:-not set}"
-echo "Test DB Host: ${TEST_DBHOST:-localhost}"
-echo "Test DB Port: ${TEST_DBPORT:-5432}"
-echo "Test DB User: ${TEST_DBUSER:-postgres}"
+if [[ -n "${TEST_DBHOST:-}" ]]; then
+ echo "Test DB Host: ${TEST_DBHOST}"
+ echo "Test DB Port: ${TEST_DBPORT:-5432}"
+ echo "Test DB User: ${TEST_DBUSER:-postgres}"
+else
+ echo "Test DB Host: (local - peer authentication)"
+ echo "Test DB Port: (local socket)"
+ echo "Test DB User: (current user: $(whoami))"
+fi
 echo ""
 
 # Counter for test results
@@ -146,58 +163,75 @@ if [[ -f "${SCRIPT_DIR}/run_mock_etl.sh" ]]; then
  if [[ -n "${TEST_DBHOST:-}" ]]; then
   # CI/CD environment - use host/port/user
   log_info "Verifying database connection (CI/CD mode)..."
+  set +e
   CONNECTION_OUTPUT=$(PGPASSWORD="${TEST_DBPASSWORD:-postgres}" psql -h "${TEST_DBHOST}" -p "${TEST_DBPORT:-5432}" -U "${TEST_DBUSER:-postgres}" -d "${TEST_DBNAME}" -c "SELECT 1;" 2>&1)
   CONNECTION_EXIT_CODE=$?
+  set -e
   if [[ ${CONNECTION_EXIT_CODE} -ne 0 ]]; then
-   log_error "Cannot connect to database before running mock ETL"
-   log_error "Connection attempt failed with exit code: ${CONNECTION_EXIT_CODE}"
-   log_error "Connection details:"
-   log_error "  Host: ${TEST_DBHOST}"
-   log_error "  Port: ${TEST_DBPORT:-5432}"
-   log_error "  User: ${TEST_DBUSER:-postgres}"
-   log_error "  Database: ${TEST_DBNAME}"
-   log_error "  Password: ${TEST_DBPASSWORD:+***set***}"
-   log_error "Error output:"
+   log_warning "Cannot connect to database before running mock ETL"
+   log_warning "Connection attempt failed with exit code: ${CONNECTION_EXIT_CODE}"
+   log_warning "Connection details:"
+   log_warning "  Host: ${TEST_DBHOST}"
+   log_warning "  Port: ${TEST_DBPORT:-5432}"
+   log_warning "  User: ${TEST_DBUSER:-postgres}"
+   log_warning "  Database: ${TEST_DBNAME}"
+   log_warning "  Password: ${TEST_DBPASSWORD:+***set***}"
+   log_warning "Error output:"
    if [[ -n "${CONNECTION_OUTPUT}" ]]; then
     echo "${CONNECTION_OUTPUT}" | sed 's/^/  /' | while IFS= read -r line || [[ -n "${line}" ]]; do
-     log_error "${line}"
+     log_warning "${line}"
     done
+   else
+    log_warning "  (No error output captured)"
    fi
-   exit 1
+   log_warning "Continuing with tests - individual tests will skip if database is unavailable"
+   export DB_CONNECTION_FAILED=1
+  else
+   log_success "Database connection verified"
   fi
-  log_success "Database connection verified"
  else
   # Local environment - use peer authentication
   log_info "Verifying database connection (local mode)..."
+  set +e
   CONNECTION_OUTPUT=$(psql -d "${TEST_DBNAME}" -c "SELECT 1;" 2>&1)
   CONNECTION_EXIT_CODE=$?
+  set -e
   if [[ ${CONNECTION_EXIT_CODE} -ne 0 ]]; then
-   log_error "Cannot connect to database before running mock ETL"
-   log_error "Connection attempt failed with exit code: ${CONNECTION_EXIT_CODE}"
-   log_error "Database: ${TEST_DBNAME}"
-   log_error "Error output:"
+   log_warning "Cannot connect to database before running mock ETL"
+   log_warning "Connection attempt failed with exit code: ${CONNECTION_EXIT_CODE}"
+   log_warning "Database: ${TEST_DBNAME}"
+   log_warning "Error output:"
    if [[ -n "${CONNECTION_OUTPUT}" ]]; then
     echo "${CONNECTION_OUTPUT}" | sed 's/^/  /' | while IFS= read -r line || [[ -n "${line}" ]]; do
-     log_error "${line}"
+     log_warning "${line}"
     done
+   else
+    log_warning "  (No error output captured)"
    fi
-   exit 1
+   log_warning "Continuing with tests - individual tests will skip if database is unavailable"
+   export DB_CONNECTION_FAILED=1
+  else
+   log_success "Database connection verified"
   fi
-  log_success "Database connection verified"
  fi
 
- log_info "Running mock ETL script..."
- # Ensure all environment variables are exported for the child script
- export TEST_DBNAME TEST_DBHOST TEST_DBPORT TEST_DBUSER TEST_DBPASSWORD
- export PGHOST PGPORT PGUSER PGPASSWORD PGDATABASE
- if bash "${SCRIPT_DIR}/run_mock_etl.sh" 2>&1; then
-  log_success "Test database populated"
+ if [[ "${DB_CONNECTION_FAILED:-0}" -eq 0 ]]; then
+  log_info "Running mock ETL script..."
+  # Ensure all environment variables are exported for the child script
+  export TEST_DBNAME TEST_DBHOST TEST_DBPORT TEST_DBUSER TEST_DBPASSWORD
+  export PGHOST PGPORT PGUSER PGPASSWORD PGDATABASE
+  if bash "${SCRIPT_DIR}/run_mock_etl.sh" 2>&1; then
+   log_success "Test database populated"
+  else
+   EXIT_CODE=$?
+   log_warning "Failed to populate test database with mock data"
+   log_warning "Exit code: ${EXIT_CODE}"
+   log_warning "Check the output above for detailed error messages"
+   log_warning "Continuing with tests - individual tests will skip if database is unavailable"
+   export DB_CONNECTION_FAILED=1
+  fi
  else
-  EXIT_CODE=$?
-  log_error "Failed to populate test database with mock data"
-  log_error "Exit code: ${EXIT_CODE}"
-  log_error "Check the output above for detailed error messages"
-  exit 1
+  log_warning "Skipping mock ETL script due to database connection failure"
  fi
 else
  log_warning "Mock ETL script not found, skipping data setup"

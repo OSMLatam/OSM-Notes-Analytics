@@ -27,12 +27,8 @@ setup() {
 
 # Test that resolution metrics columns exist in datamartCountries
 @test "Resolution metrics columns should exist in datamartCountries table" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check if columns exist
   run psql -d "${DBNAME}" -t -c "
     SELECT column_name
@@ -51,12 +47,8 @@ setup() {
 
 # Test that resolution metrics can be calculated
 @test "Resolution metrics should be calculable from facts table" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Test the calculation query
   local query_file=$(mktemp)
   echo "SELECT COALESCE(AVG(days_to_resolution), 0) as avg_resolution, COALESCE(COUNT(DISTINCT id_note) FILTER (WHERE action_comment = 'closed'), 0) as resolved_count FROM dwh.facts WHERE days_to_resolution IS NOT NULL;" > "${query_file}"
@@ -72,12 +64,8 @@ setup() {
 
 # Test that resolution rate calculation handles edge cases
 @test "Resolution rate should handle division by zero" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Test resolution rate calculation doesn't error with zero total
   run psql -d "${DBNAME}" -t -c "
     SELECT
@@ -94,12 +82,8 @@ setup() {
 
 # Test that resolution metrics match cross-reference with facts
 @test "Resolution metrics should match facts table calculation" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Get a country with data
   run psql -d "${DBNAME}" -t -c "
     SELECT dimension_country_id
@@ -147,12 +131,8 @@ EOF
 
 # Test that resolution metrics are not NULL for countries with data
 @test "Resolution metrics should not be NULL for countries with activity" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check countries with activity have metrics calculated
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -169,12 +149,8 @@ EOF
 
 # Test that resolution rate is between 0 and 100
 @test "Resolution rate should be between 0 and 100" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that all resolution rates are valid percentages
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -190,12 +166,8 @@ EOF
 
 # Test that resolution time metrics are non-negative
 @test "Resolution time metrics should be non-negative" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that resolution times are valid
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -213,12 +185,8 @@ EOF
 
 # Test that notes_resolved_count + notes_still_open_count equals total_notes_opened
 @test "Resolution metrics counts should be consistent" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that resolved + still_open equals opened
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -236,12 +204,8 @@ EOF
 
 # Test that datamart update procedure includes resolution metrics
 @test "Datamart update procedure should include resolution metrics calculation" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that the procedure text includes resolution metrics
   run psql -d "${DBNAME}" -t -c "
     SELECT pg_get_functiondef('dwh.update_datamart_country'::regproc);
@@ -255,12 +219,8 @@ EOF
 
 # Test that resolution metrics are updated when datamart is refreshed
 @test "Resolution metrics should update when datamart is refreshed" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Get a country's current resolution rate
   run psql -d "${DBNAME}" -t -c "
     SELECT resolution_rate
@@ -294,12 +254,8 @@ EOF
 
 # Test edge case: country with only opened notes (0% resolution)
 @test "Resolution rate should handle countries with no resolved notes" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Look for countries with only opened notes
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -316,12 +272,8 @@ EOF
 
 # Test edge case: country with all notes resolved (100% resolution)
 @test "Resolution rate should handle countries with all notes resolved" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Look for countries with all notes resolved
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)

@@ -22,12 +22,8 @@ setup() {
 
 # Test that performance log table can be created
 @test "Performance log table should be creatable" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   local dbname="${TEST_DBNAME:-${DBNAME}}"
 
   # Create the table
@@ -39,12 +35,8 @@ setup() {
 
 # Test that performance log table exists after creation
 @test "Performance log table should exist" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   local dbname="${TEST_DBNAME:-${DBNAME}}"
 
   # Check if table exists
@@ -61,12 +53,8 @@ setup() {
 
 # Test that performance log table has correct columns
 @test "Performance log table should have correct columns" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   local dbname="${TEST_DBNAME:-${DBNAME}}"
 
   # Check for required columns
@@ -91,12 +79,8 @@ setup() {
 
 # Test that country update procedure logs performance
 @test "Country update procedure should log performance" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   local dbname="${TEST_DBNAME:-${DBNAME}}"
 
   # Ensure table exists

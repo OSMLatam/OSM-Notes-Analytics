@@ -60,7 +60,8 @@ run_suite() {
  TOTAL_SUITES=$((TOTAL_SUITES + 1))
 
  if [[ -f "${suite_script}" ]]; then
-  if bash "${suite_script}"; then
+  # Run script and capture both stdout and stderr
+  if bash "${suite_script}" 2>&1; then
    log_success "${suite_name} completed successfully"
    PASSED_SUITES=$((PASSED_SUITES + 1))
   else

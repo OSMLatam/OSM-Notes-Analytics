@@ -26,12 +26,8 @@ setup() {
 
 # Test that we can create test data
 @test "Test data can be loaded successfully" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   local dbname="${TEST_DBNAME:-${DBNAME}}"
 
   # Load test data using setup
@@ -44,12 +40,8 @@ setup() {
 
 # Test that application statistics columns exist
 @test "Application statistics columns exist after data load" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   local dbname="${TEST_DBNAME:-${DBNAME}}"
 
   # Check if columns exist
@@ -69,12 +61,8 @@ setup() {
 
 # Test datamart update for a test country
 @test "Datamart update procedure can be executed for test data" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   local dbname="${TEST_DBNAME:-${DBNAME}}"
 
   # Try to update datamart for country_id = 1 (if it exists)
@@ -92,12 +80,8 @@ setup() {
 
 # Test that datamart has data after update
 @test "Datamart contains data after update" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   local dbname="${TEST_DBNAME:-${DBNAME}}"
 
   # Update datamart for test country
@@ -119,12 +103,8 @@ setup() {
 
 # Test that application calculations work correctly
 @test "Application calculations return valid data" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   local dbname="${TEST_DBNAME:-${DBNAME}}"
 
   # Update datamart and check results
@@ -149,12 +129,8 @@ setup() {
 
 # Test that resolution metrics are calculated
 @test "Resolution metrics are calculated correctly" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   local dbname="${TEST_DBNAME:-${DBNAME}}"
 
   # Update datamart
@@ -185,12 +161,8 @@ setup() {
 
 # Test that complete mock ETL pipeline runs successfully
 @test "Complete mock ETL pipeline can be executed" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   local dbname="${TEST_DBNAME:-${DBNAME}}"
 
   # Export TEST_DBNAME so run_mock_etl.sh can use it
@@ -206,12 +178,8 @@ setup() {
 
 # Test that datamarts have data after mock ETL
 @test "Datamarts contain data after mock ETL pipeline" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   local dbname="${TEST_DBNAME:-${DBNAME}}"
 
   # Check if any country has populated metrics

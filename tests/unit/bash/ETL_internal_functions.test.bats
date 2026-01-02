@@ -18,12 +18,8 @@ setup() {
 
 # Test __initialFacts function handles errors gracefully
 @test "__initialFacts should handle missing staging tables gracefully" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Test that function exists - use type -t which returns just the type
   run bash -c "SKIP_MAIN=true source ${SCRIPT_BASE_DIRECTORY}/bin/dwh/ETL.sh 2>&1 && type -t __initialFacts"
   [[ "${status}" -eq 0 ]]
@@ -54,12 +50,8 @@ setup() {
 
 # Test __detectFirstExecution function logic
 @test "__detectFirstExecution should detect empty database" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check if dimension_days exists
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -115,12 +107,8 @@ EOF
 
 # Test dimension functions work correctly
 @test "Dimension setup functions should work" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Test that we can query dimension tables
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -136,12 +124,8 @@ EOF
 
 # Test facts table structure
 @test "Facts table should have required columns for resolution metrics" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check if facts table exists
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)

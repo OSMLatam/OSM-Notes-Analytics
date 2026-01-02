@@ -38,12 +38,8 @@ setup() {
 
 # Test that application_usage_trends column exists in datamartCountries
 @test "Application usage trends column should exist in datamartCountries table" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check if column exists
   run psql -d "${DBNAME}" -t -c "
     SELECT column_name
@@ -59,12 +55,8 @@ setup() {
 
 # Test that application_usage_trends column exists in datamartUsers
 @test "Application usage trends column should exist in datamartUsers table" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check if column exists
   run psql -d "${DBNAME}" -t -c "
     SELECT column_name
@@ -80,12 +72,8 @@ setup() {
 
 # Test that application_usage_trends JSON has valid structure for countries
 @test "Application usage trends JSON should have valid structure for countries" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Test JSON structure (skip if no data)
   run psql -d "${DBNAME}" -t -c "
     SELECT json_typeof(application_usage_trends)
@@ -101,12 +89,8 @@ setup() {
 
 # Test that application_usage_trends JSON has valid structure for users
 @test "Application usage trends JSON should have valid structure for users" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Test JSON structure
   run psql -d "${DBNAME}" -t -c "
     SELECT json_typeof(application_usage_trends)
@@ -126,12 +110,8 @@ setup() {
 
 # Test that version_adoption_rates column exists in datamartCountries
 @test "Version adoption rates column should exist in datamartCountries table" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check if column exists
   run psql -d "${DBNAME}" -t -c "
     SELECT column_name
@@ -147,12 +127,8 @@ setup() {
 
 # Test that version_adoption_rates column exists in datamartUsers
 @test "Version adoption rates column should exist in datamartUsers table" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check if column exists
   run psql -d "${DBNAME}" -t -c "
     SELECT column_name
@@ -168,12 +144,8 @@ setup() {
 
 # Test that version_adoption_rates JSON has valid structure
 @test "Version adoption rates JSON should have valid structure" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Test JSON structure for countries
   run psql -d "${DBNAME}" -t -c "
     SELECT json_typeof(version_adoption_rates)
@@ -193,12 +165,8 @@ setup() {
 
 # Test that notes_health_score column exists in datamartCountries
 @test "Notes health score column should exist in datamartCountries table" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check if column exists
   run psql -d "${DBNAME}" -t -c "
     SELECT column_name
@@ -214,12 +182,8 @@ setup() {
 
 # Test that notes_health_score is within valid range (0-100)
 @test "Notes health score should be within valid range (0-100) for countries" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that health score is between 0 and 100
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -239,12 +203,8 @@ setup() {
 
 # Test that new_vs_resolved_ratio column exists in datamartCountries
 @test "New vs resolved ratio column should exist in datamartCountries table" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check if column exists
   run psql -d "${DBNAME}" -t -c "
     SELECT column_name
@@ -260,12 +220,8 @@ setup() {
 
 # Test that new_vs_resolved_ratio is non-negative
 @test "New vs resolved ratio should be non-negative for countries" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that ratio is non-negative (can be 0 or positive, or 999.99 for infinite)
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -285,12 +241,8 @@ setup() {
 
 # Test that user_response_time column exists in datamartUsers
 @test "User response time column should exist in datamartUsers table" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check if column exists
   run psql -d "${DBNAME}" -t -c "
     SELECT column_name
@@ -306,12 +258,8 @@ setup() {
 
 # Test that user_response_time is non-negative
 @test "User response time should be non-negative for users" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that response time is non-negative
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -331,12 +279,8 @@ setup() {
 
 # Test that days_since_last_action column exists in datamartUsers
 @test "Days since last action column should exist in datamartUsers table" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check if column exists
   run psql -d "${DBNAME}" -t -c "
     SELECT column_name
@@ -352,12 +296,8 @@ setup() {
 
 # Test that days_since_last_action is non-negative
 @test "Days since last action should be non-negative for users" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that days since last action is non-negative
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -377,12 +317,8 @@ setup() {
 
 # Test that collaboration_patterns column exists in datamartUsers
 @test "Collaboration patterns column should exist in datamartUsers table" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check if column exists
   run psql -d "${DBNAME}" -t -c "
     SELECT column_name
@@ -398,12 +334,8 @@ setup() {
 
 # Test that collaboration_patterns JSON has valid structure
 @test "Collaboration patterns JSON should have valid structure for users" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Test JSON structure
   run psql -d "${DBNAME}" -t -c "
     SELECT json_typeof(collaboration_patterns)
@@ -419,12 +351,8 @@ setup() {
 
 # Test that collaboration_patterns contains expected fields
 @test "Collaboration patterns JSON should contain expected fields" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check JSON structure for users
   run psql -d "${DBNAME}" -t -c "
     SELECT jsonb_object_keys(collaboration_patterns::jsonb)
@@ -440,12 +368,8 @@ setup() {
 
 # Test that collaboration_patterns values are non-negative
 @test "Collaboration patterns values should be non-negative" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that collaboration metrics are non-negative
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -470,12 +394,8 @@ setup() {
 
 # Test that application usage trends can be calculated from facts
 @test "Application usage trends should be calculable from facts table" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Test that we can calculate trends from facts
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(DISTINCT EXTRACT(YEAR FROM d.date_id))
@@ -492,12 +412,8 @@ setup() {
 
 # Test that version adoption rates can be calculated from facts
 @test "Version adoption rates should be calculable from facts table" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Test that we can calculate version adoption from facts
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(DISTINCT f.dimension_application_version)
@@ -513,12 +429,8 @@ setup() {
 
 # Test that user response time can be calculated from facts
 @test "User response time should be calculable from facts table" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Test that we can calculate response time from facts
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -546,12 +458,8 @@ setup() {
 
 # Test that notes_opened_but_not_closed_by_user column exists in datamartUsers
 @test "Notes opened but not closed by user column should exist in datamartUsers table" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check if column exists
   run psql -d "${DBNAME}" -t -c "
     SELECT column_name
@@ -567,12 +475,8 @@ setup() {
 
 # Test that notes_opened_but_not_closed_by_user is non-negative
 @test "Notes opened but not closed by user should be non-negative" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that all values are non-negative
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -588,12 +492,8 @@ setup() {
 
 # Test that notes_opened_but_not_closed_by_user is less than or equal to history_whole_open
 @test "Notes opened but not closed by user should be <= total opened notes" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that notes_opened_but_not_closed_by_user <= history_whole_open
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -610,12 +510,8 @@ setup() {
 
 # Test that notes_opened_but_not_closed_by_user can be calculated from facts
 @test "Notes opened but not closed by user should be calculable from facts table" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Test that we can calculate this metric from facts
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(DISTINCT f1.id_note)

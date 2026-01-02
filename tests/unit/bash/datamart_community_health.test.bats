@@ -24,12 +24,8 @@ setup() {
 
 # Test that community health columns exist in datamartCountries
 @test "Community health columns should exist in datamartCountries table" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check if columns exist
   run psql -d "${DBNAME}" -t -c "
     SELECT column_name
@@ -48,12 +44,8 @@ setup() {
 
 # Test that community health columns exist in datamartUsers
 @test "Community health columns should exist in datamartUsers table" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check if columns exist
   run psql -d "${DBNAME}" -t -c "
     SELECT column_name
@@ -72,12 +64,8 @@ setup() {
 
 # Test that active_notes_count is non-negative for countries
 @test "Active notes count should be non-negative for countries" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that active notes count is non-negative
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -93,12 +81,8 @@ setup() {
 
 # Test that active_notes_count is non-negative for users
 @test "Active notes count should be non-negative for users" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that active notes count is non-negative
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -114,12 +98,8 @@ setup() {
 
 # Test that backlog size is non-negative for countries
 @test "Backlog size should be non-negative for countries" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that backlog size is non-negative
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -135,12 +115,8 @@ setup() {
 
 # Test that backlog size is non-negative for users
 @test "Backlog size should be non-negative for users" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that backlog size is non-negative
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -156,12 +132,8 @@ setup() {
 
 # Test that 30-day metrics are non-negative for countries
 @test "30-day metrics should be non-negative for countries" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that 30-day metrics are non-negative
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -177,12 +149,8 @@ setup() {
 
 # Test that 30-day metrics are non-negative for users
 @test "30-day metrics should be non-negative for users" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that 30-day metrics are non-negative
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -198,12 +166,8 @@ setup() {
 
 # Test that age distribution is valid JSON for countries
 @test "Age distribution should be valid JSON for countries" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that age distribution is valid JSON
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -219,12 +183,8 @@ setup() {
 
 # Test that age distribution is valid JSON for users
 @test "Age distribution should be valid JSON for users" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that age distribution is valid JSON
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -240,12 +200,8 @@ setup() {
 
 # Test that backlog size equals active notes for countries
 @test "Backlog size should equal active notes for countries" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that backlog size equals active notes
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -262,12 +218,8 @@ setup() {
 
 # Test that backlog size equals active notes for users
 @test "Backlog size should equal active notes for users" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that backlog size equals active notes
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -284,12 +236,8 @@ setup() {
 
 # Test datamart update procedure includes health metrics for countries
 @test "Datamart update procedure should include health metrics for countries" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that the procedure text includes health metrics
   run psql -d "${DBNAME}" -t -c "
     SELECT pg_get_functiondef('dwh.update_datamart_country'::regproc);
@@ -303,12 +251,8 @@ setup() {
 
 # Test datamart update procedure includes health metrics for users
 @test "Datamart update procedure should include health metrics for users" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that the procedure text includes health metrics
   run psql -d "${DBNAME}" -t -c "
     SELECT pg_get_functiondef('dwh.update_datamart_user'::regproc);

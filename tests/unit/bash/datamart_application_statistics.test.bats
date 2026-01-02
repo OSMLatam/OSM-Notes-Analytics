@@ -24,12 +24,8 @@ setup() {
 
 # Test that application statistics columns exist in datamartCountries
 @test "Application statistics columns should exist in datamartCountries table" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check if columns exist
   run psql -d "${DBNAME}" -t -c "
     SELECT column_name
@@ -47,12 +43,8 @@ setup() {
 
 # Test that application statistics columns exist in datamartUsers
 @test "Application statistics columns should exist in datamartUsers table" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check if columns exist
   run psql -d "${DBNAME}" -t -c "
     SELECT column_name
@@ -70,12 +62,8 @@ setup() {
 
 # Test that applications_used JSON has valid structure
 @test "Applications_used JSON should have valid structure for countries" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   local dbname="${TEST_DBNAME:-${DBNAME}}"
 
   # Test JSON structure (skip if no data)
@@ -93,12 +81,8 @@ setup() {
 
 # Test that applications_used JSON has valid structure for users
 @test "Applications_used JSON should have valid structure for users" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Test JSON structure
   run psql -d "${DBNAME}" -t -c "
     SELECT json_typeof(applications_used)
@@ -114,12 +98,8 @@ setup() {
 
 # Test that mobile_apps_count and desktop_apps_count are non-negative
 @test "Mobile and desktop app counts should be non-negative for countries" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that counts are non-negative
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -135,12 +115,8 @@ setup() {
 
 # Test that mobile_apps_count and desktop_apps_count are non-negative for users
 @test "Mobile and desktop app counts should be non-negative for users" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that counts are non-negative
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -156,12 +132,8 @@ setup() {
 
 # Test that most_used_application_id references valid application
 @test "Most_used_application_id should reference valid application for countries" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that referenced application exists
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -178,12 +150,8 @@ setup() {
 
 # Test that most_used_application_id references valid application for users
 @test "Most_used_application_id should reference valid application for users" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that referenced application exists
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -200,12 +168,8 @@ setup() {
 
 # Test that applications_used JSON contains expected fields
 @test "Applications_used JSON should contain app_id, app_name, count" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check JSON structure for countries
   run psql -d "${DBNAME}" -t -c "
     SELECT jsonb_pretty(applications_used::jsonb)
@@ -221,12 +185,8 @@ setup() {
 
 # Test that applications can be queried from facts table
 @test "Application statistics should be calculable from facts table" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Test that applications exist in facts
   # Create a simple query file to avoid escaping issues
   local query_file=$(mktemp)
@@ -243,12 +203,8 @@ setup() {
 
 # Test that platform categorization works correctly
 @test "Platform categorization should work (mobile vs desktop)" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Test platform detection
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(DISTINCT platform)

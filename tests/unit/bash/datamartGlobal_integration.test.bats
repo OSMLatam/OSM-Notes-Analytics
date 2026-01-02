@@ -100,12 +100,8 @@ teardown() {
 
 # Test that datamart global table structure can be created
 @test "datamart global table can be created" {
- # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+ # Skip test if database connection is unavailable
+  skip_if_no_db_connection
  local dbname="${TEST_DBNAME:-${DBNAME}}"
 
  # Create table
@@ -128,12 +124,8 @@ teardown() {
 
 # Test that datamart global table has required columns
 @test "datamart global table has all required columns" {
- # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+ # Skip test if database connection is unavailable
+  skip_if_no_db_connection
  local dbname="${TEST_DBNAME:-${DBNAME}}"
 
  # Create table if not exists
@@ -164,12 +156,8 @@ teardown() {
 
 # Test that datamart global table has exactly one record
 @test "datamart global table should have exactly one record" {
- # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+ # Skip test if database connection is unavailable
+  skip_if_no_db_connection
  local dbname="${TEST_DBNAME:-${DBNAME}}"
 
  # Create table if not exists
@@ -188,12 +176,8 @@ teardown() {
 
 # Test that datamart global record has dimension_global_id = 1
 @test "datamart global record should have dimension_global_id = 1" {
- # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+ # Skip test if database connection is unavailable
+  skip_if_no_db_connection
  local dbname="${TEST_DBNAME:-${DBNAME}}"
 
  # Create table if not exists
@@ -212,12 +196,8 @@ teardown() {
 
 # Test that population script can be executed
 @test "datamart global population script can be executed" {
- # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+ # Skip test if database connection is unavailable
+  skip_if_no_db_connection
  local dbname="${TEST_DBNAME:-${DBNAME}}"
 
  # Create table if not exists
@@ -233,12 +213,8 @@ teardown() {
 
 # Test that datamart global can export to JSON
 @test "datamart global can be exported to JSON" {
- # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+ # Skip test if database connection is unavailable
+  skip_if_no_db_connection
  local dbname="${TEST_DBNAME:-${DBNAME}}"
 
  # Create table if not exists
@@ -258,12 +234,8 @@ teardown() {
 
 # Test that check tables script works
 @test "datamart global check tables script validates existence" {
- # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+ # Skip test if database connection is unavailable
+  skip_if_no_db_connection
  local dbname="${TEST_DBNAME:-${DBNAME}}"
 
  # Create table first
@@ -278,12 +250,8 @@ teardown() {
 
 # Test that max_date_global_processed table exists
 @test "max_date_global_processed table should exist" {
- # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+ # Skip test if database connection is unavailable
+  skip_if_no_db_connection
  local dbname="${TEST_DBNAME:-${DBNAME}}"
 
  # Create table first

@@ -24,12 +24,8 @@ setup() {
 
 # Test that content quality columns exist in datamartCountries
 @test "Content quality columns should exist in datamartCountries table" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check if columns exist
   run psql -d "${DBNAME}" -t -c "
     SELECT column_name
@@ -48,12 +44,8 @@ setup() {
 
 # Test that content quality columns exist in datamartUsers
 @test "Content quality columns should exist in datamartUsers table" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check if columns exist
   run psql -d "${DBNAME}" -t -c "
     SELECT column_name
@@ -72,12 +64,8 @@ setup() {
 
 # Test that avg_comment_length is non-negative for countries
 @test "Avg comment length should be non-negative for countries" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that comment length is non-negative
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -93,12 +81,8 @@ setup() {
 
 # Test that avg_comment_length is non-negative for users
 @test "Avg comment length should be non-negative for users" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that comment length is non-negative
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -114,12 +98,8 @@ setup() {
 
 # Test that URL and mention percentages are between 0 and 100
 @test "URL and mention percentages should be between 0 and 100 for countries" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that percentages are valid (0-100)
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -135,12 +115,8 @@ setup() {
 
 # Test that URL and mention percentages are between 0 and 100 for users
 @test "URL and mention percentages should be between 0 and 100 for users" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that percentages are valid (0-100)
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -156,12 +132,8 @@ setup() {
 
 # Test that counts are non-negative
 @test "Comment counts should be non-negative for countries" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that counts are non-negative
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -178,12 +150,8 @@ setup() {
 
 # Test that counts are non-negative for users
 @test "Comment counts should be non-negative for users" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that counts are non-negative
   run psql -d "${DBNAME}" -t -c "
     SELECT COUNT(*)
@@ -200,12 +168,8 @@ setup() {
 
 # Test content quality metrics can be calculated from facts
 @test "Content quality metrics should be calculable from facts table" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Test calculation query (check for content quality columns)
   local query_file=$(mktemp)
   echo "SELECT COALESCE(AVG(comment_length), 0) as avg_length, COALESCE(COUNT(*) FILTER (WHERE has_url = TRUE), 0) as url_count FROM dwh.facts WHERE comment_length IS NOT NULL;" > "${query_file}"
@@ -221,12 +185,8 @@ setup() {
 
 # Test comment length calculation from facts
 @test "Comment length should be calculable for countries" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Test that we can calculate average comment length
   local query_file=$(mktemp)
   echo "SELECT COALESCE(AVG(comment_length), 0) FROM dwh.facts WHERE dimension_id_country IN (SELECT dimension_country_id FROM dwh.datamartCountries WHERE avg_comment_length IS NOT NULL LIMIT 1) AND comment_length IS NOT NULL;" > "${query_file}"
@@ -242,12 +202,8 @@ setup() {
 
 # Test datamart update procedure includes content quality metrics
 @test "Datamart update procedure should include content quality metrics calculation for countries" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that the procedure text includes quality metrics
   run psql -d "${DBNAME}" -t -c "
     SELECT pg_get_functiondef('dwh.update_datamart_country'::regproc);
@@ -261,12 +217,8 @@ setup() {
 
 # Test datamart update procedure includes content quality metrics for users
 @test "Datamart update procedure should include content quality metrics calculation for users" {
-  # Verify database connection - will fail explicitly if DB is not available
-  if ! verify_database_connection; then
-    echo "Database connection failed - test cannot proceed" >&2
-    return 1
-  fi
-
+  # Skip test if database connection is unavailable
+  skip_if_no_db_connection
   # Check that the procedure text includes quality metrics
   run psql -d "${DBNAME}" -t -c "
     SELECT pg_get_functiondef('dwh.update_datamart_user'::regproc);

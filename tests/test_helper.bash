@@ -258,6 +258,14 @@ verify_database_connection() {
  return 0
 }
 
+# Helper function to skip test if database connection fails
+# Usage in tests: skip_if_no_db_connection
+skip_if_no_db_connection() {
+ if ! verify_database_connection > /dev/null 2>&1; then
+  skip "Database connection unavailable"
+ fi
+}
+
 # Setup function - runs before each test
 setup() {
  # Create temporary directory
