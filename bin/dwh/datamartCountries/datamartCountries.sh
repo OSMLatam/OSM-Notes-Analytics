@@ -395,7 +395,7 @@ function __processNotesCountriesParallel {
     __loge "Thread ${thread_num}: Completed with ${thread_failed} failures (${thread_processed} countries processed)"
    fi
 
-   exit ${thread_failed}
+   exit "${thread_failed}"
   ) &
   pids+=($!)
   __logi "Started worker thread ${thread_num} (PID: ${!})"

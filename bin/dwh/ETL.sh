@@ -2424,7 +2424,7 @@ function main() {
   __logi "AUTO-DETECTED INCREMENTAL EXECUTION - Processing only new data"
   # Check data volume to adjust timeout if needed for large incrementals
   local existing_facts_count
-  existing_facts_count=$(__psql_with_appname -d "${DBNAME_DWH}" -Atq -c "SELECT COUNT(*) FROM dwh.facts;" 2> /dev/null || echo "0")
+  existing_facts_count=$(__psql_with_appname -d "${DBNAME_DWH}" -Atq -c "SELECT COUNT(*) FROM dwh.facts;" 2> /dev/null) || existing_facts_count="0"
   # If timeout is default (30min) and we have significant data, suggest longer timeout
   if [[ -z "${PSQL_STATEMENT_TIMEOUT:-}" ]] || [[ "${PSQL_STATEMENT_TIMEOUT}" == "30min" ]]; then
    if [[ "${existing_facts_count}" -gt 10000000 ]]; then
