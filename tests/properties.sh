@@ -76,10 +76,11 @@ fi
 # Only set defaults here if they weren't set (for CI environments)
 # This allows tests to skip when no DB is configured
 # Note: For local peer authentication, TEST_DBUSER should remain unset
-if [[ -z "${TEST_DBUSER:-}" ]] && [[ "${CI:-}" == "true" ]] || [[ "${GITHUB_ACTIONS:-}" == "true" ]]; then
+if [[ -z "${TEST_DBUSER:-}" ]] && { [[ "${CI:-}" == "true" ]] || [[ "${GITHUB_ACTIONS:-}" == "true" ]]; }; then
  export TEST_DBUSER="${TEST_DBUSER:-postgres}"
 fi
-if [[ -z "${TEST_DBPASSWORD:-}" ]]; then
+# Only set TEST_DBPASSWORD for CI/CD environments, not for local peer authentication
+if [[ -z "${TEST_DBPASSWORD:-}" ]] && { [[ -n "${TEST_DBHOST:-}" ]] || [[ "${CI:-}" == "true" ]] || [[ "${GITHUB_ACTIONS:-}" == "true" ]]; }; then
  export TEST_DBPASSWORD="${TEST_DBPASSWORD:-postgres}"
 fi
 
