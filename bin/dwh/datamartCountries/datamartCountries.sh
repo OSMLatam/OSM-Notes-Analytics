@@ -245,22 +245,48 @@ function __addYears {
 # Uses file locking (flock) to ensure atomic queue operations.
 # This function is used by worker threads to get the next country to process.
 # Usage: country_id=$(__get_next_country_from_queue)
+# Returns: country ID as string, or empty string if queue is empty or error occurs
 __get_next_country_from_queue() {
  local result_file="${work_queue_file}.result.$$"
+ local country_id=""
+ 
+ # Ensure queue file exists before attempting to read
+ if [[ ! -f "${work_queue_file}" ]]; then
+  echo ""
+  return 0
+ fi
+ 
  (
-  flock -n 200 || exit 1
+  # Try to acquire lock (non-blocking)
+  # If lock cannot be acquired, return empty (another thread is accessing)
+  if ! flock -n 200; then
+   exit 1
+  fi
+  
   # Read first line (next country to process)
-  head -n 1 "${work_queue_file}" 2> /dev/null > "${result_file}" || echo "" > "${result_file}"
-  if [[ -s "${result_file}" ]]; then
-   # Remove first line from queue
-   if tail -n +2 "${work_queue_file}" > "${work_queue_file}.tmp" 2> /dev/null; then
-    mv "${work_queue_file}.tmp" "${work_queue_file}" 2> /dev/null || true
+  if [[ -f "${work_queue_file}" ]] && [[ -s "${work_queue_file}" ]]; then
+   head -n 1 "${work_queue_file}" 2> /dev/null > "${result_file}" || echo "" > "${result_file}"
+   
+   # If we got a country ID, remove it from queue
+   if [[ -s "${result_file}" ]]; then
+    # Remove first line from queue atomically
+    if tail -n +2 "${work_queue_file}" > "${work_queue_file}.tmp" 2> /dev/null; then
+     mv "${work_queue_file}.tmp" "${work_queue_file}" 2> /dev/null || true
+    fi
    fi
+  else
+   echo "" > "${result_file}"
   fi
   exit 0
  ) 200> "${queue_lock_file}"
- cat "${result_file}" 2> /dev/null || echo ""
- rm -f "${result_file}" 2> /dev/null || true
+ 
+ # Read result and clean up
+ if [[ -f "${result_file}" ]]; then
+  country_id=$(cat "${result_file}" 2> /dev/null || echo "")
+  rm -f "${result_file}" 2> /dev/null || true
+ fi
+ 
+ echo "${country_id}"
 }
 
 # Processes countries in parallel using a shared work queue for dynamic load balancing.
@@ -338,11 +364,32 @@ function __processNotesCountriesParallel {
  local work_queue_file="${TMP_DIR}/country_work_queue.txt"
  echo "${country_ids}" > "${work_queue_file}"
 
+ # Ensure queue file is fully written and readable before starting threads
+ # This prevents race conditions where threads start before the file is ready
+ if [[ ! -f "${work_queue_file}" ]] || [[ ! -s "${work_queue_file}" ]]; then
+  __loge "ERROR: Failed to create work queue file"
+  __log_finish
+  return 1
+ fi
+
+ # Verify queue file has expected content
+ local queue_count
+ queue_count=$(wc -l < "${work_queue_file}" 2> /dev/null || echo "0")
+ if [[ "${queue_count}" -ne "${total_countries}" ]]; then
+  __logw "WARN: Queue file count (${queue_count}) differs from expected (${total_countries}), but continuing..."
+ fi
+
  # Create lock file for queue access
  local queue_lock_file="${TMP_DIR}/country_queue.lock"
+ touch "${queue_lock_file}" 2> /dev/null || true
 
  # Export variables for use in subshells (functions are automatically inherited)
  export work_queue_file queue_lock_file
+
+ # Small delay to ensure file system synchronization before starting threads
+ # This helps prevent race conditions where threads access the queue file
+ # before it's fully written to disk
+ sleep 0.1
 
  local pids=()
  local start_time
@@ -355,16 +402,30 @@ function __processNotesCountriesParallel {
    local thread_processed=0
    local thread_failed=0
    local country_id
+   local empty_retries=0
+   local max_empty_retries=3
+   local retry_delay=0.2
 
    while true; do
     # Get next country from shared queue (thread-safe)
     # Functions and exported variables are automatically available in subshells
     country_id=$(__get_next_country_from_queue)
 
-    # If queue is empty, exit worker thread
+    # If queue is empty, check if we should retry (handles race condition at startup)
     if [[ -z "${country_id}" ]]; then
+     # If this is the first attempt and queue appears empty, retry a few times
+     # This handles the case where threads start before the queue file is fully ready
+     if [[ ${thread_processed} -eq 0 ]] && [[ ${empty_retries} -lt ${max_empty_retries} ]]; then
+      empty_retries=$((empty_retries + 1))
+      sleep "${retry_delay}"
+      continue
+     fi
+     # Queue is truly empty or we've exhausted retries, exit thread
      break
     fi
+
+    # Reset empty retries counter once we successfully get a country
+    empty_retries=0
 
     # Process country in atomic transaction
     # shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
@@ -399,6 +460,12 @@ function __processNotesCountriesParallel {
   ) &
   pids+=($!)
   __logi "Started worker thread ${thread_num} (PID: ${!})"
+  
+  # Small delay between thread starts to reduce lock contention
+  # This helps prevent all threads from trying to acquire the lock simultaneously
+  if [[ ${thread_num} -lt ${adjusted_threads} ]]; then
+   sleep 0.05
+  fi
  done
 
  # Wait for all worker threads to complete
