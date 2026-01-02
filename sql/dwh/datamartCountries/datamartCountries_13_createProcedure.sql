@@ -179,7 +179,7 @@ AS $proc$
   stmt := 'SELECT /* Notes-datamartCountries */ history_' || m_year || '_open '
    || 'FROM dwh.datamartCountries '
    || 'WHERE dimension_country_id = ' || m_dimension_country_id;
-  INSERT INTO logs (message) VALUES (stmt);
+  INSERT INTO dwh.logs (message) VALUES (stmt);
   EXECUTE stmt
    INTO m_check_year_populated;
 
@@ -310,7 +310,7 @@ AS $proc$
      || 'ranking_users_closing_' || m_year || ' = '
      || QUOTE_NULLABLE(m_ranking_users_closing_year) || ' '
      || 'WHERE dimension_country_id = ' || m_dimension_country_id;
-   INSERT INTO logs (message) VALUES (SUBSTR(stmt, 1, 900));
+   INSERT INTO dwh.logs (message) VALUES (SUBSTR(stmt, 1, 900));
    EXECUTE stmt;
   END IF;
  END

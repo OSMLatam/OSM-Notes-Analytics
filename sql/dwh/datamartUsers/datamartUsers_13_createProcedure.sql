@@ -160,7 +160,7 @@ AS $proc$
   stmt := 'SELECT /* Notes-datamartUsers */ history_' || m_year || '_open '
    || 'FROM dwh.datamartUsers '
    || 'WHERE dimension_user_id = ' || m_dimension_user_id;
-  INSERT INTO logs (message) VALUES (stmt);
+  INSERT INTO dwh.logs (message) VALUES (stmt);
   EXECUTE stmt
    INTO m_check_year_populated;
 
