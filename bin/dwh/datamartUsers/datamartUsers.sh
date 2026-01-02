@@ -326,9 +326,10 @@ function __processOldUsers {
 # Uses file locking (flock) to ensure atomic queue operations.
 # This function is used by worker threads to get the next user to process.
 # Usage: user_id=$(__get_next_user_from_queue)
-# Returns: user ID as string, or empty string if queue is empty or error occurs
+# Returns: user ID as string, or empty string if queue is empty
+# Exit code: 0 = success (got user or queue empty), 1 = lock failed (should retry)
 __get_next_user_from_queue() {
- local result_file="${work_queue_file}.result.$$"
+ local result_file="${work_queue_file}.result.${BASHPID}"
  local user_id=""
 
  # Ensure queue file exists before attempting to read
@@ -339,7 +340,7 @@ __get_next_user_from_queue() {
 
  (
   # Try to acquire lock (non-blocking)
-  # If lock cannot be acquired, return empty (another thread is accessing)
+  # If lock cannot be acquired, exit with code 1 to signal retry needed
   if ! flock -n 200; then
    exit 1
   fi
@@ -360,6 +361,13 @@ __get_next_user_from_queue() {
   fi
   exit 0
  ) 200> "${queue_lock_file}"
+ local exit_code=$?
+
+ # If lock acquisition failed, return special marker to indicate retry needed
+ if [[ ${exit_code} -eq 1 ]]; then
+  echo ""
+  return 1
+ fi
 
  # Read result and clean up
  if [[ -f "${result_file}" ]]; then
@@ -368,6 +376,7 @@ __get_next_user_from_queue() {
  fi
 
  echo "${user_id}"
+ return 0
 }
 
 # Processes users in parallel using a shared work queue for dynamic load balancing.
@@ -486,6 +495,21 @@ function __processNotesUser {
     # Get next user from shared queue (thread-safe)
     # Functions and exported variables are automatically available in subshells
     user_id=$(__get_next_user_from_queue)
+    local queue_exit_code=$?
+
+    # If lock acquisition failed (exit code 1), retry after short delay
+    # This handles temporary lock contention from other threads
+    if [[ ${queue_exit_code} -eq 1 ]]; then
+     empty_retries=$((empty_retries + 1))
+     # Limit retries to prevent infinite loops, but allow more retries for lock contention
+     if [[ ${empty_retries} -lt $((max_empty_retries * 2)) ]]; then
+      sleep "${retry_delay}"
+      continue
+     else
+      __logw "Thread ${thread_num}: Too many lock acquisition failures, exiting"
+      break
+     fi
+    fi
 
     # If queue is empty, check if we should retry (handles race condition at startup)
     if [[ -z "${user_id}" ]]; then
