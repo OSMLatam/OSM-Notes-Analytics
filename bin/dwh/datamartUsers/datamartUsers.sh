@@ -241,6 +241,17 @@ function __checkBaseTables {
  if [[ "${last_year_ret}" -ne 0 ]]; then
   __loge "Failed to create last year activities, but continuing..."
  fi
+ # Create export view if SQL file exists (excludes internal _partial_* columns)
+ local export_view_file="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartUsers/datamartUsers_14_createExportView.sql"
+ if [[ -f "${export_view_file}" ]]; then
+  set +e
+  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -f "${export_view_file}"
+  local view_ret=${?}
+  set -e
+  if [[ "${view_ret}" -ne 0 ]]; then
+   __loge "Failed to create export view, but continuing..."
+  fi
+ fi
  __log_finish
  return "${RET}"
 }
@@ -472,7 +483,7 @@ function __processNotesUser {
  # 4. Users with high historical activity (>100 actions) - MEDIUM priority
  # 5. Users with moderate activity (10-100 actions) - LOW priority
  # 6. Inactive users (<10 actions or >2 years inactive) - LOWEST priority
- # 
+ #
  # IMPORTANT: Process only MAX_USERS_PER_CYCLE users per cycle to allow ETL
  # to complete quickly and update data promptly. This ensures:
  # - Most active users are processed first (prioritized)
@@ -517,7 +528,7 @@ function __processNotesUser {
    ON (f.action_dimension_id_user = u.dimension_user_id)
   WHERE u.modified = TRUE
  " || echo "0")
- 
+
  if [[ "${total_modified_users}" -gt "${max_users_per_cycle}" ]]; then
   __logi "Found ${total_users} users to process this cycle (prioritized by relevance)"
   __logi "Total modified users: ${total_modified_users} (will process ${max_users_per_cycle} per cycle)"

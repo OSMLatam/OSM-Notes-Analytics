@@ -264,8 +264,26 @@ SQL_USERS
 
  if [[ -n "${user_id}" ]]; then
   # Export each modified user to a separate JSON file
-  # Use SELECT * to dynamically include all columns plus contributor_type_name from JOIN
-  psql -d "${DBNAME_DWH}" -Atq -c "
+  # Use export view if available (excludes internal _partial_* columns), otherwise use table directly
+  # The view excludes internal columns prefixed with _partial_ or _last_processed_
+  if psql -d "${DBNAME_DWH}" -Atq -c "SELECT 1 FROM information_schema.views WHERE table_schema = 'dwh' AND table_name = 'datamartusers_export'" | grep -q 1; then
+   # Use export view (excludes internal columns)
+   psql -d "${DBNAME_DWH}" -Atq -c "
+      SELECT row_to_json(t)
+      FROM (
+        SELECT
+          du.*,
+          ct.contributor_type_name
+        FROM dwh.datamartusers_export du
+        LEFT JOIN dwh.contributor_types ct
+          ON du.id_contributor_type = ct.contributor_type_id
+        WHERE du.user_id = ${user_id}
+      ) t
+	" > "${ATOMIC_TEMP_DIR}/users/${user_id}.json"
+  else
+   # Fallback: Use table directly (for backward compatibility)
+   # Exclude internal columns manually if they exist
+   psql -d "${DBNAME_DWH}" -Atq -c "
       SELECT row_to_json(t)
       FROM (
         SELECT
@@ -277,6 +295,7 @@ SQL_USERS
         WHERE du.user_id = ${user_id}
       ) t
 	" > "${ATOMIC_TEMP_DIR}/users/${user_id}.json"
+  fi
 
   echo "  Exported modified user: ${user_id} (${username})"
   MODIFIED_USER_COUNT=$((MODIFIED_USER_COUNT + 1))
