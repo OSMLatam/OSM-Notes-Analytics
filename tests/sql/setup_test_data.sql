@@ -281,42 +281,54 @@ BEGIN
       opened_dimension_id_date, opened_dimension_id_hour_of_week, opened_dimension_id_user,
       closed_dimension_id_date, closed_dimension_id_hour_of_week, closed_dimension_id_user,
       dimension_application_creation, days_to_resolution,
-      comment_length, has_url, has_mention
+      comment_length, has_url, has_mention,
+      action_dimension_id_season
     ) VALUES
       -- Country 1: Multiple notes with resolution data across different years/months
       -- Note 1001: Opened 2023-01-01 10:00 (Sun), closed 2023-01-06 14:00 (Fri) - 5 days
-      (1001, '2023-01-01 10:00:00', 'opened', 1, 1, 1, 710, 1, 710, 1, NULL, NULL, NULL, 1, NULL, 15, FALSE, FALSE),
-      (1001, '2023-01-06 14:00:00', 'closed', 1, 2, 3, 514, 1, 710, 1, 3, 514, 2, NULL, 5, 25, TRUE, TRUE),
+      -- Season: January = Winter (4)
+      (1001, '2023-01-01 10:00:00', 'opened', 1, 1, 1, 710, 1, 710, 1, NULL, NULL, NULL, 1, NULL, 15, FALSE, FALSE, 4),
+      (1001, '2023-01-06 14:00:00', 'closed', 1, 2, 3, 514, 1, 710, 1, 3, 514, 2, NULL, 5, 25, TRUE, TRUE, 4),
       -- Note 1002: Opened 2023-01-02 11:00 (Mon), closed 2023-01-12 15:00 (Thu) - 10 days
-      (1002, '2023-01-02 11:00:00', 'opened', 1, 1, 2, 111, 2, 111, 1, NULL, NULL, NULL, 2, NULL, 10, FALSE, FALSE),
-      (1002, '2023-01-12 15:00:00', 'closed', 1, 2, 4, 415, 2, 111, 1, 4, 415, 2, NULL, 10, 30, FALSE, FALSE),
+      -- Season: January = Winter (4)
+      (1002, '2023-01-02 11:00:00', 'opened', 1, 1, 2, 111, 2, 111, 1, NULL, NULL, NULL, 2, NULL, 10, FALSE, FALSE, 4),
+      (1002, '2023-01-12 15:00:00', 'closed', 1, 2, 4, 415, 2, 111, 1, 4, 415, 2, NULL, 10, 30, FALSE, FALSE, 4),
       -- Note 1003: Opened 2023-02-01 10:00 (Wed), closed 2023-02-15 14:00 (Wed) - 14 days, different month
-      (1003, '2023-02-01 10:00:00', 'opened', 1, 1, 5, 310, 5, 310, 1, NULL, NULL, NULL, 1, NULL, 20, FALSE, FALSE),
-      (1003, '2023-02-15 14:00:00', 'closed', 1, 2, 6, 314, 5, 310, 1, 6, 314, 2, NULL, 14, 35, TRUE, FALSE),
+      -- Season: February = Winter (4)
+      (1003, '2023-02-01 10:00:00', 'opened', 1, 1, 5, 310, 5, 310, 1, NULL, NULL, NULL, 1, NULL, 20, FALSE, FALSE, 4),
+      (1003, '2023-02-15 14:00:00', 'closed', 1, 2, 6, 314, 5, 310, 1, 6, 314, 2, NULL, 14, 35, TRUE, FALSE, 4),
       -- Note 1004: Opened 2023-03-01 10:00 (Wed), closed 2023-03-20 14:00 (Mon) - 19 days, different month
-      (1004, '2023-03-01 10:00:00', 'opened', 1, 1, 7, 310, 7, 310, 1, NULL, NULL, NULL, 2, NULL, 25, FALSE, TRUE),
-      (1004, '2023-03-20 14:00:00', 'closed', 1, 2, 8, 114, 7, 310, 1, 8, 114, 2, NULL, 19, 40, FALSE, FALSE),
+      -- Season: March = Spring (1)
+      (1004, '2023-03-01 10:00:00', 'opened', 1, 1, 7, 310, 7, 310, 1, NULL, NULL, NULL, 2, NULL, 25, FALSE, TRUE, 1),
+      (1004, '2023-03-20 14:00:00', 'closed', 1, 2, 8, 114, 7, 310, 1, 8, 114, 2, NULL, 19, 40, FALSE, FALSE, 1),
       -- Note 1005: Opened 2023-01-01 12:00 (Sun), still open (no resolution)
-      (1005, '2023-01-01 12:00:00', 'opened', 1, 1, 1, 712, 1, 712, 1, NULL, NULL, NULL, 3, NULL, 20, FALSE, FALSE),
+      -- Season: January = Winter (4)
+      (1005, '2023-01-01 12:00:00', 'opened', 1, 1, 1, 712, 1, 712, 1, NULL, NULL, NULL, 3, NULL, 20, FALSE, FALSE, 4),
 
       -- Country 2: Multiple notes with resolution data in 2024
       -- Note 2001: Opened 2024-01-01 10:00 (Mon), closed 2024-01-05 14:00 (Fri) - 4 days
-      (2001, '2024-01-01 10:00:00', 'opened', 2, 2, 9, 110, 9, 110, 2, NULL, NULL, NULL, 4, NULL, 30, TRUE, FALSE),
-      (2001, '2024-01-05 14:00:00', 'closed', 2, 2, 11, 514, 9, 110, 2, 11, 514, 2, NULL, 4, 50, TRUE, TRUE),
+      -- Season: January = Winter (4)
+      (2001, '2024-01-01 10:00:00', 'opened', 2, 2, 9, 110, 9, 110, 2, NULL, NULL, NULL, 4, NULL, 30, TRUE, FALSE, 4),
+      (2001, '2024-01-05 14:00:00', 'closed', 2, 2, 11, 514, 9, 110, 2, 11, 514, 2, NULL, 4, 50, TRUE, TRUE, 4),
       -- Note 2002: Opened 2024-01-02 11:00 (Tue), closed 2024-01-06 15:00 (Sat) - 4 days
-      (2002, '2024-01-02 11:00:00', 'opened', 2, 3, 10, 211, 10, 211, 3, NULL, NULL, NULL, 5, NULL, 35, FALSE, FALSE),
-      (2002, '2024-01-06 15:00:00', 'closed', 2, 2, 12, 615, 10, 211, 3, 12, 615, 2, NULL, 4, 45, FALSE, FALSE),
+      -- Season: January = Winter (4)
+      (2002, '2024-01-02 11:00:00', 'opened', 2, 3, 10, 211, 10, 211, 3, NULL, NULL, NULL, 5, NULL, 35, FALSE, FALSE, 4),
+      (2002, '2024-01-06 15:00:00', 'closed', 2, 2, 12, 615, 10, 211, 3, 12, 615, 2, NULL, 4, 45, FALSE, FALSE, 4),
       -- Note 2003: Opened 2024-02-01 10:00 (Thu), closed 2024-02-10 14:00 (Sat) - 9 days, different month
-      (2003, '2024-02-01 10:00:00', 'opened', 2, 2, 13, 410, 13, 410, 2, NULL, NULL, NULL, 4, NULL, 40, TRUE, FALSE),
-      (2003, '2024-02-10 14:00:00', 'closed', 2, 3, 14, 614, 13, 410, 2, 14, 614, 3, NULL, 9, 55, FALSE, TRUE),
+      -- Season: February = Winter (4)
+      (2003, '2024-02-01 10:00:00', 'opened', 2, 2, 13, 410, 13, 410, 2, NULL, NULL, NULL, 4, NULL, 40, TRUE, FALSE, 4),
+      (2003, '2024-02-10 14:00:00', 'closed', 2, 3, 14, 614, 13, 410, 2, 14, 614, 3, NULL, 9, 55, FALSE, TRUE, 4),
       -- Note 2004: Opened 2024-01-01 12:00 (Mon), still open (no resolution)
-      (2004, '2024-01-01 12:00:00', 'opened', 2, 3, 9, 112, 9, 112, 3, NULL, NULL, NULL, 6, NULL, 20, FALSE, FALSE),
+      -- Season: January = Winter (4)
+      (2004, '2024-01-01 12:00:00', 'opened', 2, 3, 9, 112, 9, 112, 3, NULL, NULL, NULL, 6, NULL, 20, FALSE, FALSE, 4),
 
       -- Country 3: One opened note, not closed (0% resolution)
-      (3001, '2024-06-15 10:00:00', 'opened', 3, 3, 15, 610, 15, 610, 3, NULL, NULL, NULL, 6, NULL, 15, FALSE, FALSE),
+      -- Season: June = Summer (2)
+      (3001, '2024-06-15 10:00:00', 'opened', 3, 3, 15, 610, 15, 610, 3, NULL, NULL, NULL, 6, NULL, 15, FALSE, FALSE, 2),
       -- Note 3002: Opened 2024-07-01 10:00 (Mon) and closed 2024-07-15 14:00 (Mon) for resolution_by_year/month testing
-      (3002, '2024-07-01 10:00:00', 'opened', 3, 3, 16, 110, 16, 110, 3, NULL, NULL, NULL, 1, NULL, 20, FALSE, FALSE),
-      (3002, '2024-07-15 14:00:00', 'closed', 3, 3, 17, 114, 16, 110, 3, 17, 114, 3, NULL, 14, 30, FALSE, FALSE);
+      -- Season: July = Summer (2)
+      (3002, '2024-07-01 10:00:00', 'opened', 3, 3, 16, 110, 16, 110, 3, NULL, NULL, NULL, 1, NULL, 20, FALSE, FALSE, 2),
+      (3002, '2024-07-15 14:00:00', 'closed', 3, 3, 17, 114, 16, 110, 3, 17, 114, 3, NULL, 14, 30, FALSE, FALSE, 2);
   END IF;
 END $$;
 
