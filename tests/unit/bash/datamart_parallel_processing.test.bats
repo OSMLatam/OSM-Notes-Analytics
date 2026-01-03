@@ -517,12 +517,26 @@ teardown() {
 
   (
    local count=0
+   local retries=0
+   local max_retries=10
    while true; do
     local item
     item=$(__get_next_country_from_queue)
+    local exit_code=$?
+    # If lock failed (exit code 1), retry after short delay
+    if [[ ${exit_code} -eq 1 ]]; then
+     retries=$((retries + 1))
+     if [[ ${retries} -lt ${max_retries} ]]; then
+      sleep 0.01
+      continue
+     else
+      break
+     fi
+    fi
     if [[ -n "${item}" ]]; then
      echo "${item}" >> "${result_file}"
      count=$((count + 1))
+     retries=0
     else
      break
     fi
@@ -588,12 +602,26 @@ teardown() {
 
   (
    local count=0
+   local retries=0
+   local max_retries=10
    while true; do
     local item
     item=$(__get_next_user_from_queue)
+    local exit_code=$?
+    # If lock failed (exit code 1), retry after short delay
+    if [[ ${exit_code} -eq 1 ]]; then
+     retries=$((retries + 1))
+     if [[ ${retries} -lt ${max_retries} ]]; then
+      sleep 0.01
+      continue
+     else
+      break
+     fi
+    fi
     if [[ -n "${item}" ]]; then
      echo "${item}" >> "${result_file}"
      count=$((count + 1))
+     retries=0
     else
      break
     fi
