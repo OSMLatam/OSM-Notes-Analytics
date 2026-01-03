@@ -1,24 +1,21 @@
 -- Populates datamart for users.
+-- This SQL is executed in batches by the bash script to allow periodic commits.
+-- Each execution processes a batch of users (typically 50) in a single transaction.
+-- Uses OFFSET to process different subsets of users in each batch.
 --
 -- Author: Andres Gomez (AngocA)
--- Version: 2024-01-17
+-- Version: 2025-01-03
 
 DO /* Notes-datamartUsers-processOldUsers */
 $$
 DECLARE
  r RECORD;
- max_date DATE;
  m_count INTEGER;
 BEGIN
- m_count := 1;
- RAISE NOTICE 'Started to process old users.';
+ m_count := 0;
+ RAISE NOTICE 'Processing batch of old users (range: ${LOWER_VALUE}-${HIGH_VALUE}, offset: ${BATCH_OFFSET}, limit: ${BATCH_SIZE}).';
 
- -- Inserts the part of the date to reduce calling the function Extract.
- DELETE FROM dwh.properties WHERE key IN ('year', 'month', 'day');
- INSERT INTO dwh.properties VALUES ('year', DATE_PART('year', CURRENT_DATE));
- INSERT INTO dwh.properties VALUES ('month', DATE_PART('month', CURRENT_DATE));
- INSERT INTO dwh.properties VALUES ('day', DATE_PART('day', CURRENT_DATE));
-
+ -- Process users in current batch using OFFSET and LIMIT
  FOR r IN
   SELECT /* Notes-datamartUsers */
    f.action_dimension_id_user AS dimension_user_id
@@ -30,18 +27,23 @@ BEGIN
   GROUP BY f.action_dimension_id_user
   HAVING COUNT(1) <= 20
   ORDER BY COUNT(1) DESC
+  OFFSET ${BATCH_OFFSET}
+  LIMIT ${BATCH_SIZE}
  LOOP
-  CALL dwh.update_datamart_user(r.dimension_user_id);
+  BEGIN
+   CALL dwh.update_datamart_user(r.dimension_user_id);
 
-  UPDATE dwh.dimension_users
-   SET modified = FALSE
-   WHERE dimension_user_id = r.dimension_user_id;
+   UPDATE dwh.dimension_users
+    SET modified = FALSE
+    WHERE dimension_user_id = r.dimension_user_id;
 
-  IF (MOD(m_count, 500) = 0) THEN
-   RAISE NOTICE '% processed users.', m_count;
-  END IF;
-
-  m_count := m_count + 1;
+   m_count := m_count + 1;
+  EXCEPTION WHEN OTHERS THEN
+   RAISE WARNING 'Failed to process user %: %', r.dimension_user_id, SQLERRM;
+   -- Continue with next user
+  END;
  END LOOP;
+
+ RAISE NOTICE 'Batch completed. Processed % users.', m_count;
 END
 $$;

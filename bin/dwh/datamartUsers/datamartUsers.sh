@@ -260,6 +260,8 @@ function __addYears {
 }
 
 # Processes initial batch of users.
+# Processes users in small batches with periodic commits to avoid long transactions
+# and reduce lock contention between parallel processes.
 function __processOldUsers {
  __log_start
  MAX_USER_ID=$(__psql_with_appname -d "${DBNAME_DWH}" -Atq \
@@ -279,21 +281,79 @@ function __processOldUsers {
  LOWER_VALUE=1
  HIGH_VALUE="${SIZE}"
  ITER=1
- __logw "Starting parallel process for datamartUsers..."
+ local BATCH_SIZE=50
+ __logw "Starting parallel process for datamartUsers (batch size: ${BATCH_SIZE} users per transaction)..."
  while [[ "${ITER}" -le "${MAX_THREADS}" ]]; do
   (
    __logi "Starting user batch ${LOWER_VALUE}-${HIGH_VALUE} - ${BASHPID}."
 
    export LOWER_VALUE
    export HIGH_VALUE
+   export BATCH_SIZE
+   local batch_offset=0
+   local total_processed=0
+   local batch_num=1
+   local batch_count=0
+
+   # Set up date properties once at the beginning
    set +e
-   # shellcheck disable=SC2016
-   __psql_with_appname "datamartUsers-batch-${LOWER_VALUE}-${HIGH_VALUE}" -d "${DBNAME_DWH}" -c "$(envsubst '$LOWER_VALUE,$HIGH_VALUE' \
-    < "${POSTGRES_31_POPULATE_OLD_USERS_FILE}" || true)" \
-    >> "${LOG_FILENAME}.${BASHPID}" 2>&1
+   __psql_with_appname "datamartUsers-batch-${LOWER_VALUE}-${HIGH_VALUE}" -d "${DBNAME_DWH}" -c "
+    DELETE FROM dwh.properties WHERE key IN ('year', 'month', 'day');
+    INSERT INTO dwh.properties VALUES ('year', DATE_PART('year', CURRENT_DATE));
+    INSERT INTO dwh.properties VALUES ('month', DATE_PART('month', CURRENT_DATE));
+    INSERT INTO dwh.properties VALUES ('day', DATE_PART('day', CURRENT_DATE));
+   " >> "${LOG_FILENAME}.${BASHPID}" 2>&1
    set -e
 
-   __logi "Finished user batch ${LOWER_VALUE}-${HIGH_VALUE} - ${BASHPID}."
+   # Process users in small batches with periodic commits
+   while true; do
+    export BATCH_OFFSET="${batch_offset}"
+
+    # Process batch of users in a single transaction
+    set +e
+    local batch_result
+    # shellcheck disable=SC2016  # Single quotes intentional for envsubst variable list
+    batch_result=$(__psql_with_appname "datamartUsers-batch-${LOWER_VALUE}-${HIGH_VALUE}" -d "${DBNAME_DWH}" -c "$(envsubst '$LOWER_VALUE,$HIGH_VALUE,$BATCH_SIZE,$BATCH_OFFSET' \
+     < "${POSTGRES_31_POPULATE_OLD_USERS_FILE}" || true)" \
+     2>&1)
+    local batch_exit_code=$?
+    set -e
+
+    if [[ ${batch_exit_code} -eq 0 ]]; then
+     # Extract number of users processed from NOTICE messages
+     batch_count=$(echo "${batch_result}" | grep -oP 'Processed \K[0-9]+' | tail -1 || echo "0")
+     if [[ -z "${batch_count}" ]] || ! [[ "${batch_count}" =~ ^[0-9]+$ ]]; then
+      batch_count=0
+     fi
+
+     if [[ ${batch_count} -gt 0 ]]; then
+      total_processed=$((total_processed + batch_count))
+      batch_offset=$((batch_offset + batch_count))
+
+      if [[ $((total_processed % 500)) -eq 0 ]]; then
+       __logi "Batch ${LOWER_VALUE}-${HIGH_VALUE}: Processed ${total_processed} users (committed)"
+      fi
+     fi
+
+     # If batch returned fewer users than batch_size, we've reached the end
+     if [[ ${batch_count} -lt ${BATCH_SIZE} ]] || [[ ${batch_count} -eq 0 ]]; then
+      break
+     fi
+    else
+     __loge "Batch ${LOWER_VALUE}-${HIGH_VALUE}: Error processing batch ${batch_num} (offset ${batch_offset}), continuing..."
+     # Try next batch even if current batch failed
+     batch_offset=$((batch_offset + BATCH_SIZE))
+     # Limit retries to avoid infinite loops
+     if [[ ${batch_num} -gt 1000 ]]; then
+      __loge "Batch ${LOWER_VALUE}-${HIGH_VALUE}: Too many batch attempts, stopping"
+      break
+     fi
+    fi
+
+    batch_num=$((batch_num + 1))
+   done
+
+   __logi "Finished user batch ${LOWER_VALUE}-${HIGH_VALUE} - ${BASHPID}. Total processed: ${total_processed}"
   ) &
   ITER=$((ITER + 1))
   LOWER_VALUE=$((HIGH_VALUE + 1))
