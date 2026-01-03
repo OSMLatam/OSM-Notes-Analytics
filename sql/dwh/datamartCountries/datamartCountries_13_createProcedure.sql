@@ -38,6 +38,11 @@ AS $proc$
   LEFT JOIN dwh.dimension_regions r ON c.region_id = r.dimension_region_id
   LEFT JOIN dwh.dimension_continents ON r.continent_id = dimension_continents.dimension_continent_id
   WHERE c.dimension_country_id = m_dimension_country_id;
+  
+  -- Check if country was found (SELECT INTO leaves variables NULL if no row matches)
+  IF m_country_id IS NULL OR m_country_name IS NULL THEN
+    RAISE EXCEPTION 'Country with dimension_country_id % not found', m_dimension_country_id;
+  END IF;
 
   -- date_starting_creating_notes
   SELECT /* Notes-datamartCountries */ date_id

@@ -31,6 +31,11 @@ AS $proc$
   WHERE dimension_user_id = m_dimension_user_id
     AND is_current = TRUE;
   
+  -- Check if user was found (SELECT INTO leaves variables NULL if no row matches)
+  IF m_user_id IS NULL OR m_username IS NULL THEN
+    RAISE EXCEPTION 'User with dimension_user_id % not found or has no current record (is_current = TRUE)', m_dimension_user_id;
+  END IF;
+  
   -- Handle Anonymous user (user_id = -1 or username = 'Anonymous')
   -- Note: Anonymous user handling for user_id = -1 or username = 'Anonymous'
   IF m_user_id = -1 OR m_username = 'Anonymous' THEN
