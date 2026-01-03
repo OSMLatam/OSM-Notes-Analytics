@@ -17,6 +17,8 @@ The datamart user processing system implements an **intelligent prioritization**
 - Inactive users processed in background without affecting active users
 - **Optimal CPU utilization:** Fast users don't leave threads idle
 - **Dynamic load balancing:** Threads always stay busy
+- **Cycle-based processing:** Processes MAX_USERS_PER_CYCLE users per cycle (default: 1000)
+  to allow ETL to complete quickly and update data promptly
 
 ## Prioritization System
 
@@ -96,6 +98,7 @@ ORDER BY
   COUNT(*) DESC,
   -- Priority 4: Most recent activity first
   MAX(f.action_at) DESC NULLS LAST
+LIMIT ${MAX_USERS_PER_CYCLE}  -- Process only N users per cycle (default: 1000)
 ```
 
 ## Parallel Processing
@@ -267,6 +270,42 @@ done
 - **Priority distribution:** How many users in each level
 - **Average time per user:** By priority level
 
+## Cycle-Based Processing
+
+### Why Limit Users Per Cycle?
+
+The system processes a **limited number of users per ETL cycle** (default: 1000) to ensure:
+
+1. **ETL Completes Quickly:** The ETL process can finish in a reasonable time and free up resources
+2. **Prompt Data Updates:** Most active users are processed first, so fresh data is available quickly
+3. **System Responsiveness:** The system remains responsive for ongoing incremental updates
+4. **Progressive Processing:** Less active users are processed in subsequent cycles without blocking active users
+
+### How It Works
+
+- **Prioritization:** Users are ordered by activity (most active first)
+- **Limit:** Only the top N users (MAX_USERS_PER_CYCLE) are processed per cycle
+- **Next Cycle:** Remaining users are processed in the next ETL cycle
+- **Result:** Most important users get fresh data quickly, while less active users are processed progressively
+
+### Example Scenario
+
+**Initial State:** 50,000 modified users
+
+**Cycle 1 (1000 users):**
+- 50 users with activity in last 7 days → **Processed first**
+- 200 users with activity in last 30 days → **Processed next**
+- 750 users with high historical activity → **Processed next**
+- **Result:** ETL completes in ~30 minutes, most active users have fresh data
+
+**Cycle 2 (next ETL run, 1000 users):**
+- Next batch of prioritized users
+- **Result:** More users get fresh data, ETL still completes quickly
+
+**Cycle 3+:** Continues until all users are processed
+
+**Key Benefit:** Active users have fresh data in minutes, not hours/days.
+
 ## Configuration
 
 ### Environment Variables
@@ -274,6 +313,11 @@ done
 ```bash
 # Maximum number of threads (default: nproc)
 MAX_THREADS="${MAX_THREADS:-$(nproc)}"
+
+# Maximum users to process per ETL cycle (default: 1000)
+# This limits processing to allow ETL to complete quickly
+# Users are prioritized by activity, so most active users are processed first
+MAX_USERS_PER_CYCLE="${MAX_USERS_PER_CYCLE:-1000}"
 
 # Batch size for logging (default: 1000)
 batch_size=1000
@@ -284,30 +328,41 @@ batch_size=1000
 **For systems with many users:**
 - Increase `MAX_THREADS` if resources are available
 - Monitor `max_connections` in PostgreSQL
-- Adjust `batch_size` based on volume
+- Adjust `MAX_USERS_PER_CYCLE` based on ETL cycle time requirements
+  - **Default (1000):** Good balance for most systems
+  - **Higher (2000-5000):** If you have more resources and longer ETL windows
+  - **Lower (500):** If you need faster ETL completion times
+- Adjust `batch_size` for logging based on volume
 
 **For systems with limited resources:**
 - Reduce `MAX_THREADS` to `nproc - 2`
+- Reduce `MAX_USERS_PER_CYCLE` to 500 for faster ETL completion
 - Increase `batch_size` for less logging
-- Consider processing in multiple runs
+- Processing happens automatically across multiple cycles
 
 ## Expected Performance
 
 ### Typical Scenarios
 
-**Case 1: 1000 modified users**
+**Case 1: 1000 modified users (all processed in one cycle)**
 - Active users (7 days): ~50 users → **2-5 minutes**
 - Active users (30 days): ~200 users → **10-15 minutes**
 - Inactive users: ~750 users → **30-60 minutes**
 - **Total:** ~1 hour (vs. days without prioritization)
 
-**Case 2: 10000 modified users**
-- Active users (7 days): ~500 users → **10-20 minutes**
-- Active users (30 days): ~2000 users → **1-2 hours**
-- Inactive users: ~7500 users → **5-10 hours**
-- **Total:** ~6-12 hours (vs. days/weeks without prioritization)
+**Case 2: 10000 modified users (processed across multiple cycles)**
+- **Cycle 1 (1000 users):**
+  - Active users (7 days): ~50 users → **2-5 minutes**
+  - Active users (30 days): ~200 users → **10-15 minutes**
+  - High activity users: ~750 users → **30-60 minutes**
+  - **Total Cycle 1:** ~1 hour
+- **Cycle 2-10:** Remaining users processed progressively
+- **Key benefit:** Most active users have fresh data in ~1 hour, not days/weeks
 
-**Key benefit:** Active users have fresh data in minutes, not days.
+**Case 3: 50000 modified users (large initial load)**
+- **Cycle 1 (1000 users):** Most active users → **~1 hour**
+- **Cycles 2-50:** Remaining users processed progressively
+- **Key benefit:** Active users have fresh data quickly, ETL completes promptly each cycle
 
 ## Security Considerations
 
@@ -405,4 +460,8 @@ batch_size=1000
 
 - **v1.0 (2025-12-27):** Initial implementation with static pool
 - **v2.0 (2025-01-XX):** Migrated to work queue for dynamic load balancing (DM-006)
+- **v2.1 (2026-01-03):** Added cycle-based processing limit (MAX_USERS_PER_CYCLE)
+  - Processes maximum 1000 users per cycle (configurable)
+  - Allows ETL to complete quickly and update data promptly
+  - Most active users processed first, less active users processed progressively
 - **Author:** Andres Gomez (AngocA)

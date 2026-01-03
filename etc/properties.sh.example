@@ -184,3 +184,15 @@ fi
 if [[ -z "${PSQL_READONLY_FOR_INGESTION:-}" ]]; then
  declare -r PSQL_READONLY_FOR_INGESTION="${PSQL_READONLY_FOR_INGESTION:-true}"
 fi
+
+# Datamart Users processing configuration
+# Maximum number of users to process per ETL cycle
+# This limits processing to allow ETL to complete quickly and update data promptly
+# Users are prioritized by activity (most active first), so this ensures
+# the most important users are processed first while allowing the ETL to
+# free up resources for incremental updates
+# Default: 1000 users per cycle
+# shellcheck disable=SC2034
+if [[ -z "${MAX_USERS_PER_CYCLE:-}" ]]; then
+ declare -r MAX_USERS_PER_CYCLE="${MAX_USERS_PER_CYCLE:-1000}"
+fi

@@ -8,6 +8,8 @@
 # - Parallel processing with work queue (nproc-1 threads) for dynamic load balancing
 # - Better CPU utilization: fast users don't leave threads idle
 # - Atomic transactions ensure data consistency
+# - Processes MAX_USERS_PER_CYCLE users per cycle (default: 1000) to allow ETL
+#   to complete quickly and update data promptly
 #
 # To follow the progress you can execute:
 #   tail -40f $(ls -1rtd /tmp/datamartUsers_* | tail -1)/datamartUsers.log
@@ -134,7 +136,8 @@ function __show_help {
  echo "  - High-activity users (>100 actions) prioritized"
  echo "  - Parallel processing with work queue (nproc-1 threads)"
  echo "  - Dynamic load balancing for optimal CPU utilization"
- echo "  - Processes all modified users (no limit)"
+ echo "  - Processes MAX_USERS_PER_CYCLE users per cycle (default: 1000)"
+ echo "  - Allows ETL to complete quickly and update data promptly"
  echo
  echo "Documentation: See PARALLEL_PROCESSING.md for detailed information"
  echo "               about prioritization and parallel processing."
@@ -469,7 +472,15 @@ function __processNotesUser {
  # 4. Users with high historical activity (>100 actions) - MEDIUM priority
  # 5. Users with moderate activity (10-100 actions) - LOW priority
  # 6. Inactive users (<10 actions or >2 years inactive) - LOWEST priority
- __logi "Fetching modified users with intelligent prioritization..."
+ # 
+ # IMPORTANT: Process only MAX_USERS_PER_CYCLE users per cycle to allow ETL
+ # to complete quickly and update data promptly. This ensures:
+ # - Most active users are processed first (prioritized)
+ # - ETL can free up resources for incremental updates
+ # - Less active users are processed in subsequent cycles
+ # - System remains responsive for ongoing data updates
+ local max_users_per_cycle="${MAX_USERS_PER_CYCLE:-1000}"
+ __logi "Fetching modified users with intelligent prioritization (max ${max_users_per_cycle} per cycle)..."
  local user_ids
  user_ids=$(__psql_with_appname -d "${DBNAME_DWH}" -Atq -c "
   SELECT /* Notes-datamartUsers-parallel */
@@ -493,11 +504,26 @@ function __processNotesUser {
    COUNT(*) DESC,
    -- Priority 4: Most recent activity first
    MAX(f.action_at) DESC NULLS LAST
+  LIMIT ${max_users_per_cycle}
  ")
 
  local total_users
  total_users=$(echo "${user_ids}" | grep -c . || echo "0")
- __logi "Found ${total_users} users to process (prioritized by relevance)"
+ local total_modified_users
+ total_modified_users=$(__psql_with_appname -d "${DBNAME_DWH}" -Atq -c "
+  SELECT COUNT(DISTINCT f.action_dimension_id_user)
+  FROM dwh.facts f
+   JOIN dwh.dimension_users u
+   ON (f.action_dimension_id_user = u.dimension_user_id)
+  WHERE u.modified = TRUE
+ " || echo "0")
+ 
+ if [[ "${total_modified_users}" -gt "${max_users_per_cycle}" ]]; then
+  __logi "Found ${total_users} users to process this cycle (prioritized by relevance)"
+  __logi "Total modified users: ${total_modified_users} (will process ${max_users_per_cycle} per cycle)"
+ else
+  __logi "Found ${total_users} users to process (prioritized by relevance)"
+ fi
 
  if [[ "${total_users}" -eq 0 ]]; then
   __logi "No users to process"
@@ -649,8 +675,12 @@ function __processNotesUser {
 
  if [[ ${total_failed} -eq 0 ]]; then
   __logi "SUCCESS: Datamart users population completed successfully"
-  __logi "Processed ${actually_processed} users in parallel (${total_users} total)"
-  __logi "All users processed with intelligent prioritization (recent → active → inactive)"
+  __logi "Processed ${actually_processed} users in parallel (${total_users} this cycle)"
+  if [[ "${total_modified_users:-0}" -gt "${max_users_per_cycle}" ]]; then
+   local remaining=$((total_modified_users - actually_processed))
+   __logi "Remaining modified users: ${remaining} (will be processed in next cycle)"
+  fi
+  __logi "Users processed with intelligent prioritization (recent → active → inactive)"
   __logi "⏱️  TIME: Parallel user processing took ${total_time} seconds"
   __log_finish
   rm -f "${work_queue_file}" "${queue_lock_file}" 2> /dev/null || true
