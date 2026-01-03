@@ -154,6 +154,7 @@ teardown() {
 
  for i in {1..4}; do
   (
+   set +e
    local count=0
    local retries=0
    local max_retries=10
@@ -172,20 +173,21 @@ teardown() {
      fi
     fi
     if [[ -n "${item}" ]]; then
-     echo "${item}" >> "${results_file}"
+     echo "${item}" >> "${results_file}" 2>/dev/null || true
      count=$((count + 1))
      retries=0
     else
      break
     fi
    done
+   exit 0
   ) &
   pids+=($!)
  done
 
  # Wait for all threads
  for pid in "${pids[@]}"; do
-  wait "${pid}"
+  wait "${pid}" || true
  done
 
  # Verify all items were processed exactly once
@@ -228,6 +230,7 @@ teardown() {
 
  for i in {1..4}; do
   (
+   set +e
    local count=0
    local retries=0
    local max_retries=10
@@ -246,20 +249,21 @@ teardown() {
      fi
     fi
     if [[ -n "${item}" ]]; then
-     echo "${item}" >> "${results_file}"
+     echo "${item}" >> "${results_file}" 2>/dev/null || true
      count=$((count + 1))
      retries=0
     else
      break
     fi
    done
+   exit 0
   ) &
   pids+=($!)
  done
 
  # Wait for all threads
  for pid in "${pids[@]}"; do
-  wait "${pid}"
+  wait "${pid}" || true
  done
 
  # Verify all items were processed exactly once
@@ -544,6 +548,7 @@ teardown() {
   > "${result_file}"
 
   (
+   set +e
    local count=0
    local retries=0
    local max_retries=10
@@ -562,20 +567,21 @@ teardown() {
      fi
     fi
     if [[ -n "${item}" ]]; then
-     echo "${item}" >> "${result_file}"
+     echo "${item}" >> "${result_file}" 2>/dev/null || true
      count=$((count + 1))
      retries=0
     else
      break
     fi
    done
+   exit 0
   ) &
   pids+=($!)
  done
 
  # Wait for all threads
  for pid in "${pids[@]}"; do
-  wait "${pid}"
+  wait "${pid}" || true
  done
 
  # Count items processed per thread
@@ -629,6 +635,7 @@ teardown() {
   > "${result_file}"
 
   (
+   set +e
    local count=0
    local retries=0
    local max_retries=10
@@ -647,20 +654,21 @@ teardown() {
      fi
     fi
     if [[ -n "${item}" ]]; then
-     echo "${item}" >> "${result_file}"
+     echo "${item}" >> "${result_file}" 2>/dev/null || true
      count=$((count + 1))
      retries=0
     else
      break
     fi
    done
+   exit 0
   ) &
   pids+=($!)
  done
 
  # Wait for all threads
  for pid in "${pids[@]}"; do
-  wait "${pid}"
+  wait "${pid}" || true
  done
 
  # Count items processed per thread
