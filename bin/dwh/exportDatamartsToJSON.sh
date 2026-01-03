@@ -263,9 +263,17 @@ ORDER BY user_id;
 SQL_USERS
 
  if [[ -n "${user_id}" ]]; then
+  # Validate user_id is a positive integer to prevent SQL injection
+  # This validation ensures user_id contains only digits, making it safe for direct interpolation
+  if ! [[ "${user_id}" =~ ^[0-9]+$ ]]; then
+   echo "  ERROR: Invalid user_id format: ${user_id} (skipping)" >&2
+   continue
+  fi
+
   # Export each modified user to a separate JSON file
   # Use export view if available (excludes internal _partial_* columns), otherwise use table directly
   # The view excludes internal columns prefixed with _partial_ or _last_processed_
+  # SECURITY: user_id is validated above to contain only digits, so direct interpolation is safe
   if psql -d "${DBNAME_DWH}" -Atq -c "SELECT 1 FROM information_schema.views WHERE table_schema = 'dwh' AND table_name = 'datamartusers_export'" | grep -q 1; then
    # Use export view (excludes internal columns)
    psql -d "${DBNAME_DWH}" -Atq -c "
@@ -277,7 +285,7 @@ SQL_USERS
         FROM dwh.datamartusers_export du
         LEFT JOIN dwh.contributor_types ct
           ON du.id_contributor_type = ct.contributor_type_id
-        WHERE du.user_id = ${user_id}
+        WHERE du.user_id = $(printf '%d' "${user_id}")
       ) t
 	" > "${ATOMIC_TEMP_DIR}/users/${user_id}.json"
   else
@@ -292,7 +300,7 @@ SQL_USERS
         FROM dwh.datamartusers du
         LEFT JOIN dwh.contributor_types ct
           ON du.id_contributor_type = ct.contributor_type_id
-        WHERE du.user_id = ${user_id}
+        WHERE du.user_id = $(printf '%d' "${user_id}")
       ) t
 	" > "${ATOMIC_TEMP_DIR}/users/${user_id}.json"
   fi
@@ -301,10 +309,11 @@ SQL_USERS
   MODIFIED_USER_COUNT=$((MODIFIED_USER_COUNT + 1))
 
   # Mark as exported in database
+  # SECURITY: user_id is validated above to contain only digits, so direct interpolation is safe
   psql -d "${DBNAME_DWH}" -Atq -c "
       UPDATE dwh.datamartusers
       SET json_exported = TRUE
-      WHERE user_id = ${user_id}
+      WHERE user_id = $(printf '%d' "${user_id}")
 	" > /dev/null 2>&1 || true
 
   # Validate only modified user files
