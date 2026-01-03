@@ -62,16 +62,20 @@ Key scripts:
 - `dwh.facts` - One row per note action (opened, closed, commented, reopened, hidden)
   - Partitioned by year (2013-2025+) for optimal performance
   - Contains 30+ columns including metrics (days_to_resolution, etc.)
+  - Includes temporal dimensions: `action_dimension_id_season` (season analysis), `action_timezone_id` (timezone for local time), `local_action_dimension_id_date` (local date based on timezone)
   - See [Data Dictionary](../../docs/DWH_Star_Schema_Data_Dictionary.md#table-dwhfacts) for complete column definitions
 
 **Dimension Tables:**
 - `dimension_users` - User information with SCD2 support
 - `dimension_countries` - Countries with ISO codes and regions
-- `dimension_days` - Date dimension with enhanced attributes
-- `dimension_time_of_week` - Hour of week with period of day
+- `dimension_days` - Date dimension with enhanced attributes (iso_week, quarter, month_name, etc.)
+- `dimension_time_of_week` - Hour of week with period of day (Night/Morning/Afternoon/Evening)
+- `dimension_timezones` - Timezone information (IANA tz names, UTC offsets) for local time analysis
+- `dimension_seasons` - Seasons (Spring, Summer, Autumn, Winter) for temporal analysis
+- `dimension_continents` - Continents (Americas, Europe, Asia, Africa, Oceania, Antarctica)
 - `dimension_applications` - Applications used to create notes
 - `dimension_hashtags` - Hashtags found in notes
-- Plus additional dimensions (regions, continents, timezones, seasons, automation levels, experience levels)
+- Plus additional dimensions (regions, automation levels, experience levels)
 
 **Datamart Tables:**
 - `dwh.datamartUsers` - Pre-computed user analytics (70+ metrics)

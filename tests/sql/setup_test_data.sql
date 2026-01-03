@@ -82,8 +82,21 @@ BEGIN
     INSERT INTO dwh.dimension_days (date_id) VALUES
       ('2023-01-01'),
       ('2023-01-02'),
+      ('2023-01-06'),
+      ('2023-01-12'),
+      ('2023-02-01'),
+      ('2023-02-15'),
+      ('2023-03-01'),
+      ('2023-03-20'),
       ('2024-01-01'),
+      ('2024-01-02'),
+      ('2024-01-05'),
+      ('2024-01-06'),
+      ('2024-02-01'),
+      ('2024-02-10'),
       ('2024-06-15'),
+      ('2024-07-01'),
+      ('2024-07-15'),
       ('2025-01-01');
   END IF;
 END $$;
@@ -120,34 +133,51 @@ BEGIN
       has_mention BOOLEAN
     )';
 
-    -- Insert minimal test data
+    -- Insert minimal test data with resolution metrics
+    -- Note: Using action_dimension_id_user instead of dimension_id_user
     INSERT INTO dwh.facts (
       id_note, action_at, action_comment,
-      dimension_id_country, dimension_id_user,
+      dimension_id_country, action_dimension_id_user,
       action_dimension_id_date,
       opened_dimension_id_date, opened_dimension_id_user,
       closed_dimension_id_date, closed_dimension_id_user,
       dimension_application_creation, days_to_resolution,
       comment_length, has_url, has_mention
     ) VALUES
-      -- Country 1: 3 opened, 2 closed (1 resolved in 5 days, 1 in 10 days), 1 still open
-      -- Comments: avg length 20, 1 with URL, 1 with mention
+      -- Country 1: Multiple notes with resolution data across different years/months
+      -- Note 1001: Opened 2023-01-01, closed 2023-01-06 (5 days)
       (1001, '2023-01-01 10:00:00', 'opened', 1, 1, 1, 1, 1, NULL, NULL, 1, NULL, 15, FALSE, FALSE),
-      (1001, '2023-01-06 14:00:00', 'closed', 1, 2, 2, 1, 1, 2, 2, NULL, 5, 25, TRUE, TRUE),
+      (1001, '2023-01-06 14:00:00', 'closed', 1, 2, 3, 1, 1, 3, 2, NULL, 5, 25, TRUE, TRUE),
+      -- Note 1002: Opened 2023-01-02, closed 2023-01-12 (10 days)
       (1002, '2023-01-02 11:00:00', 'opened', 1, 1, 2, 2, 1, NULL, NULL, 2, NULL, 10, FALSE, FALSE),
-      (1002, '2023-01-12 15:00:00', 'closed', 1, 2, 3, 2, 1, 3, 2, NULL, 10, 30, FALSE, FALSE),
-      (1003, '2023-01-03 12:00:00', 'opened', 1, 1, 3, 3, 1, NULL, NULL, 3, NULL, 20, FALSE, FALSE),
+      (1002, '2023-01-12 15:00:00', 'closed', 1, 2, 4, 2, 1, 4, 2, NULL, 10, 30, FALSE, FALSE),
+      -- Note 1003: Opened 2023-02-01, closed 2023-02-15 (14 days) - different month
+      (1003, '2023-02-01 10:00:00', 'opened', 1, 1, 5, 5, 1, NULL, NULL, 1, NULL, 20, FALSE, FALSE),
+      (1003, '2023-02-15 14:00:00', 'closed', 1, 2, 6, 5, 1, 6, 2, NULL, 14, 35, TRUE, FALSE),
+      -- Note 1004: Opened 2023-03-01, closed 2023-03-20 (19 days) - different month
+      (1004, '2023-03-01 10:00:00', 'opened', 1, 1, 7, 7, 1, NULL, NULL, 2, NULL, 25, FALSE, TRUE),
+      (1004, '2023-03-20 14:00:00', 'closed', 1, 2, 8, 7, 1, 8, 2, NULL, 19, 40, FALSE, FALSE),
+      -- Note 1005: Opened 2023-01-01, still open (no resolution)
+      (1005, '2023-01-01 12:00:00', 'opened', 1, 1, 1, 1, 1, NULL, NULL, 3, NULL, 20, FALSE, FALSE),
 
-      -- Country 2: 2 opened, 2 closed (100% resolution)
-      -- Comments: avg length 40, 2 with URL, 1 with mention
-      (2001, '2024-01-01 10:00:00', 'opened', 2, 2, 3, 3, 2, NULL, NULL, 4, NULL, 30, TRUE, FALSE),
-      (2001, '2024-01-05 14:00:00', 'closed', 2, 2, 4, 3, 2, 4, 2, NULL, 4, 50, TRUE, TRUE),
-      (2002, '2024-01-02 11:00:00', 'opened', 2, 3, 4, 4, 3, NULL, NULL, 5, NULL, 35, FALSE, FALSE),
-      (2002, '2024-01-06 15:00:00', 'closed', 2, 2, 5, 4, 3, 5, 2, NULL, 4, 45, FALSE, FALSE),
+      -- Country 2: Multiple notes with resolution data in 2024
+      -- Note 2001: Opened 2024-01-01, closed 2024-01-05 (4 days)
+      (2001, '2024-01-01 10:00:00', 'opened', 2, 2, 9, 9, 2, NULL, NULL, 4, NULL, 30, TRUE, FALSE),
+      (2001, '2024-01-05 14:00:00', 'closed', 2, 2, 11, 9, 2, 11, 2, NULL, 4, 50, TRUE, TRUE),
+      -- Note 2002: Opened 2024-01-02, closed 2024-01-06 (4 days)
+      (2002, '2024-01-02 11:00:00', 'opened', 2, 3, 10, 10, 3, NULL, NULL, 5, NULL, 35, FALSE, FALSE),
+      (2002, '2024-01-06 15:00:00', 'closed', 2, 2, 12, 10, 3, 12, 2, NULL, 4, 45, FALSE, FALSE),
+      -- Note 2003: Opened 2024-02-01, closed 2024-02-10 (9 days) - different month
+      (2003, '2024-02-01 10:00:00', 'opened', 2, 2, 13, 13, 2, NULL, NULL, 4, NULL, 40, TRUE, FALSE),
+      (2003, '2024-02-10 14:00:00', 'closed', 2, 3, 14, 13, 2, 14, 3, NULL, 9, 55, FALSE, TRUE),
+      -- Note 2004: Opened 2024-01-01, still open (no resolution)
+      (2004, '2024-01-01 12:00:00', 'opened', 2, 3, 9, 9, 3, NULL, NULL, 6, NULL, 20, FALSE, FALSE),
 
-      -- Country 3: 1 opened, not closed (0% resolution)
-      -- Comments: avg length 15, no URLs, no mentions
-      (3001, '2024-06-15 10:00:00', 'opened', 3, 3, 4, 4, 3, NULL, NULL, 6, NULL, 15, FALSE, FALSE);
+      -- Country 3: One opened note, not closed (0% resolution)
+      (3001, '2024-06-15 10:00:00', 'opened', 3, 3, 15, 15, 3, NULL, NULL, 6, NULL, 15, FALSE, FALSE),
+      -- Note 3002: Opened and closed in 2024-07 for resolution_by_year/month testing
+      (3002, '2024-07-01 10:00:00', 'opened', 3, 3, 16, 16, 3, NULL, NULL, 1, NULL, 20, FALSE, FALSE),
+      (3002, '2024-07-15 14:00:00', 'closed', 3, 3, 17, 16, 3, 17, 3, NULL, 14, 30, FALSE, FALSE);
   END IF;
 END $$;
 

@@ -17,6 +17,9 @@ AS $proc$
   m_country_name VARCHAR(100);
   m_country_name_es VARCHAR(100);
   m_country_name_en VARCHAR(100);
+  m_iso_alpha2 VARCHAR(2);
+  m_iso_alpha3 VARCHAR(3);
+  m_dimension_continent_id INTEGER;
   m_date_starting_creating_notes DATE;
   m_date_starting_solving_notes DATE;
   m_first_open_note_id INTEGER;
@@ -26,11 +29,15 @@ AS $proc$
   m_last_year_activity CHAR(371);
   r RECORD;
  BEGIN
-  SELECT /* Notes-datamartCountries */ country_id, country_name,
-   country_name_es, country_name_en
-   INTO m_country_id, m_country_name, m_country_name_es, m_country_name_en
-  FROM dwh.dimension_countries
-  WHERE dimension_country_id = m_dimension_country_id;
+  SELECT /* Notes-datamartCountries */ c.country_id, c.country_name,
+   c.country_name_es, c.country_name_en, c.iso_alpha2, c.iso_alpha3,
+   r.continent_id AS dimension_continent_id
+   INTO m_country_id, m_country_name, m_country_name_es, m_country_name_en,
+        m_iso_alpha2, m_iso_alpha3, m_dimension_continent_id
+  FROM dwh.dimension_countries c
+  LEFT JOIN dwh.dimension_regions r ON c.region_id = r.dimension_region_id
+  LEFT JOIN dwh.dimension_continents ON r.continent_id = dimension_continents.dimension_continent_id
+  WHERE c.dimension_country_id = m_dimension_country_id;
 
   -- date_starting_creating_notes
   SELECT /* Notes-datamartCountries */ date_id
@@ -128,6 +135,9 @@ AS $proc$
    country_name,
    country_name_es,
    country_name_en,
+   iso_alpha2,
+   iso_alpha3,
+   dimension_continent_id,
    date_starting_creating_notes,
    date_starting_solving_notes,
    first_open_note_id,
@@ -141,6 +151,9 @@ AS $proc$
    m_country_name,
    m_country_name_es,
    m_country_name_en,
+   m_iso_alpha2,
+   m_iso_alpha3,
+   m_dimension_continent_id,
    m_date_starting_creating_notes,
    m_date_starting_solving_notes,
    m_first_open_note_id,
@@ -789,6 +802,7 @@ AS $proc$
   ) AS S;
 
   -- working_hours_of_week_opening
+  -- Note: Uses action_dimension_id_season for seasonal analysis
   WITH hours AS (
    SELECT /* Notes-datamartCountries */ day_of_week, hour_of_day, COUNT(1)
    FROM dwh.facts f
@@ -796,6 +810,7 @@ AS $proc$
     ON f.opened_dimension_id_hour_of_week = t.dimension_tow_id
    WHERE f.dimension_id_country = m_dimension_id_country
     AND f.action_comment = 'opened'
+    AND f.action_dimension_id_season IS NOT NULL
    GROUP BY day_of_week, hour_of_day
    ORDER BY day_of_week, hour_of_day
   )
@@ -804,6 +819,7 @@ AS $proc$
   FROM hours;
 
   -- working_hours_of_week_commenting
+  -- Note: Uses action_dimension_id_season for seasonal analysis
   WITH hours AS (
    SELECT /* Notes-datamartCountries */ day_of_week, hour_of_day, COUNT(1)
    FROM dwh.facts f
@@ -811,6 +827,7 @@ AS $proc$
     ON f.action_dimension_id_hour_of_week = t.dimension_tow_id
    WHERE f.dimension_id_country = m_dimension_id_country
     AND f.action_comment = 'commented'
+    AND f.action_dimension_id_season IS NOT NULL
    GROUP BY day_of_week, hour_of_day
    ORDER BY day_of_week, hour_of_day
   )
@@ -819,12 +836,14 @@ AS $proc$
   FROM hours;
 
   -- working_hours_of_week_closing
+  -- Note: Uses action_dimension_id_season for seasonal analysis
   WITH hours AS (
    SELECT /* Notes-datamartCountries */ day_of_week, hour_of_day, COUNT(1)
    FROM dwh.facts f
     JOIN dwh.dimension_time_of_week t
     ON f.closed_dimension_id_hour_of_week = t.dimension_tow_id
    WHERE f.dimension_id_country = m_dimension_id_country
+     AND f.action_dimension_id_season IS NOT NULL
    GROUP BY day_of_week, hour_of_day
    ORDER BY day_of_week, hour_of_day
   )

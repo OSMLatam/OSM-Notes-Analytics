@@ -28,7 +28,14 @@ AS $proc$
   SELECT /* Notes-datamartUsers */ user_id, username
    INTO m_user_id, m_username
   FROM dwh.dimension_users
-  WHERE dimension_user_id = m_dimension_user_id;
+  WHERE dimension_user_id = m_dimension_user_id
+    AND is_current = TRUE;
+  
+  -- Handle Anonymous user (user_id = -1 or username = 'Anonymous')
+  -- Note: Anonymous user handling for user_id = -1 or username = 'Anonymous'
+  IF m_user_id = -1 OR m_username = 'Anonymous' THEN
+    m_username := COALESCE(m_username, 'Anonymous');
+  END IF;
 
   -- Gets the date of the first note created by the current user.
   -- date_starting_creating_notes
@@ -524,6 +531,13 @@ AS $proc$
   m_user_response_time DECIMAL(10,2);
   m_days_since_last_action INTEGER;
   m_collaboration_patterns JSON;
+  -- Enhanced date columns from dimension_days
+  m_iso_week SMALLINT;
+  m_quarter SMALLINT;
+  m_month_name VARCHAR(16);
+  -- Enhanced time columns from dimension_time_of_week
+  m_hour_of_week SMALLINT;
+  m_period_of_day VARCHAR(16);
   BEGIN
   -- Start timing
   m_start_time := CLOCK_TIMESTAMP();
@@ -815,12 +829,14 @@ AS $proc$
   ) AS S;
 
   -- working_hours_of_week_opening
+  -- Note: Uses action_dimension_id_season for seasonal analysis
   WITH hours AS (
    SELECT /* Notes-datamartUsers */ day_of_week, hour_of_day, COUNT(1)
    FROM dwh.facts f
     JOIN dwh.dimension_time_of_week t
     ON f.opened_dimension_id_hour_of_week = t.dimension_tow_id
    WHERE f.opened_dimension_id_user = m_dimension_user_id
+     AND f.action_dimension_id_season IS NOT NULL
    GROUP BY day_of_week, hour_of_day
    ORDER BY day_of_week, hour_of_day
   )
@@ -829,6 +845,7 @@ AS $proc$
   FROM hours;
 
   -- working_hours_of_week_commenting
+  -- Note: Uses action_dimension_id_season for seasonal analysis
   WITH hours AS (
    SELECT /* Notes-datamartUsers */ day_of_week, hour_of_day, COUNT(1)
    FROM dwh.facts f
@@ -836,6 +853,7 @@ AS $proc$
     ON f.action_dimension_id_hour_of_week = t.dimension_tow_id
    WHERE f.action_dimension_id_user = m_dimension_user_id
     AND f.action_comment = 'commented'
+    AND f.action_dimension_id_season IS NOT NULL
    GROUP BY day_of_week, hour_of_day
    ORDER BY day_of_week, hour_of_day
   )
@@ -844,12 +862,14 @@ AS $proc$
   FROM hours;
 
   -- working_hours_of_week_closing
+  -- Note: Uses action_dimension_id_season for seasonal analysis
   WITH hours AS (
    SELECT /* Notes-datamartUsers */ day_of_week, hour_of_day, COUNT(1)
    FROM dwh.facts f
     JOIN dwh.dimension_time_of_week t
     ON f.closed_dimension_id_hour_of_week = t.dimension_tow_id
    WHERE f.closed_dimension_id_user = m_dimension_user_id
+     AND f.action_dimension_id_season IS NOT NULL
    GROUP BY day_of_week, hour_of_day
    ORDER BY day_of_week, hour_of_day
   )
@@ -1552,6 +1572,58 @@ AS $proc$
     m_days_since_last_action := 0;
   END IF;
 
+  -- Enhanced date columns: Most common ISO week, quarter, and month name
+  SELECT /* Notes-datamartUsers */ d.iso_week
+   INTO m_iso_week
+  FROM dwh.facts f
+   JOIN dwh.dimension_days d ON f.action_dimension_id_date = d.dimension_day_id
+  WHERE f.action_dimension_id_user = m_dimension_user_id
+    AND d.iso_week IS NOT NULL
+  GROUP BY d.iso_week
+  ORDER BY COUNT(*) DESC
+  LIMIT 1;
+
+  SELECT /* Notes-datamartUsers */ d.quarter
+   INTO m_quarter
+  FROM dwh.facts f
+   JOIN dwh.dimension_days d ON f.action_dimension_id_date = d.dimension_day_id
+  WHERE f.action_dimension_id_user = m_dimension_user_id
+    AND d.quarter IS NOT NULL
+  GROUP BY d.quarter
+  ORDER BY COUNT(*) DESC
+  LIMIT 1;
+
+  SELECT /* Notes-datamartUsers */ d.month_name
+   INTO m_month_name
+  FROM dwh.facts f
+   JOIN dwh.dimension_days d ON f.action_dimension_id_date = d.dimension_day_id
+  WHERE f.action_dimension_id_user = m_dimension_user_id
+    AND d.month_name IS NOT NULL
+  GROUP BY d.month_name
+  ORDER BY COUNT(*) DESC
+  LIMIT 1;
+
+  -- Enhanced time columns: Most common hour_of_week and period_of_day
+  SELECT /* Notes-datamartUsers */ t.hour_of_week
+   INTO m_hour_of_week
+  FROM dwh.facts f
+   JOIN dwh.dimension_time_of_week t ON f.action_dimension_id_hour_of_week = t.dimension_tow_id
+  WHERE f.action_dimension_id_user = m_dimension_user_id
+    AND t.hour_of_week IS NOT NULL
+  GROUP BY t.hour_of_week
+  ORDER BY COUNT(*) DESC
+  LIMIT 1;
+
+  SELECT /* Notes-datamartUsers */ t.period_of_day
+   INTO m_period_of_day
+  FROM dwh.facts f
+   JOIN dwh.dimension_time_of_week t ON f.action_dimension_id_hour_of_week = t.dimension_tow_id
+  WHERE f.action_dimension_id_user = m_dimension_user_id
+    AND t.period_of_day IS NOT NULL
+  GROUP BY t.period_of_day
+  ORDER BY COUNT(*) DESC
+  LIMIT 1;
+
   -- Collaboration patterns
   WITH mentions_given AS (
     SELECT COUNT(*) as cnt
@@ -1671,6 +1743,11 @@ AS $proc$
   , user_response_time = m_user_response_time
   , days_since_last_action = m_days_since_last_action
   , collaboration_patterns = m_collaboration_patterns
+  , iso_week = m_iso_week
+  , quarter = m_quarter
+  , month_name = m_month_name
+  , hour_of_week = m_hour_of_week
+  , period_of_day = m_period_of_day
   WHERE dimension_user_id = m_dimension_user_id;
 
   -- Only update year activity if procedure exists and years columns exist

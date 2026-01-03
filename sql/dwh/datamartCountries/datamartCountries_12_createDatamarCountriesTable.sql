@@ -10,6 +10,9 @@ CREATE TABLE IF NOT EXISTS dwh.datamartCountries (
  country_name VARCHAR(100),
  country_name_es VARCHAR(100),
  country_name_en VARCHAR(100),
+ iso_alpha2 VARCHAR(2), -- ISO 3166-1 alpha-2 code
+ iso_alpha3 VARCHAR(3), -- ISO 3166-1 alpha-3 code
+ dimension_continent_id INTEGER, -- Reference to dimension_continents
  date_starting_creating_notes DATE, -- Oldest opened note.
  date_starting_solving_notes DATE, -- Oldest closed note.
  first_open_note_id INTEGER, -- Oldest.
@@ -108,6 +111,12 @@ COMMENT ON COLUMN dwh.datamartCountries.country_name_es IS
   'OSM country name in Spanish';
 COMMENT ON COLUMN dwh.datamartCountries.country_name_en IS
   'OSM country name in English';
+COMMENT ON COLUMN dwh.datamartCountries.iso_alpha2 IS
+  'ISO 3166-1 alpha-2 country code (e.g., US, GB, FR)';
+COMMENT ON COLUMN dwh.datamartCountries.iso_alpha3 IS
+  'ISO 3166-1 alpha-3 country code (e.g., USA, GBR, FRA)';
+COMMENT ON COLUMN dwh.datamartCountries.dimension_continent_id IS
+  'Reference to dimension_continents (obtained via dimension_countries.region_id -> dimension_regions.continent_id)';
 COMMENT ON COLUMN dwh.datamartCountries.date_starting_creating_notes IS
   'Oldest opened note';
 COMMENT ON COLUMN dwh.datamartCountries.date_starting_solving_notes IS

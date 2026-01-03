@@ -96,7 +96,14 @@ CREATE TABLE IF NOT EXISTS dwh.datamartUsers (
   version_adoption_rates JSON,
   user_response_time DECIMAL(10,2),
   days_since_last_action INTEGER,
-  collaboration_patterns JSON
+  collaboration_patterns JSON,
+  -- Enhanced date columns from dimension_days
+  iso_week SMALLINT, -- Most common ISO week for user activity
+  quarter SMALLINT, -- Most common quarter for user activity
+  month_name VARCHAR(16), -- Most common month name for user activity
+  -- Enhanced time columns from dimension_time_of_week
+  hour_of_week SMALLINT, -- Most common hour of week for user activity
+  period_of_day VARCHAR(16) -- Most common period of day (Night/Morning/Afternoon/Evening)
 );
 COMMENT ON TABLE dwh.datamartUsers IS
   'Contains all precalculated statistical values for users';
