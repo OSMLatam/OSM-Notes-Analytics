@@ -197,40 +197,56 @@ else
 fi
 
 echo "[MOCK-ETL] Creating datamart tables..."
-# datamartCountries: skip PK if it already exists
+# datamartCountries: create table first, then add new columns if needed
+# datamartUsers: create table first, then add new columns if needed
+
+# datamartCountries: create table, then add new columns before executing full script
 HAS_PK_DC=$("${psql_cmd[@]}" -tAc "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema='dwh' AND table_name='datamartcountries' AND constraint_type='PRIMARY KEY')" 2> /dev/null || echo "f")
 if [[ "${HAS_PK_DC}" == "t" ]]; then
+ # Table exists: add new columns first, then execute script (which will skip CREATE TABLE)
+ "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS iso_alpha2 VARCHAR(2);" 2> /dev/null || true
+ "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS iso_alpha3 VARCHAR(3);" 2> /dev/null || true
+ "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS dimension_continent_id INTEGER;" 2> /dev/null || true
  TMP_DC12_DDL="$(mktemp)"
  awk '
-    BEGIN {skip=0}
-    /^ALTER TABLE dwh\.datamartCountries/ {skip=1; next}
-    skip && /;[[:space:]]*$/ {skip=0; next}
-    skip {next}
-    {print}
-  ' "${PROJECT_ROOT}/sql/dwh/datamartCountries/datamartCountries_12_createDatamarCountriesTable.sql" > "${TMP_DC12_DDL}"
+   BEGIN {skip=0}
+   /^ALTER TABLE dwh\.datamartCountries/ {skip=1; next}
+   skip && /;[[:space:]]*$/ {skip=0; next}
+   skip {next}
+   {print}
+ ' "${PROJECT_ROOT}/sql/dwh/datamartCountries/datamartCountries_12_createDatamarCountriesTable.sql" > "${TMP_DC12_DDL}"
  "${psql_cmd[@]}" -f "${TMP_DC12_DDL}"
  rm -f "${TMP_DC12_DDL}"
 else
+ # Table doesn't exist: create it with full script (includes new columns)
  "${psql_cmd[@]}" -f "${PROJECT_ROOT}/sql/dwh/datamartCountries/datamartCountries_12_createDatamarCountriesTable.sql"
 fi
 
-# datamartUsers: skip PK blocks that already exist
+# datamartUsers: create table, then add new columns before executing full script
 HAS_PK_DU=$("${psql_cmd[@]}" -tAc "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema='dwh' AND table_name='datamartusers' AND constraint_type='PRIMARY KEY')" 2> /dev/null || echo "f")
 HAS_PK_BADGES=$("${psql_cmd[@]}" -tAc "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema='dwh' AND table_name='badges' AND constraint_type='PRIMARY KEY')" 2> /dev/null || echo "f")
 HAS_PK_BADGE_USERS=$("${psql_cmd[@]}" -tAc "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema='dwh' AND table_name='badges_per_users' AND constraint_type='PRIMARY KEY')" 2> /dev/null || echo "f")
 HAS_PK_CONTR_TYPES=$("${psql_cmd[@]}" -tAc "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema='dwh' AND table_name='contributor_types' AND constraint_type='PRIMARY KEY')" 2> /dev/null || echo "f")
 if [[ "${HAS_PK_DU}" == "t" || "${HAS_PK_BADGES}" == "t" || "${HAS_PK_BADGE_USERS}" == "t" || "${HAS_PK_CONTR_TYPES}" == "t" ]]; then
+ # Table exists: add new columns first, then execute script (which will skip CREATE TABLE)
+ if [[ "${HAS_PK_DU}" == "t" ]]; then
+  "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS iso_week SMALLINT;" 2> /dev/null || true
+  "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS quarter SMALLINT;" 2> /dev/null || true
+  "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS month_name VARCHAR(16);" 2> /dev/null || true
+  "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS hour_of_week SMALLINT;" 2> /dev/null || true
+  "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS period_of_day VARCHAR(16);" 2> /dev/null || true
+ fi
  TMP_DU12_DDL="$(mktemp)"
  awk -v pk_du="${HAS_PK_DU}" -v pk_b="${HAS_PK_BADGES}" -v pk_bu="${HAS_PK_BADGE_USERS}" -v pk_ct="${HAS_PK_CONTR_TYPES}" '
-    BEGIN {skip=0}
-    /^ALTER TABLE dwh\.datamartUsers/ { if (pk_du=="t") { skip=1; next } }
-    /^ALTER TABLE dwh\.badges$/ { if (pk_b=="t") { skip=1; next } }
-    /^ALTER TABLE dwh\.badges_per_users$/ { if (pk_bu=="t") { skip=1; next } }
-    /^ALTER TABLE dwh\.contributor_types$/ { if (pk_ct=="t") { skip=1; next } }
-    skip && /;[[:space:]]*$/ { skip=0; next }
-    skip { next }
-    { print }
-  ' "${PROJECT_ROOT}/sql/dwh/datamartUsers/datamartUsers_12_createDatamartUsersTable.sql" > "${TMP_DU12_DDL}"
+   BEGIN {skip=0}
+   /^ALTER TABLE dwh\.datamartUsers/ { if (pk_du=="t") { skip=1; next } }
+   /^ALTER TABLE dwh\.badges$/ { if (pk_b=="t") { skip=1; next } }
+   /^ALTER TABLE dwh\.badges_per_users$/ { if (pk_bu=="t") { skip=1; next } }
+   /^ALTER TABLE dwh\.contributor_types$/ { if (pk_ct=="t") { skip=1; next } }
+   skip && /;[[:space:]]*$/ { skip=0; next }
+   skip { next }
+   { print }
+ ' "${PROJECT_ROOT}/sql/dwh/datamartUsers/datamartUsers_12_createDatamartUsersTable.sql" > "${TMP_DU12_DDL}"
  "${psql_cmd[@]}" -f "${TMP_DU12_DDL}"
  rm -f "${TMP_DU12_DDL}"
 else
@@ -244,11 +260,13 @@ fi
 "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS resolution_by_month JSON;"
 
 # Ensure new ISO and continent columns exist in datamartCountries (idempotent)
+# These must be added AFTER table creation but BEFORE procedure execution
 "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS iso_alpha2 VARCHAR(2);"
 "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS iso_alpha3 VARCHAR(3);"
 "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS dimension_continent_id INTEGER;"
 
 # Ensure new enhanced date/time columns exist in datamartUsers (idempotent)
+# These must be added AFTER table creation but BEFORE procedure execution
 "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS iso_week SMALLINT;"
 "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS quarter SMALLINT;"
 "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS month_name VARCHAR(16);"
@@ -269,6 +287,7 @@ echo "[MOCK-ETL] Ensuring dimension flags are set for recalculation..."
 
 echo "[MOCK-ETL] Creating/refreshing datamart procedures (best effort) ..."
 # Create procedures if needed; rely on existing files
+# IMPORTANT: Procedures must be created AFTER columns are added, as they reference the new columns
 if [[ -f "${PROJECT_ROOT}/sql/dwh/datamartCountries/datamartCountries_13_createProcedure.sql" ]]; then
  "${psql_cmd[@]}" -f "${PROJECT_ROOT}/sql/dwh/datamartCountries/datamartCountries_13_createProcedure.sql"
 fi
