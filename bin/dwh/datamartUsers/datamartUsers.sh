@@ -521,13 +521,20 @@ function __processNotesUser {
  local total_users
  total_users=$(echo "${user_ids}" | grep -c . || echo "0")
  local total_modified_users
+ # Get total modified users count (invoke separately to avoid shellcheck SC2310 warning)
+ set +e
  total_modified_users=$(__psql_with_appname -d "${DBNAME_DWH}" -Atq -c "
   SELECT COUNT(DISTINCT f.action_dimension_id_user)
   FROM dwh.facts f
    JOIN dwh.dimension_users u
    ON (f.action_dimension_id_user = u.dimension_user_id)
   WHERE u.modified = TRUE
- " || echo "0")
+ ")
+ local query_ret=${?}
+ set -e
+ if [[ ${query_ret} -ne 0 ]] || [[ -z "${total_modified_users}" ]]; then
+  total_modified_users="0"
+ fi
 
  if [[ "${total_modified_users}" -gt "${max_users_per_cycle}" ]]; then
   __logi "Found ${total_users} users to process this cycle (prioritized by relevance)"
