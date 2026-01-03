@@ -50,6 +50,27 @@ BEGIN
   END IF;
 END $$;
 
+-- Check if dimension_regions exists, if not create it (empty, for JOIN compatibility)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'dwh' AND table_name = 'dimension_regions') THEN
+    CREATE TABLE dwh.dimension_regions (
+      dimension_region_id SERIAL PRIMARY KEY,
+      continent_id INTEGER
+    );
+  END IF;
+END $$;
+
+-- Check if dimension_continents exists, if not create it (empty, for JOIN compatibility)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'dwh' AND table_name = 'dimension_continents') THEN
+    CREATE TABLE dwh.dimension_continents (
+      dimension_continent_id SERIAL PRIMARY KEY
+    );
+  END IF;
+END $$;
+
 -- Check if dimension_countries exists, if not create it
 DO $$
 BEGIN
@@ -60,13 +81,27 @@ BEGIN
       country_name VARCHAR(100),
       country_name_es VARCHAR(100),
       country_name_en VARCHAR(100),
+      iso_alpha2 VARCHAR(2),
+      iso_alpha3 VARCHAR(3),
+      region_id INTEGER,
       modified BOOLEAN DEFAULT TRUE
     );
 
-    INSERT INTO dwh.dimension_countries (country_id, country_name, country_name_es, country_name_en) VALUES
-      (1, 'TestCountry1', 'TestCountry1', 'TestCountry1'),
-      (2, 'TestCountry2', 'TestCountry2', 'TestCountry2'),
-      (3, 'TestCountry3', 'TestCountry3', 'TestCountry3');
+    INSERT INTO dwh.dimension_countries (country_id, country_name, country_name_es, country_name_en, iso_alpha2, iso_alpha3, region_id) VALUES
+      (1, 'TestCountry1', 'TestCountry1', 'TestCountry1', 'TC', 'TST', NULL),
+      (2, 'TestCountry2', 'TestCountry2', 'TestCountry2', 'T2', 'TS2', NULL),
+      (3, 'TestCountry3', 'TestCountry3', 'TestCountry3', 'T3', 'TS3', NULL);
+  ELSE
+    -- Ensure columns exist if table already exists (for backward compatibility)
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'dwh' AND table_name = 'dimension_countries' AND column_name = 'iso_alpha2') THEN
+      ALTER TABLE dwh.dimension_countries ADD COLUMN iso_alpha2 VARCHAR(2);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'dwh' AND table_name = 'dimension_countries' AND column_name = 'iso_alpha3') THEN
+      ALTER TABLE dwh.dimension_countries ADD COLUMN iso_alpha3 VARCHAR(3);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'dwh' AND table_name = 'dimension_countries' AND column_name = 'region_id') THEN
+      ALTER TABLE dwh.dimension_countries ADD COLUMN region_id INTEGER;
+    END IF;
   END IF;
 END $$;
 

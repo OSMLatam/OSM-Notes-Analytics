@@ -243,6 +243,18 @@ fi
 "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS resolution_by_year JSON;"
 "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS resolution_by_month JSON;"
 
+# Ensure new ISO and continent columns exist in datamartCountries (idempotent)
+"${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS iso_alpha2 VARCHAR(2);"
+"${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS iso_alpha3 VARCHAR(3);"
+"${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS dimension_continent_id INTEGER;"
+
+# Ensure new enhanced date/time columns exist in datamartUsers (idempotent)
+"${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS iso_week SMALLINT;"
+"${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS quarter SMALLINT;"
+"${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS month_name VARCHAR(16);"
+"${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS hour_of_week SMALLINT;"
+"${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS period_of_day VARCHAR(16);"
+
 # Create global datamart if script exists (best effort)
 if [[ -f "${PROJECT_ROOT}/sql/dwh/datamartGlobal/datamartGlobal_12_createTable.sql" ]]; then
  "${psql_cmd[@]}" -f "${PROJECT_ROOT}/sql/dwh/datamartGlobal/datamartGlobal_12_createTable.sql" || true
