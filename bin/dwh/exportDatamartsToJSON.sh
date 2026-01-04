@@ -336,7 +336,7 @@ fi
 # Create user index file
 # shellcheck disable=SC2312  # Command substitution in echo is intentional; date command is safe
 echo "$(date +%Y-%m-%d\ %H:%M:%S) - Creating user index..."
-psql -d "${DBNAME_DWH}" -Atq -c "
+if ! psql -d "${DBNAME_DWH}" -Atq -c "
   SELECT COALESCE(json_agg(t), '[]'::json)
   FROM (
     SELECT
@@ -365,7 +365,9 @@ psql -d "${DBNAME_DWH}" -Atq -c "
     WHERE du.user_id IS NOT NULL
     ORDER BY du.history_whole_open DESC NULLS LAST, du.history_whole_closed DESC NULLS LAST
   ) t
-" > "${ATOMIC_TEMP_DIR}/indexes/users.json"
+" > "${ATOMIC_TEMP_DIR}/indexes/users.json"; then
+  echo '[]' > "${ATOMIC_TEMP_DIR}/indexes/users.json"
+fi
 
 # Validate user index
 # shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
@@ -435,7 +437,7 @@ fi
 # Create country index file
 # shellcheck disable=SC2312  # Command substitution in echo is intentional; date command is safe
 echo "$(date +%Y-%m-%d\ %H:%M:%S) - Creating country index..."
-psql -d "${DBNAME_DWH}" -Atq -c "
+if ! psql -d "${DBNAME_DWH}" -Atq -c "
   SELECT COALESCE(json_agg(t), '[]'::json)
   FROM (
     SELECT
@@ -462,7 +464,9 @@ psql -d "${DBNAME_DWH}" -Atq -c "
     WHERE country_id IS NOT NULL
     ORDER BY history_whole_open DESC NULLS LAST, history_whole_closed DESC NULLS LAST
   ) t
-" > "${ATOMIC_TEMP_DIR}/indexes/countries.json"
+" > "${ATOMIC_TEMP_DIR}/indexes/countries.json"; then
+  echo '[]' > "${ATOMIC_TEMP_DIR}/indexes/countries.json"
+fi
 
 # Validate country index
 # shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
