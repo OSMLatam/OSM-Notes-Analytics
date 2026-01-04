@@ -552,7 +552,10 @@ teardown() {
    local count=0
    local retries=0
    local max_retries=10
-   while true; do
+   local max_iterations=150  # Safety limit: 100 items + 50 retries
+   local iterations=0
+   while [[ ${iterations} -lt ${max_iterations} ]]; do
+    iterations=$((iterations + 1))
     local item
     item=$(__get_next_country_from_queue)
     local exit_code=$?
@@ -579,9 +582,39 @@ teardown() {
   pids+=($!)
  done
 
- # Wait for all threads
+ # Wait for all threads with timeout (max 30 seconds)
+ local timeout=30
+ local elapsed=0
+ local all_done=false
+ while [[ ${elapsed} -lt ${timeout} ]]; do
+  all_done=true
+  for pid in "${pids[@]}"; do
+   if kill -0 "${pid}" 2>/dev/null; then
+    all_done=false
+    break
+   fi
+  done
+  if [[ "${all_done}" == "true" ]]; then
+   break
+  fi
+  sleep 0.5
+  elapsed=$((elapsed + 1))
+ done
+
+ # Kill any remaining processes if timeout reached
+ if [[ "${all_done}" != "true" ]]; then
+  for pid in "${pids[@]}"; do
+   kill -TERM "${pid}" 2>/dev/null || true
+  done
+  sleep 1
+  for pid in "${pids[@]}"; do
+   kill -KILL "${pid}" 2>/dev/null || true
+  done
+ fi
+
+ # Wait for all threads to finish (cleanup)
  for pid in "${pids[@]}"; do
-  wait "${pid}" || true
+  wait "${pid}" 2>/dev/null || true
  done
 
  # Count items processed per thread
@@ -639,7 +672,10 @@ teardown() {
    local count=0
    local retries=0
    local max_retries=10
-   while true; do
+   local max_iterations=150  # Safety limit: 100 items + 50 retries
+   local iterations=0
+   while [[ ${iterations} -lt ${max_iterations} ]]; do
+    iterations=$((iterations + 1))
     local item
     item=$(__get_next_user_from_queue)
     local exit_code=$?
@@ -666,9 +702,39 @@ teardown() {
   pids+=($!)
  done
 
- # Wait for all threads
+ # Wait for all threads with timeout (max 30 seconds)
+ local timeout=30
+ local elapsed=0
+ local all_done=false
+ while [[ ${elapsed} -lt ${timeout} ]]; do
+  all_done=true
+  for pid in "${pids[@]}"; do
+   if kill -0 "${pid}" 2>/dev/null; then
+    all_done=false
+    break
+   fi
+  done
+  if [[ "${all_done}" == "true" ]]; then
+   break
+  fi
+  sleep 0.5
+  elapsed=$((elapsed + 1))
+ done
+
+ # Kill any remaining processes if timeout reached
+ if [[ "${all_done}" != "true" ]]; then
+  for pid in "${pids[@]}"; do
+   kill -TERM "${pid}" 2>/dev/null || true
+  done
+  sleep 1
+  for pid in "${pids[@]}"; do
+   kill -KILL "${pid}" 2>/dev/null || true
+  done
+ fi
+
+ # Wait for all threads to finish (cleanup)
  for pid in "${pids[@]}"; do
-  wait "${pid}" || true
+  wait "${pid}" 2>/dev/null || true
  done
 
  # Count items processed per thread
