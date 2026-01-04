@@ -162,12 +162,12 @@ fi
 
 # PostgreSQL timeouts for ETL queries
 # These timeouts help prevent long-running queries from blocking other operations
-# statement_timeout: Maximum time a single statement can run (default: 30 minutes)
+# statement_timeout: Maximum time a single statement can run (default: 2 hours)
 # lock_timeout: Maximum time to wait for a lock (default: 10 seconds)
 # idle_in_transaction_session_timeout: Maximum time a transaction can be idle (default: 10 minutes)
 # shellcheck disable=SC2034
 if [[ -z "${PSQL_STATEMENT_TIMEOUT:-}" ]]; then
- declare -r PSQL_STATEMENT_TIMEOUT="${PSQL_STATEMENT_TIMEOUT:-30min}"
+ declare -r PSQL_STATEMENT_TIMEOUT="${PSQL_STATEMENT_TIMEOUT:-2h}"
 fi
 # shellcheck disable=SC2034
 if [[ -z "${PSQL_LOCK_TIMEOUT:-}" ]]; then
