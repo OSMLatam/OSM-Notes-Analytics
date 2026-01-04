@@ -27,7 +27,6 @@ AS $proc$
   m_first_closed_note_id INTEGER;
   m_first_reopened_note_id INTEGER;
   m_last_year_activity CHAR(371);
-  r RECORD;
  BEGIN
   SELECT /* Notes-datamartCountries */ c.country_id, c.country_name,
    c.country_name_es, c.country_name_en, c.iso_alpha2, c.iso_alpha3,

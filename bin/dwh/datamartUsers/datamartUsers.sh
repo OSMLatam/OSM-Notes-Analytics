@@ -684,8 +684,9 @@ function __processNotesUser {
  __logi "Waiting for all user processing to complete..."
  local total_failed=0
  for pid in "${pids[@]}"; do
-  if ! wait "${pid}"; then
-   local thread_exit_code=$?
+  wait "${pid}"
+  local thread_exit_code=$?
+  if [[ ${thread_exit_code} -ne 0 ]]; then
    total_failed=$((total_failed + thread_exit_code))
   fi
  done
