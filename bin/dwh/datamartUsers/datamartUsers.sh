@@ -207,7 +207,10 @@ function __checkPrereqs {
 function __createBaseTables {
  __log_start
  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -f "${POSTGRES_12_CREATE_TABLES_FILE}"
- PROCESS_OLD_USERS=yes
+ # PROCESS_OLD_USERS is now configurable via environment variable or properties.sh
+ # Default is 'no' to prioritize modified users with intelligent prioritization
+ # Set PROCESS_OLD_USERS=yes only if you need to process all users (initial load)
+ PROCESS_OLD_USERS="${PROCESS_OLD_USERS:-no}"
  __log_finish
 }
 
@@ -461,7 +464,12 @@ __get_next_user_from_queue() {
 function __processNotesUser {
  __log_start
  if [[ "${PROCESS_OLD_USERS}" == "yes" ]]; then
+  __logw "WARNING: PROCESS_OLD_USERS=yes is enabled. This will process ALL users including inactive ones."
+  __logw "This uses OFFSET pagination which is extremely slow and can take days/weeks to complete."
+  __logw "Consider using PROCESS_OLD_USERS=no to only process modified users with intelligent prioritization."
   __processOldUsers
+ else
+  __logi "PROCESS_OLD_USERS=no: Only processing modified users with intelligent prioritization (recommended)"
  fi
 
  __logi "=== PROCESSING USERS IN PARALLEL (WORK QUEUE) ==="
@@ -808,10 +816,12 @@ function main() {
  # shellcheck disable=SC2034
  ONLY_EXECUTION="yes"
 
- # This variable is to process all those users that have performed less than 20
- # note actions, but are 95% of the users. It should be processed when the
- # tables are created.
- PROCESS_OLD_USERS=no
+ # This variable controls processing of users with <=20 actions (95% of users).
+ # Default: 'no' - Only process modified users with intelligent prioritization (recommended)
+ # Set to 'yes' only for initial load or when you need to process all users.
+ # WARNING: Processing old users uses OFFSET which is very slow. It's better to
+ # process them incrementally via modified flag in subsequent ETL cycles.
+ PROCESS_OLD_USERS="${PROCESS_OLD_USERS:-no}"
 
  set +E
  # shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling

@@ -196,3 +196,16 @@ fi
 if [[ -z "${MAX_USERS_PER_CYCLE:-}" ]]; then
  declare -r MAX_USERS_PER_CYCLE="${MAX_USERS_PER_CYCLE:-1000}"
 fi
+
+# Process old users (users with <=20 actions) - NOT RECOMMENDED
+# This processes all users including inactive ones using OFFSET pagination,
+# which is extremely slow and inefficient. The default behavior (no) only
+# processes modified users with intelligent prioritization, which is much faster.
+# Only set to 'yes' for initial load when you need to process ALL users.
+# WARNING: This can take days/weeks to complete. It's better to process users
+# incrementally via the modified flag in subsequent ETL cycles.
+# Default: no (recommended)
+# shellcheck disable=SC2034
+if [[ -z "${PROCESS_OLD_USERS:-}" ]]; then
+ declare -r PROCESS_OLD_USERS="${PROCESS_OLD_USERS:-no}"
+fi
