@@ -42,7 +42,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." &> /dev/null && pwd)"
 readonly SCRIPT_DIR
 ANALYTICS_DIR="${SCRIPT_DIR}"
 readonly ANALYTICS_DIR
-DATA_REPO_DIR="${HOME}/github/OSM-Notes-Data"
+# Support both locations: ${HOME}/OSM-Notes-Data (preferred) and ${HOME}/github/OSM-Notes-Data (fallback)
+if [[ -d "${HOME}/OSM-Notes-Data" ]]; then
+ DATA_REPO_DIR="${HOME}/OSM-Notes-Data"
+elif [[ -d "${HOME}/github/OSM-Notes-Data" ]]; then
+ DATA_REPO_DIR="${HOME}/github/OSM-Notes-Data"
+else
+ DATA_REPO_DIR="${HOME}/OSM-Notes-Data"
+fi
 readonly DATA_REPO_DIR
 
 # Function to print colored messages
