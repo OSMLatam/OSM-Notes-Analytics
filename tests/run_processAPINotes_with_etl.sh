@@ -531,13 +531,67 @@ run_processAPINotes() {
   ;;
  esac
 
- # Cleanup lock files before execution
+ # Cleanup lock files and failed execution markers before execution
+ # These files can prevent processAPINotes.sh from running if they exist
+ log_info "Cleaning up lock files and failed execution markers..."
  rm -f /tmp/processAPINotes.lock
  rm -f /tmp/processAPINotes_failed_execution
  rm -f /tmp/processPlanetNotes.lock
  rm -f /tmp/processPlanetNotes_failed_execution
  rm -f /tmp/updateCountries.lock
  rm -f /tmp/updateCountries_failed_execution
+
+ # Verify cleanup was successful
+ if [[ -f /tmp/processAPINotes_failed_execution ]]; then
+  log_error "WARNING: Failed to remove /tmp/processAPINotes_failed_execution"
+  log_error "This file may prevent processAPINotes.sh from running"
+  log_error "Attempting force removal..."
+  rm -f /tmp/processAPINotes_failed_execution || true
+ fi
+
+ # Check for and terminate any stale processes before starting new execution
+ # This prevents "process already running" errors (exit code 251)
+ if pgrep -f "processAPINotes.sh" > /dev/null 2>&1; then
+  log_info "Found running processAPINotes.sh processes, waiting for them to finish..."
+  local wait_count=0
+  local max_wait=10
+  while pgrep -f "processAPINotes.sh" > /dev/null 2>&1 && [[ ${wait_count} -lt ${max_wait} ]]; do
+   sleep 1
+   wait_count=$((wait_count + 1))
+  done
+  # If processes are still running after waiting, terminate them
+  if pgrep -f "processAPINotes.sh" > /dev/null 2>&1; then
+   log_info "Terminating stale processAPINotes.sh processes..."
+   pkill -TERM -f "processAPINotes.sh" 2> /dev/null || true
+   sleep 2
+   # Force kill if still running
+   if pgrep -f "processAPINotes.sh" > /dev/null 2>&1; then
+    log_info "Force killing remaining processAPINotes.sh processes..."
+    pkill -KILL -f "processAPINotes.sh" 2> /dev/null || true
+    sleep 1
+   fi
+  fi
+ fi
+
+ # Also check for processPlanetNotes.sh processes
+ if pgrep -f "processPlanetNotes.sh" > /dev/null 2>&1; then
+  log_info "Found running processPlanetNotes.sh processes, waiting for them to finish..."
+  local wait_count=0
+  local max_wait=10
+  while pgrep -f "processPlanetNotes.sh" > /dev/null 2>&1 && [[ ${wait_count} -lt ${max_wait} ]]; do
+   sleep 1
+   wait_count=$((wait_count + 1))
+  done
+  if pgrep -f "processPlanetNotes.sh" > /dev/null 2>&1; then
+   log_info "Terminating stale processPlanetNotes.sh processes..."
+   pkill -TERM -f "processPlanetNotes.sh" 2> /dev/null || true
+   sleep 2
+   if pgrep -f "processPlanetNotes.sh" > /dev/null 2>&1; then
+    pkill -KILL -f "processPlanetNotes.sh" 2> /dev/null || true
+    sleep 1
+   fi
+  fi
+ fi
 
  # For Execution #1 (planet mode), ensure tables are completely empty
  # This prevents duplicate key errors from residual data
@@ -595,6 +649,21 @@ run_processAPINotes() {
   log_success "Base tables truncated and sequences reset"
  fi
 
+ # For Execution #1, ensure failed execution marker is removed before starting
+ # This is critical because processAPINotes.sh checks for this file and may refuse to run
+ if [[ ${EXECUTION_NUMBER} -eq 1 ]]; then
+  if [[ -f /tmp/processAPINotes_failed_execution ]]; then
+   log_info "Removing stale failed execution marker before execution #1..."
+   rm -f /tmp/processAPINotes_failed_execution || true
+   if [[ -f /tmp/processAPINotes_failed_execution ]]; then
+    log_error "WARNING: Could not remove /tmp/processAPINotes_failed_execution"
+    log_error "This may prevent processAPINotes.sh from running"
+   else
+    log_success "Failed execution marker removed"
+   fi
+  fi
+ fi
+
  # Cleanup any residual XML files from previous executions (especially for execution #4 with 0 notes)
  # This prevents counting stale notes from previous API calls
  if [[ ${EXECUTION_NUMBER} -eq 4 ]] && [[ "${MOCK_NOTES_COUNT:-}" == "0" ]]; then
@@ -645,6 +714,32 @@ run_processAPINotes() {
   case ${EXIT_CODE} in
   248)
    log_error "Error code 248: Error executing Planet dump (processPlanetNotes.sh --base failed)"
+   log_error "This usually means processPlanetNotes.sh --base failed to create base structure"
+   log_error "Common causes:"
+   log_error "  - Missing prerequisites (countries table, enum types, procedures)"
+   log_error "  - Database connection issues"
+   log_error "  - Insufficient permissions"
+   log_error "  - Previous failed execution marker blocking execution"
+   log_error ""
+   log_error "Checking for failed execution marker..."
+   if [[ -f /tmp/processAPINotes_failed_execution ]]; then
+    log_error "Found failed execution marker: /tmp/processAPINotes_failed_execution"
+    log_error "This file prevents new executions. Contents:"
+    while IFS= read -r LINE; do
+     log_error "  ${LINE}"
+    done < /tmp/processAPINotes_failed_execution || true
+    log_error ""
+    log_error "Removing failed execution marker to allow retry..."
+    rm -f /tmp/processAPINotes_failed_execution || true
+   fi
+   log_error ""
+   log_error "Checking for processPlanetNotes.sh processes..."
+   if pgrep -f "processPlanetNotes.sh" > /dev/null 2>&1; then
+    log_error "Found running processPlanetNotes.sh processes:"
+    pgrep -af "processPlanetNotes.sh" | while IFS= read -r LINE; do
+     log_error "  ${LINE}"
+    done
+   fi
    ;;
   238)
    log_error "Error code 238: Previous execution failed (check for /tmp/processAPINotes_failed_execution)"
@@ -657,6 +752,29 @@ run_processAPINotes() {
    ;;
   246)
    log_error "Error code 246: Planet process is currently running"
+   ;;
+  251)
+   log_error "Error code 251: Process already running or lock file conflict"
+   log_error "This may indicate a previous process did not terminate cleanly"
+   log_error "Checking for running processes..."
+   if pgrep -f "processAPINotes.sh" > /dev/null 2>&1; then
+    log_error "Found running processAPINotes.sh processes:"
+    pgrep -af "processAPINotes.sh" | while IFS= read -r LINE; do
+     log_error "  ${LINE}"
+    done
+   fi
+   log_error "Checking lock files..."
+   if [[ -f /tmp/processAPINotes.lock ]]; then
+    log_error "Lock file exists: /tmp/processAPINotes.lock"
+    log_error "Lock file contents:"
+    while IFS= read -r LINE; do
+     log_error "  ${LINE}"
+    done < /tmp/processAPINotes.lock || true
+   fi
+   ;;
+  1)
+   log_error "Error code 1: General error (check logs for details)"
+   log_error "This may indicate a validation error, missing prerequisites, or unexpected failure"
    ;;
   esac
 
@@ -836,8 +954,26 @@ execute_processAPINotes_and_etl() {
  log_info "--- Step 1: Running processAPINotes.sh (${SOURCE_TYPE}) ---"
  local PROCESS_START_TIME
  PROCESS_START_TIME=$(date +%s)
+
+ # Verify no processes are running before starting
+ if pgrep -f "processAPINotes.sh\|processPlanetNotes.sh" > /dev/null 2>&1; then
+  log_error "WARNING: Found running processes before execution #${EXECUTION_NUMBER}"
+  log_error "This may cause conflicts. Processes:"
+  pgrep -af "processAPINotes.sh\|processPlanetNotes.sh" | while IFS= read -r LINE; do
+   log_error "  ${LINE}"
+  done
+ fi
+
  if ! run_processAPINotes "${EXECUTION_NUMBER}"; then
   log_error "processAPINotes (${SOURCE_TYPE}) execution #${EXECUTION_NUMBER} failed"
+
+  # Additional cleanup on failure
+  log_info "Cleaning up after failed execution..."
+  rm -f /tmp/processAPINotes.lock
+  rm -f /tmp/processAPINotes_failed_execution
+  rm -f /tmp/processPlanetNotes.lock
+  rm -f /tmp/processPlanetNotes_failed_execution
+
   return 1
  fi
  local PROCESS_END_TIME
