@@ -337,7 +337,7 @@ fi
 # shellcheck disable=SC2312  # Command substitution in echo is intentional; date command is safe
 echo "$(date +%Y-%m-%d\ %H:%M:%S) - Creating user index..."
 psql -d "${DBNAME_DWH}" -Atq -c "
-  SELECT json_agg(t)
+  SELECT COALESCE(json_agg(t), '[]'::json)
   FROM (
     SELECT
       du.user_id,
@@ -436,7 +436,7 @@ fi
 # shellcheck disable=SC2312  # Command substitution in echo is intentional; date command is safe
 echo "$(date +%Y-%m-%d\ %H:%M:%S) - Creating country index..."
 psql -d "${DBNAME_DWH}" -Atq -c "
-  SELECT json_agg(t)
+  SELECT COALESCE(json_agg(t), '[]'::json)
   FROM (
     SELECT
       country_id,
