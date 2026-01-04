@@ -366,7 +366,7 @@ if ! psql -d "${DBNAME_DWH}" -Atq -c "
     ORDER BY du.history_whole_open DESC NULLS LAST, du.history_whole_closed DESC NULLS LAST
   ) t
 " > "${ATOMIC_TEMP_DIR}/indexes/users.json"; then
-  echo '[]' > "${ATOMIC_TEMP_DIR}/indexes/users.json"
+ echo '[]' > "${ATOMIC_TEMP_DIR}/indexes/users.json"
 fi
 
 # Validate user index
@@ -465,7 +465,7 @@ if ! psql -d "${DBNAME_DWH}" -Atq -c "
     ORDER BY history_whole_open DESC NULLS LAST, history_whole_closed DESC NULLS LAST
   ) t
 " > "${ATOMIC_TEMP_DIR}/indexes/countries.json"; then
-  echo '[]' > "${ATOMIC_TEMP_DIR}/indexes/countries.json"
+ echo '[]' > "${ATOMIC_TEMP_DIR}/indexes/countries.json"
 fi
 
 # Validate country index
