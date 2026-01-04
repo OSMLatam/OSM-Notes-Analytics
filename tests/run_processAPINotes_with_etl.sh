@@ -478,6 +478,48 @@ drop_base_tables() {
   END \$\$;
  " > /dev/null 2>&1 || true
 
+ # Ensure enum types exist before processAPINotes.sh runs
+ # The drop script removes them, but processPlanetNotes.sh --base should recreate them
+ # However, to avoid timing issues, we create them explicitly here
+ log_info "Ensuring enum types exist before processAPINotes.sh execution..."
+ if [[ -f "${INGESTION_ROOT}/sql/process/processPlanetNotes_21_createBaseTables_enum.sql" ]]; then
+  ${PSQL_CMD} -d "${DBNAME}" -f "${INGESTION_ROOT}/sql/process/processPlanetNotes_21_createBaseTables_enum.sql" > /dev/null 2>&1 || true
+  log_success "Enum types ensured"
+ else
+  log_error "WARNING: Enum types SQL file not found: ${INGESTION_ROOT}/sql/process/processPlanetNotes_21_createBaseTables_enum.sql"
+ fi
+
+ # Ensure procedures exist before processAPINotes.sh runs
+ # The drop script removes them, but processPlanetNotes.sh --base should recreate them
+ # However, to avoid timing issues, we create them explicitly here
+ # Note: We only create the properties table and procedures (put_lock, remove_lock), NOT the other tables
+ # The other tables (notes, note_comments, etc.) will be created by processPlanetNotes.sh --base with data
+ log_info "Ensuring properties table and lock procedures exist before processAPINotes.sh execution..."
+ # Create properties table first (required by the procedures)
+ ${PSQL_CMD} -d "${DBNAME}" -c "
+  CREATE TABLE IF NOT EXISTS properties (
+   key VARCHAR(32) PRIMARY KEY,
+   value VARCHAR(32),
+   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+ " > /dev/null 2>&1 || true
+
+ # Create procedures by executing the relevant part of the SQL file
+ # We'll use a temporary SQL file with just the procedures
+ if [[ -f "${INGESTION_ROOT}/sql/process/processPlanetNotes_22_createBaseTables_tables.sql" ]]; then
+  local TEMP_SQL_FILE
+  TEMP_SQL_FILE=$(mktemp)
+  # Extract procedures from the original SQL file (lines 188-280 approximately)
+  # This extracts the put_lock and remove_lock procedures
+  sed -n '188,280p' "${INGESTION_ROOT}/sql/process/processPlanetNotes_22_createBaseTables_tables.sql" > "${TEMP_SQL_FILE}" 2> /dev/null || true
+  # Execute the procedures SQL
+  ${PSQL_CMD} -d "${DBNAME}" -f "${TEMP_SQL_FILE}" > /dev/null 2>&1 || true
+  rm -f "${TEMP_SQL_FILE}"
+  log_success "Lock procedures ensured"
+ else
+  log_error "WARNING: Base tables SQL file not found: ${INGESTION_ROOT}/sql/process/processPlanetNotes_22_createBaseTables_tables.sql"
+ fi
+
  log_success "Base tables and sequences cleaned"
 }
 
@@ -500,6 +542,86 @@ run_processAPINotes() {
   # First execution: drop tables (will call processPlanetNotes.sh --base)
   log_info "=== EXECUTION #1: Setting up for processPlanetNotes.sh --base ==="
   drop_base_tables
+
+  # Ensure countries table exists and is populated before processAPINotes.sh runs
+  # processPlanetNotes.sh --base calls updateCountries.sh --base, which can fail
+  # We need to ensure countries are loaded beforehand to prevent this failure
+  log_info "Ensuring countries table exists and is populated before processAPINotes.sh execution..."
+  # Load DBNAME from properties file
+  # shellcheck disable=SC1090
+  source "${INGESTION_ROOT}/etc/properties.sh"
+  local PSQL_CMD="psql"
+  if [[ -n "${DB_HOST:-}" ]]; then
+   PSQL_CMD="${PSQL_CMD} -h ${DB_HOST} -p ${DB_PORT}"
+  fi
+  # Check if countries table exists and has data
+  local countries_count
+  countries_count=$(${PSQL_CMD} -d "${DBNAME}" -tAqc \
+   "SELECT COUNT(*) FROM countries;" 2> /dev/null | grep -E '^[0-9]+$' | head -1 || echo "0")
+  if [[ "${countries_count:-0}" -eq 0 ]]; then
+   log_info "Countries table is empty or doesn't exist. Loading countries with updateCountries.sh --base..."
+   log_info "This is critical: processPlanetNotes.sh --base calls updateCountries.sh --base internally,"
+   log_info "and if it fails, the entire processPlanetNotes.sh --base will fail with code 248"
+   # Ensure environment variables are exported for updateCountries.sh
+   export SCRIPT_BASE_DIRECTORY="${INGESTION_ROOT}"
+   if [[ -n "${MOCK_FIXTURES_DIR:-}" ]]; then
+    export MOCK_FIXTURES_DIR="${MOCK_FIXTURES_DIR}"
+   else
+    export MOCK_FIXTURES_DIR="${INGESTION_ROOT}/tests/fixtures/command/extra"
+   fi
+   export HYBRID_MOCK_MODE=true
+   export TEST_MODE=true
+   export SKIP_XML_VALIDATION="${SKIP_XML_VALIDATION:-true}"
+   # Ensure PATH has hybrid mock directory for updateCountries.sh
+   if [[ -n "${HYBRID_MOCK_DIR:-}" ]] && [[ -d "${HYBRID_MOCK_DIR}" ]]; then
+    if [[ ! "${PATH}" == *"${HYBRID_MOCK_DIR}"* ]]; then
+     local SYSTEM_PATHS="/usr/bin:/usr/local/bin:/bin"
+     local REAL_PSQL_DIR
+     REAL_PSQL_DIR=$(dirname "$(command -v psql)")
+     export PATH="${HYBRID_MOCK_DIR}:${REAL_PSQL_DIR}:${SYSTEM_PATHS}:${PATH}"
+     hash -r 2> /dev/null || true
+    fi
+   fi
+   # Clean up any lock files that might prevent updateCountries.sh from running
+   rm -f /tmp/osm-notes-ingestion/locks/updateCountries.lock
+   rm -f /tmp/updateCountries.lock
+   rm -f /tmp/updateCountries_failed_execution
+   # Terminate any stale updateCountries.sh processes
+   if pgrep -f "updateCountries.sh" > /dev/null 2>&1; then
+    log_info "Found running updateCountries.sh processes, terminating them..."
+    pkill -TERM -f "updateCountries.sh" 2> /dev/null || true
+    sleep 2
+    if pgrep -f "updateCountries.sh" > /dev/null 2>&1; then
+     pkill -KILL -f "updateCountries.sh" 2> /dev/null || true
+     sleep 1
+    fi
+   fi
+   # Change to ingestion root
+   cd "${INGESTION_ROOT}"
+   # Run updateCountries.sh --base
+   log_info "Executing: ${INGESTION_ROOT}/bin/process/updateCountries.sh --base"
+   if "${INGESTION_ROOT}/bin/process/updateCountries.sh" --base; then
+    log_success "Countries loaded successfully"
+    # Verify countries were actually loaded
+    countries_count=$(${PSQL_CMD} -d "${DBNAME}" -tAqc \
+     "SELECT COUNT(*) FROM countries;" 2> /dev/null | grep -E '^[0-9]+$' | head -1 || echo "0")
+    if [[ "${countries_count:-0}" -gt 0 ]]; then
+     log_success "Verified: Countries table now has ${countries_count} countries"
+    else
+     log_error "WARNING: updateCountries.sh --base completed but countries table is still empty"
+    fi
+   else
+    local update_countries_exit=$?
+    log_error "Failed to load countries with updateCountries.sh --base (exit code: ${update_countries_exit})"
+    log_error "This WILL cause processPlanetNotes.sh --base to fail with code 248"
+    log_error "Check updateCountries.sh logs for details"
+    # Don't fail here, let processAPINotes.sh try anyway, but it will likely fail
+   fi
+   # Return to analytics root
+   cd "${ANALYTICS_ROOT}"
+  else
+   log_success "Countries table exists with ${countries_count} countries"
+  fi
 
   unset MOCK_NOTES_COUNT
   export MOCK_NOTES_COUNT=""
@@ -716,10 +838,17 @@ run_processAPINotes() {
    log_error "Error code 248: Error executing Planet dump (processPlanetNotes.sh --base failed)"
    log_error "This usually means processPlanetNotes.sh --base failed to create base structure"
    log_error "Common causes:"
+   log_error "  - updateCountries.sh --base failed (called by processPlanetNotes.sh --base)"
    log_error "  - Missing prerequisites (countries table, enum types, procedures)"
    log_error "  - Database connection issues"
    log_error "  - Insufficient permissions"
    log_error "  - Previous failed execution marker blocking execution"
+   log_error ""
+   log_error "Checking if updateCountries.sh failed..."
+   if grep -q "updateCountries.sh failed\|Please fix the issue and run updateCountries.sh" /tmp/osm-notes-ingestion/logs/processing/processPlanetNotes.log 2> /dev/null; then
+    log_error "Found updateCountries.sh failure in processPlanetNotes.log"
+    log_error "This is the root cause. updateCountries.sh --base must succeed before processPlanetNotes.sh --base can complete"
+   fi
    log_error ""
    log_error "Checking for failed execution marker..."
    if [[ -f /tmp/processAPINotes_failed_execution ]]; then

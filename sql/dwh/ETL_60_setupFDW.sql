@@ -299,7 +299,23 @@ ANALYZE public.note_comments;
 ANALYZE public.notes;
 ANALYZE public.note_comments_text;
 ANALYZE public.users;
-ANALYZE public.countries;
+-- Analyze countries only if the foreign table exists and has data
+-- This prevents errors when countries table is empty or doesn't exist yet
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.foreign_tables
+    WHERE foreign_table_schema = 'public' AND foreign_table_name = 'countries'
+  ) THEN
+    BEGIN
+      ANALYZE public.countries;
+    EXCEPTION
+      WHEN OTHERS THEN
+        -- Ignore errors if table doesn't exist or is empty on remote server
+        RAISE NOTICE 'Skipping ANALYZE on public.countries: %', SQLERRM;
+    END;
+  END IF;
+END $$;
 
 SELECT /* Notes-ETL-FDW */ clock_timestamp() AS Processing,
  'Foreign Data Wrappers setup completed' AS Task;
