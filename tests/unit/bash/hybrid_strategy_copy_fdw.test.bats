@@ -240,6 +240,8 @@ EOF
 	export FDW_INGESTION_PORT="5432"
 	export FDW_INGESTION_USER="${USER:-$(whoami)}"
 	export FDW_INGESTION_PASSWORD=""
+	export FDW_INGESTION_PASSWORD_VALUE=""
+	export ETL_ANALYZE_FDW_TABLES_VALUE="false"
 
 	# Run FDW setup (ignore connection errors during ANALYZE, just verify tables are created)
 	envsubst <"${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_60_setupFDW.sql" |
@@ -269,6 +271,8 @@ EOF
 	export FDW_INGESTION_PORT="5432"
 	export FDW_INGESTION_USER="${USER:-$(whoami)}"
 	export FDW_INGESTION_PASSWORD=""
+	export FDW_INGESTION_PASSWORD_VALUE=""
+	export ETL_ANALYZE_FDW_TABLES_VALUE="false"
 
 	envsubst <"${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_60_setupFDW.sql" |
 		psql -d "${TEST_ANALYTICS_DB}" -v ON_ERROR_STOP=0 2>&1 | grep -v "ERROR.*could not connect" || true
@@ -332,6 +336,8 @@ EOF
 	export FDW_INGESTION_PORT="5432"
 	export FDW_INGESTION_USER="${USER:-$(whoami)}"
 	export FDW_INGESTION_PASSWORD=""
+	export FDW_INGESTION_PASSWORD_VALUE=""
+	export ETL_ANALYZE_FDW_TABLES_VALUE="false"
 
 	envsubst <"${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_60_setupFDW.sql" |
 		psql -d "${TEST_ANALYTICS_DB}" -v ON_ERROR_STOP=0 2>&1 | grep -v "ERROR.*could not connect" || true
