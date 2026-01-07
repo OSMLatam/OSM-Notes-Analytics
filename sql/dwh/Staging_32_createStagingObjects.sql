@@ -335,7 +335,9 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
 --RAISE NOTICE 'Flag 23: %', CLOCK_TIMESTAMP();
 
    -- Populate bridge table for hashtags (ALL hashtags - unlimited)
-   IF array_length(m_all_hashtag_ids, 1) > 0 THEN
+   -- Only insert hashtags if fact_id is not NULL (fact was successfully inserted)
+   -- If fact_id is NULL, it means the fact was a duplicate and was skipped
+   IF m_fact_id IS NOT NULL AND array_length(m_all_hashtag_ids, 1) > 0 THEN
      FOR i IN 1..array_length(m_all_hashtag_ids, 1) LOOP
        INSERT INTO dwh.fact_hashtags (
          fact_id, dimension_hashtag_id, position,

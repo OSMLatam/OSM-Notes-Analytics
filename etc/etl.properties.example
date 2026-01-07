@@ -11,6 +11,10 @@ ETL_BATCH_SIZE=1000
 ETL_COMMIT_INTERVAL=100
 ETL_VACUUM_AFTER_LOAD=true
 ETL_ANALYZE_AFTER_LOAD=true
+# ANALYZE foreign tables during FDW setup (default: false for performance)
+# Setting to true will analyze foreign tables which can take 20+ seconds
+# but improves query planning. Only enable if you experience query performance issues.
+ETL_ANALYZE_FDW_TABLES=false
 
 # Resource Control
 MAX_MEMORY_USAGE=80

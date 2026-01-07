@@ -20,8 +20,8 @@
 # * shfmt -w -i 1 -sr -bn ETL.sh
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2025-10-27
-VERSION="2025-10-27"
+# Version: 2026-01-07
+VERSION="2026-01-07"
 
 #set -xv
 # Fails when a variable is not initialized.
@@ -131,6 +131,12 @@ declare LOCK
 LOCK="/tmp/${BASENAME}.lock"
 readonly LOCK
 
+# Failed execution marker file
+# This file is created when a critical error occurs to prevent repeated failures
+declare FAILED_EXECUTION_FILE
+FAILED_EXECUTION_FILE="/tmp/${BASENAME}.failed"
+readonly FAILED_EXECUTION_FILE
+
 # Type of process to run in the script.
 if [[ -z "${PROCESS_TYPE:-}" ]]; then
  declare -r PROCESS_TYPE=${1:-}
@@ -147,6 +153,10 @@ source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/validationFunctions.sh"
 # Load error handling functions
 # shellcheck disable=SC1091
 source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/errorHandlingFunctions.sh"
+
+# Load alert functions for failed execution markers
+# shellcheck disable=SC1091
+source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/alertFunctions.sh"
 
 # Configure log file early if running from cron (not a terminal)
 # This prevents logger from writing to stdout which would be sent by email
@@ -283,6 +293,7 @@ declare -r ETL_BATCH_SIZE="${ETL_BATCH_SIZE:-1000}"
 declare -r ETL_COMMIT_INTERVAL="${ETL_COMMIT_INTERVAL:-100}"
 declare -r ETL_VACUUM_AFTER_LOAD="${ETL_VACUUM_AFTER_LOAD:-true}"
 declare -r ETL_ANALYZE_AFTER_LOAD="${ETL_ANALYZE_AFTER_LOAD:-true}"
+declare -r ETL_ANALYZE_FDW_TABLES="${ETL_ANALYZE_FDW_TABLES:-false}"
 declare -r MAX_MEMORY_USAGE="${MAX_MEMORY_USAGE:-80}"
 declare -r MAX_DISK_USAGE="${MAX_DISK_USAGE:-90}"
 declare -r ETL_TIMEOUT="${ETL_TIMEOUT:-7200}"
@@ -934,11 +945,18 @@ function __processNotesETL {
    fi
    # Export as non-readonly variable for envsubst
    export FDW_INGESTION_PASSWORD_VALUE="${fdw_password_value}"
+   # Export ANALYZE configuration for FDW tables
+   export ETL_ANALYZE_FDW_TABLES_VALUE="${ETL_ANALYZE_FDW_TABLES}"
    # Debug: log password status (without showing the actual password)
    if [[ -n "${fdw_password_value}" ]]; then
     __logd "FDW password configured (length: ${#fdw_password_value} characters)"
    else
     __logd "FDW password not configured - will try .pgpass or peer authentication"
+   fi
+   if [[ "${ETL_ANALYZE_FDW_TABLES}" == "true" ]]; then
+    __logd "FDW table ANALYZE is enabled (may take 20+ seconds)"
+   else
+    __logd "FDW table ANALYZE is disabled (skipping for faster execution)"
    fi
    set -e
 
@@ -987,6 +1005,11 @@ function __processNotesETL {
  set -e
  if [[ ${load_staging_exit_code} -ne 0 ]]; then
   __loge "ERROR: Failed to load notes into staging (exit code: ${load_staging_exit_code})"
+  __loge "This is a critical error. Creating failed execution marker to prevent repeated failures."
+  __common_create_failed_marker "${BASENAME}" "${load_staging_exit_code}" \
+   "Failed to load notes into staging. Check logs for details." \
+   "Review ETL logs and fix the issue causing staging load to fail. Remove ${FAILED_EXECUTION_FILE} after fixing." \
+   "${FAILED_EXECUTION_FILE}"
   __log_finish
   return 1
  fi
@@ -1028,6 +1051,11 @@ function __processNotesETL {
  set -e
  if [[ ${process_actions_exit_code} -ne 0 ]]; then
   __loge "ERROR: Failed to process notes actions into DWH (exit code: ${process_actions_exit_code})"
+  __loge "This is a critical error. Creating failed execution marker to prevent repeated failures."
+  __common_create_failed_marker "${BASENAME}" "${process_actions_exit_code}" \
+   "Failed to process notes actions into DWH. Check logs for details." \
+   "Review ETL logs and fix the issue causing process_notes_actions_into_dwh() to fail. Remove ${FAILED_EXECUTION_FILE} after fixing." \
+   "${FAILED_EXECUTION_FILE}"
   __log_finish
   return 1
  fi
@@ -1040,6 +1068,11 @@ function __processNotesETL {
  set -e
  if [[ ${unify_facts_exit_code} -ne 0 ]]; then
   __loge "ERROR: Failed to unify facts (exit code: ${unify_facts_exit_code})"
+  __loge "This is a critical error. Creating failed execution marker to prevent repeated failures."
+  __common_create_failed_marker "${BASENAME}" "${unify_facts_exit_code}" \
+   "Failed to unify facts. Check logs for details." \
+   "Review ETL logs and fix the issue causing facts unification to fail. Remove ${FAILED_EXECUTION_FILE} after fixing." \
+   "${FAILED_EXECUTION_FILE}"
   __log_finish
   return 1
  fi
@@ -2178,6 +2211,21 @@ function main() {
  # The trap will be set but won't interfere because set +e prevents immediate exit
  __trapOn
  trap - ERR # Immediately disable ERR trap again to prevent interference
+
+ # Check for failed execution marker before proceeding
+ if [[ -f "${FAILED_EXECUTION_FILE}" ]]; then
+  __loge "CRITICAL: Previous ETL execution failed. Failed execution marker found: ${FAILED_EXECUTION_FILE}"
+  __loge "Contents of failed execution marker:"
+  cat "${FAILED_EXECUTION_FILE}" >&2 || true
+  __loge ""
+  __loge "ETL execution is blocked to prevent repeated failures."
+  __loge "Please review the error above, fix the issue, and remove the failed marker file:"
+  __loge "  rm -f ${FAILED_EXECUTION_FILE}"
+  __loge ""
+  __loge "ETL cannot proceed until the issue is resolved."
+  return 1
+ fi
+
  __setupLockFile
  local lock_exit_code=$?
  if [[ ${lock_exit_code} -ne 0 ]]; then
@@ -2337,6 +2385,8 @@ function main() {
      fi
     fi
     export FDW_INGESTION_PASSWORD_VALUE="${fdw_password_value}"
+    # Export ANALYZE configuration for FDW tables
+    export ETL_ANALYZE_FDW_TABLES_VALUE="${ETL_ANALYZE_FDW_TABLES}"
     set -e
     # shellcheck disable=SC2310  # Function invocation in || condition is intentional for error handling
     envsubst < "${POSTGRES_60_SETUP_FDW}" \
@@ -2454,6 +2504,11 @@ function main() {
   local process_notes_exit_code=$?
   if [[ ${process_notes_exit_code} -ne 0 ]]; then
    __loge "ERROR: Process notes ETL failed (exit code: ${process_notes_exit_code})"
+   __loge "This is a critical error. Creating failed execution marker to prevent repeated failures."
+   __common_create_failed_marker "${BASENAME}" "${process_notes_exit_code}" \
+    "Process notes ETL failed. Check logs for details." \
+    "Review ETL logs and fix the issue causing process notes ETL to fail. Remove ${FAILED_EXECUTION_FILE} after fixing." \
+    "${FAILED_EXECUTION_FILE}"
    set -e # Re-enable exit on error before returning
    return 1
   fi

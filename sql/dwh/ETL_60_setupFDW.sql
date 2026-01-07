@@ -290,30 +290,39 @@ END $$;
 -- Foreign tables are now created conditionally in the DO block above
 -- This avoids unnecessary DROP/CREATE operations when tables already exist
 
--- Analyze foreign tables for better query planning
+-- Analyze foreign tables for better query planning (optional, controlled by ETL_ANALYZE_FDW_TABLES)
 -- This helps PostgreSQL optimizer make better decisions
-SELECT /* Notes-ETL-FDW */ clock_timestamp() AS Processing,
- 'Analyzing foreign tables for query optimization' AS Task;
-
-ANALYZE public.note_comments;
-ANALYZE public.notes;
-ANALYZE public.note_comments_text;
-ANALYZE public.users;
--- Analyze countries only if the foreign table exists and has data
--- This prevents errors when countries table is empty or doesn't exist yet
+-- Note: ANALYZE on foreign tables can take 20+ seconds and requires remote database access
+-- Set ETL_ANALYZE_FDW_TABLES=true in etc/properties.sh to enable this feature
 DO $$
 BEGIN
-  IF EXISTS (
-    SELECT 1 FROM information_schema.foreign_tables
-    WHERE foreign_table_schema = 'public' AND foreign_table_name = 'countries'
-  ) THEN
-    BEGIN
-      ANALYZE public.countries;
-    EXCEPTION
-      WHEN OTHERS THEN
-        -- Ignore errors if table doesn't exist or is empty on remote server
-        RAISE NOTICE 'Skipping ANALYZE on public.countries: %', SQLERRM;
-    END;
+  -- Only run ANALYZE if explicitly enabled (default is false for performance)
+  IF '${ETL_ANALYZE_FDW_TABLES_VALUE}' = 'true' THEN
+    RAISE NOTICE 'Analyzing foreign tables for query optimization (this may take 20+ seconds)...';
+    
+    ANALYZE public.note_comments;
+    ANALYZE public.notes;
+    ANALYZE public.note_comments_text;
+    ANALYZE public.users;
+    
+    -- Analyze countries only if the foreign table exists and has data
+    -- This prevents errors when countries table is empty or doesn't exist yet
+    IF EXISTS (
+      SELECT 1 FROM information_schema.foreign_tables
+      WHERE foreign_table_schema = 'public' AND foreign_table_name = 'countries'
+    ) THEN
+      BEGIN
+        ANALYZE public.countries;
+      EXCEPTION
+        WHEN OTHERS THEN
+          -- Ignore errors if table doesn't exist or is empty on remote server
+          RAISE NOTICE 'Skipping ANALYZE on public.countries: %', SQLERRM;
+      END;
+    END IF;
+    
+    RAISE NOTICE 'Foreign table ANALYZE completed.';
+  ELSE
+    RAISE NOTICE 'Skipping ANALYZE on foreign tables (ETL_ANALYZE_FDW_TABLES=false). Set ETL_ANALYZE_FDW_TABLES=true to enable.';
   END IF;
 END $$;
 
