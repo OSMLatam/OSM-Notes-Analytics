@@ -181,7 +181,7 @@ BEGIN
     SELECT udt_name INTO current_event_type
     FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'note_comments' AND column_name = 'event';
-    
+
     -- If event column is TEXT instead of note_event_enum, recreate the foreign table
     IF current_event_type = 'text' THEN
       RAISE NOTICE 'Foreign table public.note_comments exists but event column is TEXT. Recreating with note_event_enum type.';
@@ -299,12 +299,12 @@ BEGIN
   -- Only run ANALYZE if explicitly enabled (default is false for performance)
   IF '${ETL_ANALYZE_FDW_TABLES_VALUE}' = 'true' THEN
     RAISE NOTICE 'Analyzing foreign tables for query optimization (this may take 20+ seconds)...';
-    
+
     ANALYZE public.note_comments;
     ANALYZE public.notes;
     ANALYZE public.note_comments_text;
     ANALYZE public.users;
-    
+
     -- Analyze countries only if the foreign table exists and has data
     -- This prevents errors when countries table is empty or doesn't exist yet
     IF EXISTS (
@@ -319,7 +319,7 @@ BEGIN
           RAISE NOTICE 'Skipping ANALYZE on public.countries: %', SQLERRM;
       END;
     END IF;
-    
+
     RAISE NOTICE 'Foreign table ANALYZE completed.';
   ELSE
     RAISE NOTICE 'Skipping ANALYZE on foreign tables (ETL_ANALYZE_FDW_TABLES=false). Set ETL_ANALYZE_FDW_TABLES=true to enable.';
