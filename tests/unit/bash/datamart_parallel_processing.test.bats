@@ -106,8 +106,8 @@ teardown() {
 
 # Test work queue thread-safety for users
 @test "datamartUsers work queue should be thread-safe" {
- # Source the script
- source "${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartUsers/datamartUsers.sh" > /dev/null 2>&1 || true
+ # Source the script with SKIP_MAIN to avoid database operations
+ SKIP_MAIN=true source "${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartUsers/datamartUsers.sh" > /dev/null 2>&1 || true
 
  # Create test work queue file
  local test_queue_file="${TMP_DIR}/test_user_queue.txt"
@@ -211,8 +211,8 @@ teardown() {
 
 # Test concurrent access to work queue for users
 @test "datamartUsers work queue should handle concurrent access" {
- # Source the script
- source "${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartUsers/datamartUsers.sh" > /dev/null 2>&1 || true
+ # Source the script with SKIP_MAIN to avoid database operations
+ SKIP_MAIN=true source "${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartUsers/datamartUsers.sh" > /dev/null 2>&1 || true
 
  # Create test work queue file with many items
  local test_queue_file="${TMP_DIR}/test_user_queue_concurrent.txt"
@@ -310,8 +310,8 @@ teardown() {
 
 # Test that work queue handles empty queue gracefully for users
 @test "datamartUsers work queue should handle empty queue" {
- # Source the script
- source "${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartUsers/datamartUsers.sh" > /dev/null 2>&1 || true
+ # Source the script with SKIP_MAIN to avoid database operations
+ SKIP_MAIN=true source "${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartUsers/datamartUsers.sh" > /dev/null 2>&1 || true
 
  # Create empty work queue file
  local test_queue_file="${TMP_DIR}/test_empty_user_queue.txt"
@@ -364,8 +364,8 @@ teardown() {
 
 # Test that parallel processing uses correct number of threads for users
 @test "datamartUsers parallel processing should use nproc-1 threads" {
- # Source the script
- source "${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartUsers/datamartUsers.sh" > /dev/null 2>&1 || true
+ # Source the script with SKIP_MAIN to avoid database operations
+ SKIP_MAIN=true source "${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartUsers/datamartUsers.sh" > /dev/null 2>&1 || true
 
  # Test that adjusted_threads calculation works
  local MAX_THREADS=8
@@ -411,8 +411,8 @@ teardown() {
 
 # Test that work queue file is created correctly for users
 @test "datamartUsers work queue file creation" {
- # Source the script
- source "${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartUsers/datamartUsers.sh" > /dev/null 2>&1 || true
+ # Source the script with SKIP_MAIN to avoid database operations
+ SKIP_MAIN=true source "${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartUsers/datamartUsers.sh" > /dev/null 2>&1 || true
 
  # Simulate creating work queue file
  local test_ids="100\n200\n300\n400\n500"
@@ -447,8 +447,8 @@ teardown() {
 
 # Test that parallel processing function logs correctly for users
 @test "datamartUsers parallel processing should log thread information" {
- # Source the script
- source "${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartUsers/datamartUsers.sh" > /dev/null 2>&1 || true
+ # Source the script with SKIP_MAIN to avoid database operations
+ SKIP_MAIN=true source "${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartUsers/datamartUsers.sh" > /dev/null 2>&1 || true
 
  # Check that function contains logging for threads
  run bash -c "SKIP_MAIN=true source ${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartUsers/datamartUsers.sh && declare -f __processNotesUser | grep -q 'Starting.*parallel worker threads'"
@@ -480,8 +480,8 @@ teardown() {
 
 # Test that work queue cleanup happens correctly for users
 @test "datamartUsers work queue cleanup" {
- # Source the script
- source "${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartUsers/datamartUsers.sh" > /dev/null 2>&1 || true
+ # Source the script with SKIP_MAIN to avoid database operations
+ SKIP_MAIN=true source "${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartUsers/datamartUsers.sh" > /dev/null 2>&1 || true
 
  # Create test files
  local test_queue_file="${TMP_DIR}/test_user_queue_cleanup.txt"
@@ -513,8 +513,8 @@ teardown() {
 
 # Test that parallel processing handles errors gracefully for users
 @test "datamartUsers parallel processing should handle thread errors" {
- # Source the script
- source "${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartUsers/datamartUsers.sh" > /dev/null 2>&1 || true
+ # Source the script with SKIP_MAIN to avoid database operations
+ SKIP_MAIN=true source "${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartUsers/datamartUsers.sh" > /dev/null 2>&1 || true
 
  # Check that function tracks thread failures
  run bash -c "SKIP_MAIN=true source ${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartUsers/datamartUsers.sh && declare -f __processNotesUser | grep -q 'thread_failed'"
@@ -647,8 +647,8 @@ teardown() {
 
 # Test load balancing: verify that threads process similar number of items for users
 @test "datamartUsers work queue should balance load across threads" {
- # Source the script
- source "${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartUsers/datamartUsers.sh" > /dev/null 2>&1 || true
+ # Source the script with SKIP_MAIN to avoid database operations
+ SKIP_MAIN=true source "${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartUsers/datamartUsers.sh" > /dev/null 2>&1 || true
 
  # Create test work queue file with many items
  local test_queue_file="${TMP_DIR}/test_load_balance_users.txt"
@@ -826,8 +826,8 @@ teardown() {
   skip "Skipping database integration test in CI"
  fi
 
- # Source the script
- source "${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartUsers/datamartUsers.sh" > /dev/null 2>&1 || true
+ # Source the script with SKIP_MAIN to avoid database operations during source
+ SKIP_MAIN=true source "${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartUsers/datamartUsers.sh" > /dev/null 2>&1 || true
 
  # Create test database if it doesn't exist
  run psql -d postgres -c "CREATE DATABASE ${TEST_DBNAME};" 2> /dev/null || true
@@ -911,8 +911,8 @@ teardown() {
 
 # Test that work queue maintains priority order (users)
 @test "datamartUsers work queue should maintain priority order" {
- # Source the script
- source "${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartUsers/datamartUsers.sh" > /dev/null 2>&1 || true
+ # Source the script with SKIP_MAIN to avoid database operations
+ SKIP_MAIN=true source "${SCRIPT_BASE_DIRECTORY}/bin/dwh/datamartUsers/datamartUsers.sh" > /dev/null 2>&1 || true
 
  # Create test work queue file with ordered items (simulating priority order)
  local test_queue_file="${TMP_DIR}/test_priority_user_queue.txt"
