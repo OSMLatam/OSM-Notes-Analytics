@@ -245,7 +245,8 @@ EOF
 
 	# Run FDW setup (ignore connection errors during ANALYZE, just verify tables are created)
 	# Use explicit variable list for envsubst to ensure all variables are substituted
-	envsubst '$FDW_INGESTION_HOST $FDW_INGESTION_DBNAME $FDW_INGESTION_PORT $FDW_INGESTION_USER $FDW_INGESTION_PASSWORD_VALUE $ETL_ANALYZE_FDW_TABLES_VALUE' <"${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_60_setupFDW.sql" |
+	# shellcheck disable=SC2016  # Single quotes intentional for envsubst variable list
+	envsubst '$FDW_INGESTION_HOST,$FDW_INGESTION_DBNAME,$FDW_INGESTION_PORT,$FDW_INGESTION_USER,$FDW_INGESTION_PASSWORD_VALUE,$ETL_ANALYZE_FDW_TABLES_VALUE' <"${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_60_setupFDW.sql" |
 		psql -d "${TEST_ANALYTICS_DB}" -v ON_ERROR_STOP=0 2>&1 | grep -v "ERROR.*could not connect" || true
 
 	# Verify foreign tables were created (even if connection fails)
@@ -276,7 +277,8 @@ EOF
 	export ETL_ANALYZE_FDW_TABLES_VALUE="false"
 
 	# Use explicit variable list for envsubst to ensure all variables are substituted
-	envsubst '$FDW_INGESTION_HOST $FDW_INGESTION_DBNAME $FDW_INGESTION_PORT $FDW_INGESTION_USER $FDW_INGESTION_PASSWORD_VALUE $ETL_ANALYZE_FDW_TABLES_VALUE' <"${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_60_setupFDW.sql" |
+	# shellcheck disable=SC2016  # Single quotes intentional for envsubst variable list
+	envsubst '$FDW_INGESTION_HOST,$FDW_INGESTION_DBNAME,$FDW_INGESTION_PORT,$FDW_INGESTION_USER,$FDW_INGESTION_PASSWORD_VALUE,$ETL_ANALYZE_FDW_TABLES_VALUE' <"${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_60_setupFDW.sql" |
 		psql -d "${TEST_ANALYTICS_DB}" -v ON_ERROR_STOP=0 2>&1 | grep -v "ERROR.*could not connect" || true
 
 	# Verify foreign table exists (connection may fail, but table structure should be created)
@@ -342,7 +344,8 @@ EOF
 	export ETL_ANALYZE_FDW_TABLES_VALUE="false"
 
 	# Use explicit variable list for envsubst to ensure all variables are substituted
-	envsubst '$FDW_INGESTION_HOST $FDW_INGESTION_DBNAME $FDW_INGESTION_PORT $FDW_INGESTION_USER $FDW_INGESTION_PASSWORD_VALUE $ETL_ANALYZE_FDW_TABLES_VALUE' <"${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_60_setupFDW.sql" |
+	# shellcheck disable=SC2016  # Single quotes intentional for envsubst variable list
+	envsubst '$FDW_INGESTION_HOST,$FDW_INGESTION_DBNAME,$FDW_INGESTION_PORT,$FDW_INGESTION_USER,$FDW_INGESTION_PASSWORD_VALUE,$ETL_ANALYZE_FDW_TABLES_VALUE' <"${SCRIPT_BASE_DIRECTORY}/sql/dwh/ETL_60_setupFDW.sql" |
 		psql -d "${TEST_ANALYTICS_DB}" -v ON_ERROR_STOP=0 2>&1 | grep -v "ERROR.*could not connect" || true
 
 	# Verify foreign tables exist (even if connection fails)
