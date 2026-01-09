@@ -32,9 +32,8 @@ Cron automation allows the ETL process to run automatically at regular intervals
 ### Required Components
 
 1. **ETL Script**: `bin/dwh/ETL.sh` (already exists)
-2. **Cron Wrapper**: `bin/dwh/cron_etl.sh` (created in this task)
-3. **Monitor Script**: `bin/dwh/monitor_etl.sh` (created in this task)
-4. **Cron Configuration**: `etc/cron.example` (template provided)
+2. **Cron Configuration**: `etc/cron.example` (template provided)
+3. **Monitoring**: Handled by the Monitoring project (sister project)
 
 ### System Requirements
 
@@ -47,25 +46,7 @@ Cron automation allows the ETL process to run automatically at regular intervals
 
 ## Installation
 
-### Step 1: Prepare Cron Wrapper
-
-The cron wrapper script (`bin/dwh/cron_etl.sh`) is already created. Make it executable:
-
-```bash
-chmod +x bin/dwh/cron_etl.sh
-```
-
-### Step 2: Configure Log File
-
-Edit `bin/dwh/cron_etl.sh` to set your log file location:
-
-```bash
-# Default is /var/log/osm-notes-etl.log
-# Change if needed:
-ETL_LOG_FILE="${ETL_LOG_FILE:-/var/log/osm-notes-etl.log}"
-```
-
-### Step 3: Create Cron Configuration
+### Step 1: Create Cron Configuration
 
 Copy the example configuration:
 
@@ -73,7 +54,7 @@ Copy the example configuration:
 cp etc/cron.example /tmp/osm-notes-cron
 ```
 
-### Step 4: Edit Configuration
+### Step 2: Edit Configuration
 
 Edit `/tmp/osm-notes-cron` and update the paths:
 
@@ -93,7 +74,7 @@ Also update:
 - `HOME=/home/your-username` (your actual home directory)
 - Any other paths as needed
 
-### Step 5: Install Cron Job
+### Step 3: Install Cron Job
 
 Install the cron configuration:
 
@@ -101,7 +82,7 @@ Install the cron configuration:
 crontab /tmp/osm-notes-cron
 ```
 
-### Step 6: Verify Installation
+### Step 4: Verify Installation
 
 Check that cron is installed correctly:
 
@@ -159,41 +140,15 @@ This removes logs older than 7 days every Sunday at 3:30 AM.
 
 ## Monitoring
 
-### Manual Monitoring
+Monitoring is handled by the **Monitoring project** (sister project located at the same filesystem level as this project). Configure monitoring tasks in that project instead.
 
-Run the monitor script to check ETL status:
-
-```bash
-./bin/dwh/monitor_etl.sh
-```
-
-Output includes:
-- Process status (running/not running)
-- Last execution log
-- Database connection status
+The Monitoring project provides:
+- Process status monitoring (running/not running)
+- Last execution log tracking
+- Database connection status checks
 - Data warehouse statistics
-- Disk space usage
-
-### Automated Monitoring
-
-Add to cron for automated monitoring:
-
-```cron
-# Daily report at 6 AM
-0 6 * * * /home/notes/OSM-Notes-Analytics/bin/dwh/monitor_etl.sh > /tmp/etl_daily_report.txt
-```
-
-### Email Alerts
-
-Configure email alerts in `bin/dwh/cron_etl.sh`:
-
-```bash
-# Uncomment and configure these lines:
-if command -v mail &> /dev/null; then
-  echo "ETL failed with exit code ${exit_code}. Check logs at ${ETL_LOG_FILE}" | \
-    mail -s "ETL Failed - OSM Notes Analytics" notes@osm.lat
-fi
-```
+- Disk space usage monitoring
+- Email alerts for failures
 
 ---
 
@@ -224,7 +179,6 @@ sudo tail -f /var/log/cron
 **Check permissions**:
 ```bash
 # Script must be executable
-chmod +x bin/dwh/cron_etl.sh
 chmod +x bin/dwh/ETL.sh
 
 # All scripts should be readable
@@ -237,10 +191,10 @@ ls -la bin/dwh/*.sh
 
 ```bash
 # Good
-/home/notes/OSM-Notes-Analytics/bin/dwh/cron_etl.sh
+/home/notes/OSM-Notes-Analytics/bin/dwh/ETL.sh
 
 # Bad
-bin/dwh/cron_etl.sh
+bin/dwh/ETL.sh
 ```
 
 ### Issue: Database Connection Failed
@@ -289,11 +243,11 @@ find /tmp/ETL_* -name "ETL.lock" -mmin +240 -delete
 Test cron jobs manually first:
 
 ```bash
-# Run wrapper manually
-/home/notes/OSM-Notes-Analytics/bin/dwh/cron_etl.sh
+# Run ETL manually
+/home/notes/OSM-Notes-Analytics/bin/dwh/ETL.sh
 
 # Check output
-tail -f /var/log/osm-notes-etl.log
+tail -f /tmp/ETL_*/ETL.log
 ```
 
 ### 2. Start with Conservative Schedule
@@ -302,7 +256,7 @@ Begin with less frequent execution:
 
 ```cron
 # Start with hourly updates
-0 * * * * /home/notes/OSM-Notes-Analytics/bin/dwh/cron_etl.sh
+0 * * * * export CLEAN=false ; export LOG_LEVEL=INFO ; export DBNAME_INGESTION=notes ; export DBNAME_DWH=notes_dwh ; export DB_USER=notes ; /home/notes/OSM-Notes-Analytics/bin/dwh/ETL.sh
 ```
 
 Then increase frequency based on performance.
@@ -349,10 +303,10 @@ Monitor for failures:
 
 ```bash
 # Check for errors in logs
-grep -i error /var/log/osm-notes-etl.log | tail -20
+find /tmp/ETL_* -name "ETL.log" -exec grep -i error {} \; | tail -20
 
-# Set up daily error report
-0 7 * * * grep -i error /var/log/osm-notes-etl.log | tail -50 | mail -s "ETL Errors" notes@osm.lat
+# Set up daily error report (or configure in Monitoring project)
+0 7 * * * find /tmp/ETL_* -name "ETL.log" -exec grep -i error {} \; | tail -50 | mail -s "ETL Errors" notes@osm.lat
 ```
 
 ---
@@ -379,23 +333,7 @@ You can run different ETL operations at different times:
 
 ### Custom Log Rotation
 
-Configure custom log rotation:
-
-```bash
-# Create logrotate config
-sudo vim /etc/logrotate.d/osm-notes-etl
-
-# Add:
-/var/log/osm-notes-etl.log {
-    daily
-    rotate 30
-    compress
-    delaycompress
-    missingok
-    notifempty
-    create 0644 root root
-}
-```
+ETL logs are stored in `/tmp/ETL_XXXXXX/` directories. Automatic cleanup is configured in cron (see `etc/cron.example`).
 
 ### Conditional Execution
 
@@ -403,7 +341,7 @@ Run ETL only during business hours:
 
 ```cron
 # Only run 8 AM - 8 PM
-*/15 8-20 * * * /home/notes/OSM-Notes-Analytics/bin/dwh/cron_etl.sh
+*/15 8-20 * * * export CLEAN=false ; export LOG_LEVEL=INFO ; export DBNAME_INGESTION=notes ; export DBNAME_DWH=notes_dwh ; export DB_USER=notes ; /home/notes/OSM-Notes-Analytics/bin/dwh/ETL.sh
 ```
 
 ---

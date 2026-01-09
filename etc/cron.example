@@ -107,9 +107,8 @@ HOME=/home/notes
 # ==========================================
 # MONITORING TASKS (Optional)
 # ==========================================
-
-# Daily: Run ETL monitor and send report (6 AM)
-# 0 6 * * * /home/notes/OSM-Notes-Analytics/bin/dwh/monitor_etl.sh > /tmp/etl_daily_report.txt
+# Note: Monitoring is handled by the Monitoring project (sister project)
+# Configure monitoring tasks in that project instead
 
 # Weekly: Generate weekly summary (Mondays at 8 AM)
 # 0 8 * * 1 psql -U notes -d notes_dwh -c "SELECT COUNT(*) as total_facts FROM dwh.facts" >> /tmp/weekly_summary.txt
@@ -124,7 +123,7 @@ HOME=/home/notes
 # 2. Log Files: All ETL logs are stored in /tmp/ETL_XXXXXX/ directories
 #    Keep an eye on disk space and clean up regularly
 #
-# 3. Email Alerts: Configure mail in cron_etl.sh to receive failure notifications
+# 3. Email Alerts: Configure mail notifications in your monitoring system (Monitoring project)
 #
 # 4. Database Performance: Monitor query times and adjust VACUUM frequency if needed
 #

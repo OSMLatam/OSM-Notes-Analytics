@@ -97,7 +97,7 @@ Todas las tareas de alta prioridad han sido completadas.
     - ✅ Validación que detecta notas cerradas con reaperturas posteriores
     - ✅ Validación que verifica que `note_current_status` coincide con la acción más reciente en facts
     - ✅ La tabla `note_current_status` ya maneja correctamente las reaperturas usando `DISTINCT ON` con `ORDER BY action_at DESC`
-  - Archivos: `sql/dwh/ETL_57_validateETLIntegrity.sql`, `bin/dwh/monitor_etl.sh`
+  - Archivos: `sql/dwh/ETL_57_validateETLIntegrity.sql`
 
 - [✅] **MON-002**: Monitor debe revisar que la cantidad de comentarios es la misma de actions en facts - COMPLETADO
   - Algo similar para los datamarts
@@ -107,8 +107,8 @@ Todas las tareas de alta prioridad han sido completadas.
     - ✅ Comparación por nota (detecta notas con conteos diferentes)
     - ✅ Comparación de distribución por tipo de acción
     - ✅ Manejo de casos donde la tabla base no está disponible (FDW)
-    - ✅ Integrado en `monitor_etl.sh` y ejecutado automáticamente después del ETL
-  - Archivos: `sql/dwh/ETL_57_validateETLIntegrity.sql`, `bin/dwh/monitor_etl.sh`, `bin/dwh/ETL.sh`
+    - ✅ Integrado en `ETL.sh` y ejecutado automáticamente después del ETL
+  - Archivos: `sql/dwh/ETL_57_validateETLIntegrity.sql`, `bin/dwh/ETL.sh`
 
 ---
 

@@ -171,16 +171,6 @@ These are the **only scripts** that should be executed directly:
 
 These scripts are **supporting components** and should **never** be called directly:
 
-### Utility Scripts
-
-- **`bin/dwh/cron_etl.sh`** - Wrapper script for cron execution (internal use)
-  - Called internally by cron jobs
-  - Not meant for direct execution
-
-- **`bin/dwh/monitor_etl.sh`** - ETL monitoring script (internal use)
-  - Used for internal monitoring and validation
-  - Not meant for direct execution
-
 ### SQL Scripts
 
 All SQL scripts in `sql/dwh/` are called internally by the entry point scripts:
@@ -221,10 +211,6 @@ All SQL scripts in `sql/dwh/` are called internally by the entry point scripts:
 ### ❌ Incorrect Usage (DO NOT CALL)
 
 ```bash
-# Internal scripts - will fail or cause issues
-./bin/dwh/cron_etl.sh              # WRONG (internal wrapper)
-./bin/dwh/monitor_etl.sh           # WRONG (internal monitoring)
-
 # SQL scripts - should not be executed directly
 psql -d osm_notes -f sql/dwh/ETL_22_createDWHTables.sql  # WRONG (use ETL.sh instead)
 ```
