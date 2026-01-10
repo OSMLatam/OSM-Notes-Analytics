@@ -732,6 +732,16 @@ run_processAPINotes() {
   tail -50 "${output_file}" | while IFS= read -r line; do
    log_error "  $line"
   done
+
+  # Special handling for execution #7 (0 notes scenario)
+  # This is a known test case where processAPINotes.sh may fail when handling
+  # empty XML responses, but ETL can still be tested with no new notes
+  if [[ ${execution_number} -eq 7 ]]; then
+   log_warn "Execution #7 (0 notes) failed, but this is expected behavior for empty API responses"
+   log_warn "You can still run step 8 (ETL) to test incremental mode with no new notes"
+   log_warn "This failure is acceptable for testing purposes"
+  fi
+
   return ${exit_code}
  fi
 }
@@ -961,17 +971,30 @@ run_step() {
   ;;
  all)
   log_info "=== Running all steps sequentially ==="
+  local overall_exit_code=0
   for step_num in 1 2 3 4 5 6 7 8; do
    log_info ""
    log_info "=========================================="
    if ! run_step "${step_num}"; then
     log_error "Failed at step ${step_num}"
-    return 1
+    # Special handling for step 7 (0 notes scenario)
+    # Allow continuing to step 8 even if step 7 fails
+    if [[ ${step_num} -eq 7 ]]; then
+     log_warn "Step 7 (0 notes) failed, but continuing with step 8 (ETL) to test incremental mode"
+     overall_exit_code=1
+    else
+     return 1
+    fi
    fi
    log_info "Waiting 2 seconds before next step..."
    sleep 2
   done
-  log_success "All steps completed successfully"
+  if [[ ${overall_exit_code} -eq 0 ]]; then
+   log_success "All steps completed successfully"
+  else
+   log_warn "All steps completed, but step 7 had expected failure (0 notes scenario)"
+  fi
+  return ${overall_exit_code}
   ;;
  backup)
   log_info "=== Creating manual backup ==="
