@@ -1209,10 +1209,13 @@ execute_processAPINotes_and_etl() {
   rm -f /tmp/processPlanetNotes_failed_execution
 
   # Special handling for execution #4 (0 notes scenario)
-  # This is a known test case where processAPINotes.sh may fail when handling
-  # empty XML responses, but we still want to test ETL behavior with no new notes
+  # NOTE: According to documentation, processAPINotes.sh SHOULD handle 0 notes gracefully
+  # without errors. This has been fixed in processAPINotes.sh to handle empty files correctly.
+  # However, we keep this fallback handling in case of any edge cases or future regressions.
   if [[ ${EXECUTION_NUMBER} -eq 4 ]]; then
-   log_warn "Execution #4 (0 notes) failed, but this is expected behavior for empty API responses"
+   log_warn "Execution #4 (0 notes) failed unexpectedly"
+   log_warn "processAPINotes.sh should handle 0 notes gracefully without errors"
+   log_warn "This may indicate a regression or edge case that needs investigation"
    log_warn "Continuing with ETL execution to test incremental mode with no new notes..."
    # Set a flag to indicate we're continuing despite the failure
    local CONTINUE_DESPITE_FAILURE=1
