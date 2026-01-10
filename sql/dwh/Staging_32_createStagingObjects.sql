@@ -78,13 +78,13 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
     FROM note_comments c
      JOIN notes n
      ON (c.note_id = n.note_id)
-     JOIN (
-      SELECT note_id, id_user
-      FROM note_comments
-      WHERE CAST(event AS text) = ''opened''
-       AND note_id <= ' || max_note_id_snapshot || '
-     ) o
-     ON (n.note_id = o.note_id)
+     JOIN note_comments o
+     ON (n.note_id = o.note_id
+         -- Direct enum comparison (no CAST needed): foreign table is defined as note_event_enum
+         -- ETL_60_setupFDW.sql ensures the foreign table uses note_event_enum type, not TEXT
+         -- This allows PostgreSQL to use indexes and avoids full table scans
+         AND o.event = ''opened''
+         AND o.note_id <= ' || max_note_id_snapshot || ')
      LEFT JOIN note_comments_text t
      ON (c.note_id = t.note_id AND c.sequence_action = t.sequence_action)
 
@@ -104,13 +104,13 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
     FROM note_comments c
      JOIN notes n
      ON (c.note_id = n.note_id)
-     JOIN (
-      SELECT note_id, id_user
-      FROM note_comments
-      WHERE CAST(event AS text) = ''opened''
-       AND note_id <= ' || max_note_id_snapshot || '
-     ) o
-     ON (n.note_id = o.note_id)
+     JOIN note_comments o
+     ON (n.note_id = o.note_id
+         -- Direct enum comparison (no CAST needed): foreign table is defined as note_event_enum
+         -- ETL_60_setupFDW.sql ensures the foreign table uses note_event_enum type, not TEXT
+         -- This allows PostgreSQL to use indexes and avoids full table scans
+         AND o.event = ''opened''
+         AND o.note_id <= ' || max_note_id_snapshot || ')
      LEFT JOIN note_comments_text t
      ON (c.note_id = t.note_id AND c.sequence_action = t.sequence_action)
 

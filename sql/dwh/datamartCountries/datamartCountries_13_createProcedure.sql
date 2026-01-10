@@ -242,12 +242,9 @@ AS $proc$
    FROM dwh.facts f
     JOIN dwh.dimension_days d
     ON (f.action_dimension_id_date = d.dimension_day_id)
-    JOIN (
-     SELECT note_id, sequence_action, id_user
-     FROM note_comments
-     WHERE CAST(event AS text) = 'closed'
-    ) nc
-    ON (f.id_note = nc.note_id)
+    JOIN note_comments nc
+    ON (f.id_note = nc.note_id
+        AND nc.event = 'closed')
     JOIN note_comments_text nct
     ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
    WHERE f.dimension_id_country = m_dimension_country_id

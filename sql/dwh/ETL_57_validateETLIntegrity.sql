@@ -172,7 +172,7 @@ BEGIN
     SELECT COUNT(*)
     INTO v_base_comments_count
     FROM public.note_comments
-    WHERE CAST(event AS text) IN ('opened', 'closed', 'commented', 'reopened', 'hidden');
+    WHERE event IN ('opened', 'closed', 'commented', 'reopened', 'hidden');
   EXCEPTION
     WHEN OTHERS THEN
       RETURN QUERY SELECT
@@ -216,7 +216,7 @@ BEGIN
         nc.note_id,
         COUNT(*) as base_count
       FROM public.note_comments nc
-      WHERE CAST(nc.event AS text) IN ('opened', 'closed', 'commented', 'reopened', 'hidden')
+      WHERE nc.event IN ('opened', 'closed', 'commented', 'reopened', 'hidden')
       GROUP BY nc.note_id
     ) base_counts
     FULL OUTER JOIN (

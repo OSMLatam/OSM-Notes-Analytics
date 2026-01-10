@@ -193,6 +193,10 @@ BEGIN
   END IF;
 
   IF NOT table_exists THEN
+    -- Create foreign table with note_event_enum type (not TEXT)
+    -- This allows direct enum comparisons in queries without CAST, enabling index usage
+    -- IMPORTANT: The enum type must exist in both databases (created above in this script)
+    -- If the foreign table was previously defined as TEXT, it will be recreated as enum above
     EXECUTE 'CREATE FOREIGN TABLE public.note_comments (
       id INTEGER,
       note_id INTEGER,
@@ -202,8 +206,8 @@ BEGIN
       created_at TIMESTAMP WITHOUT TIME ZONE,
       id_user INTEGER
     ) SERVER ingestion_server OPTIONS (schema_name ''public'', table_name ''note_comments'')';
-    EXECUTE 'COMMENT ON FOREIGN TABLE public.note_comments IS ''Foreign table pointing to note_comments in Ingestion DB. Used for incremental ETL processing.''';
-    RAISE NOTICE 'Created foreign table: public.note_comments';
+    EXECUTE 'COMMENT ON FOREIGN TABLE public.note_comments IS ''Foreign table pointing to note_comments in Ingestion DB. Used for incremental ETL processing. Event column is note_event_enum (not TEXT) to allow direct enum comparisons and index usage.''';
+    RAISE NOTICE 'Created foreign table: public.note_comments with event as note_event_enum';
   END IF;
 
   -- Check notes

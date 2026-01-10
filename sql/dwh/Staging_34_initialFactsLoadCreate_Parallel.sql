@@ -56,12 +56,9 @@ BEGIN
    FROM note_comments c
     JOIN notes n
     ON (c.note_id = n.note_id)
-    JOIN (
-     SELECT note_id, id_user
-     FROM note_comments
-     WHERE CAST(event AS text) = 'opened'
-    ) o
-    ON (n.note_id = o.note_id)
+    JOIN note_comments o
+    ON (n.note_id = o.note_id
+        AND o.event = 'opened')
     LEFT JOIN note_comments_text t
     ON (c.note_id = t.note_id AND c.sequence_action = t.sequence_action)
    WHERE EXTRACT(YEAR FROM c.created_at) = ${YEAR}
