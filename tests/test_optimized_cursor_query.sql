@@ -8,7 +8,7 @@
 
 -- Test 1: Verify the optimized query uses index
 \echo '=== Test 1: Verify query uses index ==='
-EXPLAIN (ANALYZE, BUFFERS) 
+EXPLAIN (ANALYZE, BUFFERS)
 SELECT c.note_id, c.sequence_action, n.created_at, o.id_user, n.id_country, c.event, c.id_user, c.created_at
 FROM note_comments c
 JOIN notes n ON (c.note_id = n.note_id)
@@ -26,7 +26,7 @@ LIMIT 100;
 -- Test 2: Verify results match expected pattern
 \echo ''
 \echo '=== Test 2: Verify results match expected pattern ==='
-SELECT 
+SELECT
     COUNT(*) as total_rows,
     COUNT(DISTINCT c.note_id) as distinct_notes,
     MIN(c.created_at) as first_comment,
