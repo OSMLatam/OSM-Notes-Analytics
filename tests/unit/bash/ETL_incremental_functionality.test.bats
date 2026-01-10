@@ -16,10 +16,10 @@ load ../../test_helper
 
   # Setup: Create necessary tables and objects
   echo "Setting up test database..."
-  
+
   # Create dwh schema if it doesn't exist
   psql -d "${TEST_DBNAME}" -c "CREATE SCHEMA IF NOT EXISTS dwh;" > /dev/null 2>&1 || true
-  
+
   # Create dwh.properties table
   psql -d "${TEST_DBNAME}" << 'EOF' > /dev/null 2>&1 || true
 CREATE TABLE IF NOT EXISTS dwh.properties (
@@ -81,7 +81,7 @@ EOF
   # Insert some test facts to simulate existing data
   psql -d "${TEST_DBNAME}" << 'EOF' > /dev/null 2>&1 || true
 INSERT INTO dwh.dimension_days (day) VALUES ('2026-01-04') ON CONFLICT DO NOTHING;
-INSERT INTO dwh.facts (id_note, action_at, processing_time) 
+INSERT INTO dwh.facts (id_note, action_at, processing_time)
 VALUES (1, '2026-01-04 01:15:33', '2026-01-04 01:28:05')
 ON CONFLICT DO NOTHING;
 EOF
@@ -114,14 +114,14 @@ EOF
   run psql -d "${TEST_DBNAME}" -c "CALL staging.process_notes_actions_into_dwh();" 2>&1
   echo "Procedure execution status: ${status}"
   echo "Procedure execution output: ${output}"
-  
+
   # Check for specific runtime errors
   if echo "${output}" | grep -q "column.*does not exist"; then
     echo "ERROR: Runtime error detected - undefined variable/column"
     echo "${output}"
     return 1
   fi
-  
+
   if echo "${output}" | grep -q "ERROR"; then
     # Some errors are acceptable (e.g., no data to process), but syntax errors are not
     if echo "${output}" | grep -q "syntax error\|undefined\|does not exist"; then
@@ -145,10 +145,10 @@ EOF
 
   # Setup: Ensure staging schema and base objects exist
   psql -d "${TEST_DBNAME}" -c "CREATE SCHEMA IF NOT EXISTS staging;" > /dev/null 2>&1 || true
-  
+
   # Create base staging objects
   psql -d "${TEST_DBNAME}" -f "${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_31_createBaseStagingObjects.sql" > /dev/null 2>&1 || true
-  
+
   # Create staging objects
   run psql -d "${TEST_DBNAME}" -f "${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_32_createStagingObjects.sql"
   [[ "${status}" -eq 0 ]]
@@ -161,7 +161,7 @@ EOF
   # This will catch runtime errors like undefined variables
   run psql -d "${TEST_DBNAME}" -c "DO \$\$ DECLARE v_count INTEGER := 0; BEGIN CALL staging.process_notes_at_date('2026-01-04 00:00:00'::TIMESTAMP, v_count, TRUE); END \$\$;" 2>&1
   echo "process_notes_at_date execution output: ${output}"
-  
+
   # Check for runtime errors
   if echo "${output}" | grep -q "column.*does not exist\|undefined\|syntax error"; then
     echo "ERROR: Runtime error detected in process_notes_at_date"
@@ -173,15 +173,15 @@ EOF
 # Test that all variables are properly declared in process_notes_actions_into_dwh
 @test "process_notes_actions_into_dwh should have all variables properly declared" {
   local sql_file="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_32_createStagingObjects.sql"
-  
+
   # Check that original_statement_timeout is declared in DECLARE section
   run grep -A 20 "DECLARE" "${sql_file}" | grep -q "original_statement_timeout"
   [[ "${status}" -eq 0 ]] || echo "ERROR: original_statement_timeout not declared in DECLARE section"
-  
+
   # Check that it's used in EXECUTE format
   run grep -q "EXECUTE format.*original_statement_timeout" "${sql_file}"
   [[ "${status}" -eq 0 ]] || echo "ERROR: original_statement_timeout not used in EXECUTE format"
-  
+
   # Check that it's initialized before use
   run grep -B 5 "EXECUTE format.*original_statement_timeout" "${sql_file}" | grep -q "SELECT current_setting\|INTO original_statement_timeout"
   [[ "${status}" -eq 0 ]] || echo "ERROR: original_statement_timeout not initialized before use"

@@ -618,12 +618,112 @@ run_processAPINotes() {
    else
     local update_countries_exit=$?
     log_error "Failed to load countries with updateCountries.sh --base (exit code: ${update_countries_exit})"
-    log_error "This WILL cause processPlanetNotes.sh --base to fail with code 248"
-    log_error "Check updateCountries.sh logs for details"
-    # Don't fail here, let processAPINotes.sh try anyway, but it will likely fail
+
+    # In mock/hybrid mode, try to load countries directly from SQL as fallback
+    # This is needed because updateCountries.sh checks disk space (requires 4GB) even in mock mode
+    if [[ "${HYBRID_MOCK_MODE:-false}" == "true" ]] || [[ "${TEST_MODE:-false}" == "true" ]]; then
+     log_warn "Attempting to load countries directly from SQL as fallback (mock mode)..."
+
+     # Return to analytics root first
+     cd "${ANALYTICS_ROOT}"
+
+     # Load DBNAME from properties file
+     # shellcheck disable=SC1090
+     source "${INGESTION_ROOT}/etc/properties.sh"
+     local PSQL_CMD_FALLBACK="psql"
+     if [[ -n "${DB_HOST:-}" ]]; then
+      PSQL_CMD_FALLBACK="${PSQL_CMD_FALLBACK} -h ${DB_HOST} -p ${DB_PORT:-5432}"
+     fi
+     if [[ -n "${DB_USER_INGESTION:-}" ]]; then
+      PSQL_CMD_FALLBACK="${PSQL_CMD_FALLBACK} -U ${DB_USER_INGESTION}"
+     fi
+
+     # Create countries table with proper structure if it doesn't exist
+     # This matches the structure expected by processPlanetNotes.sh
+     log_info "Creating countries table structure..."
+     ${PSQL_CMD_FALLBACK} -d "${DBNAME}" << 'SQL_FALLBACK' > /dev/null 2>&1 || true
+-- Create countries table if it doesn't exist (matching processPlanetNotes structure)
+-- Structure based on processPlanetNotes_25_createCountryTables.sql
+CREATE TABLE IF NOT EXISTS countries (
+ country_id INTEGER NOT NULL,
+ country_name VARCHAR(100) NOT NULL,
+ country_name_es VARCHAR(100),
+ country_name_en VARCHAR(100),
+ geom GEOMETRY NOT NULL,
+ -- Fallback columns for edge cases
+ americas INTEGER,
+ europe INTEGER,
+ russia_middle_east INTEGER,
+ asia_oceania INTEGER,
+ -- 2D grid zones (can be NULL in mock mode)
+ zone_us_canada INTEGER,
+ zone_mexico_central_america INTEGER,
+ zone_caribbean INTEGER,
+ zone_northern_south_america INTEGER,
+ zone_southern_south_america INTEGER,
+ zone_western_europe INTEGER,
+ zone_eastern_europe INTEGER,
+ zone_northern_europe INTEGER,
+ zone_southern_europe INTEGER,
+ zone_northern_africa INTEGER,
+ zone_western_africa INTEGER,
+ zone_eastern_africa INTEGER,
+ zone_southern_africa INTEGER,
+ zone_middle_east INTEGER,
+ zone_russia_north INTEGER,
+ zone_russia_south INTEGER,
+ zone_central_asia INTEGER,
+ zone_india_south_asia INTEGER,
+ zone_southeast_asia INTEGER,
+ zone_eastern_asia INTEGER,
+ zone_australia_nz INTEGER,
+ zone_pacific_islands INTEGER,
+ zone_arctic INTEGER,
+ zone_antarctic INTEGER,
+ updated BOOLEAN,
+ last_update_attempt TIMESTAMP WITH TIME ZONE,
+ update_failed BOOLEAN DEFAULT FALSE,
+ is_maritime BOOLEAN DEFAULT FALSE,
+ PRIMARY KEY (country_id)
+);
+
+-- Create index on geometry if PostGIS is available
+DO $$
+BEGIN
+ IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'postgis') THEN
+  CREATE INDEX IF NOT EXISTS idx_countries_geom ON countries USING GIST (geom);
+ END IF;
+END $$;
+
+-- Insert minimal test countries to satisfy processPlanetNotes.sh requirements
+-- These are basic countries that allow the process to continue
+-- Using simple bounding box geometries for mock mode
+INSERT INTO countries (country_id, country_name, country_name_es, country_name_en, geom, is_maritime) VALUES
+ (1, 'Unknown', 'Desconocido', 'Unknown', ST_GeomFromText('POLYGON((-180 -90, 180 -90, 180 90, -180 90, -180 -90))', 4326), FALSE),
+ (16239, 'Austria', 'Austria', 'Austria', ST_GeomFromText('POLYGON((9.5 46.0, 17.0 46.0, 17.0 49.0, 9.5 49.0, 9.5 46.0))', 4326), FALSE),
+ (2186646, 'Antarctica', 'Antartida', 'Antarctica', ST_GeomFromText('POLYGON((-180 -90, 180 -90, 180 -60, -180 -60, -180 -90))', 4326), FALSE)
+ON CONFLICT (country_id) DO NOTHING;
+SQL_FALLBACK
+
+     # Verify countries were loaded
+     local fallback_countries_count
+     fallback_countries_count=$(${PSQL_CMD_FALLBACK} -d "${DBNAME}" -tAqc \
+      "SELECT COUNT(*) FROM countries;" 2> /dev/null | grep -E '^[0-9]+$' | head -1 || echo "0")
+
+     if [[ "${fallback_countries_count:-0}" -gt 0 ]]; then
+      log_success "Loaded ${fallback_countries_count} countries directly from SQL (fallback mode)"
+      log_warn "Note: Using minimal test countries. Full country boundaries are not available in mock mode."
+     else
+      log_error "Failed to load countries even with SQL fallback"
+      log_error "This WILL cause processPlanetNotes.sh --base to fail with code 248"
+     fi
+    else
+     log_error "This WILL cause processPlanetNotes.sh --base to fail with code 248"
+     log_error "Check updateCountries.sh logs for details"
+     # Return to analytics root
+     cd "${ANALYTICS_ROOT}"
+    fi
    fi
-   # Return to analytics root
-   cd "${ANALYTICS_ROOT}"
   else
    log_success "Countries table exists with ${countries_count} countries"
   fi
