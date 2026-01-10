@@ -414,7 +414,14 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
   use_equals BOOLEAN;
   start_of_day TIMESTAMP;
   max_note_id_snapshot INTEGER; -- Snapshot of MAX(note_id) to ensure consistency
+  original_statement_timeout TEXT; -- Store original timeout setting
  BEGIN
+  -- OPTIMIZATION: Set statement_timeout for FDW queries to prevent indefinite blocking
+  -- Default timeout: 5 minutes (300 seconds) - adjust if needed for large datasets
+  -- This prevents the ETL from hanging indefinitely on slow FDW queries
+  SELECT current_setting('statement_timeout') INTO original_statement_timeout;
+  SET LOCAL statement_timeout = '300s'; -- 5 minutes timeout for FDW queries
+
   -- Capture MAX(note_id) at the start to ensure consistency between notes and note_comments
   -- This prevents race conditions where new notes are inserted while processing
   SELECT COALESCE(MAX(note_id), 0)
