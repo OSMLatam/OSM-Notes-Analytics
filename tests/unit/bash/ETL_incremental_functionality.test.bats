@@ -175,8 +175,16 @@ EOF
   local sql_file="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_32_createStagingObjects.sql"
 
   # Check that original_statement_timeout is declared in DECLARE section
-  run grep -A 20 "DECLARE" "${sql_file}" | grep -q "original_statement_timeout"
-  [[ "${status}" -eq 0 ]] || echo "ERROR: original_statement_timeout not declared in DECLARE section"
+  # Extract the procedure block starting from process_notes_actions_into_dwh
+  # and check for DECLARE followed by original_statement_timeout within 20 lines
+  run awk '
+    /CREATE OR REPLACE PROCEDURE staging\.process_notes_actions_into_dwh/ { in_proc = 1 }
+    in_proc && /^[[:space:]]*DECLARE[[:space:]]*$/ { in_declare = 1; declare_start = NR }
+    in_declare && /original_statement_timeout/ { found = 1; exit }
+    in_declare && NR > declare_start + 20 { exit }
+  END { exit !found }
+  ' "${sql_file}"
+  [[ "${status}" -eq 0 ]] || echo "ERROR: original_statement_timeout not declared in DECLARE section of process_notes_actions_into_dwh"
 
   # Check that it's used in EXECUTE format
   run grep -q "EXECUTE format.*original_statement_timeout" "${sql_file}"
