@@ -470,10 +470,12 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
    -- Process all dates from first date until the latest date (skip empty days)
    WHILE (max_processed_date <= max_note_action_date) LOOP
     -- Timestamp of the max processed note on DWH for this date (should be NULL for initial load)
+    -- OPTIMIZATION: Use timestamp range instead of DATE() to allow index usage
     SELECT /* Notes-staging */ MAX(action_at)
      INTO max_note_on_dwh_timestamp
     FROM dwh.facts
-    WHERE DATE(action_at) = max_processed_date;
+    WHERE action_at >= max_processed_date::TIMESTAMP
+     AND action_at < (max_processed_date + INTERVAL '1 day')::TIMESTAMP;
 
     IF (max_note_on_dwh_timestamp IS NULL) THEN
      max_note_on_dwh_timestamp := max_processed_date::TIMESTAMP;
@@ -481,10 +483,12 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
 
     -- Count notes to process on this date
     -- Filter by max_note_id_snapshot to ensure consistency
+    -- OPTIMIZATION: Use timestamp range instead of DATE() to allow index usage on FDW
     SELECT /* Notes-staging */ COUNT(1)
      INTO qty_notes_on_date
     FROM note_comments
-    WHERE DATE(created_at) = max_processed_date
+    WHERE created_at >= max_processed_date::TIMESTAMP
+     AND created_at < (max_processed_date + INTERVAL '1 day')::TIMESTAMP
      AND created_at > max_note_on_dwh_timestamp
      AND note_id <= max_note_id_snapshot;
 
@@ -496,10 +500,11 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
 
     -- Find next date that actually has comments (skip empty days)
     -- Filter by max_note_id_snapshot to ensure consistency
+    -- OPTIMIZATION: Use timestamp range instead of DATE() to allow index usage on FDW
     SELECT /* Notes-staging */ MIN(DATE(created_at))
      INTO max_processed_date
     FROM note_comments
-    WHERE DATE(created_at) > max_processed_date
+    WHERE created_at >= (max_processed_date + INTERVAL '1 day')::TIMESTAMP
      AND note_id <= max_note_id_snapshot;
 
     -- If no more dates with comments, exit loop
@@ -574,10 +579,12 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
 --RAISE NOTICE 'test % < %.', max_processed_date, max_note_action_date;
    -- Timestamp of the max processed note on DWH.
    -- It is on the same DATE of max_processed_date.
+   -- OPTIMIZATION: Use timestamp range instead of DATE() to allow index usage
    SELECT /* Notes-staging */ MAX(action_at)
     INTO max_note_on_dwh_timestamp
    FROM dwh.facts
-   WHERE DATE(action_at) = max_processed_date;
+   WHERE action_at >= max_processed_date::TIMESTAMP
+    AND action_at < (max_processed_date + INTERVAL '1 day')::TIMESTAMP;
 --RAISE NOTICE '1Flag 6: %', CLOCK_TIMESTAMP();
 --RAISE NOTICE 'max timestamp dwh %.', max_note_on_dwh_timestamp;
    IF (max_note_on_dwh_timestamp IS NULL) THEN
@@ -588,10 +595,12 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
    -- Gets the number of notes that have not being processed on the date being
    -- processed.
    -- Filter by max_note_id_snapshot to ensure consistency
+   -- OPTIMIZATION: Use timestamp range instead of DATE() to allow index usage on FDW
    SELECT /* Notes-staging */ COUNT(1)
     INTO qty_notes_on_date
    FROM note_comments
-   WHERE DATE(created_at) = max_processed_date
+   WHERE created_at >= max_processed_date::TIMESTAMP
+    AND created_at < (max_processed_date + INTERVAL '1 day')::TIMESTAMP
     AND created_at > max_note_on_dwh_timestamp
     AND note_id <= max_note_id_snapshot;
 --RAISE NOTICE 'count notes to process on date %: %.', max_processed_date,
@@ -604,10 +613,11 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
     -- Find next date that actually has comments (skip empty days)
     -- We only need to check if the date is greater, not the timestamp
     -- Filter by max_note_id_snapshot to ensure consistency
+    -- OPTIMIZATION: Use timestamp range instead of DATE() to allow index usage on FDW
     SELECT /* Notes-staging */ MIN(DATE(created_at))
      INTO max_processed_date
     FROM note_comments
-    WHERE DATE(created_at) > max_processed_date
+    WHERE created_at >= (max_processed_date + INTERVAL '1 day')::TIMESTAMP
      AND note_id <= max_note_id_snapshot;
 
     -- If no more dates with comments, exit loop
@@ -617,10 +627,12 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
 
     -- Get the max timestamp processed for the new date (if any facts exist for this date)
     -- This ensures we don't reprocess comments that were already processed
+    -- OPTIMIZATION: Use timestamp range instead of DATE() to allow index usage
     SELECT /* Notes-staging */ MAX(action_at)
      INTO max_note_on_dwh_timestamp
     FROM dwh.facts
-    WHERE DATE(action_at) = max_processed_date;
+    WHERE action_at >= max_processed_date::TIMESTAMP
+     AND action_at < (max_processed_date + INTERVAL '1 day')::TIMESTAMP;
 
     -- Determine if we should use m_equals = TRUE or FALSE
     -- Use TRUE (>=) if:
@@ -647,10 +659,12 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
    -- Gets the number of notes that have not being processed on the new date
    -- being processed.
    -- Filter by max_note_id_snapshot to ensure consistency
+   -- OPTIMIZATION: Use timestamp range instead of DATE() to allow index usage on FDW
     SELECT /* Notes-staging */ COUNT(1)
      INTO qty_notes_on_date
     FROM note_comments
-    WHERE DATE(created_at) = max_processed_date
+    WHERE created_at >= max_processed_date::TIMESTAMP
+     AND created_at < (max_processed_date + INTERVAL '1 day')::TIMESTAMP
      AND created_at > max_note_on_dwh_timestamp
      AND note_id <= max_note_id_snapshot;
 --RAISE NOTICE 'Notes to process for %: %.', max_processed_date,
@@ -677,6 +691,9 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
   END LOOP;
 --RAISE NOTICE 'No facts to process (% !> %).', max_processed_date,
 --max_note_action_date;
+
+  -- Restore original statement_timeout
+  EXECUTE format('SET LOCAL statement_timeout = %L', original_statement_timeout);
  END
 $proc$
 ;

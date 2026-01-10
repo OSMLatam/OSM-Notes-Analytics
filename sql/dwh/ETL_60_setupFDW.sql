@@ -44,7 +44,9 @@ DECLARE
   expected_host TEXT := '${FDW_INGESTION_HOST}';
   expected_dbname TEXT := '${FDW_INGESTION_DBNAME}';
   expected_port TEXT := '${FDW_INGESTION_PORT}';
-  expected_use_remote_estimate TEXT := 'false';
+  -- OPTIMIZATION: Enable use_remote_estimate for better query planning on FDW
+  -- This allows PostgreSQL to request statistics from the remote server for better query plans
+  expected_use_remote_estimate TEXT := 'true';
 BEGIN
   -- Check if server exists
   SELECT EXISTS (

@@ -14,7 +14,12 @@ ETL_ANALYZE_AFTER_LOAD=true
 # ANALYZE foreign tables during FDW setup (default: false for performance)
 # Setting to true will analyze foreign tables which can take 20+ seconds
 # but improves query planning. Only enable if you experience query performance issues.
-ETL_ANALYZE_FDW_TABLES=false
+# OPTIMIZATION: Enable ANALYZE on FDW tables for better query planning
+# When enabled, PostgreSQL will request statistics from the remote server
+# This improves query performance, especially for date range queries
+# Default: false (for faster ETL startup, but may cause slower queries)
+# Recommended: true (for better query performance on FDW tables)
+ETL_ANALYZE_FDW_TABLES=true
 
 # Resource Control
 MAX_MEMORY_USAGE=80
