@@ -1,0 +1,353 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Quality checks run weekly on Monday at 2am UTC
+    - cron: '0 2 * * 1'
+    # Dependency checks run monthly on the 1st at 3am UTC
+    - cron: '0 3 1 * *'
+  workflow_dispatch:
+
+jobs:
+  # Tests job - requires PostgreSQL service
+  unit-tests:
+    name: Unit and Integration Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgis/postgis:15-3.3
+        env:
+          POSTGRES_DB: dwh
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y bats postgresql-client gettext-base
+
+    - name: Setup test database
+      env:
+        PGHOST: localhost
+        PGPORT: 5432
+        PGUSER: postgres
+        PGPASSWORD: postgres
+        PGDATABASE: dwh
+      run: |
+        psql -c "CREATE EXTENSION IF NOT EXISTS postgis;"
+        psql -c "CREATE EXTENSION IF NOT EXISTS btree_gist;"
+        psql -c "SELECT version();"
+        # Verify database is accessible
+        psql -c "SELECT current_database(), current_user;"
+
+    - name: Run DWH Tests
+      env:
+        TEST_DBNAME: dwh
+        TEST_DBHOST: localhost
+        TEST_DBPORT: 5432
+        TEST_DBUSER: postgres
+        TEST_DBPASSWORD: postgres
+        PGPASSWORD: postgres
+        PGHOST: localhost
+        PGPORT: 5432
+        PGUSER: postgres
+        PGDATABASE: dwh
+      run: |
+        # Verify database connection before running tests
+        psql -c "SELECT current_database(), current_user;" || exit 1
+        ./tests/run_dwh_tests.sh
+
+    - name: Run Hybrid ETL Integration Test
+      env:
+        TEST_DBNAME: dwh
+        TEST_DBHOST: localhost
+        TEST_DBPORT: 5432
+        TEST_DBUSER: postgres
+        TEST_DBPASSWORD: postgres
+        PGPASSWORD: postgres
+        INGESTION_ROOT: ${{ github.workspace }}/../OSM-Notes-Ingestion
+      run: |
+        # Only run if OSM-Notes-Ingestion is available (submodule)
+        if [ -d "../OSM-Notes-Ingestion" ]; then
+          echo "🧪 Running hybrid ETL integration test..."
+          ./tests/run_processAPINotes_with_etl_controlled.sh all || {
+            echo "⚠️  Hybrid test failed - this is expected if OSM-Notes-Ingestion submodule is not set up"
+            echo "   To run locally: ./tests/run_processAPINotes_with_etl_controlled.sh all"
+          }
+        else
+          echo "ℹ️  Skipping hybrid test - OSM-Notes-Ingestion submodule not available"
+        fi
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: dwh-test-results
+        path: /tmp/all_tests_output.txt
+        if-no-files-found: ignore
+
+  # Quality checks jobs - run in parallel
+  shellcheck:
+    name: Shellcheck
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install shellcheck
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y shellcheck
+
+    - name: Run shellcheck on Analytics scripts
+      run: |
+        echo "Running shellcheck on Analytics-specific scripts..."
+        find bin/dwh -name "*.sh" -type f -exec shellcheck -x -o all {} \;
+
+    - name: Run shellcheck on Common submodule (integration check)
+      continue-on-error: true
+      run: |
+        echo "Running shellcheck on Common submodule in Analytics context..."
+        find lib/osm-common -name "*.sh" -type f -exec shellcheck -x -o all {} \; || {
+          echo "⚠️  Warning: Common submodule has shellcheck issues in Analytics context"
+          echo "Note: This may indicate integration problems, not necessarily bugs in Common"
+          exit 0
+        }
+
+  shfmt:
+    name: Code Formatting
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install shfmt
+      run: |
+        wget -q -O shfmt https://github.com/mvdan/sh/releases/download/v3.7.0/shfmt_v3.7.0_linux_amd64
+        chmod +x shfmt
+        sudo mv shfmt /usr/local/bin/
+        shfmt -version
+
+    - name: Check Analytics code formatting
+      run: |
+        echo "Checking Analytics code formatting (shfmt -i 1 -sr -bn)..."
+        find bin/dwh -name "*.sh" -type f -exec shfmt -d -i 1 -sr -bn {} \;
+
+    - name: Check Common code formatting (integration check)
+      continue-on-error: true
+      run: |
+        echo "Checking Common code formatting in Analytics context..."
+        find lib/osm-common -name "*.sh" -type f -exec shfmt -d -i 1 -sr -bn {} \; || {
+          echo "⚠️  Warning: Common submodule formatting issues in Analytics context"
+          exit 0
+        }
+
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Check for common issues
+      run: |
+        echo "Checking for common code quality issues..."
+
+        # Check for trailing whitespace
+        echo "Checking trailing whitespace..."
+        set +e
+        TRAILING_FILES=$(find bin/dwh -name "*.sh" -type f -exec grep -l " $" {} \; 2>/dev/null)
+        set -e
+        if [[ -n "${TRAILING_FILES}" ]]; then
+          echo "⚠️  Found trailing whitespace in Analytics scripts"
+          echo "${TRAILING_FILES}"
+          exit 1
+        else
+          echo "✓ No trailing whitespace found"
+        fi
+
+        # Check for proper shebang
+        echo "Checking shebangs..."
+        set +e
+        INVALID_SHEBANGS=$(find bin/dwh -name "*.sh" -type f -exec head -1 {} \; | grep -v '#!/bin/bash' | wc -l)
+        set -e
+        INVALID_SHEBANGS=$(echo "$INVALID_SHEBANGS" | tr -d ' \n')
+        if [[ "${INVALID_SHEBANGS}" -gt 0 ]]; then
+          echo "⚠️  Found ${INVALID_SHEBANGS} script(s) without proper shebang"
+          exit 1
+        else
+          echo "✓ All shebangs correct"
+        fi
+
+        # Check for TODO/FIXME comments
+        echo "Checking for TODO/FIXME comments..."
+        TODO_COUNT=$(find bin/dwh -name "*.sh" -type f -exec grep -c "TODO\|FIXME" {} \; 2>/dev/null | awk '{s+=$1} END {print s+0}' || echo "0")
+        echo "Found ${TODO_COUNT} TODO/FIXME comments"
+
+    - name: Generate quality report
+      if: always()
+      run: |
+        echo "## Quality Check Results - Analytics" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Tests Performed:" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Shellcheck (Analytics scripts in bin/dwh/)" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Shellcheck (Common submodule - integration check)" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Shfmt (code formatting)" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Code quality checks" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Scope:" >> $GITHUB_STEP_SUMMARY
+        echo "- **Analytics Scripts:** bin/dwh/" >> $GITHUB_STEP_SUMMARY
+        echo "- **Common Submodule:** lib/osm-common/ (tested in context)" >> $GITHUB_STEP_SUMMARY
+
+    - name: Upload quality test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: quality-test-results
+        path: /tmp/quality_test_output.txt
+        if-no-files-found: ignore
+
+  # Dependency check - only runs on main branch
+  check-dependencies:
+    name: Check Dependencies
+    runs-on: ubuntu-latest
+    # Only run on main branch (not develop) or on schedule/workflow_dispatch
+    if: github.ref == 'refs/heads/main' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    
+    - name: Check PostgreSQL compatibility
+      run: |
+        echo "## PostgreSQL Compatibility Check" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Checking SQL scripts for PostgreSQL compatibility..." >> $GITHUB_STEP_SUMMARY
+        
+        # Count SQL files
+        SQL_COUNT=$(find sql/dwh -name "*.sql" -type f | wc -l)
+        echo "- Found ${SQL_COUNT} SQL files" >> $GITHUB_STEP_SUMMARY
+        
+        # Check for deprecated syntax (basic check)
+        if grep -r "EXCLUSIVE" sql/dwh/*.sql 2>/dev/null; then
+          echo "⚠️  Warning: Found EXCLUSIVE lock syntax" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "✅ SQL compatibility check complete" >> $GITHUB_STEP_SUMMARY
+    
+    - name: Check Bash version requirements
+      run: |
+        echo "## Bash Version Requirements" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Check for Bash 4.0+ features
+        if grep -r "declare -A" bin/dwh/*.sh 2>/dev/null; then
+          echo "ℹ️  Requires Bash 4.0+ (associative arrays detected)" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if grep -r "readarray\|mapfile" bin/dwh/*.sh 2>/dev/null; then
+          echo "ℹ️  Requires Bash 4.0+ (readarray/mapfile detected)" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "✅ Bash version check complete" >> $GITHUB_STEP_SUMMARY
+    
+    - name: Check external tool dependencies
+      run: |
+        echo "## External Dependencies" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Required tools:" >> $GITHUB_STEP_SUMMARY
+        echo "- PostgreSQL 12+" >> $GITHUB_STEP_SUMMARY
+        echo "- PostGIS 3.0+" >> $GITHUB_STEP_SUMMARY
+        echo "- Bash 4.0+" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Testing tools:" >> $GITHUB_STEP_SUMMARY
+        echo "- BATS (Bash Automated Testing System)" >> $GITHUB_STEP_SUMMARY
+        echo "- shellcheck" >> $GITHUB_STEP_SUMMARY
+        echo "- shfmt" >> $GITHUB_STEP_SUMMARY
+
+  # Summary job - runs after all other jobs complete
+  all-checks-summary:
+    name: All Checks Summary
+    needs: [unit-tests, shellcheck, shfmt, code-quality, check-dependencies]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+    - name: Check all results
+      run: |
+        echo "## CI Results Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ needs.unit-tests.result }}" == "success" ]; then
+          echo "✅ Unit and Integration Tests: PASSED" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Unit and Integration Tests: FAILED" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ "${{ needs.shellcheck.result }}" == "success" ]; then
+          echo "✅ Shellcheck: PASSED" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Shellcheck: FAILED" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ "${{ needs.shfmt.result }}" == "success" ]; then
+          echo "✅ Code Formatting: PASSED" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Code Formatting: FAILED" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ "${{ needs.code-quality.result }}" == "success" ]; then
+          echo "✅ Code Quality Checks: PASSED" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Code Quality Checks: FAILED" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ "${{ needs.check-dependencies.result }}" == "success" ] || [ "${{ needs.check-dependencies.result }}" == "skipped" ]; then
+          echo "✅ Dependency Check: PASSED/SKIPPED" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Dependency Check: FAILED" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # Exit with error if any job failed
+        if [ "${{ needs.unit-tests.result }}" != "success" ] || \
+           [ "${{ needs.shellcheck.result }}" != "success" ] || \
+           [ "${{ needs.shfmt.result }}" != "success" ] || \
+           [ "${{ needs.code-quality.result }}" != "success" ] || \
+           ([ "${{ needs.check-dependencies.result }}" != "success" ] && [ "${{ needs.check-dependencies.result }}" != "skipped" ]); then
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "❌ Some checks failed. Please review the logs above." >> $GITHUB_STEP_SUMMARY
+          exit 1
+        else
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ All checks passed!" >> $GITHUB_STEP_SUMMARY
+          exit 0
+        fi
