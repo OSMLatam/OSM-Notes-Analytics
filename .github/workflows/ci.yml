@@ -240,46 +240,46 @@ jobs:
     runs-on: ubuntu-latest
     # Only run on main branch (not develop) or on schedule/workflow_dispatch
     if: github.ref == 'refs/heads/main' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         submodules: recursive
-    
+
     - name: Check PostgreSQL compatibility
       run: |
         echo "## PostgreSQL Compatibility Check" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "Checking SQL scripts for PostgreSQL compatibility..." >> $GITHUB_STEP_SUMMARY
-        
+
         # Count SQL files
         SQL_COUNT=$(find sql/dwh -name "*.sql" -type f | wc -l)
         echo "- Found ${SQL_COUNT} SQL files" >> $GITHUB_STEP_SUMMARY
-        
+
         # Check for deprecated syntax (basic check)
         if grep -r "EXCLUSIVE" sql/dwh/*.sql 2>/dev/null; then
           echo "⚠️  Warning: Found EXCLUSIVE lock syntax" >> $GITHUB_STEP_SUMMARY
         fi
-        
+
         echo "✅ SQL compatibility check complete" >> $GITHUB_STEP_SUMMARY
-    
+
     - name: Check Bash version requirements
       run: |
         echo "## Bash Version Requirements" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        
+
         # Check for Bash 4.0+ features
         if grep -r "declare -A" bin/dwh/*.sh 2>/dev/null; then
           echo "ℹ️  Requires Bash 4.0+ (associative arrays detected)" >> $GITHUB_STEP_SUMMARY
         fi
-        
+
         if grep -r "readarray\|mapfile" bin/dwh/*.sh 2>/dev/null; then
           echo "ℹ️  Requires Bash 4.0+ (readarray/mapfile detected)" >> $GITHUB_STEP_SUMMARY
         fi
-        
+
         echo "✅ Bash version check complete" >> $GITHUB_STEP_SUMMARY
-    
+
     - name: Check external tool dependencies
       run: |
         echo "## External Dependencies" >> $GITHUB_STEP_SUMMARY
@@ -306,37 +306,37 @@ jobs:
       run: |
         echo "## CI Results Summary" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        
+
         if [ "${{ needs.unit-tests.result }}" == "success" ]; then
           echo "✅ Unit and Integration Tests: PASSED" >> $GITHUB_STEP_SUMMARY
         else
           echo "❌ Unit and Integration Tests: FAILED" >> $GITHUB_STEP_SUMMARY
         fi
-        
+
         if [ "${{ needs.shellcheck.result }}" == "success" ]; then
           echo "✅ Shellcheck: PASSED" >> $GITHUB_STEP_SUMMARY
         else
           echo "❌ Shellcheck: FAILED" >> $GITHUB_STEP_SUMMARY
         fi
-        
+
         if [ "${{ needs.shfmt.result }}" == "success" ]; then
           echo "✅ Code Formatting: PASSED" >> $GITHUB_STEP_SUMMARY
         else
           echo "❌ Code Formatting: FAILED" >> $GITHUB_STEP_SUMMARY
         fi
-        
+
         if [ "${{ needs.code-quality.result }}" == "success" ]; then
           echo "✅ Code Quality Checks: PASSED" >> $GITHUB_STEP_SUMMARY
         else
           echo "❌ Code Quality Checks: FAILED" >> $GITHUB_STEP_SUMMARY
         fi
-        
+
         if [ "${{ needs.check-dependencies.result }}" == "success" ] || [ "${{ needs.check-dependencies.result }}" == "skipped" ]; then
           echo "✅ Dependency Check: PASSED/SKIPPED" >> $GITHUB_STEP_SUMMARY
         else
           echo "❌ Dependency Check: FAILED" >> $GITHUB_STEP_SUMMARY
         fi
-        
+
         # Exit with error if any job failed
         if [ "${{ needs.unit-tests.result }}" != "success" ] || \
            [ "${{ needs.shellcheck.result }}" != "success" ] || \
