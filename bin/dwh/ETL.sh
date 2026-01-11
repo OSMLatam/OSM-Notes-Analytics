@@ -305,6 +305,8 @@ declare -r ETL_VALIDATE_FACTS="${ETL_VALIDATE_FACTS:-true}"
 declare -r ETL_PARALLEL_ENABLED="${ETL_PARALLEL_ENABLED:-true}"
 declare -r ETL_MAX_PARALLEL_JOBS="${ETL_MAX_PARALLEL_JOBS:-4}"
 declare -r ETL_MONITOR_RESOURCES="${ETL_MONITOR_RESOURCES:-true}"
+# Fail ETL if datamarts fail (default: true for strict mode, set to false for backward compatibility)
+declare -r ETL_DATAMART_FAIL_ON_ERROR="${ETL_DATAMART_FAIL_ON_ERROR:-true}"
 declare -r ETL_MONITOR_INTERVAL="${ETL_MONITOR_INTERVAL:-30}"
 declare -r ETL_TEST_MODE="${ETL_TEST_MODE:-false}"
 
@@ -2411,6 +2413,7 @@ function main() {
   DATAMART_START_TIME=$(date +%s)
   __logi "Executing datamart scripts..."
   set +e
+  local datamart_failures=0
   local DATAMART_COUNTRIES_START_TIME
   DATAMART_COUNTRIES_START_TIME=$(date +%s)
   if "${DATAMART_COUNTRIES_SCRIPT}" ""; then
@@ -2420,14 +2423,16 @@ function main() {
    __logi "SUCCESS: datamartCountries completed successfully"
    __logi "⏱️  TIME: datamartCountries took ${datamart_countries_duration} seconds"
   else
-   __loge "ERROR: datamartCountries failed with exit code $?"
-   # Find log file directory (failures are acceptable here)
+   local datamart_countries_exit_code=$?
+   __loge "ERROR: datamartCountries failed with exit code ${datamart_countries_exit_code}"
+   # Find log file directory
    local datamart_countries_log_dir
-   # shellcheck disable=SC2312  # Command substitution in error message is intentional; failures are acceptable
+   # shellcheck disable=SC2312  # Command substitution in error message is intentional
    datamart_countries_log_dir=$(find /tmp -maxdepth 1 -type d -name 'datamartCountries_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2- || echo "")
    if [[ -n "${datamart_countries_log_dir}" ]]; then
     __loge "Check log file: ${datamart_countries_log_dir}/datamartCountries.log"
    fi
+   datamart_failures=$((datamart_failures + 1))
   fi
   local DATAMART_USERS_START_TIME
   DATAMART_USERS_START_TIME=$(date +%s)
@@ -2438,14 +2443,16 @@ function main() {
    __logi "SUCCESS: datamartUsers completed successfully"
    __logi "⏱️  TIME: datamartUsers took ${datamart_users_duration} seconds"
   else
-   __loge "ERROR: datamartUsers failed with exit code $?"
-   # Find log file directory (failures are acceptable here)
+   local datamart_users_exit_code=$?
+   __loge "ERROR: datamartUsers failed with exit code ${datamart_users_exit_code}"
+   # Find log file directory
    local datamart_users_log_dir
-   # shellcheck disable=SC2312  # Command substitution in error message is intentional; failures are acceptable
+   # shellcheck disable=SC2312  # Command substitution in error message is intentional
    datamart_users_log_dir=$(find /tmp -maxdepth 1 -type d -name 'datamartUsers_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2- || echo "")
    if [[ -n "${datamart_users_log_dir}" ]]; then
     __loge "Check log file: ${datamart_users_log_dir}/datamartUsers.log"
    fi
+   datamart_failures=$((datamart_failures + 1))
   fi
   local DATAMART_GLOBAL_START_TIME
   DATAMART_GLOBAL_START_TIME=$(date +%s)
@@ -2456,16 +2463,28 @@ function main() {
    __logi "SUCCESS: datamartGlobal completed successfully"
    __logi "⏱️  TIME: datamartGlobal took ${datamart_global_duration} seconds"
   else
-   __loge "ERROR: datamartGlobal failed with exit code $?"
-   # Find log file directory (failures are acceptable here)
+   local datamart_global_exit_code=$?
+   __loge "ERROR: datamartGlobal failed with exit code ${datamart_global_exit_code}"
+   # Find log file directory
    local datamart_global_log_dir
-   # shellcheck disable=SC2312  # Command substitution in error message is intentional; failures are acceptable
+   # shellcheck disable=SC2312  # Command substitution in error message is intentional
    datamart_global_log_dir=$(find /tmp -maxdepth 1 -type d -name 'datamartGlobal_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2- || echo "")
    if [[ -n "${datamart_global_log_dir}" ]]; then
     __loge "Check log file: ${datamart_global_log_dir}/datamartGlobal.log"
    fi
+   datamart_failures=$((datamart_failures + 1))
   fi
   set -e
+  # Fail ETL if datamarts failed and ETL_DATAMART_FAIL_ON_ERROR is true (default)
+  if [[ ${datamart_failures} -gt 0 ]]; then
+   __loge "ERROR: ${datamart_failures} datamart script(s) failed"
+   if [[ "${ETL_DATAMART_FAIL_ON_ERROR}" == "true" ]]; then
+    __loge "ETL_DATAMART_FAIL_ON_ERROR=true: ETL will fail due to datamart errors"
+    return 1
+   else
+    __logw "ETL_DATAMART_FAIL_ON_ERROR=false: Continuing despite datamart failures (backward compatibility mode)"
+   fi
+  fi
   local DATAMART_END_TIME
   DATAMART_END_TIME=$(date +%s)
   local datamart_duration=$((DATAMART_END_TIME - DATAMART_START_TIME))
@@ -2548,43 +2567,60 @@ function main() {
 
   __logi "Executing datamart scripts..."
   set +e
+  local datamart_failures=0
   if "${DATAMART_COUNTRIES_SCRIPT}" ""; then
    __logi "SUCCESS: datamartCountries completed successfully"
   else
-   __loge "ERROR: datamartCountries failed with exit code $?"
-   # Find log file directory (failures are acceptable here)
+   local datamart_countries_exit_code=$?
+   __loge "ERROR: datamartCountries failed with exit code ${datamart_countries_exit_code}"
+   # Find log file directory
    local datamart_countries_log_dir
-   # shellcheck disable=SC2312  # Command substitution in error message is intentional; failures are acceptable
+   # shellcheck disable=SC2312  # Command substitution in error message is intentional
    datamart_countries_log_dir=$(find /tmp -maxdepth 1 -type d -name 'datamartCountries_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2- || echo "")
    if [[ -n "${datamart_countries_log_dir}" ]]; then
     __loge "Check log file: ${datamart_countries_log_dir}/datamartCountries.log"
    fi
+   datamart_failures=$((datamart_failures + 1))
   fi
   if "${DATAMART_USERS_SCRIPT}" ""; then
    __logi "SUCCESS: datamartUsers completed successfully"
   else
-   __loge "ERROR: datamartUsers failed with exit code $?"
-   # Find log file directory (failures are acceptable here)
+   local datamart_users_exit_code=$?
+   __loge "ERROR: datamartUsers failed with exit code ${datamart_users_exit_code}"
+   # Find log file directory
    local datamart_users_log_dir
-   # shellcheck disable=SC2312  # Command substitution in error message is intentional; failures are acceptable
+   # shellcheck disable=SC2312  # Command substitution in error message is intentional
    datamart_users_log_dir=$(find /tmp -maxdepth 1 -type d -name 'datamartUsers_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2- || echo "")
    if [[ -n "${datamart_users_log_dir}" ]]; then
     __loge "Check log file: ${datamart_users_log_dir}/datamartUsers.log"
    fi
+   datamart_failures=$((datamart_failures + 1))
   fi
   if "${DATAMART_GLOBAL_SCRIPT}" ""; then
    __logi "SUCCESS: datamartGlobal completed successfully"
   else
-   __loge "ERROR: datamartGlobal failed with exit code $?"
-   # Find log file directory (failures are acceptable here)
+   local datamart_global_exit_code=$?
+   __loge "ERROR: datamartGlobal failed with exit code ${datamart_global_exit_code}"
+   # Find log file directory
    local datamart_global_log_dir
-   # shellcheck disable=SC2312  # Command substitution in error message is intentional; failures are acceptable
+   # shellcheck disable=SC2312  # Command substitution in error message is intentional
    datamart_global_log_dir=$(find /tmp -maxdepth 1 -type d -name 'datamartGlobal_*' -printf '%T@ %p\n' 2> /dev/null | sort -n | tail -1 | cut -d' ' -f2- || echo "")
    if [[ -n "${datamart_global_log_dir}" ]]; then
     __loge "Check log file: ${datamart_global_log_dir}/datamartGlobal.log"
    fi
+   datamart_failures=$((datamart_failures + 1))
   fi
   set -e
+  # Fail ETL if datamarts failed and ETL_DATAMART_FAIL_ON_ERROR is true (default)
+  if [[ ${datamart_failures} -gt 0 ]]; then
+   __loge "ERROR: ${datamart_failures} datamart script(s) failed"
+   if [[ "${ETL_DATAMART_FAIL_ON_ERROR}" == "true" ]]; then
+    __loge "ETL_DATAMART_FAIL_ON_ERROR=true: ETL will fail due to datamart errors"
+    return 1
+   else
+    __logw "ETL_DATAMART_FAIL_ON_ERROR=false: Continuing despite datamart failures (backward compatibility mode)"
+   fi
+  fi
  fi
 
  # Generate ETL execution report (ETL-001)

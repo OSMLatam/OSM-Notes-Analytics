@@ -822,7 +822,11 @@ function main() {
  # Set to 'yes' only for initial load or when you need to process all users.
  # WARNING: Processing old users uses OFFSET which is very slow. It's better to
  # process them incrementally via modified flag in subsequent ETL cycles.
- PROCESS_OLD_USERS="${PROCESS_OLD_USERS:-no}"
+ # Note: PROCESS_OLD_USERS is already set in __createBaseTables() or from properties.sh
+ # Only set default if not already set (to avoid readonly variable error)
+ if [[ -z "${PROCESS_OLD_USERS:-}" ]]; then
+  PROCESS_OLD_USERS="no"
+ fi
 
  set +E
  # shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling

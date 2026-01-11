@@ -1115,7 +1115,9 @@ run_etl() {
  PRE_ETL_TIMESTAMP=$(date +%s)
 
  # Run ETL in incremental mode (it will auto-detect if it's first execution)
- log_info "Executing: ${ETL_SCRIPT}"
+ # Enable strict mode: fail if datamarts fail (for testing)
+ export ETL_DATAMART_FAIL_ON_ERROR=true
+ log_info "Executing: ${ETL_SCRIPT} (with ETL_DATAMART_FAIL_ON_ERROR=true)"
 
  # Capture ETL output and save it
  # Use PIPESTATUS to capture the actual exit code of ETL_SCRIPT, not tee

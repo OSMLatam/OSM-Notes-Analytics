@@ -31,12 +31,12 @@ AS $proc$
  BEGIN
   SELECT /* Notes-datamartCountries */ c.country_id, c.country_name,
    c.country_name_es, c.country_name_en, c.iso_alpha2, c.iso_alpha3,
-   r.continent_id AS dimension_continent_id
+   reg.continent_id AS dimension_continent_id
    INTO m_country_id, m_country_name, m_country_name_es, m_country_name_en,
         m_iso_alpha2, m_iso_alpha3, m_dimension_continent_id
   FROM dwh.dimension_countries c
-  LEFT JOIN dwh.dimension_regions r ON c.region_id = r.dimension_region_id
-  LEFT JOIN dwh.dimension_continents ON r.continent_id = dimension_continents.dimension_continent_id
+  LEFT JOIN dwh.dimension_regions reg ON c.region_id = reg.dimension_region_id
+  LEFT JOIN dwh.dimension_continents ON reg.continent_id = dimension_continents.dimension_continent_id
   WHERE c.dimension_country_id = m_dimension_country_id;
 
   -- Check if country was found (SELECT INTO leaves variables NULL if no row matches)
