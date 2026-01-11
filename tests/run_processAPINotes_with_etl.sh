@@ -927,9 +927,12 @@ SQL_FALLBACK
  cd "${INGESTION_ROOT}"
 
  # Run the script and capture output
+ # Execute in a subshell to isolate readonly variables (like PLANET) from previous executions
+ # This prevents conflicts when properties.sh tries to declare variables that were readonly in previous runs
  log_info "Executing: ${PROCESS_API_SCRIPT}"
  local OUTPUT_FILE="/tmp/processAPINotes_output_${EXECUTION_NUMBER}_$$.log"
- if "${PROCESS_API_SCRIPT}" > "${OUTPUT_FILE}" 2>&1; then
+ # Use bash -c to execute in a fresh subshell, preserving environment variables but isolating readonly state
+ if bash -c "cd '${INGESTION_ROOT}' && '${PROCESS_API_SCRIPT}'" > "${OUTPUT_FILE}" 2>&1; then
   log_success "processAPINotes.sh completed successfully (execution #${EXECUTION_NUMBER})"
   rm -f "${OUTPUT_FILE}" 2> /dev/null || true
   return 0

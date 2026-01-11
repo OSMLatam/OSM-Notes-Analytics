@@ -305,6 +305,8 @@ __get_next_country_from_queue() {
 # This ensures better load balancing: fast countries don't leave threads idle while
 # slow countries are being processed by other threads.
 function __processNotesCountriesParallel {
+ # Disable exit on error temporarily to handle errors explicitly
+ set +e
  __log_start
  __logi "=== PROCESSING COUNTRIES IN PARALLEL (WORK QUEUE) ==="
 
@@ -526,6 +528,7 @@ function __processNotesCountriesParallel {
   __logi "⏱️  TIME: Parallel country processing took ${total_time} seconds"
   __log_finish
   rm -f "${work_queue_file}" "${queue_lock_file}" 2> /dev/null || true
+  set -e
   return 0
  else
   __loge "ERROR: Datamart countries population had ${total_failed} failed country(ies)"
@@ -533,6 +536,7 @@ function __processNotesCountriesParallel {
   __loge "⏱️  TIME: Parallel country processing took ${total_time} seconds (with ${total_failed} failures)"
   __log_finish
   rm -f "${work_queue_file}" "${queue_lock_file}" 2> /dev/null || true
+  set -e
   return 1
  fi
 }
