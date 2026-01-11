@@ -212,8 +212,8 @@ export DBNAME="osm_notes_test"
 # Run a specific test file
 bats tests/unit/bash/datamart_high_priority_metrics.test.bats
 
-# Run with verbose output
-bats --verbose tests/unit/bash/ETL_enhanced.test.bats
+# Run with verbose output (show output of passing tests)
+bats --show-output-of-passing-tests tests/unit/bash/ETL_enhanced.test.bats
 
 # Run a specific test by name
 bats --filter "test name pattern" tests/unit/bash/datamart_high_priority_metrics.test.bats
@@ -429,8 +429,8 @@ run psql -d "${DBNAME}" -c "SELECT 1"
 ### Verbose Output
 
 ```bash
-# Run with verbose output
-bats --verbose tests/unit/bash/datamart_high_priority_metrics.test.bats
+# Run with verbose output (show output of passing tests)
+bats --show-output-of-passing-tests tests/unit/bash/datamart_high_priority_metrics.test.bats
 
 # Run with trace (shows each command)
 bats --trace tests/unit/bash/ETL_enhanced.test.bats
@@ -449,7 +449,7 @@ bats --filter "resolution rate" tests/unit/bash/datamart_resolution_metrics.test
 2. **Run test in isolation**: Execute just the failing test
 3. **Check database state**: Verify test data is loaded correctly
 4. **Review test helper**: Check if setup functions are working
-5. **Enable verbose mode**: Use `--verbose` or `--trace` flags
+5. **Enable verbose mode**: Use `--show-output-of-passing-tests` or `--trace` flags
 
 ### Common Debugging Commands
 

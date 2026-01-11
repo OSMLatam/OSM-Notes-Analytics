@@ -146,17 +146,17 @@ run_test_suite() {
  if [[ -n "${bats_output_file}" ]] && [[ -f "${bats_output_file}" ]]; then
   if [[ "${GITHUB_ACTIONS:-}" == "true" ]] || [[ "${CI:-}" == "true" ]]; then
    # In CI, use tap format for better parsing, but also show verbose output
-   bats --tap --verbose "${test_file}" 2>&1 | tee "${bats_output_file}"
+   bats --tap --show-output-of-passing-tests "${test_file}" 2>&1 | tee "${bats_output_file}"
   else
    # Local execution - use default format
-   bats --verbose "${test_file}" 2>&1 | tee "${bats_output_file}"
+   bats --show-output-of-passing-tests "${test_file}" 2>&1 | tee "${bats_output_file}"
   fi
  else
   # No output file available - run without capture
   if [[ "${GITHUB_ACTIONS:-}" == "true" ]] || [[ "${CI:-}" == "true" ]]; then
-   bats --tap --verbose "${test_file}"
+   bats --tap --show-output-of-passing-tests "${test_file}"
   else
-   bats --verbose "${test_file}"
+   bats --show-output-of-passing-tests "${test_file}"
   fi
  fi
  local bats_exit_code=${PIPESTATUS[0]}
