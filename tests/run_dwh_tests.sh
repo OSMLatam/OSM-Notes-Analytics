@@ -81,45 +81,114 @@ if ! command -v bats &> /dev/null; then
 fi
 
 log_info "Starting DWH and ETL tests..."
+echo "======================================"
+echo "Test Execution Environment"
+echo "======================================"
 echo "Project Root: ${PROJECT_ROOT}"
+echo "Script Directory: ${SCRIPT_DIR}"
 echo "Test Database: ${TEST_DBNAME:-not set}"
 if [[ -n "${TEST_DBHOST:-}" ]]; then
  echo "Test DB Host: ${TEST_DBHOST}"
  echo "Test DB Port: ${TEST_DBPORT:-5432}"
  echo "Test DB User: ${TEST_DBUSER:-postgres}"
+ echo "Test DB Password: ${TEST_DBPASSWORD:+***set***}"
 else
  echo "Test DB Host: (local - peer authentication)"
  echo "Test DB Port: (local socket)"
  echo "Test DB User: (current user: $(whoami))"
 fi
+echo "BATS Version: $(bats --version 2>/dev/null || echo 'unknown')"
+echo "BATS Location: $(command -v bats)"
+echo "CI Environment: ${CI:-false}"
+echo "GitHub Actions: ${GITHUB_ACTIONS:-false}"
+echo "Start Time: $(date '+%Y-%m-%d %H:%M:%S')"
+echo "======================================"
 echo ""
 
 # Counter for test results
 TOTAL_TESTS=0
 PASSED_TESTS=0
 FAILED_TESTS=0
+FAILED_TEST_FILES=()
 
 # Function to run a test suite
 run_test_suite() {
  local test_file="$1"
  local test_name
  test_name="$(basename "${test_file}")"
+ local start_time
+ start_time=$(date +%s)
 
  log_info "Running ${test_name}..."
+ log_info "  Test file: ${test_file}"
 
- # Temporarily disable exit on error to allow test failures to be captured
- set +e
- bats "${test_file}"
- local bats_exit_code=$?
+# Temporarily disable exit on error to allow test failures to be captured
+set +e
+# Capture both stdout and stderr, preserving colors if possible
+local bats_output_file
+bats_output_file=$(mktemp)
+
+ # Run bats with verbose output for better debugging
+ if [[ "${GITHUB_ACTIONS:-}" == "true" ]] || [[ "${CI:-}" == "true" ]]; then
+  # In CI, use tap format for better parsing, but also show verbose output
+  bats --tap --verbose "${test_file}" 2>&1 | tee "${bats_output_file}"
+ else
+  # Local execution - use default format
+  bats --verbose "${test_file}" 2>&1 | tee "${bats_output_file}"
+ fi
+ local bats_exit_code=${PIPESTATUS[0]}
  set -e
 
+ local end_time
+ end_time=$(date +%s)
+ local duration=$((end_time - start_time))
+
  if [[ ${bats_exit_code} -eq 0 ]]; then
-  log_success "${test_name} passed"
+  log_success "${test_name} passed (${duration}s)"
   PASSED_TESTS=$((PASSED_TESTS + 1))
  else
-  log_error "${test_name} failed (exit code: ${bats_exit_code})"
+  log_error "${test_name} failed (exit code: ${bats_exit_code}, duration: ${duration}s)"
   FAILED_TESTS=$((FAILED_TESTS + 1))
+  FAILED_TEST_FILES+=("${test_name}")
+
+  # Show detailed failure information
+  log_error "=== Detailed failure information for ${test_name} ==="
+  log_error "Exit code: ${bats_exit_code}"
+  log_error "Test file: ${test_file}"
+
+  # Extract failed test names from BATS output
+  # Check for TAP format (not ok) or BATS format (✗ or failing)
+  if grep -qE "(not ok|✗|failing)" "${bats_output_file}" 2>/dev/null; then
+   log_error "Failed tests in ${test_name}:"
+   # Extract TAP format failures
+   grep -E "not ok" "${bats_output_file}" 2>/dev/null | sed 's/^/  [TAP] /' | while IFS= read -r line || [[ -n "${line}" ]]; do
+    log_error "${line}"
+   done
+   # Extract BATS format failures (lines with ✗ or "failing")
+   grep -E "(✗|failing)" "${bats_output_file}" 2>/dev/null | head -n 10 | sed 's/^/  [BATS] /' | while IFS= read -r line || [[ -n "${line}" ]]; do
+    log_error "${line}"
+   done
+  fi
+
+  # Show error messages from the output
+  if grep -qE "(ERROR|FAIL|Error|error)" "${bats_output_file}" 2>/dev/null; then
+   log_error "Error messages found in output:"
+   grep -E "(ERROR|FAIL|Error|error)" "${bats_output_file}" 2>/dev/null | head -n 15 | sed 's/^/  /' | while IFS= read -r line || [[ -n "${line}" ]]; do
+    log_error "${line}"
+   done
+  fi
+
+  # Show last 30 lines of output for context (increased from 20)
+  log_error "Last 30 lines of test output:"
+  tail -n 30 "${bats_output_file}" | sed 's/^/  /' | while IFS= read -r line || [[ -n "${line}" ]]; do
+   log_error "${line}"
+  done
+
+  log_error "=== End of failure information for ${test_name} ==="
  fi
+
+ # Clean up temp file
+ rm -f "${bats_output_file}"
 
  TOTAL_TESTS=$((TOTAL_TESTS + 1))
  echo ""
@@ -241,44 +310,95 @@ echo ""
 
 # Run unit tests
 log_info "Running unit tests..."
-echo "===================="
-echo ""
+echo "======================================"
+log_info "Unit tests directory: ${SCRIPT_DIR}/unit/bash"
 
+# Count test files before running
+unit_test_count=0
 if [[ -d "${SCRIPT_DIR}/unit/bash" ]]; then
  for test_file in "${SCRIPT_DIR}"/unit/bash/*.bats; do
   if [[ -f "${test_file}" ]]; then
+   unit_test_count=$((unit_test_count + 1))
+  fi
+ done
+ log_info "Found ${unit_test_count} unit test file(s)"
+else
+ log_warning "Unit tests directory not found: ${SCRIPT_DIR}/unit/bash"
+fi
+echo ""
+
+if [[ -d "${SCRIPT_DIR}/unit/bash" ]] && [[ ${unit_test_count} -gt 0 ]]; then
+ test_num=0
+ for test_file in "${SCRIPT_DIR}"/unit/bash/*.bats; do
+  if [[ -f "${test_file}" ]]; then
+   test_num=$((test_num + 1))
+   log_info "[${test_num}/${unit_test_count}] Processing unit test file..."
    run_test_suite "${test_file}"
   fi
  done
 else
- log_warning "No unit bash tests found"
+ log_warning "No unit bash tests found or directory doesn't exist"
 fi
 
 # Run integration tests
 log_info "Running integration tests..."
-echo "============================="
-echo ""
+echo "======================================"
+log_info "Integration tests directory: ${SCRIPT_DIR}/integration"
 
+# Count test files before running
+integration_test_count=0
 if [[ -d "${SCRIPT_DIR}/integration" ]]; then
  for test_file in "${SCRIPT_DIR}"/integration/*.bats; do
   if [[ -f "${test_file}" ]]; then
+   integration_test_count=$((integration_test_count + 1))
+  fi
+ done
+ log_info "Found ${integration_test_count} integration test file(s)"
+else
+ log_warning "Integration tests directory not found: ${SCRIPT_DIR}/integration"
+fi
+echo ""
+
+if [[ -d "${SCRIPT_DIR}/integration" ]] && [[ ${integration_test_count} -gt 0 ]]; then
+ test_num=0
+ for test_file in "${SCRIPT_DIR}"/integration/*.bats; do
+  if [[ -f "${test_file}" ]]; then
+   test_num=$((test_num + 1))
+   log_info "[${test_num}/${integration_test_count}] Processing integration test file..."
    run_test_suite "${test_file}"
   fi
  done
 else
- log_warning "No integration tests found"
+ log_warning "No integration tests found or directory doesn't exist"
 fi
 
 # Show summary
 echo ""
 echo "======================================"
-log_info "Test Summary"
+log_info "Test Execution Summary"
 echo "======================================"
 echo "Total Test Suites: ${TOTAL_TESTS}"
 echo "Passed: ${PASSED_TESTS} ✅"
 echo "Failed: ${FAILED_TESTS} ❌"
+echo "End Time: $(date '+%Y-%m-%d %H:%M:%S')"
 
-# Save summary to file for CI/CD
+if [[ ${FAILED_TESTS} -gt 0 ]]; then
+ echo ""
+ log_error "Failed Test Files:"
+ for failed_file in "${FAILED_TEST_FILES[@]}"; do
+  log_error "  - ${failed_file}"
+ done
+fi
+
+# Calculate success rate
+success_rate=0
+if [[ ${TOTAL_TESTS} -gt 0 ]]; then
+ success_rate=$((PASSED_TESTS * 100 / TOTAL_TESTS))
+fi
+echo "Success Rate: ${success_rate}%"
+echo "======================================"
+
+# Save detailed summary to file for CI/CD
 {
  echo "======================================"
  echo "DWH Tests Summary"
@@ -286,14 +406,29 @@ echo "Failed: ${FAILED_TESTS} ❌"
  echo "Total Test Suites: ${TOTAL_TESTS}"
  echo "Passed: ${PASSED_TESTS}"
  echo "Failed: ${FAILED_TESTS}"
+ echo "Success Rate: ${success_rate}%"
  echo ""
- echo "Test completed at: $(date)"
+ if [[ ${FAILED_TESTS} -gt 0 ]]; then
+  echo "Failed Test Files:"
+  for failed_file in "${FAILED_TEST_FILES[@]}"; do
+   echo "  - ${failed_file}"
+  done
+  echo ""
+ fi
+ echo "Test completed at: $(date '+%Y-%m-%d %H:%M:%S')"
+ echo "Environment:"
+ echo "  TEST_DBNAME: ${TEST_DBNAME:-not set}"
+ echo "  TEST_DBHOST: ${TEST_DBHOST:-not set}"
+ echo "  TEST_DBUSER: ${TEST_DBUSER:-not set}"
+ echo "  CI: ${CI:-false}"
+ echo "  GITHUB_ACTIONS: ${GITHUB_ACTIONS:-false}"
 } > /tmp/all_tests_output.txt 2>&1 || true
 
 if [[ ${FAILED_TESTS} -eq 0 ]]; then
- log_success "All tests passed!"
+ log_success "All tests passed! ✅"
  exit 0
 else
- log_error "${FAILED_TESTS} test suite(s) failed"
+ log_error "${FAILED_TESTS} test suite(s) failed ❌"
+ log_error "Review the detailed failure information above for each failed test"
  exit 1
 fi
