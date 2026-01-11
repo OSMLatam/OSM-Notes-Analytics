@@ -196,7 +196,9 @@ function __createBaseTables {
 function __checkBaseTables {
  __log_start
  set +e
- __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -f "${CHECK_OBJECTS_FILE}"
+ # Redirect stderr to avoid SQL error messages from causing issues
+ # The error is expected when tables don't exist yet
+ __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -f "${CHECK_OBJECTS_FILE}" 2> /dev/null
  RET=${?}
  set -e
  if [[ "${RET}" -ne 0 ]]; then
@@ -361,7 +363,8 @@ function __processNotesCountriesParallel {
 
  local total_countries
  total_countries=$(echo "${country_ids}" | grep -c . || echo "0")
- total_countries=$((total_countries)) # Remove whitespace and newlines, ensure numeric
+ total_countries=$(echo "${total_countries}" | tr -d '[:space:]') # Remove all whitespace including newlines
+ total_countries=$((total_countries))                             # Ensure numeric
  __logi "Found ${total_countries} countries to process"
 
  if [[ "${total_countries}" -eq 0 ]]; then
@@ -385,7 +388,8 @@ function __processNotesCountriesParallel {
  # Verify queue file has expected content
  local queue_count
  queue_count=$(wc -l < "${work_queue_file}" 2> /dev/null || echo "0")
- queue_count=$((queue_count)) # Remove whitespace and newlines, ensure numeric
+ queue_count=$(echo "${queue_count}" | tr -d '[:space:]') # Remove all whitespace including newlines
+ queue_count=$((queue_count))                             # Ensure numeric
  if [[ "${queue_count}" -ne "${total_countries}" ]]; then
   __logw "WARN: Queue file count (${queue_count}) differs from expected (${total_countries}), but continuing..."
  fi
@@ -512,7 +516,8 @@ function __processNotesCountriesParallel {
  # Count total processed (check remaining queue)
  local remaining_countries
  remaining_countries=$(wc -l < "${work_queue_file}" 2> /dev/null || echo "0")
- remaining_countries=$((remaining_countries)) # Remove whitespace and newlines, ensure numeric
+ remaining_countries=$(echo "${remaining_countries}" | tr -d '[:space:]') # Remove all whitespace including newlines
+ remaining_countries=$((remaining_countries))                             # Ensure numeric
  local actually_processed=$((total_countries - remaining_countries))
 
  if [[ ${total_failed} -eq 0 ]]; then
@@ -637,10 +642,19 @@ function main() {
  __addYears
  set -E
  # Process countries in parallel using work queue for dynamic load balancing
+ set +e
  __processNotesCountriesParallel
+ local process_exit_code=$?
+ set -e
+ if [[ ${process_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Failed to process countries (exit code: ${process_exit_code})"
+  __log_finish
+  return 1
+ fi
 
  __logw "Ending process."
  __log_finish
+ return 0
 }
 
 # Allows to other user read the directory.
