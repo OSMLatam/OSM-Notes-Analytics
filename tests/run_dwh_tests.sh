@@ -97,7 +97,7 @@ else
  echo "Test DB Port: (local socket)"
  echo "Test DB User: (current user: $(whoami))"
 fi
-echo "BATS Version: $(bats --version 2>/dev/null || echo 'unknown')"
+echo "BATS Version: $(bats --version 2> /dev/null || echo 'unknown')"
 echo "BATS Location: $(command -v bats)"
 echo "CI Environment: ${CI:-false}"
 echo "GitHub Actions: ${GITHUB_ACTIONS:-false}"
@@ -122,11 +122,11 @@ run_test_suite() {
  log_info "Running ${test_name}..."
  log_info "  Test file: ${test_file}"
 
-# Temporarily disable exit on error to allow test failures to be captured
-set +e
-# Capture both stdout and stderr, preserving colors if possible
-local bats_output_file
-bats_output_file=$(mktemp)
+ # Temporarily disable exit on error to allow test failures to be captured
+ set +e
+ # Capture both stdout and stderr, preserving colors if possible
+ local bats_output_file
+ bats_output_file=$(mktemp)
 
  # Run bats with verbose output for better debugging
  if [[ "${GITHUB_ACTIONS:-}" == "true" ]] || [[ "${CI:-}" == "true" ]]; then
@@ -158,22 +158,22 @@ bats_output_file=$(mktemp)
 
   # Extract failed test names from BATS output
   # Check for TAP format (not ok) or BATS format (✗ or failing)
-  if grep -qE "(not ok|✗|failing)" "${bats_output_file}" 2>/dev/null; then
+  if grep -qE "(not ok|✗|failing)" "${bats_output_file}" 2> /dev/null; then
    log_error "Failed tests in ${test_name}:"
    # Extract TAP format failures
-   grep -E "not ok" "${bats_output_file}" 2>/dev/null | sed 's/^/  [TAP] /' | while IFS= read -r line || [[ -n "${line}" ]]; do
+   grep -E "not ok" "${bats_output_file}" 2> /dev/null | sed 's/^/  [TAP] /' | while IFS= read -r line || [[ -n "${line}" ]]; do
     log_error "${line}"
    done
    # Extract BATS format failures (lines with ✗ or "failing")
-   grep -E "(✗|failing)" "${bats_output_file}" 2>/dev/null | head -n 10 | sed 's/^/  [BATS] /' | while IFS= read -r line || [[ -n "${line}" ]]; do
+   grep -E "(✗|failing)" "${bats_output_file}" 2> /dev/null | head -n 10 | sed 's/^/  [BATS] /' | while IFS= read -r line || [[ -n "${line}" ]]; do
     log_error "${line}"
    done
   fi
 
   # Show error messages from the output
-  if grep -qE "(ERROR|FAIL|Error|error)" "${bats_output_file}" 2>/dev/null; then
+  if grep -qE "(ERROR|FAIL|Error|error)" "${bats_output_file}" 2> /dev/null; then
    log_error "Error messages found in output:"
-   grep -E "(ERROR|FAIL|Error|error)" "${bats_output_file}" 2>/dev/null | head -n 15 | sed 's/^/  /' | while IFS= read -r line || [[ -n "${line}" ]]; do
+   grep -E "(ERROR|FAIL|Error|error)" "${bats_output_file}" 2> /dev/null | head -n 15 | sed 's/^/  /' | while IFS= read -r line || [[ -n "${line}" ]]; do
     log_error "${line}"
    done
   fi
