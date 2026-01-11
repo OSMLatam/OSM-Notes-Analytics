@@ -126,15 +126,38 @@ run_test_suite() {
  set +e
  # Capture both stdout and stderr, preserving colors if possible
  local bats_output_file
- bats_output_file=$(mktemp)
+ bats_output_file=$(mktemp 2> /dev/null)
+ local mktemp_exit_code=$?
+
+ # Verify mktemp succeeded
+ if [[ ${mktemp_exit_code} -ne 0 ]] || [[ -z "${bats_output_file}" ]] || [[ ! -f "${bats_output_file}" ]]; then
+  log_error "Failed to create temporary file for test output (mktemp exit code: ${mktemp_exit_code})"
+  log_error "This may indicate /tmp is full or permissions issue"
+  # Fallback: use a file in the project's output directory or current directory
+  bats_output_file="${SCRIPT_DIR}/.bats_output_$$.tmp"
+  if ! touch "${bats_output_file}" 2> /dev/null; then
+   log_error "Failed to create fallback output file: ${bats_output_file}"
+   log_error "Running tests without output capture - failure details may be limited"
+   bats_output_file=""
+  fi
+ fi
 
  # Run bats with verbose output for better debugging
- if [[ "${GITHUB_ACTIONS:-}" == "true" ]] || [[ "${CI:-}" == "true" ]]; then
-  # In CI, use tap format for better parsing, but also show verbose output
-  bats --tap --verbose "${test_file}" 2>&1 | tee "${bats_output_file}"
+ if [[ -n "${bats_output_file}" ]] && [[ -f "${bats_output_file}" ]]; then
+  if [[ "${GITHUB_ACTIONS:-}" == "true" ]] || [[ "${CI:-}" == "true" ]]; then
+   # In CI, use tap format for better parsing, but also show verbose output
+   bats --tap --verbose "${test_file}" 2>&1 | tee "${bats_output_file}"
+  else
+   # Local execution - use default format
+   bats --verbose "${test_file}" 2>&1 | tee "${bats_output_file}"
+  fi
  else
-  # Local execution - use default format
-  bats --verbose "${test_file}" 2>&1 | tee "${bats_output_file}"
+  # No output file available - run without capture
+  if [[ "${GITHUB_ACTIONS:-}" == "true" ]] || [[ "${CI:-}" == "true" ]]; then
+   bats --tap --verbose "${test_file}"
+  else
+   bats --verbose "${test_file}"
+  fi
  fi
  local bats_exit_code=${PIPESTATUS[0]}
  set -e
@@ -156,39 +179,47 @@ run_test_suite() {
   log_error "Exit code: ${bats_exit_code}"
   log_error "Test file: ${test_file}"
 
-  # Extract failed test names from BATS output
-  # Check for TAP format (not ok) or BATS format (✗ or failing)
-  if grep -qE "(not ok|✗|failing)" "${bats_output_file}" 2> /dev/null; then
-   log_error "Failed tests in ${test_name}:"
-   # Extract TAP format failures
-   grep -E "not ok" "${bats_output_file}" 2> /dev/null | sed 's/^/  [TAP] /' | while IFS= read -r line || [[ -n "${line}" ]]; do
-    log_error "${line}"
-   done
-   # Extract BATS format failures (lines with ✗ or "failing")
-   grep -E "(✗|failing)" "${bats_output_file}" 2> /dev/null | head -n 10 | sed 's/^/  [BATS] /' | while IFS= read -r line || [[ -n "${line}" ]]; do
-    log_error "${line}"
-   done
-  fi
+  # Only extract detailed information if output file exists and is readable
+  if [[ -n "${bats_output_file}" ]] && [[ -f "${bats_output_file}" ]] && [[ -r "${bats_output_file}" ]]; then
+   # Extract failed test names from BATS output
+   # Check for TAP format (not ok) or BATS format (✗ or failing)
+   if grep -qE "(not ok|✗|failing)" "${bats_output_file}" 2> /dev/null; then
+    log_error "Failed tests in ${test_name}:"
+    # Extract TAP format failures
+    grep -E "not ok" "${bats_output_file}" 2> /dev/null | sed 's/^/  [TAP] /' | while IFS= read -r line || [[ -n "${line}" ]]; do
+     log_error "${line}"
+    done
+    # Extract BATS format failures (lines with ✗ or "failing")
+    grep -E "(✗|failing)" "${bats_output_file}" 2> /dev/null | head -n 10 | sed 's/^/  [BATS] /' | while IFS= read -r line || [[ -n "${line}" ]]; do
+     log_error "${line}"
+    done
+   fi
 
-  # Show error messages from the output
-  if grep -qE "(ERROR|FAIL|Error|error)" "${bats_output_file}" 2> /dev/null; then
-   log_error "Error messages found in output:"
-   grep -E "(ERROR|FAIL|Error|error)" "${bats_output_file}" 2> /dev/null | head -n 15 | sed 's/^/  /' | while IFS= read -r line || [[ -n "${line}" ]]; do
+   # Show error messages from the output
+   if grep -qE "(ERROR|FAIL|Error|error)" "${bats_output_file}" 2> /dev/null; then
+    log_error "Error messages found in output:"
+    grep -E "(ERROR|FAIL|Error|error)" "${bats_output_file}" 2> /dev/null | head -n 15 | sed 's/^/  /' | while IFS= read -r line || [[ -n "${line}" ]]; do
+     log_error "${line}"
+    done
+   fi
+
+   # Show last 30 lines of output for context (increased from 20)
+   log_error "Last 30 lines of test output:"
+   tail -n 30 "${bats_output_file}" 2> /dev/null | sed 's/^/  /' | while IFS= read -r line || [[ -n "${line}" ]]; do
     log_error "${line}"
    done
+  else
+   log_error "Test output file not available - detailed failure information cannot be extracted"
+   log_error "This may indicate a problem creating temporary files (e.g., /tmp is full)"
   fi
-
-  # Show last 30 lines of output for context (increased from 20)
-  log_error "Last 30 lines of test output:"
-  tail -n 30 "${bats_output_file}" | sed 's/^/  /' | while IFS= read -r line || [[ -n "${line}" ]]; do
-   log_error "${line}"
-  done
 
   log_error "=== End of failure information for ${test_name} ==="
  fi
 
- # Clean up temp file
- rm -f "${bats_output_file}"
+ # Clean up temp file (only if it exists and is valid)
+ if [[ -n "${bats_output_file}" ]] && [[ -f "${bats_output_file}" ]]; then
+  rm -f "${bats_output_file}" 2> /dev/null || true
+ fi
 
  TOTAL_TESTS=$((TOTAL_TESTS + 1))
  echo ""
