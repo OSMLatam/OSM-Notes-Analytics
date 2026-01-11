@@ -528,6 +528,7 @@ function __processNotesUser {
 
  local total_users
  total_users=$(echo "${user_ids}" | grep -c . || echo "0")
+ total_users=$((total_users)) # Remove whitespace and newlines, ensure numeric
  local total_modified_users
  # Get total modified users count (invoke separately to avoid shellcheck SC2310 warning)
  set +e
@@ -572,6 +573,7 @@ function __processNotesUser {
  # Verify queue file has expected content
  local queue_count
  queue_count=$(wc -l < "${work_queue_file}" 2> /dev/null || echo "0")
+ queue_count=$((queue_count)) # Remove whitespace and newlines, ensure numeric
  if [[ "${queue_count}" -ne "${total_users}" ]]; then
   __logw "WARN: Queue file count (${queue_count}) differs from expected (${total_users}), but continuing..."
  fi
@@ -698,6 +700,7 @@ function __processNotesUser {
  # Count total processed (check remaining queue)
  local remaining_users
  remaining_users=$(wc -l < "${work_queue_file}" 2> /dev/null || echo "0")
+ remaining_users=$((remaining_users)) # Remove whitespace and newlines, ensure numeric
  local actually_processed=$((total_users - remaining_users))
 
  if [[ ${total_failed} -eq 0 ]]; then

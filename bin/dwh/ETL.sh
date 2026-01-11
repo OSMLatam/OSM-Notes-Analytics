@@ -515,6 +515,7 @@ function __processExperienceLevels {
 
  local total_users
  total_users=$(echo "${user_ids}" | grep -c . || echo "0")
+ total_users=$((total_users)) # Remove whitespace and newlines, ensure numeric
  __logi "Found ${total_users} users to process (prioritized by relevance)"
 
  if [[ "${total_users}" -eq 0 ]]; then
