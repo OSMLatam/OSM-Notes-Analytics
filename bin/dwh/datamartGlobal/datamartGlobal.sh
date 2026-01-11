@@ -319,15 +319,24 @@ if [[ "${SKIP_MAIN:-}" != "true" ]]; then
   __set_log_file "${LOG_FILENAME}"
   main >> "${LOG_FILENAME}"
   EXIT_CODE=$?
+  # Close file descriptor 7 if it's open (lock file)
+  exec 7>&- 2> /dev/null || true
+  # Remove lock file if it exists
+  rm -f "${LOCK}" 2> /dev/null || true
   if [[ -n "${CLEAN}" ]] && [[ "${CLEAN}" = true ]]; then
    log_timestamp=$(date +%Y-%m-%d_%H-%M-%S 2> /dev/null || date +%Y%m%d_%H%M%S)
    mv "${LOG_FILENAME}" "/tmp/${BASENAME}_${log_timestamp}.log"
-   rmdir "${TMP_DIR}"
+   # Remove directory and all its contents
+   rm -rf "${TMP_DIR}" 2> /dev/null || true
   fi
   exit "${EXIT_CODE}"
  else
   main
   EXIT_CODE=$?
+  # Close file descriptor 7 if it's open (lock file)
+  exec 7>&- 2> /dev/null || true
+  # Remove lock file if it exists
+  rm -f "${LOCK}" 2> /dev/null || true
   exit "${EXIT_CODE}"
  fi
 fi
