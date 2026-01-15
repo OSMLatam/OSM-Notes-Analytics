@@ -1131,37 +1131,83 @@ run_etl() {
 
  # Find and copy ETL log directory created after PRE_ETL_TIMESTAMP
  # ETL creates logs in /tmp/ETL_* directories
+ # IMPORTANT: Only copy log files, not directories, to avoid recursive copying
+ # that can fill up disk space (e.g., copying tests/logs into tests/logs)
  local ETL_LOG_DIR
  ETL_LOG_DIR=$(find /tmp -maxdepth 1 -type d -name "ETL_*" -newermt "@${PRE_ETL_TIMESTAMP}" -print0 2> /dev/null | xargs -0 ls -td 2> /dev/null | head -1)
  if [[ -n "${ETL_LOG_DIR}" ]] && [[ -d "${ETL_LOG_DIR}" ]]; then
-  log_info "Copying ETL log directory from ${ETL_LOG_DIR} to ${ETL_LOGS_DIR}..."
-  cp -r "${ETL_LOG_DIR}"/* "${ETL_LOGS_DIR}/" 2> /dev/null || true
+  log_info "Copying ETL log files from ${ETL_LOG_DIR} to ${ETL_LOGS_DIR}..."
+  # Only copy log files (*.log, *.txt, *.json, *.csv) and avoid copying directories
+  # This prevents recursive copying of test directories that can fill up disk space
+  find "${ETL_LOG_DIR}" -maxdepth 1 -type f \( -name "*.log" -o -name "*.txt" -o -name "*.json" -o -name "*.csv" -o -name "*.sql" \) -exec cp {} "${ETL_LOGS_DIR}/" \; 2> /dev/null || true
   log_success "ETL logs saved to: ${ETL_LOGS_DIR}"
  else
   # Fallback: try to find the most recent ETL log directory
   log_info "Could not find ETL log directory by timestamp, trying most recent..."
   ETL_LOG_DIR=$(find /tmp -maxdepth 1 -type d -name "ETL_*" -print0 2> /dev/null | xargs -0 ls -td 2> /dev/null | head -1)
   if [[ -n "${ETL_LOG_DIR}" ]] && [[ -d "${ETL_LOG_DIR}" ]]; then
-   log_info "Copying most recent ETL log directory from ${ETL_LOG_DIR} to ${ETL_LOGS_DIR}..."
-   cp -r "${ETL_LOG_DIR}"/* "${ETL_LOGS_DIR}/" 2> /dev/null || true
+   log_info "Copying most recent ETL log files from ${ETL_LOG_DIR} to ${ETL_LOGS_DIR}..."
+   # Only copy log files, not directories
+   find "${ETL_LOG_DIR}" -maxdepth 1 -type f \( -name "*.log" -o -name "*.txt" -o -name "*.json" -o -name "*.csv" -o -name "*.sql" \) -exec cp {} "${ETL_LOGS_DIR}/" \; 2> /dev/null || true
    log_success "ETL logs saved to: ${ETL_LOGS_DIR}"
   fi
  fi
 
  # Also try to find and copy datamart logs created after PRE_ETL_TIMESTAMP
+ # Only copy log files, not entire directories
  find /tmp -maxdepth 1 -type d -name "datamart*" -newermt "@${PRE_ETL_TIMESTAMP}" 2> /dev/null | while read -r DATAMART_LOG_DIR; do
   if [[ -n "${DATAMART_LOG_DIR}" ]] && [[ -d "${DATAMART_LOG_DIR}" ]]; then
-   log_info "Copying datamart log directory from ${DATAMART_LOG_DIR} to ${ETL_LOGS_DIR}..."
-   cp -r "${DATAMART_LOG_DIR}" "${ETL_LOGS_DIR}/" 2> /dev/null || true
+   log_info "Copying datamart log files from ${DATAMART_LOG_DIR} to ${ETL_LOGS_DIR}..."
+   # Create a subdirectory for this datamart's logs
+   local DATAMART_NAME
+   DATAMART_NAME=$(basename "${DATAMART_LOG_DIR}")
+   mkdir -p "${ETL_LOGS_DIR}/${DATAMART_NAME}"
+   # Only copy log files, not directories
+   find "${DATAMART_LOG_DIR}" -maxdepth 1 -type f \( -name "*.log" -o -name "*.txt" -o -name "*.json" -o -name "*.csv" \) -exec cp {} "${ETL_LOGS_DIR}/${DATAMART_NAME}/" \; 2> /dev/null || true
   fi
  done
 
  if [[ ${ETL_EXIT_CODE} -eq 0 ]]; then
   log_success "ETL completed successfully after ${SOURCE_TYPE} execution #${EXECUTION_NUMBER}"
+  # Clean up old logs to prevent disk space issues
+  cleanup_old_logs
   return 0
  else
   log_error "ETL failed with exit code: ${ETL_EXIT_CODE} after ${SOURCE_TYPE} execution #${EXECUTION_NUMBER}"
   return "${ETL_EXIT_CODE}"
+ fi
+}
+
+# Function to clean up old log directories
+# Removes log directories older than specified days (default: 7 days)
+cleanup_old_logs() {
+ local DAYS_TO_KEEP="${LOG_RETENTION_DAYS:-7}"
+ local LOGS_DIR="${ANALYTICS_ROOT}/tests/logs"
+
+ if [[ ! -d "${LOGS_DIR}" ]]; then
+  return 0
+ fi
+
+ log_info "Cleaning up log directories older than ${DAYS_TO_KEEP} days..."
+ local DELETED_COUNT=0
+ local DELETED_SIZE=0
+
+ # Find and delete old log directories
+ while IFS= read -r -d '' OLD_LOG_DIR; do
+  if [[ -d "${OLD_LOG_DIR}" ]]; then
+   local DIR_SIZE
+   DIR_SIZE=$(du -sk "${OLD_LOG_DIR}" 2> /dev/null | cut -f1 || echo "0")
+   rm -rf "${OLD_LOG_DIR}" 2> /dev/null || true
+   DELETED_COUNT=$((DELETED_COUNT + 1))
+   DELETED_SIZE=$((DELETED_SIZE + DIR_SIZE))
+  fi
+ done < <(find "${LOGS_DIR}" -maxdepth 1 -type d -name "etl_execution_*" -mtime +"${DAYS_TO_KEEP}" -print0 2> /dev/null)
+
+ if [[ ${DELETED_COUNT} -gt 0 ]]; then
+  local DELETED_SIZE_MB=$((DELETED_SIZE / 1024))
+  log_info "Cleaned up ${DELETED_COUNT} old log directory(ies), freed approximately ${DELETED_SIZE_MB} MB"
+ else
+  log_info "No old log directories to clean up"
  fi
 }
 

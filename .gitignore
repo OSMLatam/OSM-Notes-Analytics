@@ -12,6 +12,7 @@
 *.log
 *.log.*
 logs/
+tests/logs/
 /tmp/
 
 # ETL temporary directories
