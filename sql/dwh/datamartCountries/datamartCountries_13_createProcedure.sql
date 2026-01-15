@@ -442,6 +442,11 @@ AS $proc$
    CALL dwh.insert_datamart_country(m_dimension_id_country);
   END IF;
 
+  -- Get current date components
+  m_current_year := EXTRACT(YEAR FROM CURRENT_DATE)::SMALLINT;
+  m_current_month := EXTRACT(MONTH FROM CURRENT_DATE)::SMALLINT;
+  m_current_day := EXTRACT(DAY FROM CURRENT_DATE)::SMALLINT;
+
   -- last_year_activity
   SELECT /* Notes-datamartCountries */ last_year_activity
    INTO m_last_year_activity
@@ -452,7 +457,7 @@ AS $proc$
   FROM dwh.facts f
    JOIN dwh.dimension_days d
    ON (f.action_dimension_id_date = d.dimension_day_id)
-  WHERE f.dimension_id_country = dimension_id_country
+  WHERE f.dimension_id_country = m_dimension_id_country
   AND d.date_id = CURRENT_DATE;
   m_last_year_activity := dwh.refresh_today_activities(m_last_year_activity,
     dwh.get_score_country_activity(m_todays_activity));
@@ -853,247 +858,304 @@ AS $proc$
    INTO m_working_hours_of_week_closing
   FROM hours;
 
-  -- history_whole_open
-  SELECT /* Notes-datamartCountries */ COUNT(1)
-   INTO m_history_whole_open
-  FROM dwh.facts f
-  WHERE f.dimension_id_country = m_dimension_id_country
-   AND f.action_comment = 'opened';
+  -- OPTIMIZATION: Use consolidated function to get all basic metrics in a single query
+  -- This replaces 20+ separate SELECT queries with 1-2 table scans
+  -- Falls back to individual queries if function doesn't exist (backward compatibility)
+  IF EXISTS (
+    SELECT 1 FROM pg_proc
+    WHERE proname = 'get_country_basic_metrics_consolidated'
+  ) THEN
+    -- Use consolidated function (much faster)
+    SELECT
+      history_whole_open,
+      history_whole_commented,
+      history_whole_closed,
+      history_whole_closed_with_comment,
+      history_whole_reopened,
+      history_year_open,
+      history_year_commented,
+      history_year_closed,
+      history_year_closed_with_comment,
+      history_year_reopened,
+      history_month_open,
+      history_month_commented,
+      history_month_closed,
+      history_month_closed_with_comment,
+      history_month_reopened,
+      history_day_open,
+      history_day_commented,
+      history_day_closed,
+      history_day_closed_with_comment,
+      history_day_reopened
+    INTO
+      m_history_whole_open,
+      m_history_whole_commented,
+      m_history_whole_closed,
+      m_history_whole_closed_with_comment,
+      m_history_whole_reopened,
+      m_history_year_open,
+      m_history_year_commented,
+      m_history_year_closed,
+      m_history_year_closed_with_comment,
+      m_history_year_reopened,
+      m_history_month_open,
+      m_history_month_commented,
+      m_history_month_closed,
+      m_history_month_closed_with_comment,
+      m_history_month_reopened,
+      m_history_day_open,
+      m_history_day_commented,
+      m_history_day_closed,
+      m_history_day_closed_with_comment,
+      m_history_day_reopened
+    FROM dwh.get_country_basic_metrics_consolidated(
+      m_dimension_id_country,
+      m_current_year,
+      m_current_month,
+      m_current_day
+    );
+  ELSE
+    -- Fallback to original individual queries (backward compatibility)
+    -- history_whole_open
+    SELECT /* Notes-datamartCountries */ COUNT(1)
+     INTO m_history_whole_open
+    FROM dwh.facts f
+    WHERE f.dimension_id_country = m_dimension_id_country
+     AND f.action_comment = 'opened';
 
-  -- history_whole_commented
-  SELECT /* Notes-datamartCountries */ COUNT(1)
-   INTO m_history_whole_commented
-  FROM dwh.facts f
-  WHERE f.dimension_id_country = m_dimension_id_country
-   AND f.action_comment = 'commented';
+    -- history_whole_commented
+    SELECT /* Notes-datamartCountries */ COUNT(1)
+     INTO m_history_whole_commented
+    FROM dwh.facts f
+    WHERE f.dimension_id_country = m_dimension_id_country
+     AND f.action_comment = 'commented';
 
-  -- history_whole_closed - Count unique notes that were closed (not total close actions)
-  -- Changed from COUNT(1) to COUNT(DISTINCT) to avoid counting multiple closes of same note
-  SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.id_note)
-   INTO m_history_whole_closed
-  FROM dwh.facts f
-  WHERE f.dimension_id_country = m_dimension_id_country
-   AND f.action_comment = 'closed';
+    -- history_whole_closed
+    SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.id_note)
+     INTO m_history_whole_closed
+    FROM dwh.facts f
+    WHERE f.dimension_id_country = m_dimension_id_country
+     AND f.action_comment = 'closed';
 
-  -- history_whole_closed_with_comment
-  SELECT /* Notes-datamartCountries */ COUNT(1)
-   INTO m_history_whole_closed_with_comment
-  FROM dwh.facts f
-   JOIN (
-    SELECT note_id, sequence_action, id_user
-    FROM note_comments
-    WHERE CAST(event AS text) = 'closed'
-   ) nc
-   ON (f.id_note = nc.note_id)
-   JOIN note_comments_text nct
-   ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
-  WHERE f.dimension_id_country = m_dimension_id_country
-   AND f.action_comment = 'closed'
-   AND nct.body IS NOT NULL
-   AND LENGTH(TRIM(nct.body)) > 0;
+    -- history_whole_closed_with_comment
+    SELECT /* Notes-datamartCountries */ COUNT(1)
+     INTO m_history_whole_closed_with_comment
+    FROM dwh.facts f
+     JOIN (
+      SELECT note_id, sequence_action, id_user
+      FROM note_comments
+      WHERE CAST(event AS text) = 'closed'
+     ) nc
+     ON (f.id_note = nc.note_id)
+     JOIN note_comments_text nct
+     ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
+    WHERE f.dimension_id_country = m_dimension_id_country
+     AND f.action_comment = 'closed'
+     AND nct.body IS NOT NULL
+     AND LENGTH(TRIM(nct.body)) > 0;
 
-  -- history_whole_reopened - Count unique notes that were reopened (not total reopen actions)
-  -- Changed from COUNT(1) to COUNT(DISTINCT) to avoid counting multiple reopens of same note
-  SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.id_note)
-   INTO m_history_whole_reopened
-  FROM dwh.facts f
-  WHERE f.dimension_id_country = m_dimension_id_country
-   AND f.action_comment = 'reopened';
+    -- history_whole_reopened
+    SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.id_note)
+     INTO m_history_whole_reopened
+    FROM dwh.facts f
+    WHERE f.dimension_id_country = m_dimension_id_country
+     AND f.action_comment = 'reopened';
 
-  -- history_year_open
-  SELECT /* Notes-datamartCountries */ COUNT(1)
-   INTO m_history_year_open
-  FROM dwh.facts f
-   JOIN dwh.dimension_days d
-   ON (f.action_dimension_id_date = d.dimension_day_id)
-  WHERE f.dimension_id_country = m_dimension_id_country
-   AND f.action_comment = 'opened'
-   AND EXTRACT(YEAR FROM d.date_id) = m_current_year;
+    -- history_year_open
+    SELECT /* Notes-datamartCountries */ COUNT(1)
+     INTO m_history_year_open
+    FROM dwh.facts f
+     JOIN dwh.dimension_days d
+     ON (f.action_dimension_id_date = d.dimension_day_id)
+    WHERE f.dimension_id_country = m_dimension_id_country
+     AND f.action_comment = 'opened'
+     AND EXTRACT(YEAR FROM d.date_id) = m_current_year;
 
-  -- history_year_commented
-  SELECT /* Notes-datamartCountries */ COUNT(1)
-   INTO m_history_year_commented
-  FROM dwh.facts f
-   JOIN dwh.dimension_days d
-   ON (f.action_dimension_id_date = d.dimension_day_id)
-  WHERE f.dimension_id_country = m_dimension_id_country
-   AND f.action_comment = 'commented'
-   AND EXTRACT(YEAR FROM d.date_id) = m_current_year;
+    -- history_year_commented
+    SELECT /* Notes-datamartCountries */ COUNT(1)
+     INTO m_history_year_commented
+    FROM dwh.facts f
+     JOIN dwh.dimension_days d
+     ON (f.action_dimension_id_date = d.dimension_day_id)
+    WHERE f.dimension_id_country = m_dimension_id_country
+     AND f.action_comment = 'commented'
+     AND EXTRACT(YEAR FROM d.date_id) = m_current_year;
 
-  -- history_year_closed
-  SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.id_note)
-   INTO m_history_year_closed
-  FROM dwh.facts f
-   JOIN dwh.dimension_days d
-   ON (f.action_dimension_id_date = d.dimension_day_id)
-  WHERE f.dimension_id_country = m_dimension_id_country
-   AND f.action_comment = 'closed'
-   AND EXTRACT(YEAR FROM d.date_id) = m_current_year;
+    -- history_year_closed
+    SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.id_note)
+     INTO m_history_year_closed
+    FROM dwh.facts f
+     JOIN dwh.dimension_days d
+     ON (f.action_dimension_id_date = d.dimension_day_id)
+    WHERE f.dimension_id_country = m_dimension_id_country
+     AND f.action_comment = 'closed'
+     AND EXTRACT(YEAR FROM d.date_id) = m_current_year;
 
-  -- history_year_closed_with_comment
-  SELECT /* Notes-datamartCountries */ COUNT(1)
-   INTO m_history_year_closed_with_comment
-  FROM dwh.facts f
-   JOIN dwh.dimension_days d
-   ON (f.action_dimension_id_date = d.dimension_day_id)
-   JOIN (
-    SELECT note_id, sequence_action, id_user
-    FROM note_comments
-    WHERE CAST(event AS text) = 'closed'
-   ) nc
-   ON (f.id_note = nc.note_id)
-   JOIN note_comments_text nct
-   ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
-  WHERE f.dimension_id_country = m_dimension_id_country
-   AND f.action_comment = 'closed'
-   AND EXTRACT(YEAR FROM d.date_id) = m_current_year
-   AND nct.body IS NOT NULL
-   AND LENGTH(TRIM(nct.body)) > 0;
+    -- history_year_closed_with_comment
+    SELECT /* Notes-datamartCountries */ COUNT(1)
+     INTO m_history_year_closed_with_comment
+    FROM dwh.facts f
+     JOIN dwh.dimension_days d
+     ON (f.action_dimension_id_date = d.dimension_day_id)
+     JOIN (
+      SELECT note_id, sequence_action, id_user
+      FROM note_comments
+      WHERE CAST(event AS text) = 'closed'
+     ) nc
+     ON (f.id_note = nc.note_id)
+     JOIN note_comments_text nct
+     ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
+    WHERE f.dimension_id_country = m_dimension_id_country
+     AND f.action_comment = 'closed'
+     AND EXTRACT(YEAR FROM d.date_id) = m_current_year
+     AND nct.body IS NOT NULL
+     AND LENGTH(TRIM(nct.body)) > 0;
 
-  -- history_year_reopened
-  SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.id_note)
-   INTO m_history_year_reopened
-  FROM dwh.facts f
-   JOIN dwh.dimension_days d
-   ON (f.action_dimension_id_date = d.dimension_day_id)
-  WHERE f.dimension_id_country = m_dimension_id_country
-   AND f.action_comment = 'reopened'
-   AND EXTRACT(YEAR FROM d.date_id) = m_current_year;
+    -- history_year_reopened
+    SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.id_note)
+     INTO m_history_year_reopened
+    FROM dwh.facts f
+     JOIN dwh.dimension_days d
+     ON (f.action_dimension_id_date = d.dimension_day_id)
+    WHERE f.dimension_id_country = m_dimension_id_country
+     AND f.action_comment = 'reopened'
+     AND EXTRACT(YEAR FROM d.date_id) = m_current_year;
 
-  -- history_month_open
-  SELECT /* Notes-datamartCountries */ COUNT(1)
-   INTO m_history_month_open
-  FROM dwh.facts f
-   JOIN dwh.dimension_days d
-   ON (f.action_dimension_id_date = d.dimension_day_id)
-  WHERE f.dimension_id_country = m_dimension_id_country
-   AND f.action_comment = 'opened'
-   AND EXTRACT(MONTH FROM d.date_id) = m_current_month
-   AND EXTRACT(YEAR FROM d.date_id) = m_current_year;
+    -- history_month_open
+    SELECT /* Notes-datamartCountries */ COUNT(1)
+     INTO m_history_month_open
+    FROM dwh.facts f
+     JOIN dwh.dimension_days d
+     ON (f.action_dimension_id_date = d.dimension_day_id)
+    WHERE f.dimension_id_country = m_dimension_id_country
+     AND f.action_comment = 'opened'
+     AND EXTRACT(MONTH FROM d.date_id) = m_current_month
+     AND EXTRACT(YEAR FROM d.date_id) = m_current_year;
 
-  -- history_month_commented
-  SELECT /* Notes-datamartCountries */ COUNT(1)
-   INTO m_history_month_commented
-  FROM dwh.facts f
-   JOIN dwh.dimension_days d
-   ON (f.action_dimension_id_date = d.dimension_day_id)
-  WHERE f.dimension_id_country = m_dimension_id_country
-   AND f.action_comment = 'commented'
-   AND EXTRACT(MONTH FROM d.date_id) = m_current_month
-   AND EXTRACT(YEAR FROM d.date_id) = m_current_year;
+    -- history_month_commented
+    SELECT /* Notes-datamartCountries */ COUNT(1)
+     INTO m_history_month_commented
+    FROM dwh.facts f
+     JOIN dwh.dimension_days d
+     ON (f.action_dimension_id_date = d.dimension_day_id)
+    WHERE f.dimension_id_country = m_dimension_id_country
+     AND f.action_comment = 'commented'
+     AND EXTRACT(MONTH FROM d.date_id) = m_current_month
+     AND EXTRACT(YEAR FROM d.date_id) = m_current_year;
 
-  -- history_month_closed
-  SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.id_note)
-   INTO m_history_month_closed
-  FROM dwh.facts f
-   JOIN dwh.dimension_days d
-   ON (f.action_dimension_id_date = d.dimension_day_id)
-  WHERE f.dimension_id_country = m_dimension_id_country
-   AND f.action_comment = 'closed'
-   AND EXTRACT(MONTH FROM d.date_id) = m_current_month
-   AND EXTRACT(YEAR FROM d.date_id) = m_current_year;
+    -- history_month_closed
+    SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.id_note)
+     INTO m_history_month_closed
+    FROM dwh.facts f
+     JOIN dwh.dimension_days d
+     ON (f.action_dimension_id_date = d.dimension_day_id)
+    WHERE f.dimension_id_country = m_dimension_id_country
+     AND f.action_comment = 'closed'
+     AND EXTRACT(MONTH FROM d.date_id) = m_current_month
+     AND EXTRACT(YEAR FROM d.date_id) = m_current_year;
 
-  -- history_month_closed_with_comment
-  SELECT /* Notes-datamartCountries */ COUNT(1)
-   INTO m_history_month_closed_with_comment
-  FROM dwh.facts f
-   JOIN dwh.dimension_days d
-   ON (f.action_dimension_id_date = d.dimension_day_id)
-   JOIN (
-    SELECT note_id, sequence_action, id_user
-    FROM note_comments
-    WHERE CAST(event AS text) = 'closed'
-   ) nc
-   ON (f.id_note = nc.note_id)
-   JOIN note_comments_text nct
-   ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
-  WHERE f.dimension_id_country = m_dimension_id_country
-   AND f.action_comment = 'closed'
-   AND EXTRACT(MONTH FROM d.date_id) = m_current_month
-   AND EXTRACT(YEAR FROM d.date_id) = m_current_year
-   AND nct.body IS NOT NULL
-   AND LENGTH(TRIM(nct.body)) > 0;
+    -- history_month_closed_with_comment
+    SELECT /* Notes-datamartCountries */ COUNT(1)
+     INTO m_history_month_closed_with_comment
+    FROM dwh.facts f
+     JOIN dwh.dimension_days d
+     ON (f.action_dimension_id_date = d.dimension_day_id)
+     JOIN (
+      SELECT note_id, sequence_action, id_user
+      FROM note_comments
+      WHERE CAST(event AS text) = 'closed'
+     ) nc
+     ON (f.id_note = nc.note_id)
+     JOIN note_comments_text nct
+     ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
+    WHERE f.dimension_id_country = m_dimension_id_country
+     AND f.action_comment = 'closed'
+     AND EXTRACT(MONTH FROM d.date_id) = m_current_month
+     AND EXTRACT(YEAR FROM d.date_id) = m_current_year
+     AND nct.body IS NOT NULL
+     AND LENGTH(TRIM(nct.body)) > 0;
 
-  -- history_month_reopened
-  SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.id_note)
-   INTO m_history_month_reopened
-  FROM dwh.facts f
-   JOIN dwh.dimension_days d
-   ON (f.action_dimension_id_date = d.dimension_day_id)
-  WHERE f.dimension_id_country = m_dimension_id_country
-   AND f.action_comment = 'reopened'
-   AND EXTRACT(MONTH FROM d.date_id) = m_current_month
-   AND EXTRACT(YEAR FROM d.date_id) = m_current_year;
+    -- history_month_reopened
+    SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.id_note)
+     INTO m_history_month_reopened
+    FROM dwh.facts f
+     JOIN dwh.dimension_days d
+     ON (f.action_dimension_id_date = d.dimension_day_id)
+    WHERE f.dimension_id_country = m_dimension_id_country
+     AND f.action_comment = 'reopened'
+     AND EXTRACT(MONTH FROM d.date_id) = m_current_month
+     AND EXTRACT(YEAR FROM d.date_id) = m_current_year;
 
-  -- history_day_open
-  SELECT /* Notes-datamartCountries */ COUNT(1)
-   INTO m_history_day_open
-  FROM dwh.facts f
-   JOIN dwh.dimension_days d
-   ON (f.action_dimension_id_date = d.dimension_day_id)
-  WHERE f.dimension_id_country = m_dimension_id_country
-   AND f.action_comment = 'opened'
-   AND EXTRACT(DAY FROM d.date_id) = m_current_day
-   AND EXTRACT(MONTH FROM d.date_id) = m_current_month
-   AND EXTRACT(YEAR FROM d.date_id) = m_current_year;
+    -- history_day_open
+    SELECT /* Notes-datamartCountries */ COUNT(1)
+     INTO m_history_day_open
+    FROM dwh.facts f
+     JOIN dwh.dimension_days d
+     ON (f.action_dimension_id_date = d.dimension_day_id)
+    WHERE f.dimension_id_country = m_dimension_id_country
+     AND f.action_comment = 'opened'
+     AND EXTRACT(DAY FROM d.date_id) = m_current_day
+     AND EXTRACT(MONTH FROM d.date_id) = m_current_month
+     AND EXTRACT(YEAR FROM d.date_id) = m_current_year;
 
-  -- history_day_commented
-  SELECT /* Notes-datamartCountries */ COUNT(1)
-   INTO m_history_day_commented
-  FROM dwh.facts f
-   JOIN dwh.dimension_days d
-   ON (f.action_dimension_id_date = d.dimension_day_id)
-  WHERE f.dimension_id_country = m_dimension_id_country
-   AND f.action_comment = 'commented'
-   AND EXTRACT(DAY FROM d.date_id) = m_current_day
-   AND EXTRACT(MONTH FROM d.date_id) = m_current_month
-   AND EXTRACT(YEAR FROM d.date_id) = m_current_year;
+    -- history_day_commented
+    SELECT /* Notes-datamartCountries */ COUNT(1)
+     INTO m_history_day_commented
+    FROM dwh.facts f
+     JOIN dwh.dimension_days d
+     ON (f.action_dimension_id_date = d.dimension_day_id)
+    WHERE f.dimension_id_country = m_dimension_id_country
+     AND f.action_comment = 'commented'
+     AND EXTRACT(DAY FROM d.date_id) = m_current_day
+     AND EXTRACT(MONTH FROM d.date_id) = m_current_month
+     AND EXTRACT(YEAR FROM d.date_id) = m_current_year;
 
-  -- history_day_closed
-  SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.id_note)
-   INTO m_history_day_closed
-  FROM dwh.facts f
-   JOIN dwh.dimension_days d
-   ON (f.action_dimension_id_date = d.dimension_day_id)
-  WHERE f.dimension_id_country = m_dimension_id_country
-   AND f.action_comment = 'closed'
-   AND EXTRACT(DAY FROM d.date_id) = m_current_day
-   AND EXTRACT(MONTH FROM d.date_id) = m_current_month
-   AND EXTRACT(YEAR FROM d.date_id) = m_current_year;
+    -- history_day_closed
+    SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.id_note)
+     INTO m_history_day_closed
+    FROM dwh.facts f
+     JOIN dwh.dimension_days d
+     ON (f.action_dimension_id_date = d.dimension_day_id)
+    WHERE f.dimension_id_country = m_dimension_id_country
+     AND f.action_comment = 'closed'
+     AND EXTRACT(DAY FROM d.date_id) = m_current_day
+     AND EXTRACT(MONTH FROM d.date_id) = m_current_month
+     AND EXTRACT(YEAR FROM d.date_id) = m_current_year;
 
-  -- history_day_closed_with_comment
-  SELECT /* Notes-datamartCountries */ COUNT(1)
-   INTO m_history_day_closed_with_comment
-  FROM dwh.facts f
-   JOIN dwh.dimension_days d
-   ON (f.action_dimension_id_date = d.dimension_day_id)
-   JOIN (
-    SELECT note_id, sequence_action, id_user
-    FROM note_comments
-    WHERE CAST(event AS text) = 'closed'
-   ) nc
-   ON (f.id_note = nc.note_id)
-   JOIN note_comments_text nct
-   ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
-  WHERE f.dimension_id_country = m_dimension_id_country
-   AND f.action_comment = 'closed'
-   AND EXTRACT(DAY FROM d.date_id) = m_current_day
-   AND EXTRACT(MONTH FROM d.date_id) = m_current_month
-   AND EXTRACT(YEAR FROM d.date_id) = m_current_year
-   AND nct.body IS NOT NULL
-   AND LENGTH(TRIM(nct.body)) > 0;
+    -- history_day_closed_with_comment
+    SELECT /* Notes-datamartCountries */ COUNT(1)
+     INTO m_history_day_closed_with_comment
+    FROM dwh.facts f
+     JOIN dwh.dimension_days d
+     ON (f.action_dimension_id_date = d.dimension_day_id)
+     JOIN (
+      SELECT note_id, sequence_action, id_user
+      FROM note_comments
+      WHERE CAST(event AS text) = 'closed'
+     ) nc
+     ON (f.id_note = nc.note_id)
+     JOIN note_comments_text nct
+     ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
+    WHERE f.dimension_id_country = m_dimension_id_country
+     AND f.action_comment = 'closed'
+     AND EXTRACT(DAY FROM d.date_id) = m_current_day
+     AND EXTRACT(MONTH FROM d.date_id) = m_current_month
+     AND EXTRACT(YEAR FROM d.date_id) = m_current_year
+     AND nct.body IS NOT NULL
+     AND LENGTH(TRIM(nct.body)) > 0;
 
-  -- history_day_reopened
-  SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.id_note)
-   INTO m_history_day_reopened
-  FROM dwh.facts f
-   JOIN dwh.dimension_days d
-   ON (f.action_dimension_id_date = d.dimension_day_id)
-  WHERE f.dimension_id_country = m_dimension_id_country
-   AND f.action_comment = 'reopened'
-   AND EXTRACT(DAY FROM d.date_id) = m_current_day
-   AND EXTRACT(MONTH FROM d.date_id) = m_current_month
-   AND EXTRACT(YEAR FROM d.date_id) = m_current_year;
+    -- history_day_reopened
+    SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.id_note)
+     INTO m_history_day_reopened
+    FROM dwh.facts f
+     JOIN dwh.dimension_days d
+     ON (f.action_dimension_id_date = d.dimension_day_id)
+    WHERE f.dimension_id_country = m_dimension_id_country
+     AND f.action_comment = 'reopened'
+     AND EXTRACT(DAY FROM d.date_id) = m_current_day
+     AND EXTRACT(MONTH FROM d.date_id) = m_current_month
+     AND EXTRACT(YEAR FROM d.date_id) = m_current_year;
+  END IF;
 
   -- Average resolution time
   SELECT COALESCE(AVG(days_to_resolution), 0)
@@ -1628,7 +1690,7 @@ AS $proc$
   LOOP
    -- Use incremental version if available, otherwise fall back to original
    IF EXISTS (
-    SELECT 1 FROM pg_proc 
+    SELECT 1 FROM pg_proc
     WHERE proname = 'update_datamart_country_activity_year_incremental'
    ) THEN
     CALL dwh.update_datamart_country_activity_year_incremental(m_dimension_id_country, m_year);

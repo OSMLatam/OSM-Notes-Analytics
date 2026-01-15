@@ -107,6 +107,7 @@ declare -r LAST_YEAR_ACTITIES_SCRIPT="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamarts
 # Performance optimization scripts (applied automatically on setup)
 declare -r OPTIMIZE_INDEXES_FILE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartCountries/datamartCountries_14_optimize_indexes.sql"
 declare -r INCREMENTAL_YEAR_PROCESSING_FILE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartCountries/datamartCountries_15_incremental_year_processing.sql"
+declare -r CONSOLIDATE_METRICS_FILE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartCountries/datamartCountries_17_consolidate_basic_metrics.sql"
 
 ###########
 # FUNCTIONS
@@ -184,6 +185,9 @@ function __checkPrereqs {
  if [[ -f "${INCREMENTAL_YEAR_PROCESSING_FILE}" ]]; then
   SQL_FILES+=("${INCREMENTAL_YEAR_PROCESSING_FILE}")
  fi
+ if [[ -f "${CONSOLIDATE_METRICS_FILE}" ]]; then
+  SQL_FILES+=("${CONSOLIDATE_METRICS_FILE}")
+ fi
 
  # Validate each SQL file
  for SQL_FILE in "${SQL_FILES[@]}"; do
@@ -260,6 +264,18 @@ function __checkBaseTables {
   fi
  else
   __logw "Incremental year processing script not found: ${INCREMENTAL_YEAR_PROCESSING_FILE}"
+ fi
+
+ if [[ -f "${CONSOLIDATE_METRICS_FILE}" ]]; then
+  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=0 -f "${CONSOLIDATE_METRICS_FILE}" > /dev/null 2>&1
+  local cons_ret=${?}
+  if [[ "${cons_ret}" -eq 0 ]]; then
+   __logi "Consolidated metrics function applied successfully"
+  else
+   __logw "Failed to apply consolidated metrics function (may already exist), continuing..."
+  fi
+ else
+  __logw "Consolidated metrics script not found: ${CONSOLIDATE_METRICS_FILE}"
  fi
  set -e
 
