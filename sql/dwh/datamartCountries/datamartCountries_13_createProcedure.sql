@@ -529,35 +529,49 @@ AS $proc$
     AND f.action_comment = 'reopened'
   );
 
-  -- dates_most_open
-  SELECT /* Notes-datamartCountries */
-   JSON_AGG(JSON_BUILD_OBJECT('date', date, 'quantity', quantity))
-   INTO m_dates_most_open
-  FROM (
-   SELECT /* Notes-datamartCountries */ date_id AS date, COUNT(1) AS quantity
-   FROM dwh.facts f
-    JOIN dwh.dimension_days d
-    ON (f.opened_dimension_id_date = d.dimension_day_id)
-   WHERE f.dimension_id_country = m_dimension_id_country
-   GROUP BY date_id
-   ORDER BY COUNT(1) DESC
-   LIMIT 50
-  ) AS T;
+  -- OPTIMIZATION: Use consolidated function to get dates metrics in a single query
+  -- This replaces 2 separate SELECT queries with 1 table scan
+  -- Falls back to individual queries if function doesn't exist (backward compatibility)
+  IF EXISTS (
+    SELECT 1 FROM pg_proc
+    WHERE proname = 'get_country_dates_metrics_consolidated'
+  ) THEN
+    -- Use consolidated function (much faster)
+    SELECT dates_most_open, dates_most_closed
+    INTO m_dates_most_open, m_dates_most_closed
+    FROM dwh.get_country_dates_metrics_consolidated(m_dimension_id_country);
+  ELSE
+    -- Fallback to original individual queries (backward compatibility)
+    -- dates_most_open
+    SELECT /* Notes-datamartCountries */
+     JSON_AGG(JSON_BUILD_OBJECT('date', date, 'quantity', quantity))
+     INTO m_dates_most_open
+    FROM (
+     SELECT /* Notes-datamartCountries */ date_id AS date, COUNT(1) AS quantity
+     FROM dwh.facts f
+      JOIN dwh.dimension_days d
+      ON (f.opened_dimension_id_date = d.dimension_day_id)
+     WHERE f.dimension_id_country = m_dimension_id_country
+     GROUP BY date_id
+     ORDER BY COUNT(1) DESC
+     LIMIT 50
+    ) AS T;
 
-  -- dates_most_closed
-  SELECT /* Notes-datamartCountries */
-   JSON_AGG(JSON_BUILD_OBJECT('date', date, 'quantity', quantity))
-   INTO m_dates_most_closed
-  FROM (
-   SELECT /* Notes-datamartCountries */ date_id AS date, COUNT(1) AS quantity
-   FROM dwh.facts f
-    JOIN dwh.dimension_days d
-    ON (f.closed_dimension_id_date = d.dimension_day_id)
-   WHERE f.dimension_id_country = m_dimension_id_country
-   GROUP BY date_id
-   ORDER BY COUNT(1) DESC
-   LIMIT 50
-  ) AS T;
+    -- dates_most_closed
+    SELECT /* Notes-datamartCountries */
+     JSON_AGG(JSON_BUILD_OBJECT('date', date, 'quantity', quantity))
+     INTO m_dates_most_closed
+    FROM (
+     SELECT /* Notes-datamartCountries */ date_id AS date, COUNT(1) AS quantity
+     FROM dwh.facts f
+      JOIN dwh.dimension_days d
+      ON (f.closed_dimension_id_date = d.dimension_day_id)
+     WHERE f.dimension_id_country = m_dimension_id_country
+     GROUP BY date_id
+     ORDER BY COUNT(1) DESC
+     LIMIT 50
+    ) AS T;
+  END IF;
 
   -- hashtags - aggregates all hashtags used in this country with their frequency
   SELECT /* Notes-datamartCountries */
@@ -892,55 +906,69 @@ AS $proc$
     ) AS S;
   END IF;
 
-  -- working_hours_of_week_opening
-  -- Note: Uses action_dimension_id_season for seasonal analysis
-  WITH hours AS (
-   SELECT /* Notes-datamartCountries */ day_of_week, hour_of_day, COUNT(1)
-   FROM dwh.facts f
-    JOIN dwh.dimension_time_of_week t
-    ON f.opened_dimension_id_hour_of_week = t.dimension_tow_id
-   WHERE f.dimension_id_country = m_dimension_id_country
-    AND f.action_comment = 'opened'
-    AND f.action_dimension_id_season IS NOT NULL
-   GROUP BY day_of_week, hour_of_day
-   ORDER BY day_of_week, hour_of_day
-  )
-  SELECT /* Notes-datamartCountries */ JSON_AGG(hours.*)
-   INTO m_working_hours_of_week_opening
-  FROM hours;
+  -- OPTIMIZATION: Use consolidated function to get working hours metrics in a single query
+  -- This replaces 3 separate SELECT queries with 1 table scan
+  -- Falls back to individual queries if function doesn't exist (backward compatibility)
+  IF EXISTS (
+    SELECT 1 FROM pg_proc
+    WHERE proname = 'get_country_working_hours_consolidated'
+  ) THEN
+    -- Use consolidated function (much faster)
+    SELECT working_hours_of_week_opening, working_hours_of_week_commenting, working_hours_of_week_closing
+    INTO m_working_hours_of_week_opening, m_working_hours_of_week_commenting, m_working_hours_of_week_closing
+    FROM dwh.get_country_working_hours_consolidated(m_dimension_id_country);
+  ELSE
+    -- Fallback to original individual queries (backward compatibility)
+    -- working_hours_of_week_opening
+    -- Note: Uses action_dimension_id_season for seasonal analysis
+    WITH hours AS (
+     SELECT /* Notes-datamartCountries */ day_of_week, hour_of_day, COUNT(1)
+     FROM dwh.facts f
+      JOIN dwh.dimension_time_of_week t
+      ON f.opened_dimension_id_hour_of_week = t.dimension_tow_id
+     WHERE f.dimension_id_country = m_dimension_id_country
+      AND f.action_comment = 'opened'
+      AND f.action_dimension_id_season IS NOT NULL
+     GROUP BY day_of_week, hour_of_day
+     ORDER BY day_of_week, hour_of_day
+    )
+    SELECT /* Notes-datamartCountries */ JSON_AGG(hours.*)
+     INTO m_working_hours_of_week_opening
+    FROM hours;
 
-  -- working_hours_of_week_commenting
-  -- Note: Uses action_dimension_id_season for seasonal analysis
-  WITH hours AS (
-   SELECT /* Notes-datamartCountries */ day_of_week, hour_of_day, COUNT(1)
-   FROM dwh.facts f
-    JOIN dwh.dimension_time_of_week t
-    ON f.action_dimension_id_hour_of_week = t.dimension_tow_id
-   WHERE f.dimension_id_country = m_dimension_id_country
-    AND f.action_comment = 'commented'
-    AND f.action_dimension_id_season IS NOT NULL
-   GROUP BY day_of_week, hour_of_day
-   ORDER BY day_of_week, hour_of_day
-  )
-  SELECT /* Notes-datamartCountries */ JSON_AGG(hours.*)
-   INTO m_working_hours_of_week_commenting
-  FROM hours;
+    -- working_hours_of_week_commenting
+    -- Note: Uses action_dimension_id_season for seasonal analysis
+    WITH hours AS (
+     SELECT /* Notes-datamartCountries */ day_of_week, hour_of_day, COUNT(1)
+     FROM dwh.facts f
+      JOIN dwh.dimension_time_of_week t
+      ON f.action_dimension_id_hour_of_week = t.dimension_tow_id
+     WHERE f.dimension_id_country = m_dimension_id_country
+      AND f.action_comment = 'commented'
+      AND f.action_dimension_id_season IS NOT NULL
+     GROUP BY day_of_week, hour_of_day
+     ORDER BY day_of_week, hour_of_day
+    )
+    SELECT /* Notes-datamartCountries */ JSON_AGG(hours.*)
+     INTO m_working_hours_of_week_commenting
+    FROM hours;
 
-  -- working_hours_of_week_closing
-  -- Note: Uses action_dimension_id_season for seasonal analysis
-  WITH hours AS (
-   SELECT /* Notes-datamartCountries */ day_of_week, hour_of_day, COUNT(1)
-   FROM dwh.facts f
-    JOIN dwh.dimension_time_of_week t
-    ON f.closed_dimension_id_hour_of_week = t.dimension_tow_id
-   WHERE f.dimension_id_country = m_dimension_id_country
-     AND f.action_dimension_id_season IS NOT NULL
-   GROUP BY day_of_week, hour_of_day
-   ORDER BY day_of_week, hour_of_day
-  )
-  SELECT /* Notes-datamartCountries */ JSON_AGG(hours.*)
-   INTO m_working_hours_of_week_closing
-  FROM hours;
+    -- working_hours_of_week_closing
+    -- Note: Uses action_dimension_id_season for seasonal analysis
+    WITH hours AS (
+     SELECT /* Notes-datamartCountries */ day_of_week, hour_of_day, COUNT(1)
+     FROM dwh.facts f
+      JOIN dwh.dimension_time_of_week t
+      ON f.closed_dimension_id_hour_of_week = t.dimension_tow_id
+     WHERE f.dimension_id_country = m_dimension_id_country
+       AND f.action_dimension_id_season IS NOT NULL
+     GROUP BY day_of_week, hour_of_day
+     ORDER BY day_of_week, hour_of_day
+    )
+    SELECT /* Notes-datamartCountries */ JSON_AGG(hours.*)
+     INTO m_working_hours_of_week_closing
+    FROM hours;
+  END IF;
 
   -- OPTIMIZATION: Use consolidated function to get all basic metrics in a single query
   -- This replaces 20+ separate SELECT queries with 1-2 table scans
@@ -1285,113 +1313,143 @@ AS $proc$
     m_resolution_rate := 0;
   END IF;
 
-  -- Applications used (JSON array with app_id, app_name, count)
-  SELECT /* Notes-datamartCountries */ json_agg(
-   json_build_object(
-    'app_id', app_id,
-    'app_name', app_name,
-    'count', app_count
-   ) ORDER BY app_count DESC
-  )
-  INTO m_applications_used
-  FROM (
-   SELECT
-    f.dimension_application_creation as app_id,
-    a.application_name as app_name,
-    COUNT(*) as app_count
-   FROM dwh.facts f
-    JOIN dwh.dimension_applications a
-    ON a.dimension_application_id = f.dimension_application_creation
-   WHERE f.dimension_id_country = m_dimension_id_country
-    AND f.dimension_application_creation IS NOT NULL
-    AND f.action_comment = 'opened'
-   GROUP BY f.dimension_application_creation, a.application_name
-   ORDER BY app_count DESC
-  ) AS app_stats;
+  -- OPTIMIZATION: Use consolidated function to get applications metrics in a single query
+  -- This replaces 4 separate SELECT queries with 1 table scan
+  -- Falls back to individual queries if function doesn't exist (backward compatibility)
+  IF EXISTS (
+    SELECT 1 FROM pg_proc
+    WHERE proname = 'get_country_applications_metrics_consolidated'
+  ) THEN
+    -- Use consolidated function (much faster)
+    SELECT applications_used, most_used_application_id, mobile_apps_count, desktop_apps_count
+    INTO m_applications_used, m_most_used_application_id, m_mobile_apps_count, m_desktop_apps_count
+    FROM dwh.get_country_applications_metrics_consolidated(m_dimension_id_country);
+  ELSE
+    -- Fallback to original individual queries (backward compatibility)
+    -- Applications used (JSON array with app_id, app_name, count)
+    SELECT /* Notes-datamartCountries */ json_agg(
+     json_build_object(
+      'app_id', app_id,
+      'app_name', app_name,
+      'count', app_count
+     ) ORDER BY app_count DESC
+    )
+    INTO m_applications_used
+    FROM (
+     SELECT
+      f.dimension_application_creation as app_id,
+      a.application_name as app_name,
+      COUNT(*) as app_count
+     FROM dwh.facts f
+      JOIN dwh.dimension_applications a
+      ON a.dimension_application_id = f.dimension_application_creation
+     WHERE f.dimension_id_country = m_dimension_id_country
+      AND f.dimension_application_creation IS NOT NULL
+      AND f.action_comment = 'opened'
+     GROUP BY f.dimension_application_creation, a.application_name
+     ORDER BY app_count DESC
+    ) AS app_stats;
 
-  -- Most used application
-  SELECT /* Notes-datamartCountries */ dimension_application_creation
-  INTO m_most_used_application_id
-  FROM dwh.facts
-  WHERE dimension_id_country = m_dimension_id_country
-   AND dimension_application_creation IS NOT NULL
-   AND action_comment = 'opened'
-  GROUP BY dimension_application_creation
-  ORDER BY COUNT(*) DESC
-  LIMIT 1;
+    -- Most used application
+    SELECT /* Notes-datamartCountries */ dimension_application_creation
+    INTO m_most_used_application_id
+    FROM dwh.facts
+    WHERE dimension_id_country = m_dimension_id_country
+     AND dimension_application_creation IS NOT NULL
+     AND action_comment = 'opened'
+    GROUP BY dimension_application_creation
+    ORDER BY COUNT(*) DESC
+    LIMIT 1;
 
-  -- Mobile apps count (android, ios, and other mobile platforms)
-  SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.dimension_application_creation)
-  INTO m_mobile_apps_count
-  FROM dwh.facts f
-   JOIN dwh.dimension_applications a
-   ON a.dimension_application_id = f.dimension_application_creation
-  WHERE f.dimension_id_country = m_dimension_id_country
-   AND f.dimension_application_creation IS NOT NULL
-   AND f.action_comment = 'opened'
-   AND (a.platform IN ('android', 'ios')
-    OR a.platform LIKE 'mobile%'
-    OR a.category = 'mobile');
+    -- Mobile apps count (android, ios, and other mobile platforms)
+    SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.dimension_application_creation)
+    INTO m_mobile_apps_count
+    FROM dwh.facts f
+     JOIN dwh.dimension_applications a
+     ON a.dimension_application_id = f.dimension_application_creation
+    WHERE f.dimension_id_country = m_dimension_id_country
+     AND f.dimension_application_creation IS NOT NULL
+     AND f.action_comment = 'opened'
+     AND (a.platform IN ('android', 'ios')
+      OR a.platform LIKE 'mobile%'
+      OR a.category = 'mobile');
 
-  -- Desktop apps count (web and desktop platforms)
-  SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.dimension_application_creation)
-  INTO m_desktop_apps_count
-  FROM dwh.facts f
-   JOIN dwh.dimension_applications a
-   ON a.dimension_application_id = f.dimension_application_creation
-  WHERE f.dimension_id_country = m_dimension_id_country
-   AND f.dimension_application_creation IS NOT NULL
-   AND f.action_comment = 'opened'
-   AND (a.platform = 'web'
-    OR a.platform IN ('desktop', 'windows', 'linux', 'macos'));
+    -- Desktop apps count (web and desktop platforms)
+    SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.dimension_application_creation)
+    INTO m_desktop_apps_count
+    FROM dwh.facts f
+     JOIN dwh.dimension_applications a
+     ON a.dimension_application_id = f.dimension_application_creation
+    WHERE f.dimension_id_country = m_dimension_id_country
+     AND f.dimension_application_creation IS NOT NULL
+     AND f.action_comment = 'opened'
+     AND (a.platform = 'web'
+      OR a.platform IN ('desktop', 'windows', 'linux', 'macos'));
+  END IF;
 
-  -- Average comment length
-  SELECT /* Notes-datamartCountries */ COALESCE(AVG(comment_length), 0)
-  INTO m_avg_comment_length
-  FROM dwh.facts
-  WHERE dimension_id_country = m_dimension_id_country
-   AND comment_length IS NOT NULL
-   AND action_comment = 'commented';
+  -- OPTIMIZATION: Use consolidated function to get comments metrics in a single query
+  -- This replaces 4 separate SELECT queries with 1 table scan
+  -- Falls back to individual queries if function doesn't exist (backward compatibility)
+  IF EXISTS (
+    SELECT 1 FROM pg_proc
+    WHERE proname = 'get_country_comments_metrics_consolidated'
+  ) THEN
+    -- Use consolidated function (much faster)
+    SELECT avg_comment_length, comments_with_url_count, comments_with_url_pct,
+           comments_with_mention_count, comments_with_mention_pct, avg_comments_per_note
+    INTO m_avg_comment_length, m_comments_with_url_count, m_comments_with_url_pct,
+         m_comments_with_mention_count, m_comments_with_mention_pct, m_avg_comments_per_note
+    FROM dwh.get_country_comments_metrics_consolidated(m_dimension_id_country);
+  ELSE
+    -- Fallback to original individual queries (backward compatibility)
+    -- Average comment length
+    SELECT /* Notes-datamartCountries */ COALESCE(AVG(comment_length), 0)
+    INTO m_avg_comment_length
+    FROM dwh.facts
+    WHERE dimension_id_country = m_dimension_id_country
+     AND comment_length IS NOT NULL
+     AND action_comment = 'commented';
 
-  -- Comments with URL count and percentage
-  SELECT
-   COUNT(*) FILTER (WHERE has_url = TRUE) as url_count,
-   COUNT(*) as total_comments,
-   CASE
-    WHEN COUNT(*) > 0
-    THEN (COUNT(*) FILTER (WHERE has_url = TRUE)::DECIMAL / COUNT(*) * 100)
-    ELSE 0
-   END as url_pct
-  INTO m_comments_with_url_count, qty, m_comments_with_url_pct
-  FROM dwh.facts
-  WHERE dimension_id_country = m_dimension_id_country
-   AND action_comment = 'commented';
+    -- Comments with URL count and percentage
+    SELECT
+     COUNT(*) FILTER (WHERE has_url = TRUE) as url_count,
+     COUNT(*) as total_comments,
+     CASE
+      WHEN COUNT(*) > 0
+      THEN (COUNT(*) FILTER (WHERE has_url = TRUE)::DECIMAL / COUNT(*) * 100)
+      ELSE 0
+     END as url_pct
+    INTO m_comments_with_url_count, qty, m_comments_with_url_pct
+    FROM dwh.facts
+    WHERE dimension_id_country = m_dimension_id_country
+     AND action_comment = 'commented';
 
-  -- Comments with mention count and percentage
-  SELECT
-   COUNT(*) FILTER (WHERE has_mention = TRUE) as mention_count,
-   COUNT(*) as total_comments,
-   CASE
-    WHEN COUNT(*) > 0
-    THEN (COUNT(*) FILTER (WHERE has_mention = TRUE)::DECIMAL / COUNT(*) * 100)
-    ELSE 0
-   END as mention_pct
-  INTO m_comments_with_mention_count, qty, m_comments_with_mention_pct
-  FROM dwh.facts
-  WHERE dimension_id_country = m_dimension_id_country
-   AND action_comment = 'commented';
+    -- Comments with mention count and percentage
+    SELECT
+     COUNT(*) FILTER (WHERE has_mention = TRUE) as mention_count,
+     COUNT(*) as total_comments,
+     CASE
+      WHEN COUNT(*) > 0
+      THEN (COUNT(*) FILTER (WHERE has_mention = TRUE)::DECIMAL / COUNT(*) * 100)
+      ELSE 0
+     END as mention_pct
+    INTO m_comments_with_mention_count, qty, m_comments_with_mention_pct
+    FROM dwh.facts
+    WHERE dimension_id_country = m_dimension_id_country
+     AND action_comment = 'commented';
 
-  -- Average comments per note
-  SELECT /* Notes-datamartCountries */
-   CASE
-    WHEN COUNT(DISTINCT opened_dimension_id_user) > 0
-    THEN COUNT(*)::DECIMAL / COUNT(DISTINCT id_note)
-    ELSE 0
-   END
-  INTO m_avg_comments_per_note
-  FROM dwh.facts
-  WHERE dimension_id_country = m_dimension_id_country
-   AND action_comment = 'commented';
+    -- Average comments per note
+    SELECT /* Notes-datamartCountries */
+     CASE
+      WHEN COUNT(DISTINCT opened_dimension_id_user) > 0
+      THEN COUNT(*)::DECIMAL / COUNT(DISTINCT id_note)
+      ELSE 0
+     END
+    INTO m_avg_comments_per_note
+    FROM dwh.facts
+    WHERE dimension_id_country = m_dimension_id_country
+     AND action_comment = 'commented';
+  END IF;
 
   -- Phase 4: Community Health Metrics
   -- Active notes count (currently open notes)
@@ -1405,52 +1463,66 @@ AS $proc$
   -- Notes backlog size (same as active notes)
   m_notes_backlog_size := m_active_notes_count;
 
-  -- Notes age distribution
-  SELECT /* Notes-datamartCountries */ json_agg(
-    json_build_object(
-      'age_range', age_range,
-      'count', age_count
-    ) ORDER BY age_range
-  )
-  INTO m_notes_age_distribution
-  FROM (
-    SELECT
-      age_range,
-      COUNT(*) as age_count
+  -- OPTIMIZATION: Use consolidated function to get notes age metrics in a single query
+  -- This replaces 2 separate SELECT queries with 1 table scan
+  -- Falls back to individual queries if function doesn't exist (backward compatibility)
+  IF EXISTS (
+    SELECT 1 FROM pg_proc
+    WHERE proname = 'get_country_notes_age_metrics_consolidated'
+  ) THEN
+    -- Use consolidated function (much faster)
+    SELECT notes_age_distribution, notes_created_last_30_days
+    INTO m_notes_age_distribution, m_notes_created_last_30_days
+    FROM dwh.get_country_notes_age_metrics_consolidated(m_dimension_id_country);
+  ELSE
+    -- Fallback to original individual queries (backward compatibility)
+    -- Notes age distribution
+    SELECT /* Notes-datamartCountries */ json_agg(
+      json_build_object(
+        'age_range', age_range,
+        'count', age_count
+      ) ORDER BY age_range
+    )
+    INTO m_notes_age_distribution
     FROM (
       SELECT
-        CASE
-          WHEN CURRENT_DATE - dd.date_id <= 7 THEN '0-7 days'
-          WHEN CURRENT_DATE - dd.date_id <= 30 THEN '8-30 days'
-          WHEN CURRENT_DATE - dd.date_id <= 90 THEN '31-90 days'
-          ELSE '90+ days'
-        END as age_range
-      FROM dwh.facts f
-      JOIN dwh.dimension_days dd ON f.opened_dimension_id_date = dd.dimension_day_id
-      WHERE f.dimension_id_country = m_dimension_id_country
-        AND f.action_comment = 'opened'
-        AND NOT EXISTS (
-          SELECT 1
-          FROM dwh.facts f2
-          WHERE f2.id_note = f.id_note
-            AND f2.action_comment = 'closed'
-            AND f2.dimension_id_country = m_dimension_id_country
-        )
-    ) subq
-    GROUP BY age_range
-  ) AS grouped;
+        age_range,
+        COUNT(*) as age_count
+      FROM (
+        SELECT
+          CASE
+            WHEN CURRENT_DATE - dd.date_id <= 7 THEN '0-7 days'
+            WHEN CURRENT_DATE - dd.date_id <= 30 THEN '8-30 days'
+            WHEN CURRENT_DATE - dd.date_id <= 90 THEN '31-90 days'
+            ELSE '90+ days'
+          END as age_range
+        FROM dwh.facts f
+        JOIN dwh.dimension_days dd ON f.opened_dimension_id_date = dd.dimension_day_id
+        WHERE f.dimension_id_country = m_dimension_id_country
+          AND f.action_comment = 'opened'
+          AND NOT EXISTS (
+            SELECT 1
+            FROM dwh.facts f2
+            WHERE f2.id_note = f.id_note
+              AND f2.action_comment = 'closed'
+              AND f2.dimension_id_country = m_dimension_id_country
+          )
+      ) subq
+      GROUP BY age_range
+    ) AS grouped;
 
-  -- Notes created last 30 days
-  SELECT /* Notes-datamartCountries */ COUNT(DISTINCT id_note)
-  INTO m_notes_created_last_30_days
-  FROM dwh.facts f
-  WHERE f.dimension_id_country = m_dimension_id_country
-    AND f.action_comment = 'opened'
-    AND f.opened_dimension_id_date IN (
-      SELECT dimension_day_id
-      FROM dwh.dimension_days
-      WHERE date_id >= CURRENT_DATE - INTERVAL '30 days'
-    );
+    -- Notes created last 30 days
+    SELECT /* Notes-datamartCountries */ COUNT(DISTINCT id_note)
+    INTO m_notes_created_last_30_days
+    FROM dwh.facts f
+    WHERE f.dimension_id_country = m_dimension_id_country
+      AND f.action_comment = 'opened'
+      AND f.opened_dimension_id_date IN (
+        SELECT dimension_day_id
+        FROM dwh.dimension_days
+        WHERE date_id >= CURRENT_DATE - INTERVAL '30 days'
+      );
+  END IF;
 
   -- Notes resolved last 30 days
   SELECT /* Notes-datamartCountries */ COUNT(DISTINCT id_note)

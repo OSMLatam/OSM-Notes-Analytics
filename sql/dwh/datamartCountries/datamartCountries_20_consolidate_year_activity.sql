@@ -117,7 +117,7 @@ BEGIN
       (SELECT year_closed FROM year_metrics) AS history_year_closed,
       (SELECT year_closed_with_comment FROM year_metrics) AS history_year_closed_with_comment,
       (SELECT year_reopened FROM year_metrics) AS history_year_reopened,
-      
+
       -- Opening rankings (top 50)
       (
         SELECT JSON_AGG(JSON_BUILD_OBJECT('rank', rank, 'username', username, 'quantity', count))
@@ -128,7 +128,7 @@ BEGIN
           LIMIT 50
         ) top_opening
       ) AS ranking_users_opening_year,
-      
+
       -- Closing rankings (top 50)
       (
         SELECT JSON_AGG(JSON_BUILD_OBJECT('rank', rank, 'username', username, 'quantity', count))

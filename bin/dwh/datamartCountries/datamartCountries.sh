@@ -111,6 +111,11 @@ declare -r CONSOLIDATE_METRICS_FILE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartCo
 declare -r CONSOLIDATE_RANKINGS_FILE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartCountries/datamartCountries_18_consolidate_user_rankings.sql"
 declare -r CONSOLIDATE_HASHTAGS_FILE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartCountries/datamartCountries_19_consolidate_hashtags.sql"
 declare -r CONSOLIDATE_YEAR_ACTIVITY_FILE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartCountries/datamartCountries_20_consolidate_year_activity.sql"
+declare -r CONSOLIDATE_DATES_FILE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartCountries/datamartCountries_21_consolidate_dates_metrics.sql"
+declare -r CONSOLIDATE_WORKING_HOURS_FILE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartCountries/datamartCountries_22_consolidate_working_hours.sql"
+declare -r CONSOLIDATE_APPLICATIONS_FILE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartCountries/datamartCountries_23_consolidate_applications.sql"
+declare -r CONSOLIDATE_COMMENTS_FILE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartCountries/datamartCountries_24_consolidate_comments.sql"
+declare -r CONSOLIDATE_NOTES_AGE_FILE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartCountries/datamartCountries_25_consolidate_notes_age.sql"
 
 ###########
 # FUNCTIONS
@@ -318,6 +323,61 @@ function __checkBaseTables {
   fi
  else
   __logw "Consolidated year activity script not found: ${CONSOLIDATE_YEAR_ACTIVITY_FILE}"
+ fi
+ if [[ -f "${CONSOLIDATE_DATES_FILE}" ]]; then
+  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=0 -f "${CONSOLIDATE_DATES_FILE}" > /dev/null 2>&1
+  local dates_ret=${?}
+  if [[ "${dates_ret}" -eq 0 ]]; then
+   __logi "Consolidated dates metrics function applied successfully"
+  else
+   __logw "Failed to apply consolidated dates metrics function (may already exist), continuing..."
+  fi
+ else
+  __logw "Consolidated dates metrics script not found: ${CONSOLIDATE_DATES_FILE}"
+ fi
+ if [[ -f "${CONSOLIDATE_WORKING_HOURS_FILE}" ]]; then
+  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=0 -f "${CONSOLIDATE_WORKING_HOURS_FILE}" > /dev/null 2>&1
+  local hours_ret=${?}
+  if [[ "${hours_ret}" -eq 0 ]]; then
+   __logi "Consolidated working hours function applied successfully"
+  else
+   __logw "Failed to apply consolidated working hours function (may already exist), continuing..."
+  fi
+ else
+  __logw "Consolidated working hours script not found: ${CONSOLIDATE_WORKING_HOURS_FILE}"
+ fi
+ if [[ -f "${CONSOLIDATE_APPLICATIONS_FILE}" ]]; then
+  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=0 -f "${CONSOLIDATE_APPLICATIONS_FILE}" > /dev/null 2>&1
+  local apps_ret=${?}
+  if [[ "${apps_ret}" -eq 0 ]]; then
+   __logi "Consolidated applications metrics function applied successfully"
+  else
+   __logw "Failed to apply consolidated applications metrics function (may already exist), continuing..."
+  fi
+ else
+  __logw "Consolidated applications metrics script not found: ${CONSOLIDATE_APPLICATIONS_FILE}"
+ fi
+ if [[ -f "${CONSOLIDATE_COMMENTS_FILE}" ]]; then
+  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=0 -f "${CONSOLIDATE_COMMENTS_FILE}" > /dev/null 2>&1
+  local comments_ret=${?}
+  if [[ "${comments_ret}" -eq 0 ]]; then
+   __logi "Consolidated comments metrics function applied successfully"
+  else
+   __logw "Failed to apply consolidated comments metrics function (may already exist), continuing..."
+  fi
+ else
+  __logw "Consolidated comments metrics script not found: ${CONSOLIDATE_COMMENTS_FILE}"
+ fi
+ if [[ -f "${CONSOLIDATE_NOTES_AGE_FILE}" ]]; then
+  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=0 -f "${CONSOLIDATE_NOTES_AGE_FILE}" > /dev/null 2>&1
+  local notes_age_ret=${?}
+  if [[ "${notes_age_ret}" -eq 0 ]]; then
+   __logi "Consolidated notes age metrics function applied successfully"
+  else
+   __logw "Failed to apply consolidated notes age metrics function (may already exist), continuing..."
+  fi
+ else
+  __logw "Consolidated notes age metrics script not found: ${CONSOLIDATE_NOTES_AGE_FILE}"
  fi
  set -e
 
