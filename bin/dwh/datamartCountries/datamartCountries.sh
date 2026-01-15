@@ -108,6 +108,7 @@ declare -r LAST_YEAR_ACTITIES_SCRIPT="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamarts
 declare -r OPTIMIZE_INDEXES_FILE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartCountries/datamartCountries_14_optimize_indexes.sql"
 declare -r INCREMENTAL_YEAR_PROCESSING_FILE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartCountries/datamartCountries_15_incremental_year_processing.sql"
 declare -r CONSOLIDATE_METRICS_FILE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartCountries/datamartCountries_17_consolidate_basic_metrics.sql"
+declare -r CONSOLIDATE_RANKINGS_FILE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartCountries/datamartCountries_18_consolidate_user_rankings.sql"
 
 ###########
 # FUNCTIONS
@@ -187,6 +188,9 @@ function __checkPrereqs {
  fi
  if [[ -f "${CONSOLIDATE_METRICS_FILE}" ]]; then
   SQL_FILES+=("${CONSOLIDATE_METRICS_FILE}")
+ fi
+ if [[ -f "${CONSOLIDATE_RANKINGS_FILE}" ]]; then
+  SQL_FILES+=("${CONSOLIDATE_RANKINGS_FILE}")
  fi
 
  # Validate each SQL file
@@ -276,6 +280,18 @@ function __checkBaseTables {
   fi
  else
   __logw "Consolidated metrics script not found: ${CONSOLIDATE_METRICS_FILE}"
+ fi
+
+ if [[ -f "${CONSOLIDATE_RANKINGS_FILE}" ]]; then
+  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=0 -f "${CONSOLIDATE_RANKINGS_FILE}" > /dev/null 2>&1
+  local rank_ret=${?}
+  if [[ "${rank_ret}" -eq 0 ]]; then
+   __logi "Consolidated user rankings function applied successfully"
+  else
+   __logw "Failed to apply consolidated user rankings function (may already exist), continuing..."
+  fi
+ else
+  __logw "Consolidated user rankings script not found: ${CONSOLIDATE_RANKINGS_FILE}"
  fi
  set -e
 
