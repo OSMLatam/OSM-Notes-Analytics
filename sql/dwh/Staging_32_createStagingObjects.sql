@@ -178,18 +178,20 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
 --RAISE NOTICE 'Flag 3: %', CLOCK_TIMESTAMP();
 
    -- Gets the user who created the note.
+   -- Handle anonymous notes (NULL user_id) by using Anonymous user (user_id = -1)
    SELECT /* Notes-staging */ dimension_user_id
     INTO m_dimension_user_open
    FROM dwh.dimension_users
-    WHERE user_id = rec_note_action.created_id_user AND is_current;
+    WHERE user_id = COALESCE(rec_note_action.created_id_user, -1) AND is_current;
 --RAISE NOTICE 'Flag 4: %', CLOCK_TIMESTAMP();
 
    -- Gets the user who performed the action (if action is opened, then it
    -- is the same).
+   -- Handle anonymous comments (NULL user_id) by using Anonymous user (user_id = -1)
    SELECT /* Notes-staging */ dimension_user_id
     INTO m_dimension_user_action
    FROM dwh.dimension_users
-    WHERE user_id = rec_note_action.action_id_user AND is_current;
+    WHERE user_id = COALESCE(rec_note_action.action_id_user, -1) AND is_current;
 --RAISE NOTICE 'Flag 5: %', CLOCK_TIMESTAMP();
 
    -- Gets the days of the actions
