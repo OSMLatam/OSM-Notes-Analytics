@@ -114,7 +114,7 @@ BEGIN
 
       -- Top opening hashtag (single value)
       (
-        SELECT hashtag
+        SELECT hashtag::VARCHAR(50)
         FROM opening_rankings
         WHERE rank = 1
         LIMIT 1
@@ -122,7 +122,7 @@ BEGIN
 
       -- Top resolution hashtag (single value)
       (
-        SELECT hashtag
+        SELECT hashtag::VARCHAR(50)
         FROM resolution_rankings
         WHERE rank = 1
         LIMIT 1
@@ -143,13 +143,13 @@ BEGIN
       ) AS resolution_hashtag_count
   )
   SELECT
-    hashtags_opening,
-    hashtags_resolution,
-    hashtags_comments,
-    top_opening_hashtag,
-    top_resolution_hashtag,
-    opening_hashtag_count::INTEGER,
-    resolution_hashtag_count::INTEGER
+    aggregated_metrics.hashtags_opening,
+    aggregated_metrics.hashtags_resolution,
+    aggregated_metrics.hashtags_comments,
+    aggregated_metrics.top_opening_hashtag,
+    aggregated_metrics.top_resolution_hashtag,
+    aggregated_metrics.opening_hashtag_count::INTEGER,
+    aggregated_metrics.resolution_hashtag_count::INTEGER
   FROM aggregated_metrics;
 END;
 $$ LANGUAGE plpgsql STABLE;
