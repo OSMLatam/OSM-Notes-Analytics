@@ -77,13 +77,13 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date_${YEAR} (
      n.created_at created_at, o.id_user created_id_user, n.id_country id_country,
      c.sequence_action seq, c.event action_comment, c.id_user action_id_user,
      c.created_at action_at, t.body
-    FROM note_comments c
-     JOIN notes n
+    FROM public.note_comments c
+     JOIN public.notes n
      ON (c.note_id = n.note_id)
-     JOIN note_comments o
+     JOIN public.note_comments o
      ON (n.note_id = o.note_id
          AND o.event = ''opened'')
-     LEFT JOIN note_comments_text t
+     LEFT JOIN public.note_comments_text t
      ON (c.note_id = t.note_id AND c.sequence_action = t.sequence_action)
 
     WHERE c.created_at >= ''' || max_processed_timestamp
@@ -98,13 +98,13 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date_${YEAR} (
      n.created_at created_at, o.id_user created_id_user, n.id_country id_country,
      c.sequence_action seq, c.event action_comment, c.id_user action_id_user,
      c.created_at action_at, t.body
-    FROM note_comments c
-     JOIN notes n
+    FROM public.note_comments c
+     JOIN public.notes n
      ON (c.note_id = n.note_id)
-     JOIN note_comments o
+     JOIN public.note_comments o
      ON (n.note_id = o.note_id
          AND o.event = ''opened'')
-     LEFT JOIN note_comments_text t
+     LEFT JOIN public.note_comments_text t
      ON (c.note_id = t.note_id AND c.sequence_action = t.sequence_action)
 
     WHERE c.created_at > ''' || max_processed_timestamp
@@ -133,7 +133,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date_${YEAR} (
     INSERT INTO dwh.dimension_countries
      (country_id, country_name, country_name_es, country_name_en)
     SELECT /* Notes-staging */ c.country_id, c.country_name, c.country_name_es, c.country_name_en
-    FROM countries c
+    FROM public.countries c
     WHERE c.country_id = rec_note_action.id_country
      AND c.country_id NOT IN (SELECT country_id FROM dwh.dimension_countries)
     ON CONFLICT (country_id) DO NOTHING
@@ -202,7 +202,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date_${YEAR} (
    IF (rec_note_action.action_comment = 'opened') THEN
     SELECT /* Notes-staging */ body
      INTO m_text_comment
-    FROM note_comments_text
+    FROM public.note_comments_text
     WHERE note_id = rec_note_action.id_note
      AND sequence_action = rec_note_action.seq; -- Sequence should be 1.
 --RAISE NOTICE 'Flag 8: %', CLOCK_TIMESTAMP();
@@ -255,7 +255,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date_${YEAR} (
    -- Defaults for local/tz/season
    -- Compute tz/season using note coordinates
    SELECT n.latitude, n.longitude INTO m_latitude, m_longitude
-   FROM notes n WHERE n.note_id = rec_note_action.id_note;
+   FROM public.notes n WHERE n.note_id = rec_note_action.id_note;
    m_timezone_id := dwh.get_timezone_id_by_lonlat(m_longitude, m_latitude);
    m_local_action_id_date := dwh.get_local_date_id(rec_note_action.action_at, m_timezone_id);
    m_local_action_id_hour_of_week := dwh.get_local_hour_of_week_id(rec_note_action.action_at, m_timezone_id);
@@ -369,7 +369,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_staging_${YEAR} (
 --RAISE NOTICE '0 facts, processing all year ${YEAR}. It could take several hours.';
    SELECT /* Notes-staging */ MIN(created_at)
     INTO min_timestamp
-   FROM note_comments
+   FROM public.note_comments
    WHERE EXTRACT(YEAR FROM created_at) = ${YEAR};
    CALL staging.process_notes_at_date_${YEAR}(min_timestamp, qty_dwh_notes,
      TRUE);
@@ -380,7 +380,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_staging_${YEAR} (
   -- Gets the date of the most recent note action from base tables.
   SELECT /* Notes-staging */ MAX(DATE(created_at))
    INTO max_note_action_date
-  FROM note_comments
+  FROM public.note_comments
   WHERE EXTRACT(YEAR FROM created_at) = ${YEAR};
 --RAISE NOTICE 'recursive case %.', max_note_action_date;
 --RAISE NOTICE '1Flag 3: %', CLOCK_TIMESTAMP();
@@ -420,7 +420,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_staging_${YEAR} (
    -- processed.
    SELECT /* Notes-staging */ COUNT(1)
     INTO qty_notes_on_date
-   FROM note_comments
+   FROM public.note_comments
    WHERE DATE(created_at) = max_processed_date
     AND created_at > max_note_on_dwh_timestamp
     AND EXTRACT(YEAR FROM created_at) = ${YEAR};
@@ -434,7 +434,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_staging_${YEAR} (
     -- Find next date that actually has comments (skip empty days) for this year
     SELECT /* Notes-staging */ MIN(DATE(created_at))
      INTO max_processed_date
-    FROM note_comments
+    FROM public.note_comments
     WHERE DATE(created_at) > max_processed_date
      AND EXTRACT(YEAR FROM created_at) = ${YEAR};
 
@@ -452,7 +452,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_staging_${YEAR} (
    -- being processed.
     SELECT /* Notes-staging */ COUNT(1)
      INTO qty_notes_on_date
-    FROM note_comments
+    FROM public.note_comments
     WHERE DATE(created_at) = max_processed_date
      AND created_at > max_note_on_dwh_timestamp
      AND EXTRACT(YEAR FROM created_at) = ${YEAR};

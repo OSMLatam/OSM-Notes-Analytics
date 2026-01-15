@@ -218,10 +218,10 @@ AS $proc$
    FROM dwh.facts f
     JOIN dwh.dimension_days d
     ON f.action_dimension_id_date = d.dimension_day_id
-    JOIN note_comments nc
+    JOIN public.note_comments nc
     ON (f.id_note = nc.note_id
         AND nc.event = 'closed')
-    JOIN note_comments_text nct
+    JOIN public.note_comments_text nct
     ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
    WHERE f.action_dimension_id_user = m_dimension_user_id
     AND f.action_comment = 'closed'
@@ -906,11 +906,11 @@ AS $proc$
   FROM dwh.facts f
    JOIN (
     SELECT note_id, sequence_action, id_user
-    FROM note_comments
+    FROM public.note_comments
     WHERE CAST(event AS text) = 'closed'
    ) nc
    ON (f.id_note = nc.note_id)
-   JOIN note_comments_text nct
+   JOIN public.note_comments_text nct
    ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
   WHERE f.action_dimension_id_user = m_dimension_user_id
    AND f.action_comment = 'closed'
@@ -962,11 +962,11 @@ AS $proc$
    ON (f.action_dimension_id_date = d.dimension_day_id)
    JOIN (
     SELECT note_id, sequence_action, id_user
-    FROM note_comments
+    FROM public.note_comments
     WHERE CAST(event AS text) = 'closed'
    ) nc
    ON (f.id_note = nc.note_id)
-   JOIN note_comments_text nct
+   JOIN public.note_comments_text nct
    ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
   WHERE f.action_dimension_id_user = m_dimension_user_id
    AND f.action_comment = 'closed'
@@ -1025,11 +1025,11 @@ AS $proc$
    ON (f.action_dimension_id_date = d.dimension_day_id)
    JOIN (
     SELECT note_id, sequence_action, id_user
-    FROM note_comments
+    FROM public.note_comments
     WHERE CAST(event AS text) = 'closed'
    ) nc
    ON (f.id_note = nc.note_id)
-   JOIN note_comments_text nct
+   JOIN public.note_comments_text nct
    ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
   WHERE f.action_dimension_id_user = m_dimension_user_id
    AND f.action_comment = 'closed'
@@ -1093,11 +1093,11 @@ AS $proc$
    ON (f.action_dimension_id_date = d.dimension_day_id)
    JOIN (
     SELECT note_id, sequence_action, id_user
-    FROM note_comments
+    FROM public.note_comments
     WHERE CAST(event AS text) = 'closed'
    ) nc
    ON (f.id_note = nc.note_id)
-   JOIN note_comments_text nct
+   JOIN public.note_comments_text nct
    ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
   WHERE f.action_dimension_id_user = m_dimension_user_id
    AND f.action_comment = 'closed'

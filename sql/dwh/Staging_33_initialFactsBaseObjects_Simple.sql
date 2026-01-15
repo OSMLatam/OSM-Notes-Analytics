@@ -142,7 +142,7 @@ END
 $$;
 
 -- Create index for performance
-CREATE INDEX IF NOT EXISTS comments_function_year ON note_comments (EXTRACT(YEAR FROM created_at), created_at);
+CREATE INDEX IF NOT EXISTS comments_function_year ON public.note_comments (EXTRACT(YEAR FROM created_at), created_at);
 COMMENT ON INDEX comments_function_year IS
   'Index to improve access when processing ETL per years';
 

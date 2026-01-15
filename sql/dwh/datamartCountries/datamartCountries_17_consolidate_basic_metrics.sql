@@ -63,7 +63,7 @@ BEGIN
     JOIN dwh.dimension_days d ON f.action_dimension_id_date = d.dimension_day_id
     LEFT JOIN (
       SELECT note_id, sequence_action, id_user
-      FROM note_comments
+      FROM public.note_comments
       WHERE CAST(event AS text) = 'closed'
     ) nc ON f.id_note = nc.note_id
     LEFT JOIN note_comments_text nct ON (

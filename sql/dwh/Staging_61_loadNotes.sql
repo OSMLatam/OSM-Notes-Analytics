@@ -11,7 +11,7 @@ SELECT /* Notes-staging */ COUNT(1) AS facts, 0 AS comments
 FROM dwh.facts
 UNION
 SELECT /* Notes-staging */ 0 AS facts, count(1) AS comments
-FROM note_comments;
+FROM public.note_comments;
 COMMIT;
 
 SELECT /* Notes-staging */ clock_timestamp() AS Processing,
@@ -29,5 +29,5 @@ SELECT /* Notes-staging */ COUNT(1) AS facts, 0 AS comments
 FROM dwh.facts
 UNION
 SELECT /* Notes-staging */ 0 AS facts, count(1) AS comments
-FROM note_comments;
+FROM public.note_comments;
 COMMIT;

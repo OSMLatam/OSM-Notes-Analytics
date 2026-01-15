@@ -53,7 +53,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
   -- This prevents race conditions where new notes are inserted while processing
   SELECT COALESCE(MAX(note_id), 0)
     INTO max_note_id_snapshot
-  FROM notes;
+  FROM public.notes;
 --  RAISE NOTICE 'Day % started.', max_processed_timestamp;
 
 --RAISE NOTICE 'Flag 1: %', CLOCK_TIMESTAMP();
@@ -75,17 +75,17 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
      n.created_at created_at, o.id_user created_id_user, n.id_country id_country,
      c.sequence_action seq, c.event action_comment, c.id_user action_id_user,
      c.created_at action_at, t.body
-    FROM note_comments c
-     JOIN notes n
+    FROM public.note_comments c
+     JOIN public.notes n
      ON (c.note_id = n.note_id)
-     JOIN note_comments o
+     JOIN public.note_comments o
      ON (n.note_id = o.note_id
          -- Direct enum comparison (no CAST needed): foreign table is defined as note_event_enum
          -- ETL_60_setupFDW.sql ensures the foreign table uses note_event_enum type, not TEXT
          -- This allows PostgreSQL to use indexes and avoids full table scans
          AND o.event = ''opened''
          AND o.note_id <= ' || max_note_id_snapshot || ')
-     LEFT JOIN note_comments_text t
+     LEFT JOIN public.note_comments_text t
      ON (c.note_id = t.note_id AND c.sequence_action = t.sequence_action)
 
     WHERE c.created_at >= ''' || max_processed_timestamp
@@ -101,17 +101,17 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
      n.created_at created_at, o.id_user created_id_user, n.id_country id_country,
      c.sequence_action seq, c.event action_comment, c.id_user action_id_user,
      c.created_at action_at, t.body
-    FROM note_comments c
-     JOIN notes n
+    FROM public.note_comments c
+     JOIN public.notes n
      ON (c.note_id = n.note_id)
-     JOIN note_comments o
+     JOIN public.note_comments o
      ON (n.note_id = o.note_id
          -- Direct enum comparison (no CAST needed): foreign table is defined as note_event_enum
          -- ETL_60_setupFDW.sql ensures the foreign table uses note_event_enum type, not TEXT
          -- This allows PostgreSQL to use indexes and avoids full table scans
          AND o.event = ''opened''
          AND o.note_id <= ' || max_note_id_snapshot || ')
-     LEFT JOIN note_comments_text t
+     LEFT JOIN public.note_comments_text t
      ON (c.note_id = t.note_id AND c.sequence_action = t.sequence_action)
 
     WHERE c.created_at > ''' || max_processed_timestamp
@@ -144,7 +144,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
     INSERT INTO dwh.dimension_countries
      (country_id, country_name, country_name_es, country_name_en)
     SELECT /* Notes-staging */ c.country_id, c.country_name, c.country_name_es, c.country_name_en
-    FROM countries c
+    FROM public.countries c
     WHERE c.country_id = rec_note_action.id_country
      AND c.country_id NOT IN (SELECT country_id FROM dwh.dimension_countries)
     ON CONFLICT (country_id) DO NOTHING
@@ -286,7 +286,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
    -- be executed in READ ONLY mode for better concurrency, but this procedure also
    -- performs writes, so READ ONLY cannot be applied to the entire transaction.
    SELECT n.latitude, n.longitude INTO m_latitude, m_longitude
-   FROM notes n WHERE n.note_id = rec_note_action.id_note;
+   FROM public.notes n WHERE n.note_id = rec_note_action.id_note;
    m_timezone_id := dwh.get_timezone_id_by_lonlat(m_longitude, m_latitude);
    m_local_action_id_date := dwh.get_local_date_id(rec_note_action.action_at, m_timezone_id);
    m_local_action_id_hour_of_week := dwh.get_local_hour_of_week_id(rec_note_action.action_at, m_timezone_id);
@@ -428,7 +428,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
   -- This prevents race conditions where new notes are inserted while processing
   SELECT COALESCE(MAX(note_id), 0)
     INTO max_note_id_snapshot
-  FROM notes;
+  FROM public.notes;
 
   -- Use this snapshot for all queries to ensure referential integrity
   -- All note_comments processed will have their corresponding notes
@@ -466,14 +466,14 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
    -- Filter by max_note_id_snapshot to ensure consistency
    SELECT /* Notes-staging */ MAX(DATE(created_at))
     INTO max_note_action_date
-   FROM note_comments
+   FROM public.note_comments
    WHERE note_id <= max_note_id_snapshot;
 
    -- Start from the first date with comments
    -- Filter by max_note_id_snapshot to ensure consistency
    SELECT /* Notes-staging */ MIN(DATE(created_at))
     INTO max_processed_date
-   FROM note_comments
+   FROM public.note_comments
    WHERE note_id <= max_note_id_snapshot;
 
    -- Process all dates from first date until the latest date (skip empty days)
@@ -495,7 +495,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
     -- OPTIMIZATION: Use timestamp range instead of DATE() to allow index usage on FDW
     SELECT /* Notes-staging */ COUNT(1)
      INTO qty_notes_on_date
-    FROM note_comments
+    FROM public.note_comments
     WHERE created_at >= max_processed_date::TIMESTAMP
      AND created_at < (max_processed_date + INTERVAL '1 day')::TIMESTAMP
      AND created_at > max_note_on_dwh_timestamp
@@ -512,8 +512,8 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
     -- OPTIMIZATION: Use timestamp range instead of DATE() to allow index usage on FDW
     SELECT /* Notes-staging */ MIN(DATE(created_at))
      INTO max_processed_date
-    FROM note_comments
-    WHERE created_at >= (max_processed_date + INTERVAL '1 day')::TIMESTAMP
+   FROM public.note_comments
+   WHERE created_at >= (max_processed_date + INTERVAL '1 day')::TIMESTAMP
      AND note_id <= max_note_id_snapshot;
 
     -- If no more dates with comments, exit loop
@@ -556,7 +556,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
   -- Filter by max_note_id_snapshot to ensure consistency
   SELECT /* Notes-staging */ MAX(DATE(created_at))
    INTO max_note_action_date
-  FROM note_comments
+  FROM public.note_comments
   WHERE note_id <= max_note_id_snapshot;
 --RAISE NOTICE 'Max date with comments in base tables: %', max_note_action_date;
 --RAISE NOTICE '1Flag 4: %', CLOCK_TIMESTAMP();
@@ -605,13 +605,13 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
    -- processed.
    -- Filter by max_note_id_snapshot to ensure consistency
    -- OPTIMIZATION: Use timestamp range instead of DATE() to allow index usage on FDW
-   SELECT /* Notes-staging */ COUNT(1)
-    INTO qty_notes_on_date
-   FROM note_comments
-   WHERE created_at >= max_processed_date::TIMESTAMP
-    AND created_at < (max_processed_date + INTERVAL '1 day')::TIMESTAMP
-    AND created_at > max_note_on_dwh_timestamp
-    AND note_id <= max_note_id_snapshot;
+    SELECT /* Notes-staging */ COUNT(1)
+     INTO qty_notes_on_date
+    FROM public.note_comments
+    WHERE created_at >= max_processed_date::TIMESTAMP
+     AND created_at < (max_processed_date + INTERVAL '1 day')::TIMESTAMP
+     AND created_at > max_note_on_dwh_timestamp
+     AND note_id <= max_note_id_snapshot;
 --RAISE NOTICE 'count notes to process on date %: %.', max_processed_date,
 --qty_notes_on_date;
 --RAISE NOTICE '1Flag 7: %', CLOCK_TIMESTAMP();
@@ -625,8 +625,8 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
     -- OPTIMIZATION: Use timestamp range instead of DATE() to allow index usage on FDW
     SELECT /* Notes-staging */ MIN(DATE(created_at))
      INTO max_processed_date
-    FROM note_comments
-    WHERE created_at >= (max_processed_date + INTERVAL '1 day')::TIMESTAMP
+   FROM public.note_comments
+   WHERE created_at >= (max_processed_date + INTERVAL '1 day')::TIMESTAMP
      AND note_id <= max_note_id_snapshot;
 
     -- If no more dates with comments, exit loop
@@ -671,7 +671,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
    -- OPTIMIZATION: Use timestamp range instead of DATE() to allow index usage on FDW
     SELECT /* Notes-staging */ COUNT(1)
      INTO qty_notes_on_date
-    FROM note_comments
+    FROM public.note_comments
     WHERE created_at >= max_processed_date::TIMESTAMP
      AND created_at < (max_processed_date + INTERVAL '1 day')::TIMESTAMP
      AND created_at > max_note_on_dwh_timestamp

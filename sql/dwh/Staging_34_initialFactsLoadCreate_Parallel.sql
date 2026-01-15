@@ -53,13 +53,13 @@ BEGIN
     n.created_at created_at, o.id_user created_id_user, n.id_country id_country,
     c.sequence_action seq, c.event action_comment, c.id_user action_id_user,
     c.created_at action_at, t.body
-   FROM note_comments c
-    JOIN notes n
+   FROM public.note_comments c
+    JOIN public.notes n
     ON (c.note_id = n.note_id)
-    JOIN note_comments o
+    JOIN public.note_comments o
     ON (n.note_id = o.note_id
         AND o.event = 'opened')
-    LEFT JOIN note_comments_text t
+    LEFT JOIN public.note_comments_text t
     ON (c.note_id = t.note_id AND c.sequence_action = t.sequence_action)
    WHERE EXTRACT(YEAR FROM c.created_at) = ${YEAR}
    ORDER BY c.note_id, c.sequence_action;
@@ -78,7 +78,7 @@ BEGIN
     INSERT INTO dwh.dimension_countries
      (country_id, country_name, country_name_es, country_name_en)
     SELECT /* Notes-staging */ c.country_id, c.country_name, c.country_name_es, c.country_name_en
-    FROM countries c
+    FROM public.countries c
     WHERE c.country_id = rec_note_action.id_country
      AND c.country_id NOT IN (SELECT country_id FROM dwh.dimension_countries)
     ON CONFLICT (country_id) DO NOTHING
@@ -173,7 +173,7 @@ BEGIN
 
    -- Get timezone and local time info
    SELECT n.latitude, n.longitude INTO m_latitude, m_longitude
-   FROM notes n WHERE n.note_id = rec_note_action.id_note;
+   FROM public.notes n WHERE n.note_id = rec_note_action.id_note;
    m_timezone_id := dwh.get_timezone_id_by_lonlat(m_longitude, m_latitude);
    m_local_action_id_date := dwh.get_local_date_id(rec_note_action.action_at, m_timezone_id);
    m_local_action_id_hour_of_week := dwh.get_local_hour_of_week_id(rec_note_action.action_at, m_timezone_id);

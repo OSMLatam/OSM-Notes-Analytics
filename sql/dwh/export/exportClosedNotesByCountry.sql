@@ -92,8 +92,8 @@ WITH cleaned_comments AS (
       SELECT DISTINCT ON (nc.note_id)
         nc.note_id,
         nct.body
-      FROM note_comments nc
-        JOIN note_comments_text nct
+      FROM public.note_comments nc
+        JOIN public.note_comments_text nct
           ON nc.note_id = nct.note_id
           AND nc.sequence_action = nct.sequence_action
       WHERE nc.event = 'opened'
@@ -105,8 +105,8 @@ WITH cleaned_comments AS (
       SELECT DISTINCT ON (nc.note_id)
         nc.note_id,
         nct.body
-      FROM note_comments nc
-        JOIN note_comments_text nct
+      FROM public.note_comments nc
+        JOIN public.note_comments_text nct
           ON nc.note_id = nct.note_id
           AND nc.sequence_action = nct.sequence_action
       WHERE nc.event = 'closed'
@@ -151,10 +151,10 @@ FROM dwh.facts closed_fact
   -- Get country information
   JOIN dwh.dimension_countries dc
     ON closed_fact.dimension_id_country = dc.dimension_country_id
-  LEFT JOIN countries c
+  LEFT JOIN public.countries c
     ON dc.country_id = c.country_id
   -- Get note coordinates
-  LEFT JOIN notes n
+  LEFT JOIN public.notes n
     ON closed_fact.id_note = n.note_id
   -- Get opened date from dimension_days
   LEFT JOIN dwh.dimension_days opened_date
@@ -162,12 +162,12 @@ FROM dwh.facts closed_fact
   -- Get user who opened the note
   LEFT JOIN dwh.dimension_users du_opened
     ON closed_fact.opened_dimension_id_user = du_opened.dimension_user_id
-  LEFT JOIN users u_opened
+  LEFT JOIN public.users u_opened
     ON du_opened.user_id = u_opened.user_id
   -- Get user who closed the note
   LEFT JOIN dwh.dimension_users du_closed
     ON closed_fact.closed_dimension_id_user = du_closed.dimension_user_id
-  LEFT JOIN users u_closed
+  LEFT JOIN public.users u_closed
     ON du_closed.user_id = u_closed.user_id
 WHERE closed_fact.action_comment = 'closed'
   -- Country filter already applied in CTE
