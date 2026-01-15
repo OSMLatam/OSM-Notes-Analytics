@@ -110,6 +110,7 @@ declare -r INCREMENTAL_YEAR_PROCESSING_FILE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/da
 declare -r CONSOLIDATE_METRICS_FILE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartCountries/datamartCountries_17_consolidate_basic_metrics.sql"
 declare -r CONSOLIDATE_RANKINGS_FILE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartCountries/datamartCountries_18_consolidate_user_rankings.sql"
 declare -r CONSOLIDATE_HASHTAGS_FILE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartCountries/datamartCountries_19_consolidate_hashtags.sql"
+declare -r CONSOLIDATE_YEAR_ACTIVITY_FILE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartCountries/datamartCountries_20_consolidate_year_activity.sql"
 
 ###########
 # FUNCTIONS
@@ -305,6 +306,18 @@ function __checkBaseTables {
   fi
  else
   __logw "Consolidated hashtag metrics script not found: ${CONSOLIDATE_HASHTAGS_FILE}"
+ fi
+
+ if [[ -f "${CONSOLIDATE_YEAR_ACTIVITY_FILE}" ]]; then
+  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=0 -f "${CONSOLIDATE_YEAR_ACTIVITY_FILE}" > /dev/null 2>&1
+  local year_ret=${?}
+  if [[ "${year_ret}" -eq 0 ]]; then
+   __logi "Consolidated year activity function applied successfully"
+  else
+   __logw "Failed to apply consolidated year activity function (may already exist), continuing..."
+  fi
+ else
+  __logw "Consolidated year activity script not found: ${CONSOLIDATE_YEAR_ACTIVITY_FILE}"
  fi
  set -e
 

@@ -203,113 +203,138 @@ AS $proc$
 
   IF (m_check_year_populated IS NULL OR m_check_year_populated = m_current_year) THEN
 
-   -- history_year_open
-   SELECT /* Notes-datamartCountries */ COUNT(1)
-    INTO m_history_year_open
-   FROM dwh.facts f
-    JOIN dwh.dimension_days d
-    ON (f.action_dimension_id_date = d.dimension_day_id)
-   WHERE f.dimension_id_country = m_dimension_country_id
-    AND f.action_comment = 'opened'
-    AND EXTRACT(YEAR FROM d.date_id) = m_year;
-
-   -- history_year_commented
-   SELECT /* Notes-datamartCountries */ COUNT(1)
-    INTO m_history_year_commented
-   FROM dwh.facts f
-    JOIN dwh.dimension_days d
-    ON (f.action_dimension_id_date = d.dimension_day_id)
-   WHERE f.dimension_id_country = m_dimension_country_id
-    AND f.action_comment = 'commented'
-    AND EXTRACT(YEAR FROM d.date_id) = m_year;
-
-   -- history_year_closed
-   SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.id_note)
-    INTO m_history_year_closed
-   FROM dwh.facts f
-    JOIN dwh.dimension_days d
-    ON (f.action_dimension_id_date = d.dimension_day_id)
-   WHERE f.dimension_id_country = m_dimension_country_id
-    AND f.action_comment = 'closed'
-    AND EXTRACT(YEAR FROM d.date_id) = m_year;
-
-   -- history_year_closed_with_comment
-   -- Note: This SELECT reads from ingestion tables (note_comments, note_comments_text)
-   -- and should ideally be executed in READ ONLY mode for better concurrency, but this
-   -- procedure also performs writes, so READ ONLY cannot be applied to the entire transaction.
-   SELECT /* Notes-datamartCountries */ COUNT(1)
-    INTO m_history_year_closed_with_comment
-   FROM dwh.facts f
-    JOIN dwh.dimension_days d
-    ON (f.action_dimension_id_date = d.dimension_day_id)
-    JOIN note_comments nc
-    ON (f.id_note = nc.note_id
-        AND nc.event = 'closed')
-    JOIN note_comments_text nct
-    ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
-   WHERE f.dimension_id_country = m_dimension_country_id
-    AND f.action_comment = 'closed'
-    AND EXTRACT(YEAR FROM d.date_id) = m_year
-    AND nct.body IS NOT NULL
-    AND LENGTH(TRIM(nct.body)) > 0;
-
-   -- history_year_reopened
-   SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.id_note)
-    INTO m_history_year_reopened
-   FROM dwh.facts f
-    JOIN dwh.dimension_days d
-    ON (f.action_dimension_id_date = d.dimension_day_id)
-   WHERE f.dimension_id_country = m_dimension_country_id
-    AND f.action_comment = 'reopened'
-    AND EXTRACT(YEAR FROM d.date_id) = m_year;
-
-   -- m_ranking_users_opening_year
-   SELECT /* Notes-datamartCountries */
-    JSON_AGG(JSON_BUILD_OBJECT('rank', rank, 'username', username,
-    'quantity', quantity))
-    INTO m_ranking_users_opening_year
-   FROM (
-    SELECT /* Notes-datamartCountries */
-     RANK () OVER (ORDER BY quantity DESC) rank, username, quantity
-	  FROM (
-     SELECT /* Notes-datamartCountries */ u.username AS username,
-      COUNT(1) AS quantity
+   -- OPTIMIZATION: Use consolidated function to get all year activity metrics in a single query
+   -- This replaces 7+ separate SELECT queries with 1 table scan
+   -- Falls back to individual queries if function doesn't exist (backward compatibility)
+   IF EXISTS (
+     SELECT 1 FROM pg_proc
+     WHERE proname = 'get_country_year_activity_consolidated'
+   ) THEN
+     -- Use consolidated function (much faster)
+     SELECT
+       history_year_open,
+       history_year_commented,
+       history_year_closed,
+       history_year_closed_with_comment,
+       history_year_reopened,
+       ranking_users_opening_year,
+       ranking_users_closing_year
+     INTO
+       m_history_year_open,
+       m_history_year_commented,
+       m_history_year_closed,
+       m_history_year_closed_with_comment,
+       m_history_year_reopened,
+       m_ranking_users_opening_year,
+       m_ranking_users_closing_year
+     FROM dwh.get_country_year_activity_consolidated(m_dimension_country_id, m_year);
+   ELSE
+     -- Fallback to original individual queries (backward compatibility)
+     -- history_year_open
+     SELECT /* Notes-datamartCountries */ COUNT(1)
+      INTO m_history_year_open
      FROM dwh.facts f
-      JOIN dwh.dimension_users u
-      ON f.opened_dimension_id_user = u.dimension_user_id
       JOIN dwh.dimension_days d
-      ON f.opened_dimension_id_date = d.dimension_day_id
+      ON (f.action_dimension_id_date = d.dimension_day_id)
      WHERE f.dimension_id_country = m_dimension_country_id
-     AND EXTRACT(YEAR FROM d.date_id) = m_year
-      GROUP BY u.username
-     ORDER BY COUNT(1) DESC
-     LIMIT 50
-    ) AS T
-   ) AS S;
+      AND f.action_comment = 'opened'
+      AND EXTRACT(YEAR FROM d.date_id) = m_year;
 
-   -- m_ranking_users_closing_year
-   SELECT /* Notes-datamartCountries */
-    JSON_AGG(JSON_BUILD_OBJECT('rank', rank, 'username', username,
-    'quantity', quantity))
-    INTO m_ranking_users_closing_year
-   FROM (
-    SELECT /* Notes-datamartCountries */
-     RANK () OVER (ORDER BY quantity DESC) rank, username, quantity
-    FROM (
-     SELECT /* Notes-datamartCountries */ u.username AS username,
-      COUNT(1) AS quantity
+     -- history_year_commented
+     SELECT /* Notes-datamartCountries */ COUNT(1)
+      INTO m_history_year_commented
      FROM dwh.facts f
-      JOIN dwh.dimension_users u
-      ON f.closed_dimension_id_user = u.dimension_user_id
       JOIN dwh.dimension_days d
-      ON f.closed_dimension_id_date = d.dimension_day_id
+      ON (f.action_dimension_id_date = d.dimension_day_id)
      WHERE f.dimension_id_country = m_dimension_country_id
+      AND f.action_comment = 'commented'
+      AND EXTRACT(YEAR FROM d.date_id) = m_year;
+
+     -- history_year_closed
+     SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.id_note)
+      INTO m_history_year_closed
+     FROM dwh.facts f
+      JOIN dwh.dimension_days d
+      ON (f.action_dimension_id_date = d.dimension_day_id)
+     WHERE f.dimension_id_country = m_dimension_country_id
+      AND f.action_comment = 'closed'
+      AND EXTRACT(YEAR FROM d.date_id) = m_year;
+
+     -- history_year_closed_with_comment
+     SELECT /* Notes-datamartCountries */ COUNT(1)
+      INTO m_history_year_closed_with_comment
+     FROM dwh.facts f
+      JOIN dwh.dimension_days d
+      ON (f.action_dimension_id_date = d.dimension_day_id)
+      JOIN note_comments nc
+      ON (f.id_note = nc.note_id
+          AND nc.event = 'closed')
+      JOIN note_comments_text nct
+      ON (nc.note_id = nct.note_id AND nc.sequence_action = nct.sequence_action)
+     WHERE f.dimension_id_country = m_dimension_country_id
+      AND f.action_comment = 'closed'
       AND EXTRACT(YEAR FROM d.date_id) = m_year
-     GROUP BY u.username
-     ORDER BY COUNT(1) DESC
-     LIMIT 50
-    ) AS T
-   ) AS S;
+      AND nct.body IS NOT NULL
+      AND LENGTH(TRIM(nct.body)) > 0;
+
+     -- history_year_reopened
+     SELECT /* Notes-datamartCountries */ COUNT(DISTINCT f.id_note)
+      INTO m_history_year_reopened
+     FROM dwh.facts f
+      JOIN dwh.dimension_days d
+      ON (f.action_dimension_id_date = d.dimension_day_id)
+     WHERE f.dimension_id_country = m_dimension_country_id
+      AND f.action_comment = 'reopened'
+      AND EXTRACT(YEAR FROM d.date_id) = m_year;
+
+     -- m_ranking_users_opening_year
+     SELECT /* Notes-datamartCountries */
+       JSON_AGG(JSON_BUILD_OBJECT('rank', rank, 'username', username,
+         'quantity', quantity))
+       INTO m_ranking_users_opening_year
+     FROM (
+       SELECT /* Notes-datamartCountries */
+         RANK () OVER (ORDER BY quantity DESC) rank, username, quantity
+       FROM (
+         SELECT /* Notes-datamartCountries */ u.username AS username,
+           COUNT(1) AS quantity
+         FROM dwh.facts f
+           JOIN dwh.dimension_users u
+             ON f.opened_dimension_id_user = u.dimension_user_id
+           JOIN dwh.dimension_days d
+             ON f.opened_dimension_id_date = d.dimension_day_id
+         WHERE f.dimension_id_country = m_dimension_country_id
+           AND EXTRACT(YEAR FROM d.date_id) = m_year
+         GROUP BY u.username
+         ORDER BY COUNT(1) DESC
+         LIMIT 50
+       ) AS T
+     ) AS S;
+
+     -- m_ranking_users_closing_year
+     SELECT /* Notes-datamartCountries */
+       JSON_AGG(JSON_BUILD_OBJECT('rank', rank, 'username', username,
+         'quantity', quantity))
+       INTO m_ranking_users_closing_year
+     FROM (
+       SELECT /* Notes-datamartCountries */
+         RANK () OVER (ORDER BY quantity DESC) rank, username, quantity
+       FROM (
+         SELECT /* Notes-datamartCountries */ u.username AS username,
+           COUNT(1) AS quantity
+         FROM dwh.facts f
+           JOIN dwh.dimension_users u
+             ON f.closed_dimension_id_user = u.dimension_user_id
+           JOIN dwh.dimension_days d
+             ON f.closed_dimension_id_date = d.dimension_day_id
+         WHERE f.dimension_id_country = m_dimension_country_id
+           AND EXTRACT(YEAR FROM d.date_id) = m_year
+         GROUP BY u.username
+         ORDER BY COUNT(1) DESC
+         LIMIT 50
+       ) AS T
+     ) AS S;
+   END IF;
 
    stmt := 'UPDATE dwh.datamartCountries SET '
      || 'history_' || m_year || '_open = ' || m_history_year_open || ', '
@@ -715,44 +740,44 @@ AS $proc$
     -- Fallback to original individual queries (backward compatibility)
     -- users_open_notes
     SELECT /* Notes-datamartCountries */
-     JSON_AGG(JSON_BUILD_OBJECT('rank', rank, 'username', username,
-     'quantity', quantity))
-     INTO m_users_open_notes
+      JSON_AGG(JSON_BUILD_OBJECT('rank', rank, 'username', username,
+        'quantity', quantity))
+      INTO m_users_open_notes
     FROM (
-     SELECT /* Notes-datamartCountries */
-      RANK () OVER (ORDER BY quantity DESC) rank, username, quantity
-     FROM (
-      SELECT /* Notes-datamartCountries */ u.username AS username,
-       COUNT(1) AS quantity
-      FROM dwh.facts f
-       JOIN dwh.dimension_users u
-       ON f.opened_dimension_id_user = u.dimension_user_id
-      WHERE f.dimension_id_country = m_dimension_id_country
-      GROUP BY u.username
-      ORDER BY COUNT(1) DESC
-      LIMIT 50
-     ) AS T
+      SELECT /* Notes-datamartCountries */
+        RANK () OVER (ORDER BY quantity DESC) rank, username, quantity
+      FROM (
+        SELECT /* Notes-datamartCountries */ u.username AS username,
+          COUNT(1) AS quantity
+        FROM dwh.facts f
+          JOIN dwh.dimension_users u
+            ON f.opened_dimension_id_user = u.dimension_user_id
+        WHERE f.dimension_id_country = m_dimension_id_country
+        GROUP BY u.username
+        ORDER BY COUNT(1) DESC
+        LIMIT 50
+      ) AS T
     ) AS S;
 
     -- users_solving_notes
     SELECT /* Notes-datamartCountries */
-     JSON_AGG(JSON_BUILD_OBJECT('rank', rank, 'username', username,
-     'quantity', quantity))
-     INTO m_users_solving_notes
+      JSON_AGG(JSON_BUILD_OBJECT('rank', rank, 'username', username,
+        'quantity', quantity))
+      INTO m_users_solving_notes
     FROM (
-     SELECT /* Notes-datamartCountries */
-      RANK () OVER (ORDER BY quantity DESC) rank, username, quantity
-     FROM (
-      SELECT /* Notes-datamartCountries */ u.username AS username,
-       COUNT(1) AS quantity
-      FROM dwh.facts f
-       JOIN dwh.dimension_users u
-       ON F.closed_dimension_id_user = u.dimension_user_id
-      WHERE f.dimension_id_country = m_dimension_id_country
-      GROUP BY u.username
-      ORDER BY COUNT(1) DESC
-      LIMIT 50
-     ) AS T
+      SELECT /* Notes-datamartCountries */
+        RANK () OVER (ORDER BY quantity DESC) rank, username, quantity
+      FROM (
+        SELECT /* Notes-datamartCountries */ u.username AS username,
+          COUNT(1) AS quantity
+        FROM dwh.facts f
+          JOIN dwh.dimension_users u
+            ON f.closed_dimension_id_user = u.dimension_user_id
+        WHERE f.dimension_id_country = m_dimension_id_country
+        GROUP BY u.username
+        ORDER BY COUNT(1) DESC
+        LIMIT 50
+      ) AS T
     ) AS S;
 
     SELECT /* Notes-datamartCountries */ EXTRACT(YEAR FROM CURRENT_TIMESTAMP)
@@ -766,104 +791,104 @@ AS $proc$
 
     -- users_open_notes_current_month
     SELECT /* Notes-datamartCountries */
-     JSON_AGG(JSON_BUILD_OBJECT('rank', rank, 'username', username,
-     'quantity', quantity))
-     INTO m_users_open_notes_current_month
+      JSON_AGG(JSON_BUILD_OBJECT('rank', rank, 'username', username,
+        'quantity', quantity))
+      INTO m_users_open_notes_current_month
     FROM (
-     SELECT /* Notes-datamartCountries */
-      RANK () OVER (ORDER BY quantity DESC) rank, username, quantity
-     FROM (
-      SELECT /* Notes-datamartCountries */ u.username AS username,
-       COUNT(1) AS quantity
-      FROM dwh.facts f
-       JOIN dwh.dimension_users u
-       ON f.opened_dimension_id_user = u.dimension_user_id
-       JOIN dwh.dimension_days d
-       ON f.opened_dimension_id_date = d.dimension_day_id
-      WHERE f.dimension_id_country = m_dimension_id_country
-       AND EXTRACT(MONTH FROM d.date_id) = m_current_month
-       AND EXTRACT(YEAR FROM d.date_id) = m_current_year
-      GROUP BY u.username
-      ORDER BY COUNT(1) DESC
-      LIMIT 50
-     ) AS T
+      SELECT /* Notes-datamartCountries */
+        RANK () OVER (ORDER BY quantity DESC) rank, username, quantity
+      FROM (
+        SELECT /* Notes-datamartCountries */ u.username AS username,
+          COUNT(1) AS quantity
+        FROM dwh.facts f
+          JOIN dwh.dimension_users u
+            ON f.opened_dimension_id_user = u.dimension_user_id
+          JOIN dwh.dimension_days d
+            ON f.opened_dimension_id_date = d.dimension_day_id
+        WHERE f.dimension_id_country = m_dimension_id_country
+          AND EXTRACT(MONTH FROM d.date_id) = m_current_month
+          AND EXTRACT(YEAR FROM d.date_id) = m_current_year
+        GROUP BY u.username
+        ORDER BY COUNT(1) DESC
+        LIMIT 50
+      ) AS T
     ) AS S;
 
     -- users_solving_notes_current_month
     SELECT /* Notes-datamartCountries */
-     JSON_AGG(JSON_BUILD_OBJECT('rank', rank, 'username', username,
-     'quantity', quantity))
-     INTO m_users_solving_notes_current_month
+      JSON_AGG(JSON_BUILD_OBJECT('rank', rank, 'username', username,
+        'quantity', quantity))
+      INTO m_users_solving_notes_current_month
     FROM (
-     SELECT /* Notes-datamartCountries */
-      RANK () OVER (ORDER BY quantity DESC) rank, username, quantity
-     FROM (
-      SELECT /* Notes-datamartCountries */ u.username AS username,
-       COUNT(1) AS quantity
-      FROM dwh.facts f
-       JOIN dwh.dimension_users u
-       ON f.closed_dimension_id_user = u.dimension_user_id
-       JOIN dwh.dimension_days d
-       ON f.closed_dimension_id_date = d.dimension_day_id
-      WHERE f.dimension_id_country = m_dimension_id_country
-       AND EXTRACT(MONTH FROM d.date_id) = m_current_month
-       AND EXTRACT(YEAR FROM d.date_id) = m_current_year
-      GROUP BY u.username
-      ORDER BY COUNT(1) DESC
-      LIMIT 50
-     ) AS T
+      SELECT /* Notes-datamartCountries */
+        RANK () OVER (ORDER BY quantity DESC) rank, username, quantity
+      FROM (
+        SELECT /* Notes-datamartCountries */ u.username AS username,
+          COUNT(1) AS quantity
+        FROM dwh.facts f
+          JOIN dwh.dimension_users u
+            ON f.closed_dimension_id_user = u.dimension_user_id
+          JOIN dwh.dimension_days d
+            ON f.closed_dimension_id_date = d.dimension_day_id
+        WHERE f.dimension_id_country = m_dimension_id_country
+          AND EXTRACT(MONTH FROM d.date_id) = m_current_month
+          AND EXTRACT(YEAR FROM d.date_id) = m_current_year
+        GROUP BY u.username
+        ORDER BY COUNT(1) DESC
+        LIMIT 50
+      ) AS T
     ) AS S;
 
     -- users_open_notes_current_day
     SELECT /* Notes-datamartCountries */
-     JSON_AGG(JSON_BUILD_OBJECT('rank', rank, 'username', username,
-     'quantity', quantity))
-     INTO m_users_open_notes_current_day
+      JSON_AGG(JSON_BUILD_OBJECT('rank', rank, 'username', username,
+        'quantity', quantity))
+      INTO m_users_open_notes_current_day
     FROM (
-     SELECT /* Notes-datamartCountries */
-      RANK () OVER (ORDER BY quantity DESC) rank, username, quantity
-     FROM (
-      SELECT /* Notes-datamartCountries */ u.username AS username,
-       COUNT(1) AS quantity
-      FROM dwh.facts f
-       JOIN dwh.dimension_users u
-       ON f.opened_dimension_id_user = u.dimension_user_id
-       JOIN dwh.dimension_days d
-       ON f.opened_dimension_id_date = d.dimension_day_id
-      WHERE f.dimension_id_country = m_dimension_id_country
-       AND EXTRACT(DAY FROM d.date_id) = m_current_day
-       AND EXTRACT(MONTH FROM d.date_id) = m_current_month
-       AND EXTRACT(YEAR FROM d.date_id) = m_current_year
-      GROUP BY u.username
-      ORDER BY COUNT(1) DESC
-      LIMIT 50
-     ) AS T
+      SELECT /* Notes-datamartCountries */
+        RANK () OVER (ORDER BY quantity DESC) rank, username, quantity
+      FROM (
+        SELECT /* Notes-datamartCountries */ u.username AS username,
+          COUNT(1) AS quantity
+        FROM dwh.facts f
+          JOIN dwh.dimension_users u
+            ON f.opened_dimension_id_user = u.dimension_user_id
+          JOIN dwh.dimension_days d
+            ON f.opened_dimension_id_date = d.dimension_day_id
+        WHERE f.dimension_id_country = m_dimension_id_country
+          AND EXTRACT(DAY FROM d.date_id) = m_current_day
+          AND EXTRACT(MONTH FROM d.date_id) = m_current_month
+          AND EXTRACT(YEAR FROM d.date_id) = m_current_year
+        GROUP BY u.username
+        ORDER BY COUNT(1) DESC
+        LIMIT 50
+      ) AS T
     ) AS S;
 
     -- users_solving_notes_current_day
     SELECT /* Notes-datamartCountries */
-     JSON_AGG(JSON_BUILD_OBJECT('rank', rank, 'username', username,
-     'quantity', quantity))
-     INTO m_users_solving_notes_current_day
+      JSON_AGG(JSON_BUILD_OBJECT('rank', rank, 'username', username,
+        'quantity', quantity))
+      INTO m_users_solving_notes_current_day
     FROM (
-     SELECT /* Notes-datamartCountries */
-      RANK () OVER (ORDER BY quantity DESC) rank, username, quantity
-     FROM (
-      SELECT /* Notes-datamartCountries */ u.username AS username,
-       COUNT(1) AS quantity
-      FROM dwh.facts f
-       JOIN dwh.dimension_users u
-       ON f.closed_dimension_id_user = u.dimension_user_id
-       JOIN dwh.dimension_days d
-       ON f.closed_dimension_id_date = d.dimension_day_id
-      WHERE f.dimension_id_country = m_dimension_id_country
-       AND EXTRACT(DAY FROM d.date_id) = m_current_day
-       AND EXTRACT(MONTH FROM d.date_id) = m_current_month
-       AND EXTRACT(YEAR FROM d.date_id) = m_current_year
-      GROUP BY u.username
-      ORDER BY COUNT(1) DESC
-      LIMIT 50
-     ) AS T
+      SELECT /* Notes-datamartCountries */
+        RANK () OVER (ORDER BY quantity DESC) rank, username, quantity
+      FROM (
+        SELECT /* Notes-datamartCountries */ u.username AS username,
+          COUNT(1) AS quantity
+        FROM dwh.facts f
+          JOIN dwh.dimension_users u
+            ON f.closed_dimension_id_user = u.dimension_user_id
+          JOIN dwh.dimension_days d
+            ON f.closed_dimension_id_date = d.dimension_day_id
+        WHERE f.dimension_id_country = m_dimension_id_country
+          AND EXTRACT(DAY FROM d.date_id) = m_current_day
+          AND EXTRACT(MONTH FROM d.date_id) = m_current_month
+          AND EXTRACT(YEAR FROM d.date_id) = m_current_year
+        GROUP BY u.username
+        ORDER BY COUNT(1) DESC
+        LIMIT 50
+      ) AS T
     ) AS S;
   END IF;
 

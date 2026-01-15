@@ -89,7 +89,7 @@ BEGIN
           LIMIT 10
         ) top_opening
       ) AS hashtags_opening,
-      
+
       -- Resolution hashtags rankings (top 10)
       (
         SELECT JSON_AGG(JSON_BUILD_OBJECT('rank', rank, 'hashtag', hashtag, 'count', count))
@@ -100,7 +100,7 @@ BEGIN
           LIMIT 10
         ) top_resolution
       ) AS hashtags_resolution,
-      
+
       -- Comment hashtags rankings (top 10)
       (
         SELECT JSON_AGG(JSON_BUILD_OBJECT('rank', rank, 'hashtag', hashtag, 'count', count))
@@ -111,7 +111,7 @@ BEGIN
           LIMIT 10
         ) top_comments
       ) AS hashtags_comments,
-      
+
       -- Top opening hashtag (single value)
       (
         SELECT hashtag
@@ -119,7 +119,7 @@ BEGIN
         WHERE rank = 1
         LIMIT 1
       ) AS top_opening_hashtag,
-      
+
       -- Top resolution hashtag (single value)
       (
         SELECT hashtag
@@ -127,14 +127,14 @@ BEGIN
         WHERE rank = 1
         LIMIT 1
       ) AS top_resolution_hashtag,
-      
+
       -- Opening hashtag count (distinct facts)
       (
         SELECT COUNT(DISTINCT fact_id)
         FROM country_hashtags
         WHERE is_opening_hashtag = TRUE
       ) AS opening_hashtag_count,
-      
+
       -- Resolution hashtag count (distinct facts)
       (
         SELECT COUNT(DISTINCT fact_id)
