@@ -141,14 +141,14 @@ BEGIN
       ) AS ranking_users_closing_year
   )
   SELECT
-    history_year_open::INTEGER,
-    history_year_commented::INTEGER,
-    history_year_closed::INTEGER,
-    history_year_closed_with_comment::INTEGER,
-    history_year_reopened::INTEGER,
-    ranking_users_opening_year,
-    ranking_users_closing_year
-  FROM aggregated_metrics;
+    am.history_year_open::INTEGER,
+    am.history_year_commented::INTEGER,
+    am.history_year_closed::INTEGER,
+    am.history_year_closed_with_comment::INTEGER,
+    am.history_year_reopened::INTEGER,
+    am.ranking_users_opening_year,
+    am.ranking_users_closing_year
+  FROM aggregated_metrics am;
 END;
 $$ LANGUAGE plpgsql STABLE;
 

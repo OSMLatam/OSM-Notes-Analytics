@@ -86,13 +86,13 @@ BEGIN
   ) THEN
     -- Use consolidated function (much faster)
     SELECT
-      history_year_open,
-      history_year_commented,
-      history_year_closed,
-      history_year_closed_with_comment,
-      history_year_reopened,
-      ranking_users_opening_year,
-      ranking_users_closing_year
+      yac.history_year_open,
+      yac.history_year_commented,
+      yac.history_year_closed,
+      yac.history_year_closed_with_comment,
+      yac.history_year_reopened,
+      yac.ranking_users_opening_year,
+      yac.ranking_users_closing_year
     INTO
       m_history_year_open,
       m_history_year_commented,
@@ -101,7 +101,7 @@ BEGIN
       m_history_year_reopened,
       m_ranking_users_opening_year,
       m_ranking_users_closing_year
-    FROM dwh.get_country_year_activity_consolidated(m_dimension_country_id, m_year);
+    FROM dwh.get_country_year_activity_consolidated(m_dimension_country_id, m_year) yac;
   ELSE
     -- Fallback to original individual queries (backward compatibility)
     -- history_year_open

@@ -50,13 +50,13 @@ BEGIN
   aggregated_metrics AS (
     SELECT
       (SELECT avg_length FROM comment_stats) AS avg_comment_length,
-      (SELECT url_count FROM comment_stats) AS comments_with_url_count,
+      (SELECT url_count::INTEGER FROM comment_stats) AS comments_with_url_count,
       CASE
         WHEN (SELECT total_comments FROM comment_stats) > 0
         THEN ((SELECT url_count FROM comment_stats)::DECIMAL / (SELECT total_comments FROM comment_stats) * 100)
         ELSE 0
       END AS comments_with_url_pct,
-      (SELECT mention_count FROM comment_stats) AS comments_with_mention_count,
+      (SELECT mention_count::INTEGER FROM comment_stats) AS comments_with_mention_count,
       CASE
         WHEN (SELECT total_comments FROM comment_stats) > 0
         THEN ((SELECT mention_count FROM comment_stats)::DECIMAL / (SELECT total_comments FROM comment_stats) * 100)

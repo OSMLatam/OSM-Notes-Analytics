@@ -57,7 +57,7 @@ BEGIN
     GROUP BY age_range
   ),
   notes_last_30_days AS (
-    SELECT COUNT(DISTINCT id_note) AS count_30_days
+    SELECT COUNT(DISTINCT id_note)::INTEGER AS count_30_days
     FROM opened_notes
     WHERE opened_date >= CURRENT_DATE - INTERVAL '30 days'
   ),
@@ -70,7 +70,7 @@ BEGIN
          ) ORDER BY age_range
        )
        FROM age_distribution) AS notes_age_distribution,
-      (SELECT count_30_days FROM notes_last_30_days) AS notes_created_last_30_days
+      (SELECT count_30_days FROM notes_last_30_days)::INTEGER AS notes_created_last_30_days
   )
   SELECT
     aggregated_metrics.notes_age_distribution,

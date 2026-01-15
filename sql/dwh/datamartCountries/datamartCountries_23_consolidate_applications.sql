@@ -60,22 +60,22 @@ BEGIN
        )
        FROM app_stats) AS applications_used,
       (SELECT app_id FROM app_stats WHERE rank = 1 LIMIT 1) AS most_used_application_id,
-      (SELECT COUNT(DISTINCT app_id)
+      (SELECT COUNT(DISTINCT app_id)::INTEGER
        FROM country_apps
        WHERE platform IN ('android', 'ios')
           OR platform LIKE 'mobile%'
           OR category = 'mobile') AS mobile_apps_count,
-      (SELECT COUNT(DISTINCT app_id)
+      (SELECT COUNT(DISTINCT app_id)::INTEGER
        FROM country_apps
        WHERE platform = 'web'
           OR platform IN ('desktop', 'windows', 'linux', 'macos')) AS desktop_apps_count
   )
   SELECT
-    aggregated_metrics.applications_used,
-    aggregated_metrics.most_used_application_id,
-    aggregated_metrics.mobile_apps_count,
-    aggregated_metrics.desktop_apps_count
-  FROM aggregated_metrics;
+    am.applications_used,
+    am.most_used_application_id,
+    am.mobile_apps_count,
+    am.desktop_apps_count
+  FROM aggregated_metrics am;
 END;
 $$ LANGUAGE plpgsql STABLE;
 

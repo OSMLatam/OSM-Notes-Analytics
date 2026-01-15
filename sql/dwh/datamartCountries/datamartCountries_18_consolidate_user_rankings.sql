@@ -179,12 +179,12 @@ BEGIN
       ) AS users_solving_notes_current_day
   )
   SELECT
-    users_open_notes,
-    users_solving_notes,
-    users_open_notes_current_month,
-    users_solving_notes_current_month,
-    users_open_notes_current_day,
-    users_solving_notes_current_day
+    aggregated_rankings.users_open_notes,
+    aggregated_rankings.users_solving_notes,
+    aggregated_rankings.users_open_notes_current_month,
+    aggregated_rankings.users_solving_notes_current_month,
+    aggregated_rankings.users_open_notes_current_day,
+    aggregated_rankings.users_solving_notes_current_day
   FROM aggregated_rankings;
 END;
 $$ LANGUAGE plpgsql STABLE;
