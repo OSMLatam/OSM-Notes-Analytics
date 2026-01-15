@@ -104,6 +104,10 @@ declare -r POPULATE_FILE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartCountries/dat
 # Last year activities script.
 declare -r LAST_YEAR_ACTITIES_SCRIPT="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamarts_lastYearActivities.sql"
 
+# Performance optimization scripts (applied automatically on setup)
+declare -r OPTIMIZE_INDEXES_FILE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartCountries/datamartCountries_14_optimize_indexes.sql"
+declare -r INCREMENTAL_YEAR_PROCESSING_FILE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartCountries/datamartCountries_15_incremental_year_processing.sql"
+
 ###########
 # FUNCTIONS
 
@@ -173,6 +177,14 @@ function __checkPrereqs {
   "${LAST_YEAR_ACTITIES_SCRIPT}"
  )
 
+ # Add optimization scripts if they exist (optional, don't fail if missing)
+ if [[ -f "${OPTIMIZE_INDEXES_FILE}" ]]; then
+  SQL_FILES+=("${OPTIMIZE_INDEXES_FILE}")
+ fi
+ if [[ -f "${INCREMENTAL_YEAR_PROCESSING_FILE}" ]]; then
+  SQL_FILES+=("${INCREMENTAL_YEAR_PROCESSING_FILE}")
+ fi
+
  # Validate each SQL file
  for SQL_FILE in "${SQL_FILES[@]}"; do
   # shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
@@ -222,6 +234,35 @@ function __checkBaseTables {
  if [[ "${last_year_ret}" -ne 0 ]]; then
   __loge "Failed to create last year activities, but continuing..."
  fi
+
+ # Apply performance optimizations (idempotent - safe to run multiple times)
+ __logi "Applying performance optimizations..."
+ set +e
+ if [[ -f "${OPTIMIZE_INDEXES_FILE}" ]]; then
+  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=0 -f "${OPTIMIZE_INDEXES_FILE}" > /dev/null 2>&1
+  local idx_ret=${?}
+  if [[ "${idx_ret}" -eq 0 ]]; then
+   __logi "Performance indexes applied successfully"
+  else
+   __logw "Failed to apply performance indexes (may already exist), continuing..."
+  fi
+ else
+  __logw "Performance indexes script not found: ${OPTIMIZE_INDEXES_FILE}"
+ fi
+
+ if [[ -f "${INCREMENTAL_YEAR_PROCESSING_FILE}" ]]; then
+  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=0 -f "${INCREMENTAL_YEAR_PROCESSING_FILE}" > /dev/null 2>&1
+  local inc_ret=${?}
+  if [[ "${inc_ret}" -eq 0 ]]; then
+   __logi "Incremental year processing functions applied successfully"
+  else
+   __logw "Failed to apply incremental year processing (may already exist), continuing..."
+  fi
+ else
+  __logw "Incremental year processing script not found: ${INCREMENTAL_YEAR_PROCESSING_FILE}"
+ fi
+ set -e
+
  __log_finish
  return "${RET}"
 }

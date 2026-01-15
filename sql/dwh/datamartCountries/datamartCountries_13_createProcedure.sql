@@ -1621,13 +1621,22 @@ AS $proc$
   , new_vs_resolved_ratio = m_new_vs_resolved_ratio
   WHERE dimension_country_id = m_dimension_id_country;
 
-  -- Only update year-specific data for 2013 (currently the only year with dedicated columns)
-  -- TODO: Add columns for other years or refactor to use a single JSON column for year data
-  m_year := 2013;
-  -- Only process if we have data for this year
-  IF m_year <= m_current_year THEN
-   CALL dwh.update_datamart_country_activity_year(m_dimension_id_country, m_year);
-  END IF;
+  -- Process years incrementally (only years with changes or new years)
+  -- This optimization reduces processing time by skipping years without changes
+  FOR m_year IN
+   SELECT year FROM dwh.get_years_to_process(m_dimension_id_country)
+  LOOP
+   -- Use incremental version if available, otherwise fall back to original
+   IF EXISTS (
+    SELECT 1 FROM pg_proc 
+    WHERE proname = 'update_datamart_country_activity_year_incremental'
+   ) THEN
+    CALL dwh.update_datamart_country_activity_year_incremental(m_dimension_id_country, m_year);
+   ELSE
+    -- Fallback to original procedure
+    CALL dwh.update_datamart_country_activity_year(m_dimension_id_country, m_year);
+   END IF;
+  END LOOP;
 
   -- Update new metrics (DM-006, DM-007, DM-008)
   -- Only if the function exists (for backward compatibility)
