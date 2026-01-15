@@ -56,11 +56,11 @@ BEGIN
     LEFT JOIN dwh.dimension_days d_closed ON f.closed_dimension_id_date = d_closed.dimension_day_id
     LEFT JOIN dwh.dimension_users u_opened ON f.opened_dimension_id_user = u_opened.dimension_user_id
     LEFT JOIN dwh.dimension_users u_closed ON f.closed_dimension_id_user = u_closed.dimension_user_id
-    LEFT JOIN note_comments nc ON (
+    LEFT JOIN public.note_comments nc ON (
       f.id_note = nc.note_id
       AND nc.event = 'closed'
     )
-    LEFT JOIN note_comments_text nct ON (
+    LEFT JOIN public.note_comments_text nct ON (
       nc.note_id = nct.note_id
       AND nc.sequence_action = nct.sequence_action
     )
