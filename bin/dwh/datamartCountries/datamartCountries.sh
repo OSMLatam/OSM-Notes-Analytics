@@ -109,6 +109,7 @@ declare -r OPTIMIZE_INDEXES_FILE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartCount
 declare -r INCREMENTAL_YEAR_PROCESSING_FILE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartCountries/datamartCountries_15_incremental_year_processing.sql"
 declare -r CONSOLIDATE_METRICS_FILE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartCountries/datamartCountries_17_consolidate_basic_metrics.sql"
 declare -r CONSOLIDATE_RANKINGS_FILE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartCountries/datamartCountries_18_consolidate_user_rankings.sql"
+declare -r CONSOLIDATE_HASHTAGS_FILE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/datamartCountries/datamartCountries_19_consolidate_hashtags.sql"
 
 ###########
 # FUNCTIONS
@@ -292,6 +293,18 @@ function __checkBaseTables {
   fi
  else
   __logw "Consolidated user rankings script not found: ${CONSOLIDATE_RANKINGS_FILE}"
+ fi
+
+ if [[ -f "${CONSOLIDATE_HASHTAGS_FILE}" ]]; then
+  __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=0 -f "${CONSOLIDATE_HASHTAGS_FILE}" > /dev/null 2>&1
+  local hashtag_ret=${?}
+  if [[ "${hashtag_ret}" -eq 0 ]]; then
+   __logi "Consolidated hashtag metrics function applied successfully"
+  else
+   __logw "Failed to apply consolidated hashtag metrics function (may already exist), continuing..."
+  fi
+ else
+  __logw "Consolidated hashtag metrics script not found: ${CONSOLIDATE_HASHTAGS_FILE}"
  fi
  set -e
 

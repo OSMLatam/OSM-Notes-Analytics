@@ -558,102 +558,130 @@ AS $proc$
    ) AS T
   ) AS T2;
 
-  -- DM-002: Hashtags by action type - Opening hashtags
-  SELECT /* Notes-datamartCountries */
-   JSON_AGG(JSON_BUILD_OBJECT('rank', rank, 'hashtag', hashtag, 'count', count))
-   INTO m_hashtags_opening
-  FROM (
-   SELECT
-    RANK() OVER (ORDER BY COUNT(*) DESC) AS rank,
-    h.description AS hashtag,
-    COUNT(*) AS count
-   FROM dwh.fact_hashtags fh
-   JOIN dwh.dimension_hashtags h ON fh.dimension_hashtag_id = h.dimension_hashtag_id
-   JOIN dwh.facts f ON fh.fact_id = f.fact_id
-   WHERE f.dimension_id_country = m_dimension_id_country
-    AND fh.is_opening_hashtag = TRUE
-   GROUP BY h.description
-   ORDER BY COUNT(*) DESC
-   LIMIT 10
-  ) opening_stats;
+  -- OPTIMIZATION: Use consolidated function to get all hashtag metrics in a single query
+  -- This replaces 7+ separate SELECT queries with 1 table scan
+  -- Falls back to individual queries if function doesn't exist (backward compatibility)
+  IF EXISTS (
+    SELECT 1 FROM pg_proc
+    WHERE proname = 'get_country_hashtag_metrics_consolidated'
+  ) THEN
+    -- Use consolidated function (much faster)
+    SELECT
+      hashtags_opening,
+      hashtags_resolution,
+      hashtags_comments,
+      top_opening_hashtag,
+      top_resolution_hashtag,
+      opening_hashtag_count,
+      resolution_hashtag_count
+    INTO
+      m_hashtags_opening,
+      m_hashtags_resolution,
+      m_hashtags_comments,
+      m_top_opening_hashtag,
+      m_top_resolution_hashtag,
+      m_opening_hashtag_count,
+      m_resolution_hashtag_count
+    FROM dwh.get_country_hashtag_metrics_consolidated(m_dimension_id_country);
+  ELSE
+    -- Fallback to original individual queries (backward compatibility)
+    -- DM-002: Hashtags by action type - Opening hashtags
+    SELECT /* Notes-datamartCountries */
+     JSON_AGG(JSON_BUILD_OBJECT('rank', rank, 'hashtag', hashtag, 'count', count))
+     INTO m_hashtags_opening
+    FROM (
+     SELECT
+      RANK() OVER (ORDER BY COUNT(*) DESC) AS rank,
+      h.description AS hashtag,
+      COUNT(*) AS count
+     FROM dwh.fact_hashtags fh
+     JOIN dwh.dimension_hashtags h ON fh.dimension_hashtag_id = h.dimension_hashtag_id
+     JOIN dwh.facts f ON fh.fact_id = f.fact_id
+     WHERE f.dimension_id_country = m_dimension_id_country
+      AND fh.is_opening_hashtag = TRUE
+     GROUP BY h.description
+     ORDER BY COUNT(*) DESC
+     LIMIT 10
+    ) opening_stats;
 
-  -- DM-002: Resolution hashtags
-  SELECT /* Notes-datamartCountries */
-   JSON_AGG(JSON_BUILD_OBJECT('rank', rank, 'hashtag', hashtag, 'count', count))
-   INTO m_hashtags_resolution
-  FROM (
-   SELECT
-    RANK() OVER (ORDER BY COUNT(*) DESC) AS rank,
-    h.description AS hashtag,
-    COUNT(*) AS count
-   FROM dwh.fact_hashtags fh
-   JOIN dwh.dimension_hashtags h ON fh.dimension_hashtag_id = h.dimension_hashtag_id
-   JOIN dwh.facts f ON fh.fact_id = f.fact_id
-   WHERE f.dimension_id_country = m_dimension_id_country
-    AND fh.is_resolution_hashtag = TRUE
-   GROUP BY h.description
-   ORDER BY COUNT(*) DESC
-   LIMIT 10
-  ) resolution_stats;
+    -- DM-002: Resolution hashtags
+    SELECT /* Notes-datamartCountries */
+     JSON_AGG(JSON_BUILD_OBJECT('rank', rank, 'hashtag', hashtag, 'count', count))
+     INTO m_hashtags_resolution
+    FROM (
+     SELECT
+      RANK() OVER (ORDER BY COUNT(*) DESC) AS rank,
+      h.description AS hashtag,
+      COUNT(*) AS count
+     FROM dwh.fact_hashtags fh
+     JOIN dwh.dimension_hashtags h ON fh.dimension_hashtag_id = h.dimension_hashtag_id
+     JOIN dwh.facts f ON fh.fact_id = f.fact_id
+     WHERE f.dimension_id_country = m_dimension_id_country
+      AND fh.is_resolution_hashtag = TRUE
+     GROUP BY h.description
+     ORDER BY COUNT(*) DESC
+     LIMIT 10
+    ) resolution_stats;
 
-  -- DM-002: Comment hashtags
-  SELECT /* Notes-datamartCountries */
-   JSON_AGG(JSON_BUILD_OBJECT('rank', rank, 'hashtag', hashtag, 'count', count))
-   INTO m_hashtags_comments
-  FROM (
-   SELECT
-    RANK() OVER (ORDER BY COUNT(*) DESC) AS rank,
-    h.description AS hashtag,
-    COUNT(*) AS count
-   FROM dwh.fact_hashtags fh
-   JOIN dwh.dimension_hashtags h ON fh.dimension_hashtag_id = h.dimension_hashtag_id
-   JOIN dwh.facts f ON fh.fact_id = f.fact_id
-   WHERE f.dimension_id_country = m_dimension_id_country
-    AND fh.used_in_action = 'commented'
-   GROUP BY h.description
-   ORDER BY COUNT(*) DESC
-   LIMIT 10
-  ) comment_stats;
+    -- DM-002: Comment hashtags
+    SELECT /* Notes-datamartCountries */
+     JSON_AGG(JSON_BUILD_OBJECT('rank', rank, 'hashtag', hashtag, 'count', count))
+     INTO m_hashtags_comments
+    FROM (
+     SELECT
+      RANK() OVER (ORDER BY COUNT(*) DESC) AS rank,
+      h.description AS hashtag,
+      COUNT(*) AS count
+     FROM dwh.fact_hashtags fh
+     JOIN dwh.dimension_hashtags h ON fh.dimension_hashtag_id = h.dimension_hashtag_id
+     JOIN dwh.facts f ON fh.fact_id = f.fact_id
+     WHERE f.dimension_id_country = m_dimension_id_country
+      AND fh.used_in_action = 'commented'
+     GROUP BY h.description
+     ORDER BY COUNT(*) DESC
+     LIMIT 10
+    ) comment_stats;
 
-  -- DM-002: Top opening hashtag
-  SELECT h.description
-  INTO m_top_opening_hashtag
-  FROM dwh.fact_hashtags fh
-  JOIN dwh.dimension_hashtags h ON fh.dimension_hashtag_id = h.dimension_hashtag_id
-  JOIN dwh.facts f ON fh.fact_id = f.fact_id
-  WHERE f.dimension_id_country = m_dimension_id_country
-   AND fh.is_opening_hashtag = TRUE
-  GROUP BY h.description
-  ORDER BY COUNT(*) DESC
-  LIMIT 1;
+    -- DM-002: Top opening hashtag
+    SELECT h.description
+    INTO m_top_opening_hashtag
+    FROM dwh.fact_hashtags fh
+    JOIN dwh.dimension_hashtags h ON fh.dimension_hashtag_id = h.dimension_hashtag_id
+    JOIN dwh.facts f ON fh.fact_id = f.fact_id
+    WHERE f.dimension_id_country = m_dimension_id_country
+     AND fh.is_opening_hashtag = TRUE
+    GROUP BY h.description
+    ORDER BY COUNT(*) DESC
+    LIMIT 1;
 
-  -- DM-002: Top resolution hashtag
-  SELECT h.description
-  INTO m_top_resolution_hashtag
-  FROM dwh.fact_hashtags fh
-  JOIN dwh.dimension_hashtags h ON fh.dimension_hashtag_id = h.dimension_hashtag_id
-  JOIN dwh.facts f ON fh.fact_id = f.fact_id
-  WHERE f.dimension_id_country = m_dimension_id_country
-   AND fh.is_resolution_hashtag = TRUE
-  GROUP BY h.description
-  ORDER BY COUNT(*) DESC
-  LIMIT 1;
+    -- DM-002: Top resolution hashtag
+    SELECT h.description
+    INTO m_top_resolution_hashtag
+    FROM dwh.fact_hashtags fh
+    JOIN dwh.dimension_hashtags h ON fh.dimension_hashtag_id = h.dimension_hashtag_id
+    JOIN dwh.facts f ON fh.fact_id = f.fact_id
+    WHERE f.dimension_id_country = m_dimension_id_country
+     AND fh.is_resolution_hashtag = TRUE
+    GROUP BY h.description
+    ORDER BY COUNT(*) DESC
+    LIMIT 1;
 
-  -- DM-002: Opening hashtag count
-  SELECT COUNT(DISTINCT fh.fact_id)
-  INTO m_opening_hashtag_count
-  FROM dwh.fact_hashtags fh
-  JOIN dwh.facts f ON fh.fact_id = f.fact_id
-  WHERE f.dimension_id_country = m_dimension_id_country
-   AND fh.is_opening_hashtag = TRUE;
+    -- DM-002: Opening hashtag count
+    SELECT COUNT(DISTINCT fh.fact_id)
+    INTO m_opening_hashtag_count
+    FROM dwh.fact_hashtags fh
+    JOIN dwh.facts f ON fh.fact_id = f.fact_id
+    WHERE f.dimension_id_country = m_dimension_id_country
+     AND fh.is_opening_hashtag = TRUE;
 
-  -- DM-002: Resolution hashtag count
-  SELECT COUNT(DISTINCT fh.fact_id)
-  INTO m_resolution_hashtag_count
-  FROM dwh.fact_hashtags fh
-  JOIN dwh.facts f ON fh.fact_id = f.fact_id
-  WHERE f.dimension_id_country = m_dimension_id_country
-   AND fh.is_resolution_hashtag = TRUE;
+    -- DM-002: Resolution hashtag count
+    SELECT COUNT(DISTINCT fh.fact_id)
+    INTO m_resolution_hashtag_count
+    FROM dwh.fact_hashtags fh
+    JOIN dwh.facts f ON fh.fact_id = f.fact_id
+    WHERE f.dimension_id_country = m_dimension_id_country
+     AND fh.is_resolution_hashtag = TRUE;
+  END IF;
 
   -- OPTIMIZATION: Use consolidated function to get all user rankings in a single query
   -- This replaces 6+ separate SELECT queries with 1-2 table scans

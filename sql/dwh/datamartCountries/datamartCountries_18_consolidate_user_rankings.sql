@@ -62,10 +62,10 @@ BEGIN
     SELECT
       opened_username AS username,
       COUNT(*) AS count_all,
-      COUNT(*) FILTER (WHERE opened_year = p_current_year 
+      COUNT(*) FILTER (WHERE opened_year = p_current_year
                         AND opened_month = p_current_month) AS count_month,
-      COUNT(*) FILTER (WHERE opened_year = p_current_year 
-                        AND opened_month = p_current_month 
+      COUNT(*) FILTER (WHERE opened_year = p_current_year
+                        AND opened_month = p_current_month
                         AND opened_day = p_current_day) AS count_day
     FROM country_facts
     WHERE opened_username IS NOT NULL
@@ -75,10 +75,10 @@ BEGIN
     SELECT
       closed_username AS username,
       COUNT(*) AS count_all,
-      COUNT(*) FILTER (WHERE closed_year = p_current_year 
+      COUNT(*) FILTER (WHERE closed_year = p_current_year
                         AND closed_month = p_current_month) AS count_month,
-      COUNT(*) FILTER (WHERE closed_year = p_current_year 
-                        AND closed_month = p_current_month 
+      COUNT(*) FILTER (WHERE closed_year = p_current_year
+                        AND closed_month = p_current_month
                         AND closed_day = p_current_day) AS count_day
     FROM country_facts
     WHERE closed_username IS NOT NULL
@@ -118,7 +118,7 @@ BEGIN
           LIMIT 50
         ) top_opening_all
       ) AS users_open_notes,
-      
+
       -- Historical closing rankings (top 50)
       (
         SELECT JSON_AGG(JSON_BUILD_OBJECT('rank', rank_all, 'username', username, 'quantity', count_all))
@@ -129,7 +129,7 @@ BEGIN
           LIMIT 50
         ) top_closing_all
       ) AS users_solving_notes,
-      
+
       -- Current month opening rankings (top 50)
       (
         SELECT JSON_AGG(JSON_BUILD_OBJECT('rank', rank_month, 'username', username, 'quantity', count_month))
@@ -141,7 +141,7 @@ BEGIN
           LIMIT 50
         ) top_opening_month
       ) AS users_open_notes_current_month,
-      
+
       -- Current month closing rankings (top 50)
       (
         SELECT JSON_AGG(JSON_BUILD_OBJECT('rank', rank_month, 'username', username, 'quantity', count_month))
@@ -153,7 +153,7 @@ BEGIN
           LIMIT 50
         ) top_closing_month
       ) AS users_solving_notes_current_month,
-      
+
       -- Current day opening rankings (top 50)
       (
         SELECT JSON_AGG(JSON_BUILD_OBJECT('rank', rank_day, 'username', username, 'quantity', count_day))
@@ -165,7 +165,7 @@ BEGIN
           LIMIT 50
         ) top_opening_day
       ) AS users_open_notes_current_day,
-      
+
       -- Current day closing rankings (top 50)
       (
         SELECT JSON_AGG(JSON_BUILD_OBJECT('rank', rank_day, 'username', username, 'quantity', count_day))
