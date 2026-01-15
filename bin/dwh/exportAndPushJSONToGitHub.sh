@@ -2,18 +2,34 @@
 
 # Exports JSON files and pushes to GitHub Pages data repository
 # This script exports datamarts to JSON and publishes them to the OSM-Notes-Data
-# repository without preserving JSON file history (other files maintain their history)
+# repository in incremental batches to avoid GitHub push size limits.
 #
 # Usage: ./bin/dwh/exportAndPushJSONToGitHub.sh
 #
+# Environment variables:
+#   JSON_EXPORT_BATCH_SIZE: Number of files to export per execution (default: 10000)
+#                          Set to 0 to export all pending files (not recommended for large datasets)
+#   DBNAME_DWH: Database name for DWH (default: from etc/properties.sh)
+#
 # This script:
-# 1. Exports datamarts to JSON files
+# 1. Exports datamarts to JSON files (limited by JSON_EXPORT_BATCH_SIZE)
 # 2. Copies JSON files to OSM-Notes-Data/data/
 # 3. Copies JSON schemas to OSM-Notes-Data/schemas/
-# 4. Commits and pushes to GitHub (replaces previous JSON files)
+# 4. Commits and pushes only new/modified files to GitHub (incremental mode)
+#
+# Batch Mode (JSON_EXPORT_BATCH_SIZE > 0):
+#   - Processes up to JSON_EXPORT_BATCH_SIZE users and countries per execution
+#   - Only commits new/modified files (incremental)
+#   - Next execution continues with remaining files
+#   - Recommended for initial large exports to avoid GitHub limits
+#
+# Full Mode (JSON_EXPORT_BATCH_SIZE = 0):
+#   - Exports all pending files
+#   - Replaces all JSON files in repository (original behavior)
+#   - Use only when you're sure the total size is manageable
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2025-12-28
+# Version: 2026-01-15
 
 set -eu pipefail
 
@@ -122,6 +138,11 @@ if [[ ! -f "bin/dwh/exportDatamartsToJSON.sh" ]]; then
  exit 1
 fi
 
+# Pass DBNAME_DWH to export script if set
+if [[ -n "${DBNAME_DWH:-}" ]]; then
+ export DBNAME_DWH
+fi
+
 ./bin/dwh/exportDatamartsToJSON.sh
 
 # Check if export was successful
@@ -160,7 +181,7 @@ fi
 
 print_success "Schemas copied to data repository"
 
-# Step 3: Git commit and push (without preserving JSON history)
+# Step 3: Git commit and push (incremental batch mode)
 print_info "Step 3: Committing and pushing to GitHub..."
 
 cd "${DATA_REPO_DIR}"
@@ -168,21 +189,40 @@ cd "${DATA_REPO_DIR}"
 # Ensure we're on main branch
 git checkout main 2> /dev/null || true
 
-# Remove data and schemas directories from git index (if they exist) to start fresh
-# This removes JSON files from tracking but keeps them in working directory
-if git ls-files --error-unmatch data/ > /dev/null 2>&1; then
- print_info "Removing existing JSON data files from git history..."
- git rm -r --cached data/ 2> /dev/null || true
-fi
+# Get batch size from environment (default: 10000)
+BATCH_SIZE="${JSON_EXPORT_BATCH_SIZE:-10000}"
 
-if git ls-files --error-unmatch schemas/ > /dev/null 2>&1; then
- print_info "Removing existing JSON schemas from git history..."
- git rm -r --cached schemas/ 2> /dev/null || true
-fi
+# In batch mode (BATCH_SIZE > 0), only add new/modified files
+# In full mode (BATCH_SIZE = 0), replace all files (original behavior)
+if [[ ${BATCH_SIZE} -gt 0 ]]; then
+ print_info "Batch mode: Adding only new/modified JSON files..."
+ # Add only new files (not tracked) and modified files
+ git add -A data/ schemas/
 
-# Add all JSON files and schemas (fresh add, no history)
-print_info "Adding JSON files and schemas to git..."
-git add data/ schemas/
+ # Count only new/modified files for commit message
+ NEW_FILES=$(git diff --cached --name-only --diff-filter=AM data/ 2> /dev/null | wc -l || echo "0")
+ SCHEMA_FILES=$(git diff --cached --name-only --diff-filter=AM schemas/ 2> /dev/null | wc -l || echo "0")
+else
+ print_info "Full mode: Replacing all JSON files..."
+ # Remove data and schemas directories from git index (if they exist) to start fresh
+ # This removes JSON files from tracking but keeps them in working directory
+ if git ls-files --error-unmatch data/ > /dev/null 2>&1; then
+  print_info "Removing existing JSON data files from git history..."
+  git rm -r --cached data/ 2> /dev/null || true
+ fi
+
+ if git ls-files --error-unmatch schemas/ > /dev/null 2>&1; then
+  print_info "Removing existing JSON schemas from git history..."
+  git rm -r --cached schemas/ 2> /dev/null || true
+ fi
+
+ # Add all JSON files and schemas (fresh add, no history)
+ git add data/ schemas/
+
+ # Count all files
+ NEW_FILES=$(find data/ -name "*.json" 2> /dev/null | wc -l || echo "0")
+ SCHEMA_FILES=$(find schemas/ -name "*.json" 2> /dev/null | wc -l || echo "0")
+fi
 
 # Check if there are changes to commit
 if git diff --cached --quiet; then
@@ -190,22 +230,35 @@ if git diff --cached --quiet; then
  exit 0
 fi
 
-# Get file count for commit message
-FILE_COUNT=$(find data/ -name "*.json" 2> /dev/null | wc -l || echo "0")
-SCHEMA_COUNT=$(find schemas/ -name "*.json" 2> /dev/null | wc -l || echo "0")
+# Get total file count for informational message
+TOTAL_FILES=$(find data/ -name "*.json" 2> /dev/null | wc -l || echo "0")
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
-# Commit changes (only JSON files, replaces previous JSON commits)
-if [[ ${SCHEMA_COUNT} -gt 0 ]]; then
- git commit -m "Auto-update: ${FILE_COUNT} JSON files and ${SCHEMA_COUNT} schemas - ${TIMESTAMP}
+# Commit changes
+if [[ ${BATCH_SIZE} -gt 0 ]]; then
+ # Batch mode: Incremental commit
+ if [[ ${SCHEMA_FILES} -gt 0 ]]; then
+  git commit -m "Auto-update: Batch export - ${NEW_FILES} new/modified JSON files and ${SCHEMA_FILES} schemas (${TOTAL_FILES} total) - ${TIMESTAMP}
 
-This commit replaces all previous JSON files. JSON history is not preserved.
-Other files in the repository maintain their full history."
+Incremental batch export. Processing continues in next execution."
+ else
+  git commit -m "Auto-update: Batch export - ${NEW_FILES} new/modified JSON files (${TOTAL_FILES} total) - ${TIMESTAMP}
+
+Incremental batch export. Processing continues in next execution."
+ fi
 else
- git commit -m "Auto-update: ${FILE_COUNT} JSON files - ${TIMESTAMP}
+ # Full mode: Replace all files
+ if [[ ${SCHEMA_FILES} -gt 0 ]]; then
+  git commit -m "Auto-update: ${TOTAL_FILES} JSON files and ${SCHEMA_FILES} schemas - ${TIMESTAMP}
 
 This commit replaces all previous JSON files. JSON history is not preserved.
 Other files in the repository maintain their full history."
+ else
+  git commit -m "Auto-update: ${TOTAL_FILES} JSON files - ${TIMESTAMP}
+
+This commit replaces all previous JSON files. JSON history is not preserved.
+Other files in the repository maintain their full history."
+ fi
 fi
 
 # Push to GitHub
@@ -230,6 +283,20 @@ fi
 
 echo ""
 print_success "Done! JSON files updated in GitHub repository"
-print_info "Note: JSON file history is not preserved. Each export replaces previous JSON files."
+
+# Show progress information in batch mode
+if [[ ${BATCH_SIZE} -gt 0 ]]; then
+ PENDING_USERS=$(psql -d "${DBNAME_DWH:-notes_dwh}" -Atq -c "SELECT COUNT(*) FROM dwh.datamartusers WHERE json_exported = FALSE AND user_id IS NOT NULL;" 2> /dev/null || echo "?")
+ PENDING_COUNTRIES=$(psql -d "${DBNAME_DWH:-notes_dwh}" -Atq -c "SELECT COUNT(*) FROM dwh.datamartcountries WHERE json_exported = FALSE AND country_id IS NOT NULL;" 2> /dev/null || echo "?")
+
+ if [[ "${PENDING_USERS}" != "?" ]] && [[ "${PENDING_COUNTRIES}" != "?" ]]; then
+  print_info "Progress: ${NEW_FILES} files exported in this batch"
+  print_info "Remaining: ~${PENDING_USERS} users and ${PENDING_COUNTRIES} countries pending"
+  print_info "Next execution will continue with the next batch"
+ fi
+else
+ print_info "Note: JSON file history is not preserved. Each export replaces previous JSON files."
+fi
+
 print_info "Allow 1-2 minutes for GitHub Pages to update"
 print_info "Schemas available at: https://osmlatam.github.io/OSM-Notes-Data/schemas/"

@@ -4,10 +4,20 @@
 # This allows the web viewer to read precalculated data without direct database access.
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2025-12-23
+# Version: 2026-01-15
 # Note: This script now uses SELECT * to dynamically export all columns,
 # including any new year-based columns added to the datamart tables.
 # For users, it also includes contributor_type_name via JOIN with contributor_types table.
+#
+# Directory Structure:
+#   - Users are organized in subdirectories using hexadecimal hash (3 levels)
+#     Format: users/{hex1}/{hex2}/{hex3}/{user_id}.json
+#     Calculation: modulo 4096 of user_id, converted to 3-digit hex
+#     Example: user_id 12345 -> users/0/3/9/12345.json
+#     Note: This script assumes files are already in hexadecimal structure.
+#           For initial migration, use migrateGitHubToHexStructure.sh
+#   - Countries remain in flat structure (countries/{country_id}.json)
+#     as there are few countries and no scalability issues
 
 # Fails when a variable is not initialized.
 set -u
@@ -18,6 +28,11 @@ set -o pipefail
 
 # Logger levels: TRACE, DEBUG, INFO, WARN, ERROR, FATAL.
 declare LOG_LEVEL="${LOG_LEVEL:-ERROR}"
+
+# Batch size for incremental export (limits number of files exported per execution)
+# Set JSON_EXPORT_BATCH_SIZE=0 to export all pending files (default behavior)
+declare JSON_EXPORT_BATCH_SIZE="${JSON_EXPORT_BATCH_SIZE:-10000}"
+readonly JSON_EXPORT_BATCH_SIZE
 
 # Base directory for the project.
 declare SCRIPT_BASE_DIRECTORY
@@ -240,18 +255,40 @@ fi
 # Reset export flags for entities marked as modified in dimension tables
 __reset_exported_flags
 
+# Function to calculate hexadecimal subdirectory for user_id (3-level hash)
+# Uses modulo 4096 for uniform distribution across 4096 directories
+get_user_subdir() {
+ local user_id=$1
+ local mod
+ local hex_mod
+ local d1
+ local d2
+ local d3
+ mod=$((user_id % 4096))
+ hex_mod=$(printf "%03x" $mod)
+ d1=$(echo "$hex_mod" | cut -c1)
+ d2=$(echo "$hex_mod" | cut -c2)
+ d3=$(echo "$hex_mod" | cut -c3)
+ echo "${d1}/${d2}/${d3}"
+}
+
 # Export users - incremental mode
 # shellcheck disable=SC2312  # Command substitution in echo is intentional; date command is safe
 echo "$(date +%Y-%m-%d\ %H:%M:%S) - Exporting users datamart (incremental)..."
 
-# Copy existing user files to temp directory to preserve unchanged ones
+# Copy existing user files to temp directory to preserve unchanged ones (hexadecimal subdirectory structure)
 if [[ -d "${OUTPUT_DIR}/users" ]]; then
  echo "  Copying existing user files..."
- cp -p "${OUTPUT_DIR}/users"/*.json "${ATOMIC_TEMP_DIR}/users/" 2> /dev/null || true
+ # Copy files from hexadecimal subdirectory structure recursively
+ cp -rp "${OUTPUT_DIR}/users"/* "${ATOMIC_TEMP_DIR}/users/" 2> /dev/null || true
 fi
 
-# Export only modified users
+# Export only modified users (with optional batch limit)
 MODIFIED_USER_COUNT=0
+if [[ ${JSON_EXPORT_BATCH_SIZE} -gt 0 ]]; then
+ echo "  Processing batch of up to ${JSON_EXPORT_BATCH_SIZE} users..."
+fi
+
 psql -d "${DBNAME_DWH}" -Atq << SQL_USERS | while IFS='|' read -r user_id username; do
 SELECT
   user_id,
@@ -259,7 +296,8 @@ SELECT
 FROM dwh.datamartusers
 WHERE user_id IS NOT NULL
   AND json_exported = FALSE
-ORDER BY user_id;
+ORDER BY user_id
+LIMIT ${JSON_EXPORT_BATCH_SIZE};
 SQL_USERS
 
  if [[ -n "${user_id}" ]]; then
@@ -270,7 +308,11 @@ SQL_USERS
    continue
   fi
 
-  # Export each modified user to a separate JSON file
+  # Calculate subdirectory for this user_id (hexadecimal hash of 3 levels)
+  USER_SUBDIR=$(get_user_subdir "${user_id}")
+  mkdir -p "${ATOMIC_TEMP_DIR}/users/${USER_SUBDIR}"
+
+  # Export each modified user to a separate JSON file in subdirectory
   # Use export view if available (excludes internal _partial_* columns), otherwise use table directly
   # The view excludes internal columns prefixed with _partial_ or _last_processed_
   # SECURITY: user_id is validated above to contain only digits, so direct interpolation is safe
@@ -287,7 +329,7 @@ SQL_USERS
           ON du.id_contributor_type = ct.contributor_type_id
         WHERE du.user_id = $(printf '%d' "${user_id}")
       ) t
-	" > "${ATOMIC_TEMP_DIR}/users/${user_id}.json"
+	" > "${ATOMIC_TEMP_DIR}/users/${USER_SUBDIR}/${user_id}.json"
   else
    # Fallback: Use table directly (for backward compatibility)
    # Exclude internal columns manually if they exist
@@ -302,7 +344,7 @@ SQL_USERS
           ON du.id_contributor_type = ct.contributor_type_id
         WHERE du.user_id = $(printf '%d' "${user_id}")
       ) t
-	" > "${ATOMIC_TEMP_DIR}/users/${user_id}.json"
+	" > "${ATOMIC_TEMP_DIR}/users/${USER_SUBDIR}/${user_id}.json"
   fi
 
   echo "  Exported modified user: ${user_id} (${username})"
@@ -319,7 +361,7 @@ SQL_USERS
   # Validate only modified user files
   # shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
   if ! __validate_json_with_schema \
-   "${ATOMIC_TEMP_DIR}/users/${user_id}.json" \
+   "${ATOMIC_TEMP_DIR}/users/${USER_SUBDIR}/${user_id}.json" \
    "${SCHEMA_DIR}/user-profile.schema.json" \
    "user ${user_id}"; then
    VALIDATION_ERROR_COUNT=$((VALIDATION_ERROR_COUNT + 1))
@@ -388,14 +430,19 @@ if [[ -d "${OUTPUT_DIR}/countries" ]]; then
  cp -p "${OUTPUT_DIR}/countries"/*.json "${ATOMIC_TEMP_DIR}/countries/" 2> /dev/null || true
 fi
 
-# Export only modified countries
+# Export only modified countries (with optional batch limit)
 MODIFIED_COUNTRY_COUNT=0
+if [[ ${JSON_EXPORT_BATCH_SIZE} -gt 0 ]]; then
+ echo "  Processing batch of up to ${JSON_EXPORT_BATCH_SIZE} countries..."
+fi
+
 psql -d "${DBNAME_DWH}" -Atq << SQL_COUNTRIES | while IFS='|' read -r country_id country_name; do
 SELECT country_id, country_name_en
 FROM dwh.datamartcountries
 WHERE country_id IS NOT NULL
   AND json_exported = FALSE
-ORDER BY country_id;
+ORDER BY country_id
+LIMIT ${JSON_EXPORT_BATCH_SIZE};
 SQL_COUNTRIES
 
  if [[ -n "${country_id}" ]]; then
@@ -492,7 +539,7 @@ cat > "${ATOMIC_TEMP_DIR}/metadata.json" << EOF
 {
   "export_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "export_timestamp": ${EXPORT_TIMESTAMP},
-  "total_users": $(find "${ATOMIC_TEMP_DIR}/users" -maxdepth 1 -type f | wc -l),
+  "total_users": $(find "${ATOMIC_TEMP_DIR}/users" -type f -name "*.json" | wc -l),
   "total_countries": $(find "${ATOMIC_TEMP_DIR}/countries" -maxdepth 1 -type f | wc -l),
   "version": "${CURRENT_VERSION}",
   "schema_version": "${SCHEMA_VERSION}",
@@ -588,7 +635,7 @@ mv "${ATOMIC_TEMP_DIR}"/* "${OUTPUT_DIR}/"
 # shellcheck disable=SC2312  # Command substitution in echo is intentional; date command is safe
 echo "$(date +%Y-%m-%d\ %H:%M:%S) - JSON export completed successfully"
 # shellcheck disable=SC2312  # Command substitution in echo is intentional; find/wc commands are safe
-echo "  Users: $(find "${OUTPUT_DIR}/users" -maxdepth 1 -type f | wc -l) files"
+echo "  Users: $(find "${OUTPUT_DIR}/users" -type f -name "*.json" | wc -l) files"
 # shellcheck disable=SC2312  # Command substitution in echo is intentional; find/wc commands are safe
 echo "  Countries: $(find "${OUTPUT_DIR}/countries" -maxdepth 1 -type f | wc -l) files"
 echo "  Global statistics: global_stats.json, global_stats_summary.json"
