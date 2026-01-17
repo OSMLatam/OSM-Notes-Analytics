@@ -45,6 +45,7 @@ HOME=/home/notes
 # Monthly: Export CSV files and push to GitHub (15th day of month at 2 AM)
 # Exports closed notes by country to CSV for AI context
 # Runs on day 15 to ensure ETL has processed all data from previous month
+# Logs are automatically saved to /tmp/exportAndPushCSVToGitHub.log when run from cron
 0 2 15 * * /home/notes/OSM-Notes-Analytics/bin/dwh/exportAndPushCSVToGitHub.sh
 
 # Daily: Export JSON files and push to GitHub (after ETL completes successfully)

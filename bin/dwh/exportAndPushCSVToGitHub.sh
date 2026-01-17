@@ -12,6 +12,20 @@
 
 set -euo pipefail
 
+# Script basename for log file
+BASENAME=$(basename -s .sh "${0}")
+readonly BASENAME
+
+# Configure log file when running from cron (not a terminal)
+# This prevents output from being sent by email and saves it to a log file instead
+if [[ ! -t 1 ]] && [[ "${1:-}" != "--help" ]] && [[ "${1:-}" != "-h" ]]; then
+ LOG_DIR="/tmp"
+ mkdir -p "${LOG_DIR}"
+ LOG_FILE="${LOG_DIR}/${BASENAME}.log"
+ # Redirect all output to log file to prevent cron from sending emails
+ exec >> "${LOG_FILE}" 2>&1
+fi
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
