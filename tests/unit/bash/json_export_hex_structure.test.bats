@@ -285,8 +285,13 @@ get_user_subdir_test() {
   
   # Copy subdirectory structure recursively
   if [[ -d "${test_dir}/users" ]]; then
-    find "${test_dir}/users" -type d -mindepth 2 | while read -r subdir; do
-      cp -rp "$subdir" "${temp_dir}/users/" 2>/dev/null || true
+    # Find all JSON files in subdirectories and copy them preserving structure
+    find "${test_dir}/users" -type f -path "*/[0-9a-f]/*/[0-9a-f]/*.json" | while read -r file; do
+      # Extract relative path from test_dir/users (e.g., "0/0/1/1.json" from "/path/to/users/0/0/1/1.json")
+      local rel_path="${file#${test_dir}/users/}"
+      # Create directory structure and copy file
+      mkdir -p "${temp_dir}/users/$(dirname "$rel_path")"
+      cp "$file" "${temp_dir}/users/${rel_path}" 2>/dev/null || true
     done
   fi
   
