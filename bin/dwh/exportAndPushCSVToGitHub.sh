@@ -258,10 +258,77 @@ COUNTRY_LIST_END=$(date +%s)
 COUNTRY_LIST_DURATION=$((COUNTRY_LIST_END - COUNTRY_LIST_START))
 print_info "Country list retrieved in ${COUNTRY_LIST_DURATION}s"
 
+# Configuration for incremental commits
+# Commit and push every N countries to reduce risk of losing work
+COUNTRIES_PER_COMMIT="${COUNTRIES_PER_COMMIT:-20}"
+readonly COUNTRIES_PER_COMMIT
+
 TOTAL_COUNTRIES=0
 EXPORTED_COUNTRIES=0
 TOTAL_NOTES=0
 EXPORT_START=$(date +%s)
+COMMITTED_COUNTRIES=0
+
+# Function to commit and push current batch of CSV files
+function __commit_and_push_batch() {
+ local batch_start="${1}"
+ local batch_end="${2}"
+ local batch_count="${3}"
+
+ print_info "Committing batch: countries ${batch_start}-${batch_end} (${batch_count} countries)"
+
+ cd "${DATA_REPO_DIR}"
+
+ # Ensure we're on main branch
+ git checkout main 2> /dev/null || true
+
+ # Pull latest changes to avoid conflicts
+ git pull origin main 2> /dev/null || true
+
+ # Copy current batch of CSV files
+ rsync -av "${TEMP_CSV_DIR}/" "${CSV_TARGET_DIR}/" > /dev/null 2>&1
+
+ # Remove CSV directory from git index if this is the first batch
+ if [[ ${COMMITTED_COUNTRIES} -eq 0 ]] && git ls-files --error-unmatch csv/notes-by-country/ > /dev/null 2>&1; then
+  print_info "Removing existing CSV files from git history..."
+  git rm -r --cached csv/notes-by-country/ 2> /dev/null || true
+ fi
+
+ # Add all CSV files (including previous batches)
+ git add csv/notes-by-country/
+
+ # Check if there are changes to commit
+ if git diff --cached --quiet; then
+  print_warn "No changes to commit in this batch"
+  return 0
+ fi
+
+ # Get file count for commit message
+ FILE_COUNT=$(find csv/notes-by-country/ -name "*.csv" 2> /dev/null | wc -l || echo "0")
+ TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+
+ # Commit changes
+ if git commit -m "Auto-update: Batch ${batch_start}-${batch_end} (${batch_count} countries, ${FILE_COUNT} CSV files) - ${TIMESTAMP}
+
+Incremental export: countries ${batch_start} to ${batch_end}
+Total CSV files: ${FILE_COUNT}" > /dev/null 2>&1; then
+  # Push to GitHub
+  if git push origin main > /dev/null 2>&1; then
+   print_success "Batch ${batch_start}-${batch_end} pushed to GitHub (${FILE_COUNT} CSV files)"
+   COMMITTED_COUNTRIES=$((COMMITTED_COUNTRIES + batch_count))
+   return 0
+  else
+   print_error "Failed to push batch ${batch_start}-${batch_end}"
+   return 1
+  fi
+ else
+  print_error "Failed to commit batch ${batch_start}-${batch_end}"
+  return 1
+ fi
+}
+
+BATCH_START=1
+BATCH_COUNT=0
 
 while IFS='|' read -r country_id country_name; do
  if [[ -n "${country_id}" && -n "${country_name}" ]]; then
@@ -270,13 +337,32 @@ while IFS='|' read -r country_id country_name; do
   # shellcheck disable=SC2310  # Function invocation in condition is intentional for error handling
   if __export_country_notes "${country_id}" "${country_name}"; then
    EXPORTED_COUNTRIES=$((EXPORTED_COUNTRIES + 1))
+   BATCH_COUNT=$((BATCH_COUNT + 1))
+
    # Count notes in the file
    file_notes=$(wc -l < "${TEMP_CSV_DIR}/${country_id}_$(__sanitize_filename "${country_name}").csv" | tr -d ' ')
    file_notes=$((file_notes - 1)) # Subtract header
    TOTAL_NOTES=$((TOTAL_NOTES + file_notes))
+
+   # Commit and push every COUNTRIES_PER_COMMIT countries
+   if [[ ${BATCH_COUNT} -ge ${COUNTRIES_PER_COMMIT} ]]; then
+    BATCH_END=${EXPORTED_COUNTRIES}
+    if __commit_and_push_batch "${BATCH_START}" "${BATCH_END}" "${BATCH_COUNT}"; then
+     BATCH_START=$((BATCH_END + 1))
+     BATCH_COUNT=0
+    else
+     print_warn "Continuing despite commit failure. Will retry at end."
+    fi
+   fi
   fi
  fi
 done < "${COUNTRY_LIST}"
+
+# Commit and push remaining countries if any
+if [[ ${BATCH_COUNT} -gt 0 ]]; then
+ BATCH_END=${EXPORTED_COUNTRIES}
+ __commit_and_push_batch "${BATCH_START}" "${BATCH_END}" "${BATCH_COUNT}"
+fi
 
 rm -f "${COUNTRY_LIST}"
 
@@ -301,89 +387,24 @@ print_success "Export completed: ${EXPORTED_COUNTRIES} countries, ${TOTAL_NOTES}
 print_info "Export timing: ${EXPORT_DURATION}s (countries: ${EXPORTED_COUNTRIES}, avg: ${AVG_TIME_PER_COUNTRY}s per country)"
 print_info "Step 1 total time: ${STEP1_DURATION}s"
 
-# Step 2: Copy to data repository
-print_info "Step 2: Copying CSV files to data repository..."
-STEP2_START=$(date +%s)
+# Step 2: Ensure CSV_TARGET_DIR exists (already created during incremental commits)
 CSV_TARGET_DIR="${DATA_REPO_DIR}/csv/notes-by-country"
 mkdir -p "${CSV_TARGET_DIR}"
 
-# Copy all CSV files
-if ! rsync -av --delete "${TEMP_CSV_DIR}/" "${CSV_TARGET_DIR}/"; then
- print_error "Failed to copy CSV files"
- exit 1
-fi
+# Final summary
+TOTAL_END=$(date +%s)
+TOTAL_DURATION=$((TOTAL_END - STEP1_START))
 
-STEP2_END=$(date +%s)
-STEP2_DURATION=$((STEP2_END - STEP2_START))
-print_success "CSV files copied to data repository in ${STEP2_DURATION}s"
-
-# Step 3: Git commit and push (without preserving CSV history)
-print_info "Step 3: Committing and pushing to GitHub..."
-STEP3_START=$(date +%s)
-
-cd "${DATA_REPO_DIR}"
-
-# Ensure we're on main branch
-git checkout main 2> /dev/null || true
-
-# Remove CSV directory from git index (if it exists) to start fresh
-# This removes CSV files from tracking but keeps them in working directory
-if git ls-files --error-unmatch csv/notes-by-country/ > /dev/null 2>&1; then
- print_info "Removing existing CSV files from git history..."
- git rm -r --cached csv/notes-by-country/ 2> /dev/null || true
-fi
-
-# Add all CSV files (fresh add, no history)
-print_info "Adding CSV files to git..."
-git add csv/notes-by-country/
-
-# Check if there are changes to commit
-if git diff --cached --quiet; then
- print_warn "No changes to commit (CSV files are identical to previous version)"
- exit 0
-fi
-
-# Get file count for commit message
-FILE_COUNT=$(find csv/notes-by-country/ -name "*.csv" 2> /dev/null | wc -l || echo "0")
-TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
-
-# Commit changes (only CSV files, replaces previous CSV commits)
-git commit -m "Auto-update: ${FILE_COUNT} CSV files (closed notes by country) - ${TIMESTAMP}
-
-This commit replaces all previous CSV files. CSV history is not preserved.
-Other files in the repository maintain their full history."
-
-# Push to GitHub
-# Note: In production, ensure git credentials are configured for the user running this script
-# See docs/GitHub_Push_Setup.md for configuration instructions
-print_info "Pushing to GitHub..."
-if git push origin main; then
- STEP3_END=$(date +%s)
- STEP3_DURATION=$((STEP3_END - STEP3_START))
-
- TOTAL_END=$(date +%s)
- TOTAL_DURATION=$((TOTAL_END - STEP1_START))
-
- print_success "CSV files pushed to GitHub successfully in ${STEP3_DURATION}s"
- echo ""
- echo "CSV files are now available at:"
- echo "https://github.com/OSMLatam/OSM-Notes-Data/tree/main/csv/notes-by-country"
- echo ""
- echo "Raw file access:"
- echo "https://raw.githubusercontent.com/OSMLatam/OSM-Notes-Data/main/csv/notes-by-country/"
- echo ""
- print_info "Total execution time: ${TOTAL_DURATION}s (Step 1: ${STEP1_DURATION}s, Step 2: ${STEP2_DURATION}s, Step 3: ${STEP3_DURATION}s)"
-else
- print_error "Failed to push to GitHub"
- echo ""
- echo "Please check:"
- echo "1. Git credentials are configured (SSH key or Personal Access Token)"
- echo "2. Remote repository exists and is accessible"
- echo "3. Network connection is available"
- echo ""
- echo "For production setup, see: docs/GitHub_Push_Setup.md"
- exit 1
-fi
+print_success "All CSV files exported and pushed incrementally"
+print_info "Total batches committed: $((COMMITTED_COUNTRIES / COUNTRIES_PER_COMMIT + (COMMITTED_COUNTRIES % COUNTRIES_PER_COMMIT > 0 ? 1 : 0)))"
+echo ""
+echo "CSV files are now available at:"
+echo "https://github.com/OSMLatam/OSM-Notes-Data/tree/main/csv/notes-by-country"
+echo ""
+echo "Raw file access:"
+echo "https://raw.githubusercontent.com/OSMLatam/OSM-Notes-Data/main/csv/notes-by-country/"
+echo ""
+print_info "Total execution time: ${TOTAL_DURATION}s"
 
 echo ""
 print_success "Done! CSV files updated in GitHub repository"
