@@ -23,7 +23,15 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." &> /dev/null && pwd)"
 readonly SCRIPT_DIR
 ANALYTICS_DIR="${SCRIPT_DIR}"
 readonly ANALYTICS_DIR
-DATA_REPO_DIR="${HOME}/github/OSM-Notes-Data"
+
+# Support both locations: ${HOME}/OSM-Notes-Data (preferred) and ${HOME}/github/OSM-Notes-Data (fallback)
+if [[ -d "${HOME}/OSM-Notes-Data" ]]; then
+ DATA_REPO_DIR="${HOME}/OSM-Notes-Data"
+elif [[ -d "${HOME}/github/OSM-Notes-Data" ]]; then
+ DATA_REPO_DIR="${HOME}/github/OSM-Notes-Data"
+else
+ DATA_REPO_DIR="${HOME}/OSM-Notes-Data"
+fi
 readonly DATA_REPO_DIR
 
 # Loads the global properties
@@ -122,7 +130,25 @@ if [[ ! -d "${DATA_REPO_DIR}" ]]; then
  echo "1. Go to https://github.com/OSMLatam/OSM-Notes-Data"
  echo "2. Clone it: git clone https://github.com/OSMLatam/OSM-Notes-Data.git ${DATA_REPO_DIR}"
  echo ""
+ echo "Or if it exists elsewhere, create a symlink or set DATA_REPO_DIR environment variable"
+ echo ""
  exit 1
+fi
+
+# Safety check: Prevent execution if DBNAME_DWH looks like a test database
+# This prevents accidentally overwriting production CSV files with test data
+if [[ "${DBNAME_DWH:-}" =~ ^(test|mock|demo|dev|local).*$ ]] || [[ "${DBNAME_DWH:-}" =~ .*_(test|mock|demo|dev)$ ]]; then
+ print_error "Safety check failed: DBNAME_DWH appears to be a test database: ${DBNAME_DWH}"
+ echo ""
+ echo "This script should only run against production databases to avoid corrupting"
+ echo "production data in GitHub. If you need to test, use a separate test repository."
+ echo ""
+ echo "To override this check, set FORCE_EXPORT=true environment variable"
+ if [[ "${FORCE_EXPORT:-}" != "true" ]]; then
+  exit 1
+ else
+  print_warn "FORCE_EXPORT=true is set - proceeding despite test database warning"
+ fi
 fi
 
 # Step 1: Export CSV files
