@@ -65,6 +65,10 @@ readonly SQL_SCRIPT
 TEMP_CSV_DIR=$(mktemp -d "/tmp/csv_export_XXXXXX")
 readonly TEMP_CSV_DIR
 
+# Lock file for single execution
+LOCK="${TEMP_CSV_DIR}/${BASENAME}.lock"
+readonly LOCK
+
 # Function to print colored messages
 print_info() {
  echo -e "${GREEN}ℹ${NC} $1"
@@ -82,6 +86,23 @@ print_success() {
  echo -e "${GREEN}✓${NC} $1"
 }
 
+# Wrapper for psql that sets application_name for better process identification
+# Usage: __psql_with_appname [appname] [psql_args...]
+# If appname is not provided, uses BASENAME (script name without .sh)
+# If first argument starts with '-', it's a psql option, not an appname
+function __psql_with_appname {
+ local appname
+ if [[ "${1:-}" =~ ^- ]]; then
+  # First argument is a psql option, use default appname
+  appname="${BASENAME}"
+ else
+  # First argument is an appname
+  appname="${1}"
+  shift
+ fi
+ PGAPPNAME="${appname}" psql "$@"
+}
+
 # Function to sanitize country name for filename
 function __sanitize_filename() {
  local name="${1}"
@@ -97,8 +118,12 @@ function __export_country_notes() {
  sanitized_name=$(__sanitize_filename "${country_name}")
 
  local output_file="${TEMP_CSV_DIR}/${country_id}_${sanitized_name}.csv"
+ local start_time
+ local end_time
+ local duration
 
  print_info "Exporting notes for country: ${country_name} (ID: ${country_id})"
+ start_time=$(date +%s)
 
  # Create CSV with header and data
  {
@@ -107,11 +132,14 @@ function __export_country_notes() {
 
   # Data rows - replace :country_id variable in SQL and execute
   sed "s/:country_id/${country_id}/g" "${SQL_SCRIPT}" \
-   | psql -d "${DBNAME_DWH}" \
+   | __psql_with_appname "${BASENAME}-country-${country_id}" -d "${DBNAME_DWH}" \
     --csv \
     -t \
     2> /dev/null
  } > "${output_file}"
+
+ end_time=$(date +%s)
+ duration=$((end_time - start_time))
 
  # Count lines (excluding header)
  local line_count
@@ -119,10 +147,10 @@ function __export_country_notes() {
  line_count=$((line_count - 1)) # Subtract header row
 
  if [[ ${line_count} -gt 0 ]]; then
-  print_info "  Exported ${line_count} notes"
+  print_info "  Exported ${line_count} notes in ${duration}s"
   return 0
  else
-  print_warn "  No notes found for country ${country_name} (ID: ${country_id})"
+  print_warn "  No notes found for country ${country_name} (ID: ${country_id}) in ${duration}s"
   # Remove empty file
   rm -f "${output_file}"
   return 1
@@ -133,6 +161,7 @@ function __export_country_notes() {
 function __cleanup() {
  rm -rf "${TEMP_CSV_DIR}" 2> /dev/null || true
  rm -f "${COUNTRY_LIST:-}" 2> /dev/null || true
+ rm -f "${LOCK:-}" 2> /dev/null || true
 }
 trap __cleanup EXIT
 
@@ -165,11 +194,34 @@ if [[ "${DBNAME_DWH:-}" =~ ^(test|mock|demo|dev|local).*$ ]] || [[ "${DBNAME_DWH
  fi
 fi
 
+# Validate single execution using flock
+print_info "Validating single execution..."
+exec 7> "${LOCK}"
+if ! flock -n 7; then
+ print_error "Another instance of ${BASENAME} is already running."
+ print_error "Lock file: ${LOCK}"
+ if [[ -f "${LOCK}" ]]; then
+  print_error "Lock file contents:"
+  cat "${LOCK}" || true
+ fi
+ exit 1
+fi
+
+# Write lock file information
+cat > "${LOCK}" << EOF
+PID: $$
+Process: ${BASENAME}
+Started: $(date '+%Y-%m-%d %H:%M:%S')
+Temporary directory: ${TEMP_CSV_DIR}
+Main script: ${0}
+EOF
+
 # Step 1: Export CSV files
 print_info "Step 1: Exporting CSV files from Analytics..."
+STEP1_START=$(date +%s)
 
 # Check if dwh schema exists
-if ! psql -d "${DBNAME_DWH}" -Atq -c "SELECT 1 FROM information_schema.schemata WHERE schema_name = 'dwh'" | grep -q 1; then
+if ! __psql_with_appname -d "${DBNAME_DWH}" -Atq -c "SELECT 1 FROM information_schema.schemata WHERE schema_name = 'dwh'" | grep -q 1; then
  print_error "Schema 'dwh' does not exist. Please run the ETL process first."
  exit 1
 fi
@@ -185,10 +237,11 @@ mkdir -p "${TEMP_CSV_DIR}"
 
 # Get list of countries that have closed notes
 print_info "Getting list of countries with closed notes..."
+COUNTRY_LIST_START=$(date +%s)
 
 # Export notes for each country
 COUNTRY_LIST=$(mktemp)
-psql -d "${DBNAME_DWH}" -Atq << 'EOF' > "${COUNTRY_LIST}"
+__psql_with_appname -d "${DBNAME_DWH}" -Atq << 'EOF' > "${COUNTRY_LIST}"
 SELECT DISTINCT
   dc.country_id,
   COALESCE(c.country_name, 'Unknown') AS country_name
@@ -201,9 +254,14 @@ WHERE f.action_comment = 'closed'
 ORDER BY COALESCE(c.country_name, 'Unknown');
 EOF
 
+COUNTRY_LIST_END=$(date +%s)
+COUNTRY_LIST_DURATION=$((COUNTRY_LIST_END - COUNTRY_LIST_START))
+print_info "Country list retrieved in ${COUNTRY_LIST_DURATION}s"
+
 TOTAL_COUNTRIES=0
 EXPORTED_COUNTRIES=0
 TOTAL_NOTES=0
+EXPORT_START=$(date +%s)
 
 while IFS='|' read -r country_id country_name; do
  if [[ -n "${country_id}" && -n "${country_name}" ]]; then
@@ -222,15 +280,30 @@ done < "${COUNTRY_LIST}"
 
 rm -f "${COUNTRY_LIST}"
 
+EXPORT_END=$(date +%s)
+EXPORT_DURATION=$((EXPORT_END - EXPORT_START))
+
 if [[ ${EXPORTED_COUNTRIES} -eq 0 ]]; then
  print_warn "No CSV files were exported"
  exit 0
 fi
 
+STEP1_END=$(date +%s)
+STEP1_DURATION=$((STEP1_END - STEP1_START))
+
+# Calculate average time per country (using integer division)
+AVG_TIME_PER_COUNTRY=0
+if [[ ${EXPORTED_COUNTRIES} -gt 0 ]]; then
+ AVG_TIME_PER_COUNTRY=$((EXPORT_DURATION / EXPORTED_COUNTRIES))
+fi
+
 print_success "Export completed: ${EXPORTED_COUNTRIES} countries, ${TOTAL_NOTES} total notes"
+print_info "Export timing: ${EXPORT_DURATION}s (countries: ${EXPORTED_COUNTRIES}, avg: ${AVG_TIME_PER_COUNTRY}s per country)"
+print_info "Step 1 total time: ${STEP1_DURATION}s"
 
 # Step 2: Copy to data repository
 print_info "Step 2: Copying CSV files to data repository..."
+STEP2_START=$(date +%s)
 CSV_TARGET_DIR="${DATA_REPO_DIR}/csv/notes-by-country"
 mkdir -p "${CSV_TARGET_DIR}"
 
@@ -240,10 +313,13 @@ if ! rsync -av --delete "${TEMP_CSV_DIR}/" "${CSV_TARGET_DIR}/"; then
  exit 1
 fi
 
-print_success "CSV files copied to data repository"
+STEP2_END=$(date +%s)
+STEP2_DURATION=$((STEP2_END - STEP2_START))
+print_success "CSV files copied to data repository in ${STEP2_DURATION}s"
 
 # Step 3: Git commit and push (without preserving CSV history)
 print_info "Step 3: Committing and pushing to GitHub..."
+STEP3_START=$(date +%s)
 
 cd "${DATA_REPO_DIR}"
 
@@ -282,13 +358,21 @@ Other files in the repository maintain their full history."
 # See docs/GitHub_Push_Setup.md for configuration instructions
 print_info "Pushing to GitHub..."
 if git push origin main; then
- print_success "CSV files pushed to GitHub successfully"
+ STEP3_END=$(date +%s)
+ STEP3_DURATION=$((STEP3_END - STEP3_START))
+
+ TOTAL_END=$(date +%s)
+ TOTAL_DURATION=$((TOTAL_END - STEP1_START))
+
+ print_success "CSV files pushed to GitHub successfully in ${STEP3_DURATION}s"
  echo ""
  echo "CSV files are now available at:"
  echo "https://github.com/OSMLatam/OSM-Notes-Data/tree/main/csv/notes-by-country"
  echo ""
  echo "Raw file access:"
  echo "https://raw.githubusercontent.com/OSMLatam/OSM-Notes-Data/main/csv/notes-by-country/"
+ echo ""
+ print_info "Total execution time: ${TOTAL_DURATION}s (Step 1: ${STEP1_DURATION}s, Step 2: ${STEP2_DURATION}s, Step 3: ${STEP3_DURATION}s)"
 else
  print_error "Failed to push to GitHub"
  echo ""
