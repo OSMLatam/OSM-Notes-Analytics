@@ -263,6 +263,10 @@ print_info "Country list retrieved in ${COUNTRY_LIST_DURATION}s"
 COUNTRIES_PER_COMMIT="${COUNTRIES_PER_COMMIT:-20}"
 readonly COUNTRIES_PER_COMMIT
 
+# CSV target directory (needed for incremental commits)
+CSV_TARGET_DIR="${DATA_REPO_DIR}/csv/notes-by-country"
+mkdir -p "${CSV_TARGET_DIR}"
+
 TOTAL_COUNTRIES=0
 EXPORTED_COUNTRIES=0
 TOTAL_NOTES=0
@@ -386,10 +390,6 @@ fi
 print_success "Export completed: ${EXPORTED_COUNTRIES} countries, ${TOTAL_NOTES} total notes"
 print_info "Export timing: ${EXPORT_DURATION}s (countries: ${EXPORTED_COUNTRIES}, avg: ${AVG_TIME_PER_COUNTRY}s per country)"
 print_info "Step 1 total time: ${STEP1_DURATION}s"
-
-# Step 2: Ensure CSV_TARGET_DIR exists (already created during incremental commits)
-CSV_TARGET_DIR="${DATA_REPO_DIR}/csv/notes-by-country"
-mkdir -p "${CSV_TARGET_DIR}"
 
 # Final summary
 TOTAL_END=$(date +%s)
