@@ -348,7 +348,7 @@ ls -lh ./output/json/countries/ | head -10
 
 **Location:** `bin/dwh/exportAndPushJSONToGitHub.sh`
 
-**Purpose:** Exports JSON files and automatically deploys them to GitHub Pages.
+**Purpose:** Exports JSON files and automatically deploys them to GitHub Pages using intelligent incremental mode.
 
 **Usage:**
 
@@ -358,26 +358,38 @@ ls -lh ./output/json/countries/ | head -10
 
 **Features:**
 
-- Exports datamarts to JSON (calls `exportDatamartsToJSON.sh`)
-- Validates all JSON files
-- Commits and pushes to Git repository
-- Deploys to GitHub Pages automatically
+- **Intelligent incremental export**: Exports countries one by one and pushes immediately
+- **Automatic detection**: Identifies missing, outdated (default: 30 days), or not exported countries
+- **Cleanup**: Removes countries from GitHub that no longer exist in local database
+- **Documentation**: Auto-generates README.md with alphabetical list of countries
+- **Resilient**: Continues processing even if one country fails
+- **Progress tracking**: Shows which countries are being processed
+- **Schema validation**: Validates each JSON file before pushing
 
 **Prerequisites:**
 
 - Datamarts must be populated
-- Git repository configured
+- Git repository configured (`OSM-Notes-Data` cloned to `~/OSM-Notes-Data` or `~/github/OSM-Notes-Data`)
 - GitHub Pages enabled
 - Git credentials configured
+
+**Environment variables:**
+
+- `MAX_AGE_DAYS`: Maximum age in days before regeneration (default: 30, matches monthly cron)
+- `COUNTRIES_PER_BATCH`: Number of countries to process before break (default: 10)
+- `DBNAME_DWH`: Database name (default: from etc/properties.sh)
 
 **Example:**
 
 ```bash
-# Export and deploy to GitHub Pages
+# Default: monthly refresh (30 days)
 ./bin/dwh/exportAndPushJSONToGitHub.sh
+
+# Custom age threshold for testing
+MAX_AGE_DAYS=7 ./bin/dwh/exportAndPushJSONToGitHub.sh
 ```
 
-**Note:** This script is typically scheduled to run after datamart updates.
+**Note:** This script is typically scheduled to run monthly via cron after datamart updates.
 
 ## Workflow
 

@@ -129,15 +129,30 @@ These are the **only scripts** that should be executed directly:
 7. **`bin/dwh/exportAndPushJSONToGitHub.sh`** - Export and push to GitHub Pages
    - **Usage**: `./bin/dwh/exportAndPushJSONToGitHub.sh`
    - **Purpose**: Exports JSON files and automatically deploys them to GitHub Pages for OSM-Notes-Viewer (sister project)
-   - **When**: After datamarts are updated (typically scheduled)
+   - **When**: After datamarts are updated (typically scheduled monthly via cron)
    - **Prerequisites**: 
      - Datamarts must be populated
-     - Git repository configured
+     - Git repository configured (`OSM-Notes-Data` cloned)
      - GitHub Pages enabled
+     - Git credentials configured
    - **Consumer**: OSM-Notes-Viewer (sister project) reads these JSON files
+   - **Features**:
+     - Intelligent incremental export: exports countries one by one and pushes immediately
+     - Automatic detection of missing or outdated countries (default: 30 days)
+     - Removes obsolete countries from GitHub that no longer exist locally
+     - Generates README.md with alphabetical list of countries
+     - Resilient: continues processing even if one country fails
+   - **Environment variables**:
+     - `MAX_AGE_DAYS`: Maximum age in days before regeneration (default: 30)
+     - `COUNTRIES_PER_BATCH`: Number of countries before break (default: 10)
+     - `DBNAME_DWH`: Database name (default: from etc/properties.sh)
    - **Example**:
      ```bash
+     # Default: monthly refresh (30 days)
      ./bin/dwh/exportAndPushJSONToGitHub.sh
+     
+     # Custom age threshold
+     MAX_AGE_DAYS=7 ./bin/dwh/exportAndPushJSONToGitHub.sh
      ```
 
 ### Maintenance Scripts

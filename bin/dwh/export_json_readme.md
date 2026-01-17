@@ -41,21 +41,54 @@ cd bin/dwh
 
 ### Export and Push to GitHub Pages
 
-Automatically export and deploy to GitHub Pages:
+The script `exportAndPushJSONToGitHub.sh` exports and pushes countries intelligently:
 
 ```bash
 ./bin/dwh/exportAndPushJSONToGitHub.sh
 ```
 
-This script:
-1. Runs `exportDatamartsToJSON.sh` to generate JSON files
-2. Copies files to the `OSM-Notes-Data` repository
-3. Commits and pushes to GitHub
-4. Makes data available via GitHub Pages
+**Behavior:**
+1. Identifies countries that need export (missing, outdated, or marked as not exported)
+2. Removes countries from GitHub that no longer exist in local database
+3. Exports each country individually
+4. Commits and pushes each country immediately after export
+5. Continues with next country even if one fails
+6. Generates README.md with alphabetical list of countries
+7. Updates country index at the end
+
+**Features:**
+- **Resilient**: If one country fails, others continue processing
+- **Progress tracking**: See which countries are being processed
+- **Automatic detection**: Identifies missing or outdated countries (default: 30 days)
+- **Cleanup**: Removes countries from GitHub that don't exist locally
+- **Documentation**: Auto-generates README.md with country list
+- **Small commits**: Easier to track changes in GitHub
+- **Less risk**: If process fails, only one country is lost
+
+**Environment variables:**
+- `MAX_AGE_DAYS`: Maximum age in days for country files before regeneration (default: 30)
+  - Since cron runs monthly, default of 30 days ensures all countries are refreshed
+- `COUNTRIES_PER_BATCH`: Number of countries to process before taking a break (default: 10)
+- `DBNAME_DWH`: Database name for DWH (default: from etc/properties.sh)
+
+**Examples:**
+```bash
+# Default: Export countries older than 30 days (monthly cron)
+./bin/dwh/exportAndPushJSONToGitHub.sh
+
+# Export countries older than 7 days (for testing)
+MAX_AGE_DAYS=7 ./bin/dwh/exportAndPushJSONToGitHub.sh
+
+# Process 5 countries at a time
+COUNTRIES_PER_BATCH=5 ./bin/dwh/exportAndPushJSONToGitHub.sh
+```
 
 **Requirements:**
-- `OSM-Notes-Data` repository cloned to `~/github/OSM-Notes-Data`
+- `OSM-Notes-Data` repository cloned to `~/github/OSM-Notes-Data` or `~/OSM-Notes-Data`
 - Git credentials configured for push access
+
+**Generated Files:**
+- `data/countries/README.md`: Alphabetical list of all countries with links to their JSON files
 
 ### Custom Output Directory
 
