@@ -283,6 +283,9 @@ function __commit_and_push_batch() {
 
  cd "${DATA_REPO_DIR}"
 
+ # Configure git safe.directory if needed (for dubious ownership error)
+ git config --global --add safe.directory "${DATA_REPO_DIR}" 2> /dev/null || true
+
  # Ensure we're on main branch
  git checkout main 2> /dev/null || true
 
@@ -302,7 +305,22 @@ function __commit_and_push_batch() {
  git add csv/notes-by-country/
 
  # Check if there are changes to commit
- if git diff --cached --quiet; then
+ # Try different methods for compatibility with different git versions
+ local has_changes=false
+ if git diff --staged --quiet 2> /dev/null; then
+  has_changes=false
+ elif git diff --cached --quiet 2> /dev/null; then
+  has_changes=false
+ elif git status --porcelain csv/notes-by-country/ 2> /dev/null | grep -qE "^A|^M"; then
+  has_changes=true
+ else
+  # Last resort: check if files were actually added
+  if git status --short csv/notes-by-country/ 2> /dev/null | grep -q .; then
+   has_changes=true
+  fi
+ fi
+
+ if [[ "${has_changes}" == "false" ]]; then
   print_warn "No changes to commit in this batch"
   return 0
  fi
