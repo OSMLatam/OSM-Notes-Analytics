@@ -286,17 +286,64 @@ function __commit_and_push_batch() {
  # Configure git safe.directory if needed (for dubious ownership error)
  git config --global --add safe.directory "${DATA_REPO_DIR}" 2> /dev/null || true
 
- # Fix permissions if needed (in case .git directory has wrong owner)
- # This handles the case where the repo was cloned by a different user
+ # Check and fix permissions if needed
+ # The .git directory should be writable by the current user
+ CURRENT_USER=$(whoami)
+ GIT_OWNER=$(stat -c '%U' "${DATA_REPO_DIR}/.git" 2> /dev/null || echo "unknown")
+ GIT_GROUP=$(stat -c '%G' "${DATA_REPO_DIR}/.git" 2> /dev/null || echo "unknown")
+ 
  if [[ ! -w "${DATA_REPO_DIR}/.git" ]]; then
-  print_warn "Git directory not writable. Attempting to fix permissions..."
-  chmod -R u+w "${DATA_REPO_DIR}/.git" 2> /dev/null || true
+  print_warn "Git directory not writable. Checking ownership..."
+  
+  if [[ "${CURRENT_USER}" != "${GIT_OWNER}" ]]; then
+   # Check if user is in the git owner's group
+   if groups "${CURRENT_USER}" 2>/dev/null | grep -q "\b${GIT_GROUP}\b"; then
+    # User is in the group, try to fix group permissions
+    print_info "User ${CURRENT_USER} is in group ${GIT_GROUP}, checking group permissions..."
+    if [[ -r "${DATA_REPO_DIR}/.git" ]]; then
+     # Try to make group writable
+     chmod -R g+w "${DATA_REPO_DIR}/.git" 2> /dev/null || true
+     if [[ -w "${DATA_REPO_DIR}/.git" ]]; then
+      print_success "Fixed group permissions"
+     else
+      print_error "Could not fix group permissions. Owner: ${GIT_OWNER}, Group: ${GIT_GROUP}"
+      print_error "Please run: sudo chmod -R g+w ${DATA_REPO_DIR}/.git"
+      print_error "Or: sudo chown -R ${CURRENT_USER}:${CURRENT_USER} ${DATA_REPO_DIR}/.git"
+      return 1
+     fi
+    else
+     print_error "Cannot read git directory. Please fix permissions."
+     return 1
+    fi
+   else
+    print_error "Git directory owned by ${GIT_OWNER}:${GIT_GROUP}, but script running as ${CURRENT_USER}"
+    print_error "Please fix ownership: sudo chown -R ${CURRENT_USER}:${CURRENT_USER} ${DATA_REPO_DIR}/.git"
+    print_error "Or add ${CURRENT_USER} to ${GIT_GROUP} group: sudo usermod -a -G ${GIT_GROUP} ${CURRENT_USER}"
+    return 1
+   fi
+  else
+   # Same owner, try to fix permissions
+   if ! chmod -R u+w "${DATA_REPO_DIR}/.git" 2> /dev/null; then
+    print_error "Could not fix git directory permissions"
+    return 1
+   fi
+  fi
  fi
 
  # Remove stale lock file if it exists
  if [[ -f "${DATA_REPO_DIR}/.git/index.lock" ]]; then
   print_warn "Removing stale git lock file..."
-  rm -f "${DATA_REPO_DIR}/.git/index.lock" 2> /dev/null || true
+  if ! rm -f "${DATA_REPO_DIR}/.git/index.lock" 2> /dev/null; then
+   # Try with different user if we have sudo access
+   if command -v sudo > /dev/null 2>&1 && [[ "${CURRENT_USER}" != "${GIT_OWNER}" ]]; then
+    sudo -u "${GIT_OWNER}" rm -f "${DATA_REPO_DIR}/.git/index.lock" 2> /dev/null || true
+   fi
+   if [[ -f "${DATA_REPO_DIR}/.git/index.lock" ]]; then
+    print_error "Could not remove lock file. Please remove manually:"
+    print_error "  sudo rm -f ${DATA_REPO_DIR}/.git/index.lock"
+    return 1
+   fi
+  fi
  fi
 
  # Ensure we're on main branch
@@ -305,8 +352,8 @@ function __commit_and_push_batch() {
  # Pull latest changes to avoid conflicts
  git pull origin main 2> /dev/null || true
 
- # Copy current batch of CSV files
- rsync -av "${TEMP_CSV_DIR}/" "${CSV_TARGET_DIR}/" > /dev/null 2>&1
+ # Copy current batch of CSV files (exclude lock files and other non-CSV files)
+ rsync -av --exclude='*.lock' --exclude='*.log' "${TEMP_CSV_DIR}/" "${CSV_TARGET_DIR}/" > /dev/null 2>&1
 
  # Remove CSV directory from git index if this is the first batch
  if [[ ${COMMITTED_COUNTRIES} -eq 0 ]] && git ls-files --error-unmatch csv/notes-by-country/ > /dev/null 2>&1; then
@@ -314,8 +361,11 @@ function __commit_and_push_batch() {
   git rm -r --cached csv/notes-by-country/ 2> /dev/null || true
  fi
 
+ # Remove any non-CSV files that might have been copied (lock files, etc.)
+ find "${CSV_TARGET_DIR}" -type f ! -name "*.csv" -delete 2> /dev/null || true
+
  # Add all CSV files (including previous batches)
- git add csv/notes-by-country/
+ git add csv/notes-by-country/*.csv 2> /dev/null || true
 
  # Check if there are changes to commit
  # Try different methods for compatibility with different git versions
@@ -342,22 +392,42 @@ function __commit_and_push_batch() {
  FILE_COUNT=$(find csv/notes-by-country/ -name "*.csv" 2> /dev/null | wc -l || echo "0")
  TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
- # Commit changes
- if git commit -m "Auto-update: Batch ${batch_start}-${batch_end} (${batch_count} countries, ${FILE_COUNT} CSV files) - ${TIMESTAMP}
+ # Check if the last commit was a CSV update (to use --amend and avoid history)
+ # This keeps only the latest CSV version in git history
+ local use_amend=false
+ local last_commit_msg
+ last_commit_msg=$(git log -1 --pretty=%B 2> /dev/null || echo "")
+ if echo "${last_commit_msg}" | grep -q "Auto-update.*CSV files"; then
+  use_amend=true
+  print_info "Previous CSV commit found, will amend to replace it (no history preserved)"
+ fi
 
-Incremental export: countries ${batch_start} to ${batch_end}
-Total CSV files: ${FILE_COUNT}" > /dev/null 2>&1; then
-  # Push to GitHub
-  if git push origin main > /dev/null 2>&1; then
-   print_success "Batch ${batch_start}-${batch_end} pushed to GitHub (${FILE_COUNT} CSV files)"
-   COMMITTED_COUNTRIES=$((COMMITTED_COUNTRIES + batch_count))
-   return 0
-  else
-   print_error "Failed to push batch ${batch_start}-${batch_end}"
-   return 1
-  fi
+ # Commit changes locally (amend if previous commit was CSV to avoid history)
+ # NO PUSH here - we'll push only once at the end with a single commit
+ local commit_output
+ if [[ "${use_amend}" == "true" ]]; then
+  commit_output=$(git commit --amend -m "Auto-update: ${FILE_COUNT} CSV files (closed notes by country) - ${TIMESTAMP}
+
+This commit replaces all previous CSV files. CSV history is not preserved.
+Total countries exported: ${EXPORTED_COUNTRIES}
+Total notes: ${TOTAL_NOTES}" 2>&1)
+ else
+  commit_output=$(git commit -m "Auto-update: ${FILE_COUNT} CSV files (closed notes by country) - ${TIMESTAMP}
+
+This commit replaces all previous CSV files. CSV history is not preserved.
+Total countries exported: ${EXPORTED_COUNTRIES}
+Total notes: ${TOTAL_NOTES}" 2>&1)
+ fi
+ local commit_exit_code=$?
+
+ if [[ ${commit_exit_code} -eq 0 ]]; then
+  # Only commit locally, NO push (push will happen once at the end)
+  print_success "Batch ${batch_start}-${batch_end} committed locally (${FILE_COUNT} CSV files, no push yet)"
+  COMMITTED_COUNTRIES=$((COMMITTED_COUNTRIES + batch_count))
+  return 0
  else
   print_error "Failed to commit batch ${batch_start}-${batch_end}"
+  print_error "Git commit error: ${commit_output}"
   return 1
  fi
 }
@@ -375,7 +445,8 @@ while IFS='|' read -r country_id country_name; do
    BATCH_COUNT=$((BATCH_COUNT + 1))
 
    # Count notes in the file
-   file_notes=$(wc -l < "${TEMP_CSV_DIR}/${country_id}_$(__sanitize_filename "${country_name}").csv" | tr -d ' ')
+   sanitized_name=$(__sanitize_filename "${country_name}")
+   file_notes=$(wc -l < "${TEMP_CSV_DIR}/${country_id}_${sanitized_name}.csv" | tr -d ' ')
    file_notes=$((file_notes - 1)) # Subtract header
    TOTAL_NOTES=$((TOTAL_NOTES + file_notes))
 
@@ -393,10 +464,98 @@ while IFS='|' read -r country_id country_name; do
  fi
 done < "${COUNTRY_LIST}"
 
-# Commit and push remaining countries if any
+# Commit remaining countries if any (local commit only, no push)
 if [[ ${BATCH_COUNT} -gt 0 ]]; then
  BATCH_END=${EXPORTED_COUNTRIES}
  __commit_and_push_batch "${BATCH_START}" "${BATCH_END}" "${BATCH_COUNT}"
+fi
+
+# Step 2: Create single commit with all CSV files (replacing any previous CSV commits)
+print_info "Step 2: Creating single CSV commit (no history preserved)..."
+STEP2_START=$(date +%s)
+cd "${DATA_REPO_DIR}"
+
+# Ensure we're on main branch
+git checkout main 2> /dev/null || true
+
+# Pull latest changes to avoid conflicts
+git pull origin main 2> /dev/null || true
+
+# Find the commit before any CSV commits (to reset to)
+base_commit=$(git log --oneline --all --grep="Auto-update.*CSV files" 2> /dev/null | tail -1 | cut -d' ' -f1)
+
+if [[ -n "${base_commit}" ]]; then
+ # Reset to before CSV commits, keeping all files staged
+ print_info "Resetting to before CSV commits (keeping files)..."
+ git reset --soft "${base_commit}^" 2> /dev/null || git reset --soft HEAD~1 2> /dev/null || true
+else
+ # No previous CSV commits, remove from index if they exist
+ if git ls-files --error-unmatch csv/notes-by-country/ > /dev/null 2>&1; then
+  print_info "Removing existing CSV files from git history..."
+  git rm -r --cached csv/notes-by-country/ 2> /dev/null || true
+ fi
+fi
+
+# Ensure all CSV files are copied and staged
+rsync -av --exclude='*.lock' --exclude='*.log' "${TEMP_CSV_DIR}/" "${CSV_TARGET_DIR}/" > /dev/null 2>&1
+find "${CSV_TARGET_DIR}" -type f ! -name "*.csv" -delete 2> /dev/null || true
+git add csv/notes-by-country/*.csv 2> /dev/null || true
+
+# Create single commit with all CSV files
+FILE_COUNT=$(find csv/notes-by-country/ -name "*.csv" 2> /dev/null | wc -l || echo "0")
+TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+
+if git diff --cached --quiet 2> /dev/null && git diff --staged --quiet 2> /dev/null; then
+ print_warn "No changes to commit (CSV files are identical to previous version)"
+else
+ if git commit -m "Auto-update: ${FILE_COUNT} CSV files (closed notes by country) - ${TIMESTAMP}
+
+This commit replaces all previous CSV files. CSV history is not preserved.
+Total countries: ${EXPORTED_COUNTRIES}
+Total notes: ${TOTAL_NOTES}" > /dev/null 2>&1; then
+  print_success "Single CSV commit created (${FILE_COUNT} files)"
+ else
+  print_error "Failed to create CSV commit"
+  exit 1
+ fi
+fi
+
+STEP2_END=$(date +%s)
+STEP2_DURATION=$((STEP2_END - STEP2_START))
+print_success "Step 2 completed in ${STEP2_DURATION}s"
+
+# Step 3: Push single commit to GitHub
+print_info "Step 3: Pushing to GitHub (single commit)..."
+STEP3_START=$(date +%s)
+
+# Push to GitHub (force if we reset history, otherwise normal push)
+if git log --oneline -1 | grep -q "Auto-update.*CSV files"; then
+ # We have CSV commits, check if we need to force push
+ remote_commit_count=$(git log --oneline origin/main..HEAD --grep="Auto-update.*CSV files" 2> /dev/null | wc -l || echo "0")
+ 
+ if [[ ${remote_commit_count} -gt 1 ]] || git log --oneline origin/main | grep -q "Auto-update.*CSV files"; then
+  # Force push to replace remote CSV commits with our single commit
+  if git push --force-with-lease origin main > /dev/null 2>&1; then
+   STEP3_END=$(date +%s)
+   STEP3_DURATION=$((STEP3_END - STEP3_START))
+   print_success "CSV files pushed to GitHub successfully in ${STEP3_DURATION}s (single commit, no history)"
+  else
+   print_error "Failed to push to GitHub"
+   exit 1
+  fi
+ else
+  # Normal push (first time or no previous CSV commits on remote)
+  if git push origin main > /dev/null 2>&1; then
+   STEP3_END=$(date +%s)
+   STEP3_DURATION=$((STEP3_END - STEP3_START))
+   print_success "CSV files pushed to GitHub successfully in ${STEP3_DURATION}s"
+  else
+   print_error "Failed to push to GitHub"
+   exit 1
+  fi
+ fi
+else
+ print_warn "No CSV commit to push"
 fi
 
 rm -f "${COUNTRY_LIST}"
@@ -426,13 +585,13 @@ print_info "Step 1 total time: ${STEP1_DURATION}s"
 TOTAL_END=$(date +%s)
 TOTAL_DURATION=$((TOTAL_END - STEP1_START))
 
-print_success "All CSV files exported and pushed incrementally"
-# Calculate total batches committed
-TOTAL_BATCHES=$((COMMITTED_COUNTRIES / COUNTRIES_PER_COMMIT))
+print_success "All CSV files exported"
+# Calculate total batches committed locally
+TOTAL_BATCHES_LOCAL=$((COMMITTED_COUNTRIES / COUNTRIES_PER_COMMIT))
 if [[ $((COMMITTED_COUNTRIES % COUNTRIES_PER_COMMIT)) -gt 0 ]]; then
- TOTAL_BATCHES=$((TOTAL_BATCHES + 1))
+ TOTAL_BATCHES_LOCAL=$((TOTAL_BATCHES_LOCAL + 1))
 fi
-print_info "Total batches committed: ${TOTAL_BATCHES}"
+print_info "Total batches committed locally: ${TOTAL_BATCHES_LOCAL}"
 echo ""
 echo "CSV files are now available at:"
 echo "https://github.com/OSMLatam/OSM-Notes-Data/tree/main/csv/notes-by-country"
@@ -441,6 +600,7 @@ echo "Raw file access:"
 echo "https://raw.githubusercontent.com/OSMLatam/OSM-Notes-Data/main/csv/notes-by-country/"
 echo ""
 print_info "Total execution time: ${TOTAL_DURATION}s"
+print_info "Note: CSV file history is not preserved. Only the latest version is kept in git."
 
 echo ""
 print_success "Done! CSV files updated in GitHub repository"
