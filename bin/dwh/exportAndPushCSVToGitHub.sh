@@ -130,8 +130,8 @@ function __export_country_notes() {
   # Header row (optimized order for AI context)
   echo "note_id,country_name,latitude,longitude,opened_at,closed_at,days_to_resolution,opened_by_username,opening_comment,total_comments,was_reopened,closed_by_username,closing_comment"
 
-  # Data rows - replace :country_id variable in SQL and execute
-  sed "s/:country_id/${country_id}/g" "${SQL_SCRIPT}" \
+  # Data rows - replace :country_id and :max_notes_per_country variables in SQL and execute
+  sed -e "s/:country_id/${country_id}/g" -e "s/:max_notes_per_country/${MAX_NOTES_PER_COUNTRY}/g" "${SQL_SCRIPT}" \
    | __psql_with_appname "${BASENAME}-country-${country_id}" -d "${DBNAME_DWH}" \
     --csv \
     -t \
@@ -285,8 +285,28 @@ fi
 # Create temporary directory for CSV export
 mkdir -p "${TEMP_CSV_DIR}"
 
-# Get list of countries that have closed notes
-print_info "Getting list of countries with closed notes..."
+# First, sync with GitHub to get latest CSV files for comparison
+print_info "Syncing with GitHub to check existing CSV files..."
+cd "${DATA_REPO_DIR}" || exit 1
+git checkout main 2> /dev/null || true
+
+# Abort any ongoing merge to start clean
+if [[ -f "${DATA_REPO_DIR}/.git/MERGE_HEAD" ]]; then
+ print_warn "Aborting ongoing merge to start clean..."
+ git merge --abort 2> /dev/null || true
+fi
+
+# Fetch and pull latest changes from GitHub
+git fetch origin main 2> /dev/null || true
+if ! git pull --no-edit origin main 2> /dev/null; then
+ # Pull failed, resolve conflicts by taking our version
+ git checkout --ours csv/notes-by-country/*.csv 2> /dev/null || true
+ git add csv/notes-by-country/*.csv 2> /dev/null || true
+ git commit --no-edit 2> /dev/null || git merge --abort 2> /dev/null || true
+fi
+
+# Get list of countries that have closed notes, with last update date
+print_info "Getting list of countries with closed notes and last update dates..."
 COUNTRY_LIST_START=$(date +%s)
 
 # Export notes for each country
@@ -294,14 +314,17 @@ COUNTRY_LIST=$(mktemp)
 __psql_with_appname -d "${DBNAME_DWH}" -Atq << 'EOF' > "${COUNTRY_LIST}"
 SELECT DISTINCT
   dc.country_id,
-  COALESCE(c.country_name, 'Unknown') AS country_name
+  COALESCE(c.country_name, 'Unknown') AS country_name,
+  COALESCE(dc.country_name_en, c.country_name_en, c.country_name, 'Unknown') AS country_name_en,
+  MAX(f.action_at)::TEXT AS last_close_date
 FROM dwh.facts f
   JOIN dwh.dimension_countries dc
     ON f.dimension_id_country = dc.dimension_country_id
   LEFT JOIN countries c
     ON dc.country_id = c.country_id
 WHERE f.action_comment = 'closed'
-ORDER BY COALESCE(c.country_name, 'Unknown');
+GROUP BY dc.country_id, COALESCE(c.country_name, 'Unknown'), COALESCE(dc.country_name_en, c.country_name_en, c.country_name, 'Unknown')
+ORDER BY COALESCE(dc.country_name_en, c.country_name_en, c.country_name, 'Unknown');
 EOF
 
 COUNTRY_LIST_END=$(date +%s)
@@ -317,6 +340,13 @@ readonly COUNTRIES_PER_COMMIT
 COUNTRIES_PER_PUSH="${COUNTRIES_PER_PUSH:-10}"
 readonly COUNTRIES_PER_PUSH
 
+# Maximum notes per country to export (for AI context)
+# This limits the export to the most recent notes to keep files under GitHub's 100MB limit
+# Based on Germany: 609K notes = 143 MB, so ~400K notes should be ~94 MB (under 100MB limit)
+# For AI context, recent notes are more valuable than very old historical data
+MAX_NOTES_PER_COUNTRY="${MAX_NOTES_PER_COUNTRY:-400000}"
+readonly MAX_NOTES_PER_COUNTRY
+
 # CSV target directory (needed for incremental commits)
 CSV_TARGET_DIR="${DATA_REPO_DIR}/csv/notes-by-country"
 mkdir -p "${CSV_TARGET_DIR}"
@@ -326,6 +356,141 @@ EXPORTED_COUNTRIES=0
 TOTAL_NOTES=0
 EXPORT_START=$(date +%s)
 COMMITTED_COUNTRIES=0
+
+# Function to generate README.md with country list and links to CSV files
+function __generate_readme() {
+ print_info "Generating README.md with country list..."
+
+ local readme_file="${CSV_TARGET_DIR}/README.md"
+ local temp_readme
+ temp_readme=$(mktemp)
+
+ # Header
+ cat > "${temp_readme}" << 'EOF'
+# OSM Notes by Country - CSV Exports
+
+This directory contains CSV files with closed notes data for each country from OSM Notes Analytics.
+
+## Available Countries
+
+The following countries are available (sorted alphabetically by English name):
+
+EOF
+
+ # Get all CSV files and extract country IDs
+ local csv_files
+ csv_files=$(find "${CSV_TARGET_DIR}" -name "*.csv" -type f -printf '%f\n' 2> /dev/null | sort)
+
+ if [[ -z "${csv_files}" ]]; then
+  print_warn "No CSV files found to generate README"
+  rm -f "${temp_readme}"
+  return 1
+ fi
+
+ # Create temporary file to store country info
+ local country_info_file
+ country_info_file=$(mktemp)
+
+ # Get country information from database for all countries that have CSV files
+ local country_ids
+ country_ids=$(echo "${csv_files}" | sed -n 's/^\([0-9]\+\).*\.csv$/\1/p' | sort -u | tr '\n' ',' | sed 's/,$//')
+
+ if [[ -n "${country_ids}" ]]; then
+  # Query database for country names in English and save to temp file
+  local db_results_file
+  db_results_file=$(mktemp)
+  __psql_with_appname -d "${DBNAME_DWH}" -Atq << EOF > "${db_results_file}"
+SELECT
+  dc.country_id,
+  COALESCE(dc.country_name_en, c.country_name_en, c.country_name, dc.country_name, 'Unknown') AS country_name_en,
+  COALESCE(c.country_name, dc.country_name, 'Unknown') AS country_name_local
+FROM dwh.dimension_countries dc
+  LEFT JOIN countries c ON dc.country_id = c.country_id
+WHERE dc.country_id IN (${country_ids})
+ORDER BY COALESCE(dc.country_name_en, c.country_name_en, c.country_name, dc.country_name, 'Unknown');
+EOF
+
+  # Process database results
+  while IFS='|' read -r country_id country_name_en country_name_local; do
+   if [[ -n "${country_id}" ]]; then
+    # Find the CSV file for this country (may have different name formats)
+    local csv_file
+    csv_file=$(echo "${csv_files}" | grep "^${country_id}_" | head -1)
+
+    if [[ -n "${csv_file}" ]]; then
+     # Store country info: country_name_en|country_id|csv_file|country_name_local
+     echo "${country_name_en}|${country_id}|${csv_file}|${country_name_local}" >> "${country_info_file}"
+    fi
+   fi
+  done < "${db_results_file}"
+  rm -f "${db_results_file}"
+ fi
+
+ # Sort by English name and generate README entries
+ if [[ -f "${country_info_file}" ]]; then
+  sort -t'|' -k1,1 "${country_info_file}" | while IFS='|' read -r country_name_en country_id csv_file country_name_local; do
+   if [[ -n "${country_name_en}" && -n "${csv_file}" ]]; then
+    # Format: - [English Name (Local Name)](./filename.csv) (ID: country_id)
+    if [[ "${country_name_en}" != "${country_name_local}" && "${country_name_local}" != "Unknown" ]]; then
+     echo "- [${country_name_en} (${country_name_local})](./${csv_file}) (ID: ${country_id})" >> "${temp_readme}"
+    else
+     echo "- [${country_name_en}](./${csv_file}) (ID: ${country_id})" >> "${temp_readme}"
+    fi
+   fi
+  done
+  rm -f "${country_info_file}"
+ else
+  # Fallback: if database query failed, list files by filename
+  echo "${csv_files}" | while read -r csv_file; do
+   local country_id
+   country_id=$(echo "${csv_file}" | sed -n 's/^\([0-9]\+\).*\.csv$/\1/p')
+   if [[ -n "${country_id}" ]]; then
+    echo "- [Country ID: ${country_id}](./${csv_file})" >> "${temp_readme}"
+   fi
+  done
+ fi
+
+ # Footer
+ cat >> "${temp_readme}" << EOF
+
+## CSV File Format
+
+Each CSV file contains the following columns:
+
+- **note_id**: OSM note ID
+- **country_name**: Country name
+- **latitude**: Note latitude
+- **longitude**: Note longitude
+- **opened_at**: Date and time when note was opened
+- **closed_at**: Date and time when note was closed
+- **days_to_resolution**: Days from open to close
+- **opened_by_username**: Username who opened the note
+- **opening_comment**: Initial comment (cleaned, max 2000 chars)
+- **total_comments**: Total number of comments on the note
+- **was_reopened**: Whether note was reopened before final close (0/1)
+- **closed_by_username**: Username who closed the note
+- **closing_comment**: Comment when note was closed (cleaned, max 2000 chars)
+
+## Notes
+
+- Files are limited to the most recent notes (up to 400,000 per country) to keep file sizes manageable
+- Files larger than 100MB are excluded from the repository (GitHub's file size limit)
+- Data is updated automatically from the OSM Notes Analytics database
+
+## Last Updated
+
+Generated: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+EOF
+
+ # Copy to target directory
+ cp "${temp_readme}" "${readme_file}"
+ rm -f "${temp_readme}"
+
+ local file_count
+ file_count=$(echo "${csv_files}" | wc -l)
+ print_success "README.md generated with ${file_count} countries"
+ return 0
+}
 
 # Function to commit and push current batch of CSV files
 function __commit_and_push_batch() {
@@ -403,8 +568,41 @@ function __commit_and_push_batch() {
  # Ensure we're on main branch
  git checkout main 2> /dev/null || true
 
- # Pull latest changes to avoid conflicts
- git pull origin main 2> /dev/null || true
+ # Abort any ongoing merge to start clean
+ if [[ -f "${DATA_REPO_DIR}/.git/MERGE_HEAD" ]]; then
+  print_warn "Aborting ongoing merge to start clean..."
+  git merge --abort 2> /dev/null || true
+ fi
+
+ # Fetch latest changes
+ git fetch origin main 2> /dev/null || true
+
+ # Check if remote has changes
+ local remote_commit
+ local local_commit
+ remote_commit=$(git rev-parse origin/main 2> /dev/null || echo "")
+ local_commit=$(git rev-parse HEAD 2> /dev/null || echo "")
+
+ if [[ -n "${remote_commit}" && -n "${local_commit}" && "${remote_commit}" != "${local_commit}" ]]; then
+  # Remote has changes, pull with strategy to prefer our CSV files
+  print_info "Remote has changes, pulling and resolving conflicts..."
+
+  # Try to pull with ours strategy for CSV files
+  if ! git pull --no-edit origin main 2> /dev/null; then
+   # Pull failed due to conflicts, resolve by taking our version for CSV files
+   print_info "Resolving merge conflicts (taking local version for CSV files)..."
+
+   # For CSV files, always take our version
+   git checkout --ours csv/notes-by-country/*.csv 2> /dev/null || true
+   git add csv/notes-by-country/*.csv 2> /dev/null || true
+
+   # Complete the merge
+   git commit --no-edit 2> /dev/null || git merge --abort 2> /dev/null || true
+  fi
+ else
+  # No remote changes or already up to date
+  git pull origin main 2> /dev/null || true
+ fi
 
  # Copy ALL CSV files from temp dir (accumulated so far)
  # This ensures we have all files from previous batches plus current batch
@@ -417,6 +615,10 @@ function __commit_and_push_batch() {
  # This is critical to prevent pushing large files
  __filter_large_csv_files "${CSV_TARGET_DIR}"
 
+ # Generate/update README.md with all countries (after copying all CSV files)
+ # Don't fail if README generation fails (non-critical)
+ __generate_readme || print_warn "README generation failed, continuing anyway..."
+
  # Remove CSV directory from git index if this is the first batch
  if [[ ${COMMITTED_COUNTRIES} -eq 0 ]] && git ls-files --error-unmatch csv/notes-by-country/ > /dev/null 2>&1; then
   print_info "Removing existing CSV files from git history..."
@@ -425,6 +627,11 @@ function __commit_and_push_batch() {
 
  # Add all CSV files in target directory (excluding large ones already filtered)
  git add csv/notes-by-country/*.csv 2> /dev/null || true
+
+ # Add README.md if it exists
+ if [[ -f "${CSV_TARGET_DIR}/README.md" ]]; then
+  git add csv/notes-by-country/README.md 2> /dev/null || true
+ fi
 
  # Check if there are changes to commit
  # Try different methods for compatibility with different git versions
@@ -451,20 +658,39 @@ function __commit_and_push_batch() {
  FILE_COUNT=$(find csv/notes-by-country/ -name "*.csv" 2> /dev/null | wc -l || echo "0")
  TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
+ # Check if we're in the middle of a merge
+ local in_merge=false
+ if [[ -f "${DATA_REPO_DIR}/.git/MERGE_HEAD" ]]; then
+  in_merge=true
+  print_warn "In the middle of a merge, will complete merge instead of amending"
+ fi
+
  # Check if the last commit was a CSV update (to use --amend and avoid history)
  # This keeps only the latest CSV version in git history
+ # But don't amend if we're in a merge
  local use_amend=false
- local last_commit_msg
- last_commit_msg=$(git log -1 --pretty=%B 2> /dev/null || echo "")
- if echo "${last_commit_msg}" | grep -q "Auto-update.*CSV files"; then
-  use_amend=true
-  print_info "Previous CSV commit found, will amend to replace it (no history preserved)"
+ if [[ "${in_merge}" == "false" ]]; then
+  local last_commit_msg
+  last_commit_msg=$(git log -1 --pretty=%B 2> /dev/null || echo "")
+  if echo "${last_commit_msg}" | grep -q "Auto-update.*CSV files"; then
+   use_amend=true
+   print_info "Previous CSV commit found, will amend to replace it (no history preserved)"
+  fi
  fi
 
  # Commit changes locally (amend if previous commit was CSV to avoid history)
- # NO PUSH here - we'll push only once at the end with a single commit
+ # But if in merge, complete the merge instead
  local commit_output
- if [[ "${use_amend}" == "true" ]]; then
+ if [[ "${in_merge}" == "true" ]]; then
+  # Complete the merge by taking our version of CSV files
+  git checkout --ours csv/notes-by-country/*.csv 2> /dev/null || true
+  git add csv/notes-by-country/*.csv 2> /dev/null || true
+  commit_output=$(git commit --no-edit -m "Auto-update: ${FILE_COUNT} CSV files (closed notes by country) - ${TIMESTAMP}
+
+This commit replaces all previous CSV files. CSV history is not preserved.
+Total countries exported: ${EXPORTED_COUNTRIES}
+Total notes: ${TOTAL_NOTES}" 2>&1)
+ elif [[ "${use_amend}" == "true" ]]; then
   commit_output=$(git commit --amend -m "Auto-update: ${FILE_COUNT} CSV files (closed notes by country) - ${TIMESTAMP}
 
 This commit replaces all previous CSV files. CSV history is not preserved.
@@ -492,11 +718,56 @@ Total notes: ${TOTAL_NOTES}" 2>&1)
   if [[ ${push_exit_code} -eq 0 ]]; then
    print_success "Pushed successfully (${EXPORTED_COUNTRIES} countries exported)"
   else
-   print_error "Failed to push to GitHub"
-   print_error "Git push error: ${push_output}"
-   # Continue processing but warn user
-   print_warn "Continuing export, but push failed. Will retry at end."
-   return 2 # Return 2 to indicate push failure but commit success
+   # Check if push failed due to non-fast-forward (diverged branches)
+   if echo "${push_output}" | grep -q "non-fast-forward\|diverged"; then
+    print_warn "Branches have diverged, attempting to resolve..."
+
+    # Fetch latest changes
+    git fetch origin main 2> /dev/null || true
+
+    # Abort any ongoing merge
+    if [[ -f "${DATA_REPO_DIR}/.git/MERGE_HEAD" ]]; then
+     git merge --abort 2> /dev/null || true
+    fi
+
+    # Resolve conflicts by taking our CSV version
+    if git pull --no-edit origin main 2> /dev/null; then
+     # Pull succeeded, try push again
+     push_output=$(git push origin main 2>&1)
+     push_exit_code=$?
+     if [[ ${push_exit_code} -eq 0 ]]; then
+      print_success "Pushed successfully after resolving conflicts (${EXPORTED_COUNTRIES} countries exported)"
+     else
+      print_error "Failed to push after resolving conflicts"
+      print_error "Git push error: ${push_output}"
+      print_warn "Continuing export, but push failed. Will retry at end."
+      return 2
+     fi
+    else
+     # Pull failed, resolve conflicts manually
+     print_info "Resolving merge conflicts (taking local version for CSV files)..."
+     git checkout --ours csv/notes-by-country/*.csv 2> /dev/null || true
+     git add csv/notes-by-country/*.csv 2> /dev/null || true
+     git commit --no-edit 2> /dev/null || true
+
+     # Try push again
+     push_output=$(git push origin main 2>&1)
+     push_exit_code=$?
+     if [[ ${push_exit_code} -eq 0 ]]; then
+      print_success "Pushed successfully after manual conflict resolution (${EXPORTED_COUNTRIES} countries exported)"
+     else
+      print_error "Failed to push after manual conflict resolution"
+      print_error "Git push error: ${push_output}"
+      print_warn "Continuing export, but push failed. Will retry at end."
+      return 2
+     fi
+    fi
+   else
+    print_error "Failed to push to GitHub"
+    print_error "Git push error: ${push_output}"
+    print_warn "Continuing export, but push failed. Will retry at end."
+    return 2
+   fi
   fi
 
   return 0
@@ -510,31 +781,126 @@ Total notes: ${TOTAL_NOTES}" 2>&1)
 BATCH_START=1
 BATCH_COUNT=0
 
-while IFS='|' read -r country_id country_name; do
+# Function to check if CSV needs update
+# Returns 0 if CSV needs update, 1 if CSV is up to date
+function __csv_needs_update() {
+ local country_id="${1}"
+ local country_name="${2}"
+ local last_close_date="${3}"
+ local sanitized_name
+ sanitized_name=$(__sanitize_filename "${country_name}")
+
+ # Check for CSV file in git (more reliable than filesystem)
+ # Search for any CSV file that starts with country_id_ (handles both formats)
+ local csv_file_in_git=""
+ local csv_file_pattern="${country_id}_*.csv"
+
+ # Find CSV file in git for this country ID
+ # Use git ls-files to find files matching the pattern
+ csv_file_in_git=$(cd "${DATA_REPO_DIR}" && git ls-files "csv/notes-by-country/${csv_file_pattern}" 2> /dev/null | head -1)
+
+ # If no file found in git, needs update
+ if [[ -z "${csv_file_in_git}" ]]; then
+  return 0
+ fi
+
+ # Get git commit date for this file (most reliable)
+ local git_commit_date=0
+ if [[ -n "${csv_file_in_git}" ]]; then
+  git_commit_date=$(cd "${DATA_REPO_DIR}" && git log -1 --format=%ct -- "${csv_file_in_git}" 2> /dev/null | head -1)
+  # If git_commit_date is empty or invalid, try to get it from the file
+  if [[ -z "${git_commit_date}" ]] || ! [[ "${git_commit_date}" =~ ^[0-9]+$ ]]; then
+   git_commit_date=0
+  fi
+ fi
+
+ # Also check filesystem modification time as fallback
+ local csv_file_fs
+ csv_file_fs="${CSV_TARGET_DIR}/$(basename "${csv_file_in_git}")"
+ local csv_mtime=0
+ if [[ -f "${csv_file_fs}" ]]; then
+  csv_mtime=$(stat -c%Y "${csv_file_fs}" 2> /dev/null || stat -f%m "${csv_file_fs}" 2> /dev/null || echo "0")
+ fi
+
+ # Use the most recent date (git commit or file modification)
+ local csv_timestamp=${git_commit_date}
+ if [[ ${csv_mtime} -gt ${git_commit_date} ]]; then
+  csv_timestamp=${csv_mtime}
+ fi
+
+ # Convert last_close_date to timestamp
+ # PostgreSQL returns timestamps in format: YYYY-MM-DD HH:MI:SS or YYYY-MM-DD HH:MI:SS.MS
+ local db_timestamp=0
+ if [[ -n "${last_close_date}" ]]; then
+  # Remove milliseconds and timezone if present
+  local clean_date
+  clean_date=$(echo "${last_close_date}" | sed 's/\.[0-9]*//' | sed 's/+.*//' | sed 's/-.*//')
+  # Try different date parsing methods
+  db_timestamp=$(date -d "${clean_date}" +%s 2> /dev/null \
+   || date -d "${last_close_date}" +%s 2> /dev/null \
+   || echo "0")
+ fi
+
+ # If we can't parse dates or CSV timestamp is invalid, export to be safe
+ if [[ ${csv_timestamp} -eq 0 ]] || [[ ${db_timestamp} -eq 0 ]]; then
+  return 0
+ fi
+
+ # Get current timestamp
+ local current_timestamp
+ current_timestamp=$(date +%s)
+
+ # If CSV was committed recently (within last 24 hours), consider it up to date
+ # This prevents re-exporting if CSV was just updated
+ local csv_age_hours=$(((current_timestamp - csv_timestamp) / 3600))
+ if [[ ${csv_age_hours} -lt 24 ]]; then
+  # CSV is recent (less than 24 hours old), consider it up to date
+  return 1
+ fi
+
+ # CSV is older than 24 hours, check if database has significantly newer data
+ # Only export if database has data more than 1 hour newer than CSV
+ local time_diff=$((db_timestamp - csv_timestamp))
+ if [[ ${time_diff} -gt 3600 ]]; then
+  # Database has data more than 1 hour newer than CSV, needs update
+  return 0
+ fi
+
+ # CSV is up to date (either recent or no significant new data)
+ return 1
+}
+
+while IFS='|' read -r country_id country_name country_name_en last_close_date; do
  if [[ -n "${country_id}" && -n "${country_name}" ]]; then
   TOTAL_COUNTRIES=$((TOTAL_COUNTRIES + 1))
 
-  # shellcheck disable=SC2310  # Function invocation in condition is intentional for error handling
-  if __export_country_notes "${country_id}" "${country_name}"; then
-   EXPORTED_COUNTRIES=$((EXPORTED_COUNTRIES + 1))
-   BATCH_COUNT=$((BATCH_COUNT + 1))
+  # Check if CSV needs update
+  if __csv_needs_update "${country_id}" "${country_name}" "${last_close_date}"; then
+   # shellcheck disable=SC2310  # Function invocation in condition is intentional for error handling
+   if __export_country_notes "${country_id}" "${country_name}"; then
+    EXPORTED_COUNTRIES=$((EXPORTED_COUNTRIES + 1))
+    BATCH_COUNT=$((BATCH_COUNT + 1))
 
-   # Count notes in the file
-   sanitized_name=$(__sanitize_filename "${country_name}")
-   file_notes=$(wc -l < "${TEMP_CSV_DIR}/${country_id}_${sanitized_name}.csv" | tr -d ' ')
-   file_notes=$((file_notes - 1)) # Subtract header
-   TOTAL_NOTES=$((TOTAL_NOTES + file_notes))
+    # Count notes in the file
+    sanitized_name=$(__sanitize_filename "${country_name}")
+    file_notes=$(wc -l < "${TEMP_CSV_DIR}/${country_id}_${sanitized_name}.csv" | tr -d ' ')
+    file_notes=$((file_notes - 1)) # Subtract header
+    TOTAL_NOTES=$((TOTAL_NOTES + file_notes))
 
-   # Commit and push every COUNTRIES_PER_COMMIT countries
-   if [[ ${BATCH_COUNT} -ge ${COUNTRIES_PER_COMMIT} ]]; then
-    BATCH_END=${EXPORTED_COUNTRIES}
-    if __commit_and_push_batch "${BATCH_START}" "${BATCH_END}" "${BATCH_COUNT}"; then
-     BATCH_START=$((BATCH_END + 1))
-     BATCH_COUNT=0
-    else
-     print_warn "Continuing despite commit failure. Will retry at end."
+    # Commit and push every COUNTRIES_PER_COMMIT countries
+    if [[ ${BATCH_COUNT} -ge ${COUNTRIES_PER_COMMIT} ]]; then
+     BATCH_END=${EXPORTED_COUNTRIES}
+     if __commit_and_push_batch "${BATCH_START}" "${BATCH_END}" "${BATCH_COUNT}"; then
+      BATCH_START=$((BATCH_END + 1))
+      BATCH_COUNT=0
+     else
+      print_warn "Continuing despite commit failure. Will retry at end."
+     fi
     fi
    fi
+  else
+   # CSV is up to date, skip export
+   print_info "Skipping ${country_name} (ID: ${country_id}) - CSV is up to date"
   fi
  fi
 done < "${COUNTRY_LIST}"

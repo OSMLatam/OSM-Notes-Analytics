@@ -34,9 +34,18 @@
 --
 -- Usage:
 --   This SQL is used by bin/dwh/exportAndPushCSVToGitHub.sh
---   The script replaces :country_id with actual country ID before execution
+--   The script replaces :country_id and :max_notes_per_country with actual values before execution
+--   :country_id - Country ID to export
+--   :max_notes_per_country - Maximum number of notes to export (default: 400000)
+--                            This limits export to most recent notes to keep files under 100MB
 
 \set ON_ERROR_STOP on
+
+-- Set default for max_notes_per_country if not provided
+\if :{?max_notes_per_country}
+\else
+\set max_notes_per_country 400000
+\endif
 
 -- Helper function to clean comment text for CSV export
 -- - Replaces multiple newlines/tabs with single space
@@ -70,6 +79,7 @@ WITH country_dimension AS (
 ),
 -- Step 1: Get the most recent close fact for each note in the country
 -- Filter by dimension_id_country directly to enable partition pruning
+-- Limit to most recent notes for AI context (configurable via :max_notes_per_country)
 latest_closes AS (
   SELECT DISTINCT ON (f.id_note)
     f.fact_id,
@@ -86,7 +96,16 @@ latest_closes AS (
     AND f.dimension_id_country = cd.dimension_country_id
   ORDER BY f.id_note, f.fact_id DESC
 ),
--- Step 2: Pre-aggregate comment counts and reopen status for all notes
+-- Step 1b: Limit to most recent notes (for AI context, we prioritize recent resolutions)
+-- This ensures we export the most relevant examples for AI training
+-- Recent notes are more valuable for AI context as they reflect current resolution patterns
+limited_closes AS (
+  SELECT *
+  FROM latest_closes
+  ORDER BY action_at DESC
+  LIMIT :max_notes_per_country
+),
+-- Step 2: Pre-aggregate comment counts and reopen status for limited notes
 -- This eliminates correlated subqueries in the main query
 note_metrics AS (
   SELECT
@@ -94,7 +113,7 @@ note_metrics AS (
     COUNT(*) FILTER (WHERE f.action_comment IN ('commented', 'opened', 'closed', 'reopened')) AS total_comments,
     MAX(CASE WHEN f.action_comment = 'reopened' THEN 1 ELSE 0 END) AS was_reopened
   FROM dwh.facts f
-    JOIN latest_closes lc
+    JOIN limited_closes lc
       ON f.id_note = lc.id_note
   GROUP BY f.id_note
 ),
@@ -107,7 +126,7 @@ comments_data AS (
     opening_comment.body AS opening_body,
     -- Get closing comment (last closed event for this note)
     closing_comment.body AS closing_body
-  FROM latest_closes lc
+  FROM limited_closes lc
     -- LATERAL JOIN for opening comment - only fetches one row per note
     LEFT JOIN LATERAL (
       SELECT nct.body
@@ -153,7 +172,7 @@ SELECT
   -- 4. Solution context (how it was resolved)
   COALESCE(u_closed.username, 'Unknown') AS closed_by_username,
   COALESCE(dwh.clean_comment_for_csv(cd.closing_body), '') AS closing_comment
-FROM latest_closes lc
+FROM limited_closes lc
   -- Get cleaned comments and metadata
   JOIN comments_data cd
     ON lc.id_note = cd.id_note
