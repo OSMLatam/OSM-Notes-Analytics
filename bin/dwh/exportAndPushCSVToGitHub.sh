@@ -286,6 +286,19 @@ function __commit_and_push_batch() {
  # Configure git safe.directory if needed (for dubious ownership error)
  git config --global --add safe.directory "${DATA_REPO_DIR}" 2> /dev/null || true
 
+ # Fix permissions if needed (in case .git directory has wrong owner)
+ # This handles the case where the repo was cloned by a different user
+ if [[ ! -w "${DATA_REPO_DIR}/.git" ]]; then
+  print_warn "Git directory not writable. Attempting to fix permissions..."
+  chmod -R u+w "${DATA_REPO_DIR}/.git" 2> /dev/null || true
+ fi
+
+ # Remove stale lock file if it exists
+ if [[ -f "${DATA_REPO_DIR}/.git/index.lock" ]]; then
+  print_warn "Removing stale git lock file..."
+  rm -f "${DATA_REPO_DIR}/.git/index.lock" 2> /dev/null || true
+ fi
+
  # Ensure we're on main branch
  git checkout main 2> /dev/null || true
 
@@ -414,7 +427,12 @@ TOTAL_END=$(date +%s)
 TOTAL_DURATION=$((TOTAL_END - STEP1_START))
 
 print_success "All CSV files exported and pushed incrementally"
-print_info "Total batches committed: $((COMMITTED_COUNTRIES / COUNTRIES_PER_COMMIT + (COMMITTED_COUNTRIES % COUNTRIES_PER_COMMIT > 0 ? 1 : 0)))"
+# Calculate total batches committed
+TOTAL_BATCHES=$((COMMITTED_COUNTRIES / COUNTRIES_PER_COMMIT))
+if [[ $((COMMITTED_COUNTRIES % COUNTRIES_PER_COMMIT)) -gt 0 ]]; then
+ TOTAL_BATCHES=$((TOTAL_BATCHES + 1))
+fi
+print_info "Total batches committed: ${TOTAL_BATCHES}"
 echo ""
 echo "CSV files are now available at:"
 echo "https://github.com/OSMLatam/OSM-Notes-Data/tree/main/csv/notes-by-country"
