@@ -291,13 +291,13 @@ function __commit_and_push_batch() {
  CURRENT_USER=$(whoami)
  GIT_OWNER=$(stat -c '%U' "${DATA_REPO_DIR}/.git" 2> /dev/null || echo "unknown")
  GIT_GROUP=$(stat -c '%G' "${DATA_REPO_DIR}/.git" 2> /dev/null || echo "unknown")
- 
+
  if [[ ! -w "${DATA_REPO_DIR}/.git" ]]; then
   print_warn "Git directory not writable. Checking ownership..."
-  
+
   if [[ "${CURRENT_USER}" != "${GIT_OWNER}" ]]; then
    # Check if user is in the git owner's group
-   if groups "${CURRENT_USER}" 2>/dev/null | grep -q "\b${GIT_GROUP}\b"; then
+   if groups "${CURRENT_USER}" 2> /dev/null | grep -q "\b${GIT_GROUP}\b"; then
     # User is in the group, try to fix group permissions
     print_info "User ${CURRENT_USER} is in group ${GIT_GROUP}, checking group permissions..."
     if [[ -r "${DATA_REPO_DIR}/.git" ]]; then
@@ -532,7 +532,7 @@ STEP3_START=$(date +%s)
 if git log --oneline -1 | grep -q "Auto-update.*CSV files"; then
  # We have CSV commits, check if we need to force push
  remote_commit_count=$(git log --oneline origin/main..HEAD --grep="Auto-update.*CSV files" 2> /dev/null | wc -l || echo "0")
- 
+
  if [[ ${remote_commit_count} -gt 1 ]] || git log --oneline origin/main | grep -q "Auto-update.*CSV files"; then
   # Force push to replace remote CSV commits with our single commit
   if git push --force-with-lease origin main > /dev/null 2>&1; then
