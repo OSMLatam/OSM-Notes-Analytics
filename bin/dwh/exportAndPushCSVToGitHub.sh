@@ -157,6 +157,56 @@ function __export_country_notes() {
  fi
 }
 
+# Function to check and filter large CSV files (GitHub limit: 100MB)
+# Excludes files larger than 100MB and logs warnings
+# Usage: __filter_large_csv_files [directory]
+# Returns: 0 if all files OK, 1 if some files were excluded
+function __filter_large_csv_files() {
+ local csv_dir="${1:-${CSV_TARGET_DIR:-}}"
+
+ # Return early if directory doesn't exist
+ if [[ ! -d "${csv_dir}" ]]; then
+  return 0
+ fi
+
+ local excluded_count=0
+ local max_size_mb=100
+ local max_size_bytes=$((max_size_mb * 1024 * 1024))
+
+ # Check each CSV file
+ while IFS= read -r -d '' csv_file; do
+  [[ -z "${csv_file}" ]] && continue
+
+  local file_size
+  file_size=$(stat -f%z "${csv_file}" 2> /dev/null || stat -c%s "${csv_file}" 2> /dev/null || echo "0")
+
+  if [[ ${file_size} -gt ${max_size_bytes} ]]; then
+   local file_size_mb
+   file_size_mb=$((file_size / 1024 / 1024))
+   local filename
+   filename=$(basename "${csv_file}")
+
+   print_warn "Excluding large file from git: ${filename} (${file_size_mb} MB, exceeds GitHub's 100MB limit)"
+
+   # Remove from git index if already staged
+   git rm --cached "${csv_file}" 2> /dev/null || true
+
+   # Remove from target directory (keep in temp for reference)
+   rm -f "${csv_file}" 2> /dev/null || true
+
+   excluded_count=$((excluded_count + 1))
+  fi
+ done < <(find "${csv_dir}" -maxdepth 1 -name "*.csv" -type f -print0 2> /dev/null || true)
+
+ if [[ ${excluded_count} -gt 0 ]]; then
+  print_warn "Excluded ${excluded_count} large CSV file(s) from git commit (exceed 100MB limit)"
+  print_info "Large files are kept in ${TEMP_CSV_DIR} for reference but not pushed to GitHub"
+  return 1
+ fi
+
+ return 0
+}
+
 # Cleanup function
 function __cleanup() {
  rm -rf "${TEMP_CSV_DIR}" 2> /dev/null || true
@@ -258,10 +308,14 @@ COUNTRY_LIST_END=$(date +%s)
 COUNTRY_LIST_DURATION=$((COUNTRY_LIST_END - COUNTRY_LIST_START))
 print_info "Country list retrieved in ${COUNTRY_LIST_DURATION}s"
 
-# Configuration for incremental commits
-# Commit and push every N countries to reduce risk of losing work
-COUNTRIES_PER_COMMIT="${COUNTRIES_PER_COMMIT:-20}"
+# Configuration for incremental commits and pushes
+# Commit and push every N countries to reduce risk of losing work and avoid large pushes
+COUNTRIES_PER_COMMIT="${COUNTRIES_PER_COMMIT:-10}"
 readonly COUNTRIES_PER_COMMIT
+
+# Push every N countries exported (should match COUNTRIES_PER_COMMIT for commit+push together)
+COUNTRIES_PER_PUSH="${COUNTRIES_PER_PUSH:-10}"
+readonly COUNTRIES_PER_PUSH
 
 # CSV target directory (needed for incremental commits)
 CSV_TARGET_DIR="${DATA_REPO_DIR}/csv/notes-by-country"
@@ -352,8 +406,16 @@ function __commit_and_push_batch() {
  # Pull latest changes to avoid conflicts
  git pull origin main 2> /dev/null || true
 
- # Copy current batch of CSV files (exclude lock files and other non-CSV files)
+ # Copy ALL CSV files from temp dir (accumulated so far)
+ # This ensures we have all files from previous batches plus current batch
  rsync -av --exclude='*.lock' --exclude='*.log' "${TEMP_CSV_DIR}/" "${CSV_TARGET_DIR}/" > /dev/null 2>&1
+
+ # Remove any non-CSV files that might have been copied (lock files, etc.)
+ find "${CSV_TARGET_DIR}" -type f ! -name "*.csv" -delete 2> /dev/null || true
+
+ # Filter out files that exceed GitHub's 100MB limit BEFORE adding to git
+ # This is critical to prevent pushing large files
+ __filter_large_csv_files "${CSV_TARGET_DIR}"
 
  # Remove CSV directory from git index if this is the first batch
  if [[ ${COMMITTED_COUNTRIES} -eq 0 ]] && git ls-files --error-unmatch csv/notes-by-country/ > /dev/null 2>&1; then
@@ -361,10 +423,7 @@ function __commit_and_push_batch() {
   git rm -r --cached csv/notes-by-country/ 2> /dev/null || true
  fi
 
- # Remove any non-CSV files that might have been copied (lock files, etc.)
- find "${CSV_TARGET_DIR}" -type f ! -name "*.csv" -delete 2> /dev/null || true
-
- # Add all CSV files (including previous batches)
+ # Add all CSV files in target directory (excluding large ones already filtered)
  git add csv/notes-by-country/*.csv 2> /dev/null || true
 
  # Check if there are changes to commit
@@ -421,9 +480,25 @@ Total notes: ${TOTAL_NOTES}" 2>&1)
  local commit_exit_code=$?
 
  if [[ ${commit_exit_code} -eq 0 ]]; then
-  # Only commit locally, NO push (push will happen once at the end)
-  print_success "Batch ${batch_start}-${batch_end} committed locally (${FILE_COUNT} CSV files, no push yet)"
+  print_success "Batch ${batch_start}-${batch_end} committed locally (${FILE_COUNT} CSV files)"
   COMMITTED_COUNTRIES=$((COMMITTED_COUNTRIES + batch_count))
+
+  # Push immediately after commit (since commit and push happen together every N countries)
+  print_info "Pushing to GitHub (${EXPORTED_COUNTRIES} countries exported)..."
+  local push_output
+  push_output=$(git push origin main 2>&1)
+  local push_exit_code=$?
+
+  if [[ ${push_exit_code} -eq 0 ]]; then
+   print_success "Pushed successfully (${EXPORTED_COUNTRIES} countries exported)"
+  else
+   print_error "Failed to push to GitHub"
+   print_error "Git push error: ${push_output}"
+   # Continue processing but warn user
+   print_warn "Continuing export, but push failed. Will retry at end."
+   return 2 # Return 2 to indicate push failure but commit success
+  fi
+
   return 0
  else
   print_error "Failed to commit batch ${batch_start}-${batch_end}"
@@ -464,99 +539,37 @@ while IFS='|' read -r country_id country_name; do
  fi
 done < "${COUNTRY_LIST}"
 
-# Commit remaining countries if any (local commit only, no push)
+# Commit and push remaining countries if any
 if [[ ${BATCH_COUNT} -gt 0 ]]; then
  BATCH_END=${EXPORTED_COUNTRIES}
  __commit_and_push_batch "${BATCH_START}" "${BATCH_END}" "${BATCH_COUNT}"
 fi
 
-# Step 2: Create single commit with all CSV files (replacing any previous CSV commits)
-print_info "Step 2: Creating single CSV commit (no history preserved)..."
+# Step 2: Final push check (push any remaining commits)
+print_info "Step 2: Final push check..."
 STEP2_START=$(date +%s)
 cd "${DATA_REPO_DIR}"
 
-# Ensure we're on main branch
-git checkout main 2> /dev/null || true
+# Check if there are any unpushed commits
+unpushed_commits=$(git log --oneline origin/main..HEAD --grep="Auto-update.*CSV files" 2> /dev/null | wc -l || echo "0")
 
-# Pull latest changes to avoid conflicts
-git pull origin main 2> /dev/null || true
-
-# Find the commit before any CSV commits (to reset to)
-base_commit=$(git log --oneline --all --grep="Auto-update.*CSV files" 2> /dev/null | tail -1 | cut -d' ' -f1)
-
-if [[ -n "${base_commit}" ]]; then
- # Reset to before CSV commits, keeping all files staged
- print_info "Resetting to before CSV commits (keeping files)..."
- git reset --soft "${base_commit}^" 2> /dev/null || git reset --soft HEAD~1 2> /dev/null || true
-else
- # No previous CSV commits, remove from index if they exist
- if git ls-files --error-unmatch csv/notes-by-country/ > /dev/null 2>&1; then
-  print_info "Removing existing CSV files from git history..."
-  git rm -r --cached csv/notes-by-country/ 2> /dev/null || true
- fi
-fi
-
-# Ensure all CSV files are copied and staged
-rsync -av --exclude='*.lock' --exclude='*.log' "${TEMP_CSV_DIR}/" "${CSV_TARGET_DIR}/" > /dev/null 2>&1
-find "${CSV_TARGET_DIR}" -type f ! -name "*.csv" -delete 2> /dev/null || true
-git add csv/notes-by-country/*.csv 2> /dev/null || true
-
-# Create single commit with all CSV files
-FILE_COUNT=$(find csv/notes-by-country/ -name "*.csv" 2> /dev/null | wc -l || echo "0")
-TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
-
-if git diff --cached --quiet 2> /dev/null && git diff --staged --quiet 2> /dev/null; then
- print_warn "No changes to commit (CSV files are identical to previous version)"
-else
- if git commit -m "Auto-update: ${FILE_COUNT} CSV files (closed notes by country) - ${TIMESTAMP}
-
-This commit replaces all previous CSV files. CSV history is not preserved.
-Total countries: ${EXPORTED_COUNTRIES}
-Total notes: ${TOTAL_NOTES}" > /dev/null 2>&1; then
-  print_success "Single CSV commit created (${FILE_COUNT} files)"
+if [[ ${unpushed_commits} -gt 0 ]]; then
+ print_info "Pushing ${unpushed_commits} remaining commit(s)..."
+ if git push origin main 2>&1; then
+  STEP2_END=$(date +%s)
+  STEP2_DURATION=$((STEP2_END - STEP2_START))
+  print_success "All commits pushed successfully in ${STEP2_DURATION}s"
  else
-  print_error "Failed to create CSV commit"
-  exit 1
+  print_error "Failed to push remaining commits"
+  print_warn "Some commits may not have been pushed. Check git status."
  fi
+else
+ print_info "All commits already pushed"
 fi
 
 STEP2_END=$(date +%s)
 STEP2_DURATION=$((STEP2_END - STEP2_START))
 print_success "Step 2 completed in ${STEP2_DURATION}s"
-
-# Step 3: Push single commit to GitHub
-print_info "Step 3: Pushing to GitHub (single commit)..."
-STEP3_START=$(date +%s)
-
-# Push to GitHub (force if we reset history, otherwise normal push)
-if git log --oneline -1 | grep -q "Auto-update.*CSV files"; then
- # We have CSV commits, check if we need to force push
- remote_commit_count=$(git log --oneline origin/main..HEAD --grep="Auto-update.*CSV files" 2> /dev/null | wc -l || echo "0")
-
- if [[ ${remote_commit_count} -gt 1 ]] || git log --oneline origin/main | grep -q "Auto-update.*CSV files"; then
-  # Force push to replace remote CSV commits with our single commit
-  if git push --force-with-lease origin main > /dev/null 2>&1; then
-   STEP3_END=$(date +%s)
-   STEP3_DURATION=$((STEP3_END - STEP3_START))
-   print_success "CSV files pushed to GitHub successfully in ${STEP3_DURATION}s (single commit, no history)"
-  else
-   print_error "Failed to push to GitHub"
-   exit 1
-  fi
- else
-  # Normal push (first time or no previous CSV commits on remote)
-  if git push origin main > /dev/null 2>&1; then
-   STEP3_END=$(date +%s)
-   STEP3_DURATION=$((STEP3_END - STEP3_START))
-   print_success "CSV files pushed to GitHub successfully in ${STEP3_DURATION}s"
-  else
-   print_error "Failed to push to GitHub"
-   exit 1
-  fi
- fi
-else
- print_warn "No CSV commit to push"
-fi
 
 rm -f "${COUNTRY_LIST}"
 
