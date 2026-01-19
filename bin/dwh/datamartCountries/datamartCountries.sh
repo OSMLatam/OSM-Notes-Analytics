@@ -663,10 +663,13 @@ function __processNotesCountriesParallel {
  __logi "Waiting for all worker threads to complete..."
  local total_failed=0
  for pid in "${pids[@]}"; do
+  set +e # Temporarily disable exit on error to capture wait exit code
   wait "${pid}"
   local thread_exit_code=$?
+  set -e # Re-enable exit on error
   if [[ ${thread_exit_code} -ne 0 ]]; then
    total_failed=$((total_failed + thread_exit_code))
+   __logw "Thread with PID ${pid} exited with code ${thread_exit_code}"
   fi
  done
 
@@ -675,10 +678,12 @@ function __processNotesCountriesParallel {
  local total_time=$((end_time - start_time))
 
  # Count total processed (check remaining queue)
- local remaining_countries
- remaining_countries=$(wc -l < "${work_queue_file}" 2> /dev/null || echo "0")
- remaining_countries=$(echo "${remaining_countries}" | tr -d '[:space:]') # Remove all whitespace including newlines
- remaining_countries=$((remaining_countries))                             # Ensure numeric
+ local remaining_countries=0
+ if [[ -f "${work_queue_file}" ]]; then
+  remaining_countries=$(wc -l < "${work_queue_file}" 2> /dev/null || echo "0")
+  remaining_countries=$(echo "${remaining_countries}" | tr -d '[:space:]') # Remove all whitespace including newlines
+  remaining_countries=$((remaining_countries))                             # Ensure numeric
+ fi
  local actually_processed=$((total_countries - remaining_countries))
 
  if [[ ${total_failed} -eq 0 ]]; then
