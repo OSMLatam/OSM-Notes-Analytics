@@ -214,6 +214,7 @@ declare -r POSTGRES_34_CREATE_FACTS_YEAR_LOAD="${SCRIPT_BASE_DIRECTORY}/sql/dwh/
 declare -r POSTGRES_35_EXECUTE_FACTS_YEAR_LOAD="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_35_initialFactsLoadExecute.sql"
 declare -r POSTGRES_35_EXECUTE_FACTS_YEAR_LOAD_SIMPLE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_35_initialFactsLoadExecute_Simple.sql"
 declare -r POSTGRES_35_EXECUTE_FACTS_YEAR_LOAD_PHASE2="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_35_initialFactsLoadExecute_Phase2.sql"
+declare -r POSTGRES_35B_UPDATE_CLOSED_DIMENSION_ID_DATE="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_35b_updateClosedDimensionIdDate.sql"
 declare -r POSTGRES_34_INITIAL_FACTS_LOAD_PARALLEL="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_34_initialFactsLoadCreate_Parallel.sql"
 # Drop initial facts load.
 declare -r POSTGRES_36_DROP_FACTS_YEAR_LOAD="${SCRIPT_BASE_DIRECTORY}/sql/dwh/Staging_36_initialFactsLoadDrop.sql"
@@ -1737,6 +1738,27 @@ function __initialFactsParallel {
  local phase2_duration=$((PHASE2_END_TIME - PHASE2_START_TIME))
  __logi "Phase 2: Update completed."
  __logi "⏱️  TIME: Phase 2 (Update recent_opened_dimension_id_date) took ${phase2_duration} seconds"
+
+ # Phase 2b: Update closed_dimension_id_date for opened facts
+ local PHASE2B_START_TIME
+ PHASE2B_START_TIME=$(date +%s)
+ __logi "Phase 2b: Updating closed_dimension_id_date for opened facts..."
+ set +e
+ __psql_with_appname -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 \
+  -f "${POSTGRES_35B_UPDATE_CLOSED_DIMENSION_ID_DATE}" 2>&1
+ local phase2b_exit_code=$?
+ set -e
+ if [[ ${phase2b_exit_code} -ne 0 ]]; then
+  __loge "ERROR: Phase 2b failed (exit code: ${phase2b_exit_code})"
+  __loge "This is a warning - ML training may not work, but ETL can continue"
+  # Don't fail ETL for this, just warn
+ else
+  local PHASE2B_END_TIME
+  PHASE2B_END_TIME=$(date +%s)
+  local phase2b_duration=$((PHASE2B_END_TIME - PHASE2B_START_TIME))
+  __logi "Phase 2b: Update completed."
+  __logi "⏱️  TIME: Phase 2b (Update closed_dimension_id_date) took ${phase2b_duration} seconds"
+ fi
 
  # Add constraints, indexes and triggers.
  local CONSTRAINTS_START_TIME
