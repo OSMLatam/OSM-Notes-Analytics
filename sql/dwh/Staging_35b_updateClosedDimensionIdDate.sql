@@ -19,25 +19,29 @@ CREATE INDEX IF NOT EXISTS facts_id_note_action_at_idx ON dwh.facts (id_note, ac
 -- Update closed_dimension_id_date for opened facts where note has been closed
 -- Strategy: For each opened fact, find the NEXT closed action that occurs AFTER it
 -- This correctly pairs each opened fact with its immediate close, not the most recent close
+-- Note: Cannot use LATERAL in UPDATE FROM, so we use a subquery with DISTINCT ON to find the next close
 UPDATE dwh.facts f_opened
 SET
   closed_dimension_id_date = closed_info.next_closed_date,
   closed_dimension_id_hour_of_week = closed_info.next_closed_hour,
   closed_dimension_id_user = closed_info.next_closed_user
-FROM LATERAL (
-  SELECT
+FROM (
+  SELECT DISTINCT ON (f_opened_inner.fact_id)
+    f_opened_inner.fact_id,
     f_closed.action_dimension_id_date as next_closed_date,
     f_closed.action_dimension_id_hour_of_week as next_closed_hour,
     f_closed.action_dimension_id_user as next_closed_user
-  FROM dwh.facts f_closed
-  WHERE f_closed.id_note = f_opened.id_note
+  FROM dwh.facts f_opened_inner
+  JOIN dwh.facts f_closed ON (
+    f_closed.id_note = f_opened_inner.id_note
     AND f_closed.action_comment = 'closed'
-    AND f_closed.action_at > f_opened.action_at
-  ORDER BY f_closed.action_at ASC
-  LIMIT 1
+    AND f_closed.action_at > f_opened_inner.action_at
+  )
+  WHERE f_opened_inner.action_comment = 'opened'
+    AND f_opened_inner.closed_dimension_id_date IS NULL
+  ORDER BY f_opened_inner.fact_id, f_closed.action_at ASC
 ) closed_info
-WHERE f_opened.action_comment = 'opened'
-  AND f_opened.closed_dimension_id_date IS NULL;
+WHERE f_opened.fact_id = closed_info.fact_id;
 
 -- Verify update
 -- Check that opened facts that have a subsequent close action have been updated
