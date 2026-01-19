@@ -240,8 +240,23 @@ commit_and_push_country() {
  # Ensure we're on main branch
  git checkout main 2> /dev/null || true
 
- # Pull latest changes
- git pull origin main 2> /dev/null || true
+ # Abort any ongoing merge to start clean
+ if [[ -f "${DATA_REPO_DIR}/.git/MERGE_HEAD" ]]; then
+  print_warn "Aborting ongoing merge to start clean..."
+  git merge --abort 2> /dev/null || true
+ fi
+
+ # Pull latest changes, handling conflicts gracefully
+ git fetch origin main 2> /dev/null || true
+ if ! git pull --no-edit origin main 2> /dev/null; then
+  # Pull failed due to conflicts, resolve by taking remote version for CSV files
+  # (we don't care about CSV conflicts for JSON export)
+  print_warn "Merge conflict detected, resolving (taking remote version for CSV files)..."
+  git checkout --theirs csv/notes-by-country/*.csv 2> /dev/null || true
+  git checkout --theirs csv/notes-by-country/README.md 2> /dev/null || true
+  git add csv/notes-by-country/*.csv csv/notes-by-country/README.md 2> /dev/null || true
+  git commit --no-edit 2> /dev/null || git merge --abort 2> /dev/null || true
+ fi
 
  # Add only this country file
  local country_file="data/countries/${country_id}.json"
@@ -285,7 +300,23 @@ remove_obsolete_countries() {
 
  cd "${DATA_REPO_DIR}"
  git checkout main 2> /dev/null || true
- git pull origin main 2> /dev/null || true
+
+ # Abort any ongoing merge to start clean
+ if [[ -f "${DATA_REPO_DIR}/.git/MERGE_HEAD" ]]; then
+  print_warn "Aborting ongoing merge to start clean..."
+  git merge --abort 2> /dev/null || true
+ fi
+
+ # Pull latest changes, handling conflicts gracefully
+ git fetch origin main 2> /dev/null || true
+ if ! git pull --no-edit origin main 2> /dev/null; then
+  # Pull failed due to conflicts, resolve by taking remote version for CSV files
+  print_warn "Merge conflict detected, resolving (taking remote version for CSV files)..."
+  git checkout --theirs csv/notes-by-country/*.csv 2> /dev/null || true
+  git checkout --theirs csv/notes-by-country/README.md 2> /dev/null || true
+  git add csv/notes-by-country/*.csv csv/notes-by-country/README.md 2> /dev/null || true
+  git commit --no-edit 2> /dev/null || git merge --abort 2> /dev/null || true
+ fi
 
  # Get list of country IDs from database
  local db_countries_file
@@ -302,14 +333,17 @@ ORDER BY country_id;
  github_countries_file=$(mktemp "/tmp/github_countries_XXXXXX.txt")
  if [[ -d "${DATA_REPO_DIR}/data/countries" ]]; then
   find "${DATA_REPO_DIR}/data/countries" -name "*.json" -type f \
-   | sed 's|.*/||' | sed 's|\.json$||' | sort > "${github_countries_file}"
+   | sed 's|.*/||' | sed 's|\.json$||' | sort -n > "${github_countries_file}"
  else
   touch "${github_countries_file}"
  fi
 
+ # Ensure both files are sorted numerically for comm (country_id is numeric)
+ sort -n -o "${db_countries_file}" "${db_countries_file}" 2> /dev/null || true
+
  # Find countries in GitHub that are not in database
  local obsolete_countries
- obsolete_countries=$(comm -23 "${github_countries_file}" "${db_countries_file}")
+ obsolete_countries=$(comm -23 "${github_countries_file}" "${db_countries_file}" 2> /dev/null || echo "")
 
  rm -f "${db_countries_file}" "${github_countries_file}"
 
@@ -464,7 +498,24 @@ update_country_index() {
  # Commit and push index
  cd "${DATA_REPO_DIR}"
  git checkout main 2> /dev/null || true
- git pull origin main 2> /dev/null || true
+
+ # Abort any ongoing merge to start clean
+ if [[ -f "${DATA_REPO_DIR}/.git/MERGE_HEAD" ]]; then
+  print_warn "Aborting ongoing merge to start clean..."
+  git merge --abort 2> /dev/null || true
+ fi
+
+ # Pull latest changes, handling conflicts gracefully
+ git fetch origin main 2> /dev/null || true
+ if ! git pull --no-edit origin main 2> /dev/null; then
+  # Pull failed due to conflicts, resolve by taking remote version for CSV files
+  print_warn "Merge conflict detected, resolving (taking remote version for CSV files)..."
+  git checkout --theirs csv/notes-by-country/*.csv 2> /dev/null || true
+  git checkout --theirs csv/notes-by-country/README.md 2> /dev/null || true
+  git add csv/notes-by-country/*.csv csv/notes-by-country/README.md 2> /dev/null || true
+  git commit --no-edit 2> /dev/null || git merge --abort 2> /dev/null || true
+ fi
+
  git add "data/indexes/countries.json"
 
  if ! git diff --cached --quiet; then
@@ -530,7 +581,31 @@ print_info "Countries per batch: ${COUNTRIES_PER_BATCH}"
 # Ensure data repository is up to date
 cd "${DATA_REPO_DIR}"
 git checkout main 2> /dev/null || true
-git pull origin main 2> /dev/null || true
+
+# Abort any ongoing merge to start clean
+if [[ -f "${DATA_REPO_DIR}/.git/MERGE_HEAD" ]]; then
+ print_warn "Aborting ongoing merge to start clean..."
+ git merge --abort 2> /dev/null || true
+fi
+
+# Push any pending commits first
+git fetch origin main 2> /dev/null || true
+local_ahead=$(git rev-list --count origin/main..HEAD 2> /dev/null || echo "0")
+if [[ "${local_ahead}" -gt 0 ]]; then
+ print_info "Pushing ${local_ahead} pending commit(s) to origin..."
+ git push origin main 2> /dev/null || print_warn "Failed to push pending commits, continuing anyway..."
+fi
+
+# Pull latest changes, handling conflicts gracefully
+if ! git pull --no-edit origin main 2> /dev/null; then
+ # Pull failed due to conflicts, resolve by taking remote version for CSV files
+ # (we don't care about CSV conflicts for JSON export)
+ print_warn "Merge conflict detected, resolving (taking remote version for CSV files)..."
+ git checkout --theirs csv/notes-by-country/*.csv 2> /dev/null || true
+ git checkout --theirs csv/notes-by-country/README.md 2> /dev/null || true
+ git add csv/notes-by-country/*.csv csv/notes-by-country/README.md 2> /dev/null || true
+ git commit --no-edit 2> /dev/null || git merge --abort 2> /dev/null || true
+fi
 
 # Create countries directory if it doesn't exist
 mkdir -p "${DATA_REPO_DIR}/data/countries"
