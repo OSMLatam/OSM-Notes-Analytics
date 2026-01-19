@@ -1216,6 +1216,7 @@ cleanup_old_logs() {
 execute_processAPINotes_and_etl() {
  local EXECUTION_NUMBER="${1:-1}"
  local EXIT_CODE=0
+ local CONTINUE_DESPITE_FAILURE=0
  local EXECUTION_START_TIME
  EXECUTION_START_TIME=$(date +%s)
 
@@ -1269,14 +1270,12 @@ execute_processAPINotes_and_etl() {
    log_warn "This may indicate a regression or edge case that needs investigation"
    log_warn "Continuing with ETL execution to test incremental mode with no new notes..."
    # Set a flag to indicate we're continuing despite the failure
-   local CONTINUE_DESPITE_FAILURE=1
+   CONTINUE_DESPITE_FAILURE=1
    # Mark that there was a partial failure (processAPINotes failed but ETL will run)
    EXIT_CODE=1
   else
    return 1
   fi
- else
-  local CONTINUE_DESPITE_FAILURE=0
  fi
  local PROCESS_END_TIME
  PROCESS_END_TIME=$(date +%s)
@@ -1364,7 +1363,7 @@ execute_processAPINotes_and_etl() {
  else
   # For execution #4 (0 notes), if ETL succeeds, consider the execution successful
   # even if processAPINotes.sh failed, because the goal is to test ETL with no new notes
-  if [[ ${EXECUTION_NUMBER} -eq 4 ]] && [[ ${CONTINUE_DESPITE_FAILURE:-0} -eq 1 ]]; then
+  if [[ ${EXECUTION_NUMBER} -eq 4 ]] && [[ ${CONTINUE_DESPITE_FAILURE} -eq 1 ]]; then
    log_info "Execution #4: ETL completed successfully despite processAPINotes.sh failure"
    log_info "This is acceptable - the goal was to test ETL incremental mode with no new notes"
    EXIT_CODE=0
