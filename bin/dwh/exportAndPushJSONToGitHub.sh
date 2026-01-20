@@ -567,8 +567,8 @@ if [[ ! -d "${DATA_REPO_DIR}" ]]; then
  print_error "Data repository not found at: ${DATA_REPO_DIR}"
  echo ""
  echo "Please create the repository first:"
- echo "1. Go to https://github.com/OSMLatam/OSM-Notes-Data"
- echo "2. Clone it: git clone https://github.com/OSMLatam/OSM-Notes-Data.git"
+ echo "1. Go to https://github.com/OSM-Notes/OSM-Notes-Data"
+ echo "2. Clone it: git clone https://github.com/OSM-Notes/OSM-Notes-Data.git"
  echo ""
  exit 1
 fi
@@ -726,4 +726,4 @@ if [[ ${failed} -gt 0 ]]; then
 fi
 
 print_info "Allow 1-2 minutes for GitHub Pages to update"
-print_info "Schemas available at: https://osmlatam.github.io/OSM-Notes-Data/schemas/"
+print_info "Schemas available at: https://osm-notes.github.io/OSM-Notes-Data/schemas/"

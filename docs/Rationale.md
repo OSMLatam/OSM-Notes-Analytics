@@ -14,7 +14,7 @@ As more mappers engage with notes and new contributors join the process, questio
 
 ### Limited Analytics Capabilities
 
-While the [OSM-Notes-Ingestion](https://github.com/OSMLatam/OSM-Notes-Ingestion) system successfully collects and stores note data, raw data alone is not sufficient for meaningful analysis. The base tables contain millions of records, making it difficult to:
+While the [OSM-Notes-Ingestion](https://github.com/OSM-Notes/OSM-Notes-Ingestion) system successfully collects and stores note data, raw data alone is not sufficient for meaningful analysis. The base tables contain millions of records, making it difficult to:
 
 - **Analyze user contributions**: Understand individual mapper performance and patterns
 - **Compare communities**: See how different countries/regions handle notes
@@ -249,7 +249,7 @@ The OSM-Notes-Analytics project is part of a three-project ecosystem, all at the
 ### Project Ecosystem Structure
 
 ```
-OSMLatam/
+OSM-Notes/
 ├── OSM-Notes-Ingestion/     # Data ingestion from OSM API/Planet
 ├── OSM-Notes-Analytics/     # data warehouse & ETL (this repository)
 ├── OSM-Notes-Viewer/        # Web frontend visualization
@@ -274,7 +274,7 @@ OSMLatam/
 ### OSM-Notes-Common (Shared Library)
 
 - **Purpose**: Shared Bash libraries and utilities
-- **Repository**: [OSM-Notes-Common](https://github.com/OSMLatam/OSM-Notes-Common)
+- **Repository**: [OSM-Notes-Common](https://github.com/OSM-Notes/OSM-Notes-Common)
 - **Relationship**: All three projects use common libraries via Git submodule
 - **Dependency**: Shared via Git submodule (located at `lib/osm-common/` in each project)
 - **Used by**: Ingestion, Analytics, and potentially Viewer (for any server-side scripts)
@@ -310,9 +310,9 @@ By building on the solid foundation of the ingestion system and using proven dat
 
 ## References
 
-- [OSM-Notes-Ingestion](https://github.com/OSMLatam/OSM-Notes-Ingestion) - Sister project (upstream)
-- [OSM-Notes-Viewer](https://github.com/OSMLatam/OSM-Notes-Viewer) - Sister project (downstream)
-- [OSM-Notes-Common](https://github.com/OSMLatam/OSM-Notes-Common) - Shared library (Git submodule)
+- [OSM-Notes-Ingestion](https://github.com/OSM-Notes/OSM-Notes-Ingestion) - Sister project (upstream)
+- [OSM-Notes-Viewer](https://github.com/OSM-Notes/OSM-Notes-Viewer) - Sister project (downstream)
+- [OSM-Notes-Common](https://github.com/OSM-Notes/OSM-Notes-Common) - Shared library (Git submodule)
 - [DWH Star Schema ERD](DWH_Star_Schema_ERD.md) - Data warehouse design
 - [ETL Enhanced Features](ETL_Enhanced_Features.md) - ETL capabilities
 - [Main README](../README.md) - Project overview

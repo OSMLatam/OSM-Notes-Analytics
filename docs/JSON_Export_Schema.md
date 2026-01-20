@@ -962,7 +962,7 @@ OSM-Notes-Data/schemas/
 ```
 
 **Available via GitHub Pages:**
-- `https://osmlatam.github.io/OSM-Notes-Data/schemas/`
+- `https://osm-notes.github.io/OSM-Notes-Data/schemas/`
 
 This is the recommended location for frontend applications as schemas are versioned together with the data.
 

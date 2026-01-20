@@ -332,7 +332,7 @@ sudo apt-get install shellcheck shfmt bats
 
 ```bash
 # Clone with submodules
-git clone --recurse-submodules https://github.com/OSMLatam/OSM-Notes-Analytics.git
+git clone --recurse-submodules https://github.com/OSM-Notes/OSM-Notes-Analytics.git
 cd OSM-Notes-Analytics
 
 # Or if already cloned, initialize submodules

@@ -656,9 +656,9 @@ set +x  # Disable debug output
 
 ## Integration with OSM-Notes-Common
 
-These libraries are maintained in the **[OSM-Notes-Common](https://github.com/OSMLatam/OSM-Notes-Common)** repository:
+These libraries are maintained in the **[OSM-Notes-Common](https://github.com/OSM-Notes/OSM-Notes-Common)** repository:
 
-- **Repository**: [OSM-Notes-Common](https://github.com/OSMLatam/OSM-Notes-Common)
+- **Repository**: [OSM-Notes-Common](https://github.com/OSM-Notes/OSM-Notes-Common)
 - **Location**: `lib/osm-common/` (Git submodule)
 - **Shared with**: OSM-Notes-Ingestion, OSM-Notes-Analytics (and potentially OSM-Notes-Viewer)
 - **Versioning**: Independent versioning
@@ -692,7 +692,7 @@ git submodule update --init --recursive
 
 ### Library Documentation
 
-- **[OSM-Notes-Common Repository](https://github.com/OSMLatam/OSM-Notes-Common)** - Source repository
+- **[OSM-Notes-Common Repository](https://github.com/OSM-Notes/OSM-Notes-Common)** - Source repository
 - **[lib/osm-common/README.md](osm-common/README.md)** - Detailed library documentation
 
 ### External References

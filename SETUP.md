@@ -5,7 +5,7 @@
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/OSMLatam/OSM-Notes-Analytics.git
+git clone https://github.com/OSM-Notes/OSM-Notes-Analytics.git
 cd OSM-Notes-Analytics
 ```
 
@@ -18,7 +18,7 @@ This project uses a Git submodule for shared libraries. You must initialize it:
 git submodule update --init --recursive
 
 # Or if you cloned with submodules already:
-# git clone --recurse-submodules https://github.com/OSMLatam/OSM-Notes-Analytics.git
+# git clone --recurse-submodules https://github.com/OSM-Notes/OSM-Notes-Analytics.git
 ```
 
 ### 3. Create configuration files

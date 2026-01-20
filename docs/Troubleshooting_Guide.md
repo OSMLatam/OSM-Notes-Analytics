@@ -141,7 +141,7 @@ ls -la etc/etl.properties
    psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM note_comments;"
    
    # If empty, run ingestion system first
-   # See: https://github.com/OSMLatam/OSM-Notes-Ingestion
+   # See: https://github.com/OSM-Notes/OSM-Notes-Ingestion
    ```
 
 2. **Create configuration files:**
@@ -780,7 +780,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM notes;"
 
 1. **Run ingestion system first:**
    ```bash
-   # See: https://github.com/OSMLatam/OSM-Notes-Ingestion
+   # See: https://github.com/OSM-Notes/OSM-Notes-Ingestion
    # Follow ingestion setup instructions
    ```
 

@@ -1,7 +1,7 @@
 # OSM-Notes-Analytics
 
-![Tests](https://github.com/OSMLatam/OSM-Notes-Analytics/workflows/Tests/badge.svg)
-![Quality Checks](https://github.com/OSMLatam/OSM-Notes-Analytics/workflows/Quality%20Checks/badge.svg)
+![Tests](https://github.com/OSM-Notes/OSM-Notes-Analytics/workflows/Tests/badge.svg)
+![Quality Checks](https://github.com/OSM-Notes/OSM-Notes-Analytics/workflows/Quality%20Checks/badge.svg)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-12%2B-blue)](https://www.postgresql.org/)
 [![Bash](https://img.shields.io/badge/Bash-4.0%2B-orange)](https://www.gnu.org/software/bash/)
 
@@ -117,7 +117,7 @@ For complete navigation by role, see [docs/README.md](docs/README.md#recommended
 - **PostgreSQL** 12 or higher
 - **Bash** 4.0 or higher
 - **OSM Notes Ingestion Database**: This analytics system reads from the base notes tables populated
-  by the [OSM-Notes-Ingestion](https://github.com/OSMLatam/OSM-Notes-Ingestion) ingestion system
+  by the [OSM-Notes-Ingestion](https://github.com/OSM-Notes/OSM-Notes-Ingestion) ingestion system
 
 ## Database Architecture
 
@@ -177,7 +177,7 @@ Before starting, ensure you have:
 ### Step 1: Clone Repository
 
 ```bash
-git clone https://github.com/OSMLatam/OSM-Notes-Analytics.git
+git clone https://github.com/OSM-Notes/OSM-Notes-Analytics.git
 cd OSM-Notes-Analytics
 ```
 
@@ -257,7 +257,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM note_comments_text;"
 (1 row)
 ```
 
-Each query should return a number > 0. If any table is empty or doesn't exist, you need to run the [OSM-Notes-Ingestion](https://github.com/OSMLatam/OSM-Notes-Ingestion) system first.
+Each query should return a number > 0. If any table is empty or doesn't exist, you need to run the [OSM-Notes-Ingestion](https://github.com/OSM-Notes/OSM-Notes-Ingestion) system first.
 
 **Troubleshooting:**
 - **"relation does not exist"**: Base tables not created. Run OSM-Notes-Ingestion first.
@@ -629,7 +629,7 @@ If you encounter issues during setup, here are quick solutions:
 - **Solution**: Run `./bin/dwh/ETL.sh` first
 
 **Problem: "Base tables do not exist"**
-- **Solution**: Run [OSM-Notes-Ingestion](https://github.com/OSMLatam/OSM-Notes-Ingestion) first to populate base tables
+- **Solution**: Run [OSM-Notes-Ingestion](https://github.com/OSM-Notes/OSM-Notes-Ingestion) first to populate base tables
 
 **Problem: "Cannot connect to database"**
 - **Solution**: Check `etc/properties.sh` configuration and PostgreSQL service status
@@ -1020,7 +1020,7 @@ WHERE c.dimension_country_id IS NULL;"
 
 This analytics system depends on the **OSM-Notes-Ingestion** ingestion system:
 
-1. **Ingestion** ([OSM-Notes-Ingestion](https://github.com/OSMLatam/OSM-Notes-Ingestion))
+1. **Ingestion** ([OSM-Notes-Ingestion](https://github.com/OSM-Notes/OSM-Notes-Ingestion))
    - Downloads notes from OSM Planet and API
    - Populates base tables: `notes`, `note_comments`, `note_comments_text`
    - Manages WMS layer publication
@@ -1111,7 +1111,7 @@ This analytics project is part of a larger ecosystem for OSM Notes analysis:
 The OSM Notes ecosystem consists of three sister projects at the same organizational level:
 
 ```
-OSMLatam/
+OSM-Notes/
 ├── OSM-Notes-Ingestion/     # Data ingestion from OSM API/Planet
 ├── OSM-Notes-Analytics/     # data warehouse & ETL (this repository)
 ├── OSM-Notes-Viewer/        # Web frontend visualization (web application)
@@ -1159,20 +1159,20 @@ OSMLatam/
 
 ### Related Projects
 
-- **[OSM-Notes-Ingestion](https://github.com/OSMLatam/OSM-Notes-Ingestion)**: 
+- **[OSM-Notes-Ingestion](https://github.com/OSM-Notes/OSM-Notes-Ingestion)**: 
   - Downloads notes from OSM Planet and API
   - Populates base tables: `notes`, `note_comments`, `users`, `countries`
   - Publishes WMS layer for mapping applications
   - **Deploy this FIRST** - analytics needs base data
 
-- **[OSM-Notes-Viewer](https://github.com/OSMLatam/OSM-Notes-Viewer)** (sister project):
+- **[OSM-Notes-Viewer](https://github.com/OSM-Notes/OSM-Notes-Viewer)** (sister project):
   - Web application (web page) for visualizing analytics
   - Interactive dashboards and visualizations
   - User and country profiles
   - Reads JSON exports from this analytics system
   - **Sister project** at the same organizational level as Ingestion and Analytics
 
-- **[OSM-Notes-Common](https://github.com/OSMLatam/OSM-Notes-Common)** (shared library):
+- **[OSM-Notes-Common](https://github.com/OSM-Notes/OSM-Notes-Common)** (shared library):
   - Common Bash libraries and utilities (Git submodule)
   - Used by Ingestion and Analytics projects
   - Located at `lib/osm-common/` in each project

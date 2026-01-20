@@ -389,7 +389,7 @@ psql -d $DBNAME -c "REINDEX SCHEMA dwh"
 
 1. Check logs: `/tmp/ETL_*/ETL.log`
 2. Review documentation: `docs/`
-3. Check GitHub Issues: [https://github.com/OSMLatam/OSM-Notes-Analytics/issues](https://github.com/OSMLatam/OSM-Notes-Analytics/issues)
+3. Check GitHub Issues: [https://github.com/OSM-Notes/OSM-Notes-Analytics/issues](https://github.com/OSM-Notes/OSM-Notes-Analytics/issues)
 
 ---
 

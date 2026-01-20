@@ -29,7 +29,7 @@ OSM-Notes-Analytics is a data warehouse and analytics system for OpenStreetMap n
 - **Exports** data to JSON for web visualization
 - **Provides** comprehensive analytics with 70+ metrics per user/country
 
-> **Note:** Base data ingestion is handled by the [OSM-Notes-Ingestion](https://github.com/OSMLatam/OSM-Notes-Ingestion) system. This analytics system reads from those base tables.
+> **Note:** Base data ingestion is handled by the [OSM-Notes-Ingestion](https://github.com/OSM-Notes/OSM-Notes-Ingestion) system. This analytics system reads from those base tables.
 
 ### Key Design Principles
 
@@ -623,9 +623,9 @@ Follow the naming pattern: `<Component>_<Phase><Step>_<Description>.sql`
 
 ### Library Organization
 
-The project uses shared libraries from [OSM-Notes-Common](https://github.com/OSMLatam/OSM-Notes-Common) (Git submodule located at `lib/osm-common/`) to eliminate code duplication and improve maintainability:
+The project uses shared libraries from [OSM-Notes-Common](https://github.com/OSM-Notes/OSM-Notes-Common) (Git submodule located at `lib/osm-common/`) to eliminate code duplication and improve maintainability:
 
-**Repository**: [OSM-Notes-Common](https://github.com/OSMLatam/OSM-Notes-Common)  
+**Repository**: [OSM-Notes-Common](https://github.com/OSM-Notes/OSM-Notes-Common)  
 **Location**: `lib/osm-common/` (Git submodule)  
 **Used by**: OSM-Notes-Ingestion, OSM-Notes-Analytics (and potentially OSM-Notes-Viewer)
 
@@ -682,10 +682,10 @@ source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/errorHandlingFunctions.sh"
 source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/bash_logger.sh"
 ```
 
-**Note**: The `lib/osm-common/` directory is a Git submodule pointing to the [OSM-Notes-Common](https://github.com/OSMLatam/OSM-Notes-Common) repository. Always initialize submodules when cloning:
+**Note**: The `lib/osm-common/` directory is a Git submodule pointing to the [OSM-Notes-Common](https://github.com/OSM-Notes/OSM-Notes-Common) repository. Always initialize submodules when cloning:
 
 ```bash
-git clone --recurse-submodules https://github.com/OSMLatam/OSM-Notes-Analytics.git
+git clone --recurse-submodules https://github.com/OSM-Notes/OSM-Notes-Analytics.git
 # Or after cloning:
 git submodule update --init --recursive
 ```

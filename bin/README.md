@@ -659,7 +659,7 @@ psql -d osm_notes -c "SELECT COUNT(*) FROM users;"
 psql -d osm_notes -c "SELECT COUNT(*) FROM countries;"
 
 # If tables are empty or don't exist, run OSM-Notes-Ingestion first
-# See: https://github.com/OSMLatam/OSM-Notes-Ingestion
+# See: https://github.com/OSM-Notes/OSM-Notes-Ingestion
 ```
 
 ### "Schema 'dwh' does not exist"
@@ -871,9 +871,9 @@ psql -d osm_notes -c "SELECT country_name_en FROM dwh.datamartcountries WHERE co
 
 ### Related Projects
 
-- **[OSM-Notes-Ingestion](https://github.com/OSMLatam/OSM-Notes-Ingestion)** - Data ingestion system (upstream)
-- **[OSM-Notes-Viewer](https://github.com/OSMLatam/OSM-Notes-Viewer)** - Web application (sister project)
-- **[OSM-Notes-Common](https://github.com/OSMLatam/OSM-Notes-Common)** - Shared libraries (Git submodule)
+- **[OSM-Notes-Ingestion](https://github.com/OSM-Notes/OSM-Notes-Ingestion)** - Data ingestion system (upstream)
+- **[OSM-Notes-Viewer](https://github.com/OSM-Notes/OSM-Notes-Viewer)** - Web application (sister project)
+- **[OSM-Notes-Common](https://github.com/OSM-Notes/OSM-Notes-Common)** - Shared libraries (Git submodule)
 
 ## References
 
@@ -889,8 +889,8 @@ psql -d osm_notes -c "SELECT country_name_en FROM dwh.datamartcountries WHERE co
 
 ### Related Projects
 
-- **[OSM-Notes-Ingestion](https://github.com/OSMLatam/OSM-Notes-Ingestion)** - Data ingestion system (upstream)
-- **[OSM-Notes-Viewer](https://github.com/OSMLatam/OSM-Notes-Viewer)** - Web application (sister project)
+- **[OSM-Notes-Ingestion](https://github.com/OSM-Notes/OSM-Notes-Ingestion)** - Data ingestion system (upstream)
+- **[OSM-Notes-Viewer](https://github.com/OSM-Notes/OSM-Notes-Viewer)** - Web application (sister project)
 
 ## Support
 

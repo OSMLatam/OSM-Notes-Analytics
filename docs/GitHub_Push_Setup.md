@@ -45,7 +45,7 @@ Then:
 
 ```bash
 ssh -T git@github.com
-# Should see: "Hi OSMLatam! You've successfully authenticated..."
+# Should see: "Hi OSM-Notes! You've successfully authenticated..."
 ```
 
 4. **Configure git to use SSH**:
@@ -57,7 +57,7 @@ cd ~/github/OSM-Notes-Data
 git remote -v
 
 # If using HTTPS, switch to SSH
-git remote set-url origin git@github.com:OSMLatam/OSM-Notes-Data.git
+git remote set-url origin git@github.com:OSM-Notes/OSM-Notes-Data.git
 
 # Verify
 git remote -v
@@ -117,7 +117,7 @@ git push origin main
 
 ```bash
 # Set remote URL with token embedded
-git remote set-url origin https://YOUR_TOKEN@github.com/OSMLatam/OSM-Notes-Data.git
+git remote set-url origin https://YOUR_TOKEN@github.com/OSM-Notes/OSM-Notes-Data.git
 ```
 
 **Security Note**: This method stores credentials in plain text. Use with caution.
@@ -163,7 +163,7 @@ chmod 600 ~/.ssh/deploy_key_osm_notes_data
 
 ```bash
 cd ~/github/OSM-Notes-Data
-git remote set-url origin git@github-osm-notes-data:OSMLatam/OSM-Notes-Data.git
+git remote set-url origin git@github-osm-notes-data:OSM-Notes/OSM-Notes-Data.git
 ```
 
 5. **Test**:

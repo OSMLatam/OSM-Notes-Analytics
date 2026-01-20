@@ -1,6 +1,6 @@
 -- Checks if base ingestion tables exist.
 -- These tables should be created and populated by OSM-Notes-Ingestion system.
--- Reference: https://github.com/OSMLatam/OSM-Notes-Ingestion
+-- Reference: https://github.com/OSM-Notes/OSM-Notes-Ingestion
 --
 -- Author: Andres Gomez (AngocA)
 -- Version: 2025-10-14
@@ -75,7 +75,7 @@ BEGIN
  IF (missing_tables <> '') THEN
   -- Remove trailing comma and space
   missing_tables := RTRIM(missing_tables, ', ');
-  RAISE EXCEPTION 'Base ingestion tables are missing: %. Please run OSM-Notes-Ingestion system first: https://github.com/OSMLatam/OSM-Notes-Ingestion', missing_tables;
+  RAISE EXCEPTION 'Base ingestion tables are missing: %. Please run OSM-Notes-Ingestion system first: https://github.com/OSM-Notes/OSM-Notes-Ingestion', missing_tables;
  END IF;
 
  -- Verify that tables have data

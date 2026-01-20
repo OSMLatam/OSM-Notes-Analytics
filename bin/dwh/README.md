@@ -143,7 +143,7 @@ output/json/
 
 **Note:** When using `exportAndPushJSONToGitHub.sh`, JSON schemas are also copied to
 `OSM-Notes-Data/schemas/` for frontend consumption. Schemas are available at:
-- GitHub Pages: `https://osmlatam.github.io/OSM-Notes-Data/schemas/`
+- GitHub Pages: `https://osm-notes.github.io/OSM-Notes-Data/schemas/`
 - Local: `OSM-Notes-Data/schemas/` (when repository is cloned)
 
 ### CSV Export for AI Context

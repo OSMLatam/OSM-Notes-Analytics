@@ -13,7 +13,7 @@ JSON Schema files define the structure of exported data files. These schemas are
 **For frontend/consumer applications, schemas are available at:**
 
 ```
-https://osmlatam.github.io/OSM-Notes-Data/schemas/
+https://osm-notes.github.io/OSM-Notes-Data/schemas/
 ```
 
 **Local path (when cloned):**
@@ -43,7 +43,7 @@ OSM-Notes-Data/schemas/
 OSM-Notes-Analytics/lib/osm-common/schemas/
 ```
 
-This is a Git submodule pointing to [OSM-Notes-Common](https://github.com/OSMLatam/OSM-Notes-Common).
+This is a Git submodule pointing to [OSM-Notes-Common](https://github.com/OSM-Notes/OSM-Notes-Common).
 
 **Note:** The export script (`exportAndPushJSONToGitHub.sh`) automatically copies schemas from this location to the data repository during each export.
 
@@ -65,7 +65,7 @@ This is a Git submodule pointing to [OSM-Notes-Common](https://github.com/OSMLat
 ```javascript
 // Load user profile schema
 async function loadUserProfileSchema() {
-  const response = await fetch('https://osmlatam.github.io/OSM-Notes-Data/schemas/user-profile.schema.json');
+  const response = await fetch('https://osm-notes.github.io/OSM-Notes-Data/schemas/user-profile.schema.json');
   const schema = await response.json();
   return schema;
 }
@@ -107,7 +107,7 @@ async function getAvailableMetrics(type = 'user') {
     ? 'user-profile.schema.json' 
     : 'country-profile.schema.json';
   
-  const response = await fetch(`https://osmlatam.github.io/OSM-Notes-Data/schemas/${schemaName}`);
+  const response = await fetch(`https://osm-notes.github.io/OSM-Notes-Data/schemas/${schemaName}`);
   const schema = await response.json();
   
   // Extract property names (metrics)
@@ -155,7 +155,7 @@ async function createTypeSafeAccessor() {
 
 ```javascript
 async function checkSchemaVersion() {
-  const response = await fetch('https://osmlatam.github.io/OSM-Notes-Data/data/metadata.json');
+  const response = await fetch('https://osm-notes.github.io/OSM-Notes-Data/data/metadata.json');
   const metadata = await response.json();
   
   console.log('Schema version:', metadata.schema_version);
@@ -236,6 +236,6 @@ For questions about schemas:
 1. Check this documentation
 2. Review schema files in `OSM-Notes-Data/schemas/`
 3. Check `metadata.json` for version information
-4. Create an issue in [OSM-Notes-Analytics](https://github.com/OSMLatam/OSM-Notes-Analytics/issues)
+4. Create an issue in [OSM-Notes-Analytics](https://github.com/OSM-Notes/OSM-Notes-Analytics/issues)
 
 
