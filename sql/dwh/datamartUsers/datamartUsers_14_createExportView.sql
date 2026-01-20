@@ -27,10 +27,10 @@ SELECT
   first_commented_note_id,
   first_closed_note_id,
   first_reopened_note_id,
-  lastest_open_note_id,
-  lastest_commented_note_id,
-  lastest_closed_note_id,
-  lastest_reopened_note_id,
+  latest_open_note_id,
+  latest_commented_note_id,
+  latest_closed_note_id,
+  latest_reopened_note_id,
   
   -- Activity tracking
   last_year_activity,

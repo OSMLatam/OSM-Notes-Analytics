@@ -452,10 +452,10 @@ AS $proc$
   m_id_contributor_type SMALLINT;
   m_todays_activity INTEGER;
   m_last_year_activity CHAR(371);
-  m_lastest_open_note_id INTEGER;
-  m_lastest_commented_note_id INTEGER;
-  m_lastest_closed_note_id INTEGER;
-  m_lastest_reopened_note_id INTEGER;
+  m_latest_open_note_id INTEGER;
+  m_latest_commented_note_id INTEGER;
+  m_latest_closed_note_id INTEGER;
+  m_latest_reopened_note_id INTEGER;
   m_dates_most_open JSON;
   m_dates_most_closed JSON;
   m_hashtags JSON;
@@ -575,28 +575,28 @@ AS $proc$
     dwh.get_score_user_activity(m_todays_activity));
   --RAISE NOTICE 'Activity array %.', m_last_year_activity;
 
-  -- lastest_open_note_id
+  -- latest_open_note_id
   SELECT /* Notes-datamartUsers */ MAX(id_note)
   FROM dwh.facts f
-   INTO m_lastest_open_note_id
+   INTO m_latest_open_note_id
   WHERE f.opened_dimension_id_user = m_dimension_user_id;
 
-  -- lastest_commented_note_id
+  -- latest_commented_note_id
   SELECT /* Notes-datamartUsers */ MAX(id_note)
-   INTO m_lastest_commented_note_id
+   INTO m_latest_commented_note_id
   FROM dwh.facts f
    WHERE f.action_dimension_id_user = m_dimension_user_id
     AND f.action_comment = 'commented';
 
-  -- lastest_closed_note_id
+  -- latest_closed_note_id
   SELECT /* Notes-datamartUsers */ MAX(id_note)
-   INTO m_lastest_closed_note_id
+   INTO m_latest_closed_note_id
   FROM dwh.facts f
   WHERE f.closed_dimension_id_user = m_dimension_user_id;
 
-  -- lastest_reopened_note_id
+  -- latest_reopened_note_id
   SELECT /* Notes-datamartUsers */ MAX(id_note)
-   INTO m_lastest_reopened_note_id
+   INTO m_latest_reopened_note_id
   FROM dwh.facts f
   WHERE f.action_dimension_id_user = m_dimension_user_id
    AND f.action_comment = 'reopened';
@@ -1675,10 +1675,10 @@ AS $proc$
   UPDATE dwh.datamartUsers
   SET id_contributor_type = m_id_contributor_type,
    last_year_activity = m_last_year_activity,
-   lastest_open_note_id = m_lastest_open_note_id,
-   lastest_commented_note_id = m_lastest_commented_note_id,
-   lastest_closed_note_id = m_lastest_closed_note_id,
-   lastest_reopened_note_id = m_lastest_reopened_note_id,
+   latest_open_note_id = m_latest_open_note_id,
+   latest_commented_note_id = m_latest_commented_note_id,
+   latest_closed_note_id = m_latest_closed_note_id,
+   latest_reopened_note_id = m_latest_reopened_note_id,
    dates_most_open = m_dates_most_open,
    dates_most_closed = m_dates_most_closed,
    hashtags = m_hashtags,

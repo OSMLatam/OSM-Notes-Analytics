@@ -22,10 +22,10 @@ CREATE TABLE IF NOT EXISTS dwh.datamartCountries (
 
  -- Dynamic values
  last_year_activity CHAR(371), -- Last year's actions. GitHub tile style.
- lastest_open_note_id INTEGER, -- Newest.
- lastest_commented_note_id INTEGER,
- lastest_closed_note_id INTEGER,
- lastest_reopened_note_id INTEGER,
+ latest_open_note_id INTEGER, -- Newest.
+ latest_commented_note_id INTEGER,
+ latest_closed_note_id INTEGER,
+ latest_reopened_note_id INTEGER,
  dates_most_open JSON, -- Dates when most notes were opened.
  dates_most_closed JSON, -- Dates when most notes were closed
  hashtags JSON, -- List of used hashtag.
@@ -130,13 +130,13 @@ COMMENT ON COLUMN dwh.datamartCountries.first_reopened_note_id IS
   'First reopened note';
 COMMENT ON COLUMN dwh.datamartCountries.last_year_activity IS
   'Last year''s actions. GitHub tile style.';
-COMMENT ON COLUMN dwh.datamartCountries.lastest_open_note_id IS
+COMMENT ON COLUMN dwh.datamartCountries.latest_open_note_id IS
   'Most recent opened note';
-COMMENT ON COLUMN dwh.datamartCountries.lastest_commented_note_id IS
+COMMENT ON COLUMN dwh.datamartCountries.latest_commented_note_id IS
   'Most recent commented note';
-COMMENT ON COLUMN dwh.datamartCountries.lastest_closed_note_id IS
+COMMENT ON COLUMN dwh.datamartCountries.latest_closed_note_id IS
   'Most recent closed note';
-COMMENT ON COLUMN dwh.datamartCountries.lastest_reopened_note_id IS
+COMMENT ON COLUMN dwh.datamartCountries.latest_reopened_note_id IS
   'Most recent reopened note';
 COMMENT ON COLUMN dwh.datamartCountries.dates_most_open IS
   'The dates on which the most notes were openen on the country';

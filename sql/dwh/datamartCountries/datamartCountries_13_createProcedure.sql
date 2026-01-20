@@ -371,10 +371,10 @@ AS $proc$
   qty INTEGER;
   m_todays_activity INTEGER;
   m_last_year_activity CHAR(371);
-  m_lastest_open_note_id INTEGER;
-  m_lastest_commented_note_id INTEGER;
-  m_lastest_closed_note_id INTEGER;
-  m_lastest_reopened_note_id INTEGER;
+  m_latest_open_note_id INTEGER;
+  m_latest_commented_note_id INTEGER;
+  m_latest_closed_note_id INTEGER;
+  m_latest_reopened_note_id INTEGER;
   m_dates_most_open JSON;
   m_dates_most_closed JSON;
   m_hashtags JSON;
@@ -487,9 +487,9 @@ AS $proc$
   m_last_year_activity := dwh.refresh_today_activities(m_last_year_activity,
     dwh.get_score_country_activity(m_todays_activity));
 
-  -- lastest_open_note_id
+  -- latest_open_note_id
   SELECT /* Notes-datamartCountries */ id_note
-   INTO m_lastest_open_note_id
+   INTO m_latest_open_note_id
   FROM dwh.facts
   WHERE fact_id = (
    SELECT /* Notes-datamartCountries */ MAX(fact_id)
@@ -497,9 +497,9 @@ AS $proc$
    WHERE f.dimension_id_country = m_dimension_id_country
   );
 
-  -- lastest_commented_note_id
+  -- latest_commented_note_id
   SELECT /* Notes-datamartCountries */ id_note
-   INTO m_lastest_commented_note_id
+   INTO m_latest_commented_note_id
   FROM dwh.facts
   WHERE fact_id = (
    SELECT /* Notes-datamartCountries */ MAX(fact_id)
@@ -508,9 +508,9 @@ AS $proc$
     AND f.action_comment = 'commented'
   );
 
-  -- lastest_closed_note_id
+  -- latest_closed_note_id
   SELECT /* Notes-datamartCountries */ id_note
-   INTO m_lastest_closed_note_id
+   INTO m_latest_closed_note_id
   FROM dwh.facts
   WHERE fact_id = (
    SELECT /* Notes-datamartCountries */ MAX(fact_id)
@@ -518,9 +518,9 @@ AS $proc$
    WHERE f.dimension_id_country = m_dimension_id_country
   );
 
-  -- lastest_reopened_note_id
+  -- latest_reopened_note_id
   SELECT /* Notes-datamartCountries */ id_note
-   INTO m_lastest_reopened_note_id
+   INTO m_latest_reopened_note_id
   FROM dwh.facts
   WHERE fact_id = (
    SELECT /* Notes-datamartCountries */ MAX(fact_id)
@@ -1769,10 +1769,10 @@ AS $proc$
   UPDATE dwh.datamartCountries
   SET
    last_year_activity = m_last_year_activity,
-   lastest_open_note_id = m_lastest_open_note_id,
-   lastest_commented_note_id = m_lastest_commented_note_id,
-   lastest_closed_note_id = m_lastest_closed_note_id,
-   lastest_reopened_note_id = m_lastest_reopened_note_id,
+   latest_open_note_id = m_latest_open_note_id,
+   latest_commented_note_id = m_latest_commented_note_id,
+   latest_closed_note_id = m_latest_closed_note_id,
+   latest_reopened_note_id = m_latest_reopened_note_id,
    dates_most_open = m_dates_most_open,
    dates_most_closed = m_dates_most_closed,
    hashtags = m_hashtags,

@@ -18,10 +18,10 @@ CREATE TABLE IF NOT EXISTS dwh.datamartUsers (
  -- Dynamic values
  id_contributor_type SMALLINT, -- Note contributor type.
  last_year_activity CHAR(371),  -- Last year's actions. GitHub tile style.
- lastest_open_note_id INTEGER, -- Newest.
- lastest_commented_note_id INTEGER,
- lastest_closed_note_id INTEGER,
- lastest_reopened_note_id INTEGER,
+ latest_open_note_id INTEGER, -- Newest.
+ latest_commented_note_id INTEGER,
+ latest_closed_note_id INTEGER,
+ latest_reopened_note_id INTEGER,
  dates_most_open JSON, -- Day when the user opened the most notes.
  dates_most_closed JSON, -- Day when the user closed notes the most.
  hashtags JSON, -- List of used hashtag.
@@ -127,13 +127,13 @@ COMMENT ON COLUMN dwh.datamartUsers.id_contributor_type IS
   'Note contributor type';
 COMMENT ON COLUMN dwh.datamartUsers.last_year_activity IS
   'Last year''s actions. GitHub tile style.';
-COMMENT ON COLUMN dwh.datamartUsers.lastest_open_note_id IS
+COMMENT ON COLUMN dwh.datamartUsers.latest_open_note_id IS
   'Most recent opened note';
-COMMENT ON COLUMN dwh.datamartUsers.lastest_commented_note_id IS
+COMMENT ON COLUMN dwh.datamartUsers.latest_commented_note_id IS
   'Most recent commented note';
-COMMENT ON COLUMN dwh.datamartUsers.lastest_closed_note_id IS
+COMMENT ON COLUMN dwh.datamartUsers.latest_closed_note_id IS
   'Most recent closed note';
-COMMENT ON COLUMN dwh.datamartUsers.lastest_reopened_note_id IS
+COMMENT ON COLUMN dwh.datamartUsers.latest_reopened_note_id IS
   'Most recent reopened note';
 COMMENT ON COLUMN dwh.datamartUsers.dates_most_open IS
   'The dates on which the user opened the most notes';
