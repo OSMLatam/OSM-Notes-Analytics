@@ -10,8 +10,9 @@ Data Warehouse, ETL, and Analytics for OpenStreetMap Notes
 ## Overview
 
 This repository contains the analytics and data warehouse components for the OSM Notes profiling
-system. It provides ETL (Extract, Transform, Load) processes, a [star schema data warehouse](docs/DWH_Star_Schema_ERD.md), and
-datamarts for analyzing OSM notes data.
+system. It provides ETL (Extract, Transform, Load) processes, a
+[star schema data warehouse](docs/DWH_Star_Schema_ERD.md), and datamarts for analyzing OSM notes
+data.
 
 ## Recommended Reading Path
 
@@ -38,7 +39,8 @@ datamarts for analyzing OSM notes data.
    - Follow the Quick Start guide in this README
 
 5. **Troubleshooting** (10 min)
-   - Bookmark [docs/Troubleshooting_Guide.md](docs/Troubleshooting_Guide.md) - Common issues and solutions
+   - Bookmark [docs/Troubleshooting_Guide.md](docs/Troubleshooting_Guide.md) - Common issues and
+     solutions
 
 **Total time: ~2 hours** for a complete overview.
 
@@ -58,7 +60,8 @@ datamarts for analyzing OSM notes data.
    - [docs/CI_CD_Guide.md](docs/CI_CD_Guide.md) - CI/CD workflows (25 min)
 
 4. **Deep Dive** (as needed)
-   - [docs/DWH_Star_Schema_Data_Dictionary.md](docs/DWH_Star_Schema_Data_Dictionary.md) - Complete schema reference
+   - [docs/DWH_Star_Schema_Data_Dictionary.md](docs/DWH_Star_Schema_Data_Dictionary.md) - Complete
+     schema reference
    - [CONTRIBUTING.md](CONTRIBUTING.md) - Contribution guidelines
    - [docs/README.md](docs/README.md) - Complete documentation index
 
@@ -66,7 +69,8 @@ datamarts for analyzing OSM notes data.
 
 1. **Data Model** (1 hour)
    - [docs/DWH_Star_Schema_ERD.md](docs/DWH_Star_Schema_ERD.md) - Schema overview (30 min)
-   - [docs/DWH_Star_Schema_Data_Dictionary.md](docs/DWH_Star_Schema_Data_Dictionary.md) - Column definitions (30 min)
+   - [docs/DWH_Star_Schema_Data_Dictionary.md](docs/DWH_Star_Schema_Data_Dictionary.md) - Column
+     definitions (30 min)
 
 2. **Data Access** (30 min)
    - [bin/dwh/profile.sh](bin/dwh/profile.sh) - Profile generation
@@ -81,16 +85,19 @@ datamarts for analyzing OSM notes data.
 
 2. **Operations** (1 hour)
    - [docs/ETL_Enhanced_Features.md](docs/ETL_Enhanced_Features.md) - ETL operations (30 min)
-   - [docs/DWH_Maintenance_Guide.md](docs/DWH_Maintenance_Guide.md) - Maintenance procedures (30 min)
+   - [docs/DWH_Maintenance_Guide.md](docs/DWH_Maintenance_Guide.md) - Maintenance procedures (30
+     min)
 
 3. **Troubleshooting** (30 min)
    - [docs/Troubleshooting_Guide.md](docs/Troubleshooting_Guide.md) - Problem resolution
 
-For complete navigation by role, see [docs/README.md](docs/README.md#recommended-reading-paths-by-role).
+For complete navigation by role, see
+[docs/README.md](docs/README.md#recommended-reading-paths-by-role).
 
 ## Features
 
-- **Star Schema Data Warehouse**: Comprehensive dimensional model for notes analysis (see [DWH Star Schema ERD](docs/DWH_Star_Schema_ERD.md))
+- **Star Schema Data Warehouse**: Comprehensive dimensional model for notes analysis (see
+  [DWH Star Schema ERD](docs/DWH_Star_Schema_ERD.md))
 - **Enhanced ETL Process**: Robust ETL with recovery, validation, and monitoring
 - **Partitioned Facts Table**: Automatic partitioning by year (2013-2025+)
 - **Country Datamart**: Pre-computed analytics by country (77+ metrics)
@@ -137,7 +144,8 @@ Database: osm_notes
     └── datamart_*          # Datamart tables
 ```
 
-For complete schema documentation, see [DWH Star Schema ERD](docs/DWH_Star_Schema_ERD.md) and [Data Dictionary](docs/DWH_Star_Schema_Data_Dictionary.md).
+For complete schema documentation, see [DWH Star Schema ERD](docs/DWH_Star_Schema_ERD.md) and
+[Data Dictionary](docs/DWH_Star_Schema_Data_Dictionary.md).
 
 ## Quick Start
 
@@ -184,12 +192,14 @@ cd OSM-Notes-Analytics
 **What this does:** Downloads the analytics repository to your local machine.
 
 **Verify:** Check that the directory was created:
+
 ```bash
 ls -la OSM-Notes-Analytics/
 # Should show: bin/, docs/, sql/, etc/, lib/, etc.
 ```
 
 **Note:** If you need the shared libraries (OSM-Notes-Common submodule), initialize it:
+
 ```bash
 git submodule update --init --recursive
 ```
@@ -214,6 +224,7 @@ DB_USER="notes"             # Production PostgreSQL user
 ```
 
 **Verify configuration:**
+
 ```bash
 # Test database connection
 psql -d "${DBNAME:-notes_dwh}" -U "${DB_USER:-notes}" -c "SELECT version();"
@@ -221,11 +232,13 @@ psql -d "${DBNAME:-notes_dwh}" -U "${DB_USER:-notes}" -c "SELECT version();"
 ```
 
 **Expected output:**
+
 ```
 PostgreSQL 12.x or higher
 ```
 
 **Troubleshooting:**
+
 - If connection fails, check PostgreSQL is running: `sudo systemctl status postgresql`
 - Verify database exists: `psql -l | grep osm_notes`
 - Check user permissions: `psql -d osm_notes -c "SELECT current_user;"`
@@ -234,7 +247,8 @@ PostgreSQL 12.x or higher
 
 **What this does:** Ensures the base data from OSM-Notes-Ingestion exists before running ETL.
 
-**Why this matters:** The analytics system reads from base tables populated by the ingestion system. Without this data, ETL cannot run.
+**Why this matters:** The analytics system reads from base tables populated by the ingestion system.
+Without this data, ETL cannot run.
 
 Check that base tables exist and have data:
 
@@ -250,6 +264,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM note_comments_text;"
 ```
 
 **Expected output:**
+
 ```
  count
 -------
@@ -257,9 +272,11 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM note_comments_text;"
 (1 row)
 ```
 
-Each query should return a number > 0. If any table is empty or doesn't exist, you need to run the [OSM-Notes-Ingestion](https://github.com/OSM-Notes/OSM-Notes-Ingestion) system first.
+Each query should return a number > 0. If any table is empty or doesn't exist, you need to run the
+[OSM-Notes-Ingestion](https://github.com/OSM-Notes/OSM-Notes-Ingestion) system first.
 
 **Troubleshooting:**
+
 - **"relation does not exist"**: Base tables not created. Run OSM-Notes-Ingestion first.
 - **Count is 0**: Tables exist but empty. Run OSM-Notes-Ingestion to populate data.
 - **Connection error**: Check Step 2 configuration and PostgreSQL service.
@@ -268,23 +285,29 @@ Each query should return a number > 0. If any table is empty or doesn't exist, y
 
 ### Step 4: Run ETL Process
 
-**What this does:** Transforms base data into a [star schema data warehouse](docs/DWH_Star_Schema_ERD.md) with pre-computed analytics.
+**What this does:** Transforms base data into a
+[star schema data warehouse](docs/DWH_Star_Schema_ERD.md) with pre-computed analytics.
 
-**Why this matters:** The ETL process creates the dimensional model that enables fast analytical queries and generates the datamarts used for profiles and dashboards.
+**Why this matters:** The ETL process creates the dimensional model that enables fast analytical
+queries and generates the datamarts used for profiles and dashboards.
 
 The ETL creates the data warehouse (schema `dwh`) with:
-- Fact table (partitioned by year for optimal performance) - see [Data Dictionary](docs/DWH_Star_Schema_Data_Dictionary.md#table-dwhfacts)
+
+- Fact table (partitioned by year for optimal performance) - see
+  [Data Dictionary](docs/DWH_Star_Schema_Data_Dictionary.md#table-dwhfacts)
 - Dimension tables (users, countries, dates, etc.) - see [ERD](docs/DWH_Star_Schema_ERD.md)
 - All necessary transformations - see [ETL Enhanced Features](docs/ETL_Enhanced_Features.md)
 - **Automatically updates datamarts**
 
 **ETL Process** (auto-detects first execution vs incremental):
+
 ```bash
 cd bin/dwh
 ./ETL.sh
 ```
 
 **First execution output** (creates DWH and loads all historical data):
+
 ```
 [INFO] Preparing environment.
 [INFO] Entering auto-detect mode
@@ -302,6 +325,7 @@ cd bin/dwh
 ```
 
 **Subsequent executions output** (incremental updates only):
+
 ```
 [INFO] Preparing environment.
 [INFO] Entering auto-detect mode
@@ -313,11 +337,12 @@ cd bin/dwh
 [WARN] Ending process.
 ```
 
-**Note:** The same command works for both initial setup and regular updates.
-The script automatically detects if it's the first execution by checking if
-the `dwh.facts` table exists and has data.
+**Note:** The same command works for both initial setup and regular updates. The script
+automatically detects if it's the first execution by checking if the `dwh.facts` table exists and
+has data.
 
 **Time estimates:**
+
 - **Initial load**: ~25-30 minutes for typical production dataset (~5-6M facts)
   - Longest stage: Loading facts in parallel (12-15 minutes)
   - Other stages: Copy base tables (5-6 min), constraints/indexes (3-4 min), datamarts (45-60 min)
@@ -326,17 +351,21 @@ the `dwh.facts` table exists and has data.
   - **Total**: ~1-1.5 hours for complete ETL run
 - **Incremental update**: 5-15 minutes (normal) to 30-60 minutes (large updates)
   - Depends on volume of new data since last run
-  - Large updates (> 100K facts) may require `PSQL_STATEMENT_TIMEOUT=2h` (see [Environment Variables](bin/dwh/ENVIRONMENT_VARIABLES.md))
+  - Large updates (> 100K facts) may require `PSQL_STATEMENT_TIMEOUT=2h` (see
+    [Environment Variables](bin/dwh/ENVIRONMENT_VARIABLES.md))
 
 **Monitor progress:**
+
 ```bash
 # Follow ETL logs in real-time
 tail -40f $(ls -1rtd /tmp/ETL_* | tail -1)/ETL.log
 ```
 
 **What the ETL does automatically:**
+
 - Creates schema `dwh` with all tables (see [ERD](docs/DWH_Star_Schema_ERD.md))
-- Creates automatic partitions for facts table (2013-2025+) - see [Partitioning Strategy](docs/partitioning_strategy.md)
+- Creates automatic partitions for facts table (2013-2025+) - see
+  [Partitioning Strategy](docs/partitioning_strategy.md)
 - Populates dimension tables
 - Loads facts from note_comments - see [ETL Process Flow](docs/DWH_Star_Schema_ERD.md#etl-data-flow)
 - Creates indexes and constraints
@@ -346,9 +375,11 @@ tail -40f $(ls -1rtd /tmp/ETL_* | tail -1)/ETL.log
 - Updates experience levels for users
 - Creates note activity metrics (comment counts, reopenings)
 
-For detailed ETL process flow, see [ETL Enhanced Features](docs/ETL_Enhanced_Features.md) and [DWH Star Schema ERD](docs/DWH_Star_Schema_ERD.md).
+For detailed ETL process flow, see [ETL Enhanced Features](docs/ETL_Enhanced_Features.md) and
+[DWH Star Schema ERD](docs/DWH_Star_Schema_ERD.md).
 
 **Troubleshooting:**
+
 - **ETL fails immediately**: Check base tables exist (Step 3)
 - **"Out of memory"**: Reduce `ETL_MAX_PARALLEL_JOBS` in `etc/etl.properties`
 - **Takes too long**: Increase parallelism or check system resources
@@ -368,6 +399,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT schema_name FROM information_schema.sc
 ```
 
 **Expected output:**
+
 ```
  schema_name
 -------------
@@ -381,6 +413,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT tablename FROM pg_tables WHERE scheman
 ```
 
 **Expected output:**
+
 ```
         tablename
 ------------------------
@@ -403,6 +436,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM dwh.dimension_countries;
 ```
 
 **Expected output:**
+
 ```
   count
 ---------
@@ -411,6 +445,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM dwh.dimension_countries;
 ```
 
 **Troubleshooting:**
+
 - **Schema doesn't exist**: ETL didn't complete. Check logs and re-run ETL.
 - **Tables missing**: ETL failed partway through. Check error logs.
 - **Count is 0**: ETL ran but no data loaded. Check base tables have data (Step 3).
@@ -421,19 +456,22 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM dwh.dimension_countries;
 
 **What this does:** Creates pre-computed analytics tables for fast querying.
 
-**Why this matters:** Datamarts contain pre-aggregated metrics (77+ per user/country) that enable instant profile generation without expensive queries.
+**Why this matters:** Datamarts contain pre-aggregated metrics (77+ per user/country) that enable
+instant profile generation without expensive queries.
 
 **✅ Datamarts are automatically updated during ETL execution. No manual step needed!**
 
 The datamarts aggregate data for quick access and are automatically populated after ETL completes.
 
 **Verify datamarts were created automatically:**
+
 ```bash
 # Check datamart tables exist
 psql -d "${DBNAME:-osm_notes}" -c "SELECT tablename FROM pg_tables WHERE schemaname = 'dwh' AND tablename LIKE 'datamart%';"
 ```
 
 **Expected output:**
+
 ```
      tablename
 ------------------
@@ -444,6 +482,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT tablename FROM pg_tables WHERE scheman
 ```
 
 **Manual Update** (only if needed, or for incremental updates):
+
 ```bash
 # Update users datamart
 cd bin/dwh/datamartUsers
@@ -451,6 +490,7 @@ cd bin/dwh/datamartUsers
 ```
 
 **Expected output:**
+
 ```
 [INFO] Starting process.
 [INFO] Processing 500 users...
@@ -465,6 +505,7 @@ cd bin/dwh/datamartCountries
 ```
 
 **Expected output:**
+
 ```
 [INFO] Starting process.
 [INFO] Processing countries...
@@ -475,6 +516,7 @@ cd bin/dwh/datamartCountries
 **Note**: Datamarts process incrementally (only modified entities) for optimal performance.
 
 **Troubleshooting:**
+
 - **Datamart tables don't exist**: ETL didn't complete datamart update. Run manually.
 - **Count is 0**: Datamarts empty. Run datamart scripts manually.
 - **See [Troubleshooting Guide](docs/Troubleshooting_Guide.md#datamart-issues) for more solutions**
@@ -491,6 +533,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT tablename FROM pg_tables WHERE scheman
 ```
 
 **Expected output:**
+
 ```
      tablename
 ------------------
@@ -507,6 +550,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM dwh.datamartcountries;"
 ```
 
 **Expected output:**
+
 ```
  count
 -------
@@ -520,6 +564,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT user_id, username, history_whole_open,
 ```
 
 **Expected output:**
+
 ```
  user_id | username | history_whole_open | history_whole_closed
 ---------+----------+--------------------+---------------------
@@ -535,6 +580,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT country_id, country_name_en, history_w
 ```
 
 **Expected output:**
+
 ```
  country_id | country_name_en | history_whole_open | history_whole_closed
 ------------+------------------+--------------------+---------------------
@@ -545,15 +591,18 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT country_id, country_name_en, history_w
 ```
 
 **Troubleshooting:**
+
 - **Count is 0**: Datamarts not populated. Run datamart scripts (Step 6).
 - **Tables don't exist**: ETL didn't create datamarts. Check ETL logs.
 - **See [Troubleshooting Guide](docs/Troubleshooting_Guide.md#datamart-issues) for more solutions**
 
 ### Step 8: Export to JSON (Optional)
 
-**What this does:** Exports datamart data to JSON files for OSM-Notes-Viewer (sister project) consumption.
+**What this does:** Exports datamart data to JSON files for OSM-Notes-Viewer (sister project)
+consumption.
 
-**Why this matters:** The web viewer reads pre-computed JSON files instead of querying the database directly, enabling fast static hosting.
+**Why this matters:** The web viewer reads pre-computed JSON files instead of querying the database
+directly, enabling fast static hosting.
 
 Once datamarts are populated, export to JSON:
 
@@ -563,6 +612,7 @@ cd bin/dwh
 ```
 
 **Expected output:**
+
 ```
 [INFO] Starting export process...
 [INFO] Exporting users datamart...
@@ -576,6 +626,7 @@ cd bin/dwh
 ```
 
 **Verify export:**
+
 ```bash
 # Check output directory
 ls -lh ./output/json/
@@ -591,6 +642,7 @@ ls -lh ./output/json/indexes/
 ```
 
 **Expected structure:**
+
 ```
 output/json/
 ├── users/
@@ -608,39 +660,50 @@ output/json/
 ```
 
 **Export Features:**
+
 - **Atomic writes**: Files generated in temporary directory, validated, then moved atomically
 - **Schema validation**: Each JSON file validated against schemas before export
 - **Fail-safe**: On validation failure, keeps existing files and logs error
 - **No partial updates**: Either all files are valid and moved, or none
 
 **Troubleshooting:**
+
 - **Export is empty**: Check datamarts have data (Step 7)
 - **Validation fails**: Check schema files in `lib/osm-common/schemas/`
 - **Permission errors**: Check `./output/json/` directory is writable
 - **See [Troubleshooting Guide](docs/Troubleshooting_Guide.md#export-issues) for more solutions**
 
-See [JSON Export Documentation](bin/dwh/export_json_readme.md) and [Atomic Validation Export](docs/Atomic_Validation_Export.md) for complete details.
+See [JSON Export Documentation](bin/dwh/export_json_readme.md) and
+[Atomic Validation Export](docs/Atomic_Validation_Export.md) for complete details.
 
 ## Quick Troubleshooting
 
 If you encounter issues during setup, here are quick solutions:
 
 **Problem: "Schema 'dwh' does not exist"**
+
 - **Solution**: Run `./bin/dwh/ETL.sh` first
 
 **Problem: "Base tables do not exist"**
-- **Solution**: Run [OSM-Notes-Ingestion](https://github.com/OSM-Notes/OSM-Notes-Ingestion) first to populate base tables
+
+- **Solution**: Run [OSM-Notes-Ingestion](https://github.com/OSM-Notes/OSM-Notes-Ingestion) first to
+  populate base tables
 
 **Problem: "Cannot connect to database"**
+
 - **Solution**: Check `etc/properties.sh` configuration and PostgreSQL service status
 
 **Problem: "ETL takes too long"**
+
 - **Solution**: Increase `ETL_MAX_PARALLEL_JOBS` in `etc/etl.properties` or reduce `ETL_BATCH_SIZE`
 
 **Problem: "Datamart tables empty"**
-- **Solution**: Run datamart scripts manually: `./bin/dwh/datamartUsers/datamartUsers.sh` and `./bin/dwh/datamartCountries/datamartCountries.sh`
+
+- **Solution**: Run datamart scripts manually: `./bin/dwh/datamartUsers/datamartUsers.sh` and
+  `./bin/dwh/datamartCountries/datamartCountries.sh`
 
 **Problem: "JSON export fails validation"**
+
 - **Solution**: Check datamarts have data and schema files exist in `lib/osm-common/schemas/`
 
 For comprehensive troubleshooting, see [Troubleshooting Guide](docs/Troubleshooting_Guide.md).
@@ -721,6 +784,7 @@ Then schedule this wrapper:
 ```
 
 **Key features of JSON export:**
+
 - ✅ Atomic writes: Files are generated in temporary directory first
 - ✅ Schema validation: Each JSON file is validated before final export
 - ✅ Fail-safe: On validation failure, keeps existing files and exits with error
@@ -798,12 +862,13 @@ Creates the complete data warehouse from scratch, including all dimensions and f
 
 Processes only new data since the last ETL run. Use this for scheduled updates.
 
-
 ## Data Warehouse Schema
 
 ### Fact Table
 
-- **`dwh.facts`**: Central fact table containing note actions and metrics (see [Data Dictionary](docs/DWH_Star_Schema_Data_Dictionary.md#table-dwhfacts) for complete column definitions)
+- **`dwh.facts`**: Central fact table containing note actions and metrics (see
+  [Data Dictionary](docs/DWH_Star_Schema_Data_Dictionary.md#table-dwhfacts) for complete column
+  definitions)
   - **Partitioned by year** (action_at) for optimal performance
   - Automatic partition creation for current and future years
   - Each year stored in separate partition (e.g., `facts_2024`, `facts_2025`)
@@ -832,7 +897,6 @@ Processes only new data since the last ETL run. Use this for scheduled updates.
   - Content quality: comment length, URLs, mentions, engagement
   - Community health: active notes, backlog size, age distribution
   - Hashtag analysis: top hashtags, usage patterns
-  
 - **`datamart_users`**: Pre-computed user analytics (78+ metrics)
   - Historical metrics: notes opened/closed by user
   - Resolution metrics: avg/median days to resolution, resolution rate
@@ -931,6 +995,7 @@ The project includes a cleanup script for maintenance and troubleshooting:
 ```
 
 **When to use:**
+
 - **Development**: Clean temporary files regularly
 - **Testing**: Reset environment between test runs
 - **Troubleshooting**: Remove corrupted objects
@@ -951,6 +1016,7 @@ For detailed maintenance procedures, see [DWH Maintenance Guide](docs/DWH_Mainte
 #### "Table 'dwh.datamartusers' does not exist"
 
 **Solution**: Run the datamart scripts:
+
 - `bin/dwh/datamartUsers/datamartUsers.sh`
 - `bin/dwh/datamartCountries/datamartCountries.sh`
 
@@ -1010,6 +1076,7 @@ Check that:
 ### Data Integrity Issues
 
 Check for orphaned facts (example query):
+
 ```bash
 psql -d osm_notes -c "SELECT COUNT(*) FROM dwh.facts f
 LEFT JOIN dwh.dimension_countries c ON f.dimension_id_country = c.dimension_country_id
@@ -1088,19 +1155,24 @@ See [LICENSE](LICENSE) for license information.
 
 ## Data License
 
-**Important:** This repository contains only code and configuration files. All data processed by this system comes from **OpenStreetMap (OSM)** and is licensed under the **Open Database License (ODbL)**. The processed data (notes, analytics, datamarts, etc.) stored in the database is derived from OSM and must comply with OSM's licensing requirements.
+**Important:** This repository contains only code and configuration files. All data processed by
+this system comes from **OpenStreetMap (OSM)** and is licensed under the **Open Database License
+(ODbL)**. The processed data (notes, analytics, datamarts, etc.) stored in the database is derived
+from OSM and must comply with OSM's licensing requirements.
 
 - **OSM Data License:** [Open Database License (ODbL)](http://opendatacommons.org/licenses/odbl/)
 - **OSM Copyright:** [OpenStreetMap contributors](http://www.openstreetmap.org/copyright)
 - **OSM Attribution:** Required when using or distributing OSM data
 
-For more information about OSM licensing, see: [https://www.openstreetmap.org/copyright](https://www.openstreetmap.org/copyright)
+For more information about OSM licensing, see:
+[https://www.openstreetmap.org/copyright](https://www.openstreetmap.org/copyright)
 
 ## Acknowledgments
 
 - **Andres Gomez (@AngocA)**: Main developer
 - **Jose Luis Ceron Sarria**: Architecture design and infrastructure
-- **OpenStreetMap contributors**: For the valuable notes data and their contributions to the OSM project
+- **OpenStreetMap contributors**: For the valuable notes data and their contributions to the OSM
+  project
 
 ## Project Ecosystem
 
@@ -1118,7 +1190,8 @@ OSM-Notes/
 └── OSM-Notes-Common/        # Shared Bash libraries (Git submodule)
 ```
 
-**All three projects are independent repositories at the same level**, working together to provide a complete OSM Notes analysis solution.
+**All three projects are independent repositories at the same level**, working together to provide a
+complete OSM Notes analysis solution.
 
 ### How Projects Work Together
 
@@ -1159,7 +1232,7 @@ OSM-Notes/
 
 ### Related Projects
 
-- **[OSM-Notes-Ingestion](https://github.com/OSM-Notes/OSM-Notes-Ingestion)**: 
+- **[OSM-Notes-Ingestion](https://github.com/OSM-Notes/OSM-Notes-Ingestion)**:
   - Downloads notes from OSM Planet and API
   - Populates base tables: `notes`, `note_comments`, `users`, `countries`
   - Publishes WMS layer for mapping applications
@@ -1192,6 +1265,7 @@ OSM-Notes/
 The following major enhancements have been implemented:
 
 ### Datamart Enhancements
+
 - **21 new metrics** added to both `datamartCountries` and `datamartUsers`
 - **Resolution tracking**: Days to resolution, resolution rates
 - **Application analytics**: Mobile vs desktop usage, most popular apps
@@ -1200,12 +1274,14 @@ The following major enhancements have been implemented:
 - **88+ new automated tests** added to validate all new metrics
 
 ### Enhanced Dimensions
+
 - **Automation detection**: Identifies bot/automated notes vs human
 - **Experience levels**: Classifies users from newcomer to legendary
 - **Note activity metrics**: Tracks accumulated comments and reopenings
 - **Hashtag bridge table**: Supports unlimited hashtags per note
 
 ### Performance
+
 - **Partitioned facts table**: 10-50x faster date-based queries
 - **Specialized indexes**: Optimized for common query patterns
 - **Automated maintenance**: VACUUM and ANALYZE on partitions

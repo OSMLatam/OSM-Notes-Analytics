@@ -3,10 +3,12 @@
 ## Summary
 
 **Implemented strategy:**
+
 - **Initial load**: Copy base tables locally to avoid millions of cross-database queries
 - **Incremental execution**: Use Foreign Data Wrappers (FDW) to access new data
 
 **Benefits:**
+
 - ✅ Initial load without FDW overhead (local tables)
 - ✅ Incremental with FDW only for small volumes
 - ✅ Better performance: ~30.5h initial, ~6-18min incremental
@@ -18,16 +20,19 @@
 ### Created Files
 
 **Scripts:**
+
 - `bin/dwh/copyBaseTables.sh` - Copies base tables for initial load
 - `bin/dwh/dropCopiedBaseTables.sh` - Drops copied tables after load
 - `sql/dwh/ETL_60_setupFDW.sql` - Configures FDW for incremental
 
 **Tests:**
+
 - `tests/unit/bash/hybrid_strategy_copy_fdw.test.bats`
 
 ### How It Works
 
 **Initial load (first execution):**
+
 ```
 1. ETL.sh detects first execution
    ↓
@@ -39,6 +44,7 @@
 ```
 
 **Incremental execution:**
+
 ```
 1. ETL.sh detects incremental execution
    ↓
@@ -59,6 +65,7 @@
 ### Variables in `etc/properties.sh`
 
 **Option 1: Separate Databases (FDW enabled)**
+
 ```bash
 # Separate databases
 DBNAME_INGESTION="osm_notes"
@@ -75,6 +82,7 @@ FDW_INGESTION_PASSWORD=""  # Use .pgpass or environment variable
 ```
 
 **Option 2: Same Database (FDW disabled automatically)**
+
 ```bash
 # Same database for both Ingestion and Analytics
 # Option 2a: Use recommended variables (set to same value)
@@ -88,11 +96,15 @@ DBNAME="osm_notes"
 # FDW configuration is not needed (will be skipped automatically)
 ```
 
-**Note:** When `DBNAME_INGESTION` and `DBNAME_DWH` are the same (or both unset and `DBNAME` is used), the ETL automatically skips FDW setup since tables are directly accessible in the same database. The recommended approach is to use `DBNAME_INGESTION` and `DBNAME_DWH` even when they have the same value, for clarity and consistency.
+**Note:** When `DBNAME_INGESTION` and `DBNAME_DWH` are the same (or both unset and `DBNAME` is
+used), the ETL automatically skips FDW setup since tables are directly accessible in the same
+database. The recommended approach is to use `DBNAME_INGESTION` and `DBNAME_DWH` even when they have
+the same value, for clarity and consistency.
 
 ### Create Read-Only User for FDW
 
-**Important:** This step must be completed **before** running the ETL when using separate databases. The FDW user needs read-only access to the Ingestion database tables.
+**Important:** This step must be completed **before** running the ETL when using separate databases.
+The FDW user needs read-only access to the Ingestion database tables.
 
 **Step 1: Create the user (if it doesn't exist)**
 
@@ -128,15 +140,16 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO osm_notes_in
 SELECT usename, usecreatedb, usesuper FROM pg_user WHERE usename = 'osm_notes_ingestion_user';
 
 -- Verify permissions on required tables
-SELECT grantee, privilege_type, table_name 
-FROM information_schema.role_table_grants 
-WHERE table_schema = 'public' 
+SELECT grantee, privilege_type, table_name
+FROM information_schema.role_table_grants
+WHERE table_schema = 'public'
   AND table_name IN ('note_comments', 'notes', 'note_comments_text', 'users', 'countries')
   AND grantee = 'osm_notes_ingestion_user'
 ORDER BY table_name, privilege_type;
 ```
 
-**Note:** If the user already exists, skip Step 1 and only run Steps 2 and 3. The `GRANT` statements are idempotent and safe to run multiple times.
+**Note:** If the user already exists, skip Step 1 and only run Steps 2 and 3. The `GRANT` statements
+are idempotent and safe to run multiple times.
 
 **Complete example script:**
 
@@ -162,14 +175,14 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO osm_notes_ingestion_user;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO osm_notes_ingestion_user;
 
 -- Verify
-SELECT 
+SELECT
   'User exists: ' || EXISTS(SELECT 1 FROM pg_user WHERE usename = 'osm_notes_ingestion_user') as status
 UNION ALL
-SELECT 
+SELECT
   'Has SELECT on note_comments: ' || EXISTS(
-    SELECT 1 FROM information_schema.role_table_grants 
-    WHERE grantee = 'osm_notes_ingestion_user' 
-      AND table_name = 'note_comments' 
+    SELECT 1 FROM information_schema.role_table_grants
+    WHERE grantee = 'osm_notes_ingestion_user'
+      AND table_name = 'note_comments'
       AND privilege_type = 'SELECT'
   ) as status;
 ```
@@ -185,6 +198,7 @@ SELECT
 ```
 
 Auto-detects first execution and:
+
 1. Copies base tables from Ingestion to Analytics
 2. Populates DWH using local tables (no FDW)
 3. Drops copied tables after completion
@@ -196,6 +210,7 @@ Auto-detects first execution and:
 ```
 
 Auto-detects incremental execution and:
+
 1. Compares `DBNAME_INGESTION` and `DBNAME_DWH` to determine if databases are separate
 2. **If databases are different:**
    - Configures FDW (if not exists)
@@ -215,6 +230,7 @@ Auto-detects incremental execution and:
 ### Error: "Failed to setup Foreign Data Wrappers"
 
 **Solution:**
+
 - Verify that the FDW user (value of `FDW_INGESTION_USER`) exists in Ingestion DB
 - Verify read permissions (see "Create Read-Only User for FDW" section above)
 - Verify `FDW_INGESTION_*` variables in `etc/properties.sh`
@@ -232,11 +248,13 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO osm_notes_ingestion_user;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO osm_notes_ingestion_user;
 ```
 
-Replace `osm_notes_ingestion_user` with your `FDW_INGESTION_USER` value and `notes` with your `DBNAME_INGESTION` value.
+Replace `osm_notes_ingestion_user` with your `FDW_INGESTION_USER` value and `notes` with your
+`DBNAME_INGESTION` value.
 
 ### Error: "Table already exists in target database"
 
 **Solution:** The script handles this automatically (drops and recreates). If it persists:
+
 ```bash
 psql -d notes_dwh -c "DROP TABLE IF EXISTS public.notes, public.note_comments, public.note_comments_text, public.users, public.countries CASCADE;"
 ```
@@ -267,6 +285,7 @@ psql -d "${ANALYTICS_DB}" -c "\COPY public.notes FROM STDIN"
 ```
 
 **Estimated performance:**
+
 - notes: ~1-5 minutes
 - note_comments: ~5-20 minutes
 - note_comments_text: ~2-10 minutes
@@ -277,13 +296,17 @@ psql -d "${ANALYTICS_DB}" -c "\COPY public.notes FROM STDIN"
 ### Foreign Data Wrappers
 
 The `ETL_60_setupFDW.sql` script configures:
+
 - Foreign server pointing to Ingestion DB
 - Foreign tables: `notes`, `note_comments`, `note_comments_text`, `users`, `countries`
 - Optimizations: `fetch_size='10000'`, `use_remote_estimate='true'`
 
 **Estimated overhead:** 15-25% on incremental queries (acceptable for small volumes)
 
-**Automatic Skip:** When `DBNAME_INGESTION` equals `DBNAME_DWH` (or both are unset), the ETL automatically skips FDW setup. The system logs: `"Ingestion and Analytics use same database, skipping FDW setup"`. This prevents SQL errors that would occur when trying to create foreign tables pointing to the same database.
+**Automatic Skip:** When `DBNAME_INGESTION` equals `DBNAME_DWH` (or both are unset), the ETL
+automatically skips FDW setup. The system logs:
+`"Ingestion and Analytics use same database, skipping FDW setup"`. This prevents SQL errors that
+would occur when trying to create foreign tables pointing to the same database.
 
 ---
 

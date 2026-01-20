@@ -134,7 +134,8 @@ ln -sf ../../.git-hooks/pre-push .git/hooks/pre-push
 chmod +x .git-hooks/pre-push
 ```
 
-**Note:** Git hooks are optional and mainly useful for local development. CI/CD uses GitHub Actions workflows for validation.
+**Note:** Git hooks are optional and mainly useful for local development. CI/CD uses GitHub Actions
+workflows for validation.
 
 ## 📈 Status Badges
 

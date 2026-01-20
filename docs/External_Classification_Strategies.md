@@ -7,7 +7,8 @@
 
 ## 📋 Overview
 
-This document analyzes external tools and strategies used for classifying OpenStreetMap notes, with the goal of identifying techniques that could enhance our ML classification system.
+This document analyzes external tools and strategies used for classifying OpenStreetMap notes, with
+the goal of identifying techniques that could enhance our ML classification system.
 
 ---
 
@@ -55,11 +56,13 @@ Based on the tool's description, it uses:
 
 3. **Integration**:
    - QR codes for Osmand and Google Maps
-   - OSM Forum discussion link about "notes nach Dringlichkeit kategorisieren" (categorizing notes by urgency)
+   - OSM Forum discussion link about "notes nach Dringlichkeit kategorisieren" (categorizing notes
+     by urgency)
 
 ### Technical Approach
 
 **Classification Method**: Rule-based keyword matching
+
 - Identifies keywords in note text
 - Maps keywords to predefined categories
 - Uses hashtags as category markers
@@ -67,6 +70,7 @@ Based on the tool's description, it uses:
 **Data Source**: OpenStreetMap Notes API (via Overpass or direct API)
 
 **Limitations**:
+
 - Rule-based approach (may miss context)
 - Requires predefined keyword lists
 - May not handle multilingual notes well
@@ -80,6 +84,7 @@ Based on the tool's description, it uses:
 **Application**: Use keyword lists from tools like DE:Notes Map to create features
 
 **Implementation**:
+
 ```python
 # Example: Category keywords from DE:Notes Map
 category_keywords = {
@@ -94,13 +99,14 @@ def extract_category_features(text):
     features = {}
     for category, keywords in category_keywords.items():
         features[f'has_{category}_keyword'] = any(
-            keyword.lower() in text.lower() 
+            keyword.lower() in text.lower()
             for keyword in keywords
         )
     return features
 ```
 
 **Benefits**:
+
 - Leverages existing keyword research
 - Can identify domain-specific notes
 - Complements our text analysis features
@@ -112,9 +118,10 @@ def extract_category_features(text):
 **Current State**: We already track hashtags in `dwh.facts.hashtag_number` and `dwh.fact_hashtags`
 
 **Enhancement**:
+
 ```sql
 -- Classify notes by hashtag patterns
-SELECT 
+SELECT
   f.id_note,
   f.hashtag_number,
   h.hashtag_name,
@@ -131,6 +138,7 @@ WHERE f.action_comment = 'opened';
 ```
 
 **Benefits**:
+
 - Hashtags are explicit category markers
 - Users intentionally add hashtags for organization
 - High precision for hashtag-based classification
@@ -140,11 +148,13 @@ WHERE f.action_comment = 'opened';
 **Application**: Use category word lists to improve training data labeling
 
 **Implementation**:
+
 - Extract keyword lists from tools like DE:Notes Map
 - Use keywords to pre-label training data
 - Refine labels with manual review
 
 **Benefits**:
+
 - Faster training data preparation
 - More consistent labeling
 - Better coverage of domain-specific notes
@@ -154,6 +164,7 @@ WHERE f.action_comment = 'opened';
 **Application**: Combine keyword-based and ML-based classification
 
 **Architecture**:
+
 ```
 Level 1: Keyword/Hashtag Classification (Rule-based)
   ↓
@@ -163,6 +174,7 @@ Level 3: Action Recommendation
 ```
 
 **Benefits**:
+
 - Keyword classification for clear cases (high precision)
 - ML classification for ambiguous cases (better recall)
 - Hybrid approach leverages strengths of both
@@ -177,6 +189,7 @@ Level 3: Action Recommendation
 **Link**: Mentioned in DE:Notes Map but specific URL not provided
 
 **Potential Topics**:
+
 - How to categorize notes by urgency
 - Community strategies for note prioritization
 - Tools and techniques for note classification
@@ -186,6 +199,7 @@ Level 3: Action Recommendation
 ### Other Classification Tools
 
 **Potential Sources**:
+
 - OSM Wiki pages on note management
 - Community tools for note analysis
 - Academic papers on OSM note classification
@@ -197,20 +211,21 @@ Level 3: Action Recommendation
 ### Enhanced Feature Engineering
 
 **Add Keyword-based Features**:
+
 ```python
 # In ML feature extraction
 text_features = {
     # Existing features...
-    
+
     # New: Category keyword presence
     'has_firefighter_keywords': check_keywords(text, firefighter_keywords),
     'has_airplane_keywords': check_keywords(text, airplane_keywords),
     'has_wheelchair_keywords': check_keywords(text, wheelchair_keywords),
     # ... more categories
-    
+
     # New: Hashtag category
     'hashtag_category': get_hashtag_category(hashtags),
-    
+
     # New: Keyword density
     'category_keyword_density': count_category_keywords(text) / word_count,
 }
@@ -219,21 +234,22 @@ text_features = {
 ### Enhanced Training Data Labeling
 
 **Use Keywords for Pre-labeling**:
+
 ```sql
 -- Pre-label training data using keywords
 WITH keyword_labels AS (
-  SELECT 
+  SELECT
     f.id_note,
     CASE
-      WHEN LOWER(nct.body) LIKE '%firefighter%' OR 
+      WHEN LOWER(nct.body) LIKE '%firefighter%' OR
            LOWER(nct.body) LIKE '%fire station%' THEN 'firefighter'
-      WHEN LOWER(nct.body) LIKE '%airplane%' OR 
+      WHEN LOWER(nct.body) LIKE '%airplane%' OR
            LOWER(nct.body) LIKE '%airport%' THEN 'airplane'
       -- ... more keyword patterns
     END as keyword_category
   FROM dwh.facts f
-  JOIN public.note_comments_text nct 
-    ON f.id_note = nct.note_id 
+  JOIN public.note_comments_text nct
+    ON f.id_note = nct.note_id
     AND f.sequence_action = nct.sequence_action
   WHERE f.action_comment = 'opened'
 )
@@ -243,7 +259,8 @@ SELECT * FROM keyword_labels;
 ### Hybrid Classification System
 
 **Combine Rule-based and ML**:
-1. **Rule-based (Keywords/Hashtags)**: 
+
+1. **Rule-based (Keywords/Hashtags)**:
    - High precision for clear cases
    - Fast inference
    - Use for common categories
@@ -318,9 +335,10 @@ SELECT * FROM keyword_labels;
 ## 📝 Next Steps
 
 1. **Analyze Existing Hashtags**:
+
    ```sql
    -- Find most common hashtags in our data
-   SELECT 
+   SELECT
      h.hashtag_name,
      COUNT(*) as usage_count
    FROM dwh.fact_hashtags fh
@@ -358,5 +376,3 @@ SELECT * FROM keyword_labels;
 
 **Status**: Research Phase  
 **Next Review**: After keyword extraction and hashtag analysis
-
-

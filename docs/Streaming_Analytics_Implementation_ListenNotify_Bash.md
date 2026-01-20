@@ -1,20 +1,23 @@
 # LISTEN/NOTIFY Implementation in Pure Bash
 
-**Note**: This is an alternative approach using LISTEN/NOTIFY directly in Bash. The event table approach is recommended for simplicity.
+**Note**: This is an alternative approach using LISTEN/NOTIFY directly in Bash. The event table
+approach is recommended for simplicity.
 
 ## Can LISTEN/NOTIFY be used in Bash?
 
-**Yes!** LISTEN/NOTIFY is a native PostgreSQL feature and doesn't require Python. However, using it from Bash is more complex than using an event table.
+**Yes!** LISTEN/NOTIFY is a native PostgreSQL feature and doesn't require Python. However, using it
+from Bash is more complex than using an event table.
 
 ## How LISTEN/NOTIFY Works
 
 1. **LISTEN**: A client subscribes to a channel
-2. **NOTIFY**: A process sends a message to a channel  
+2. **NOTIFY**: A process sends a message to a channel
 3. **Notification**: PostgreSQL delivers the message to all listening clients
 
 ## Bash Implementation Challenges
 
 The main challenge is that `psql` shows notifications in its output, but you need to:
+
 - Keep a persistent connection
 - Parse the output for notifications
 - Handle connection failures
@@ -76,7 +79,7 @@ SELECT 'Listening on channel ${CHANNEL}';
 EOF
 } 2>&1 | while IFS= read -r line; do
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] ${line}" | tee -a "${LOG_FILE}"
-    
+
     # Check if this is a notification
     if [[ "${line}" =~ notification ]]; then
         local payload=$(parse_notification "${line}")
@@ -98,26 +101,27 @@ done
 
 ## Why Event Table is Better
 
-| Feature | LISTEN/NOTIFY (Bash) | Event Table (Bash) |
-|---------|---------------------|-------------------|
-| **Simplicity** | Complex | Simple |
-| **Reliability** | Notifications can be lost | Events persist |
-| **Debugging** | Hard (async output) | Easy (query table) |
-| **Error Recovery** | Complex | Simple (retry failed) |
-| **Monitoring** | Hard | Easy (count pending) |
-| **Latency** | Instant | 2-5 seconds |
+| Feature            | LISTEN/NOTIFY (Bash)      | Event Table (Bash)    |
+| ------------------ | ------------------------- | --------------------- |
+| **Simplicity**     | Complex                   | Simple                |
+| **Reliability**    | Notifications can be lost | Events persist        |
+| **Debugging**      | Hard (async output)       | Easy (query table)    |
+| **Error Recovery** | Complex                   | Simple (retry failed) |
+| **Monitoring**     | Hard                      | Easy (count pending)  |
+| **Latency**        | Instant                   | 2-5 seconds           |
 
 ## Recommendation
 
 **Use Event Table approach** for production. LISTEN/NOTIFY in Bash is possible but:
+
 - More complex to implement
 - Less reliable
 - Harder to maintain
 - No significant advantage over event table with 2-5 second polling
 
 The event table approach provides:
+
 - ✅ Same functionality
 - ✅ Better reliability
 - ✅ Easier maintenance
 - ✅ Acceptable latency (2-5 seconds is still "real-time" for most use cases)
-

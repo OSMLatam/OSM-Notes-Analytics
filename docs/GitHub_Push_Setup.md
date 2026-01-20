@@ -1,10 +1,13 @@
 # GitHub Push Setup for Production
 
-This document explains how to configure automated git pushes to GitHub from production servers, particularly when running as a non-interactive user (e.g., `notes` user).
+This document explains how to configure automated git pushes to GitHub from production servers,
+particularly when running as a non-interactive user (e.g., `notes` user).
 
 ## Overview
 
-The export scripts (`exportAndPushJSONToGitHub.sh`, `exportAndPushCSVToGitHub.sh`) need to push changes to the `OSM-Notes-Data` repository. In production, this typically runs as the `notes` user via cron, which requires special configuration.
+The export scripts (`exportAndPushJSONToGitHub.sh`, `exportAndPushCSVToGitHub.sh`) need to push
+changes to the `OSM-Notes-Data` repository. In production, this typically runs as the `notes` user
+via cron, which requires special configuration.
 
 ## Option 1: SSH Keys (Recommended)
 
@@ -36,6 +39,7 @@ cat ~/.ssh/id_ed25519_github.pub
 ```
 
 Then:
+
 - Go to GitHub → Settings → SSH and GPG keys
 - Click "New SSH key"
 - Paste the public key content
@@ -235,4 +239,3 @@ cd ~/github/OSM-Notes-Analytics
 - [Cron Configuration](../etc/cron.example)
 - [Export Scripts](../bin/dwh/README.md)
 - [GitHub Actions Setup](./CI_CD_Guide.md)
-

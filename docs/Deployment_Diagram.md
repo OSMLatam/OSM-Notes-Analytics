@@ -1,6 +1,7 @@
 # Deployment Diagram
 
-This document provides deployment architecture and operational diagrams for the OSM-Notes-Analytics system, including infrastructure, scheduling, dependencies, and operational workflows.
+This document provides deployment architecture and operational diagrams for the OSM-Notes-Analytics
+system, including infrastructure, scheduling, dependencies, and operational workflows.
 
 ## Table of Contents
 
@@ -45,6 +46,7 @@ This document provides deployment architecture and operational diagrams for the 
 ## Overview
 
 The deployment diagram shows:
+
 - **Infrastructure**: Servers, databases, and storage
 - **Scheduling**: Automated processes and cron jobs
 - **Dependencies**: Operational dependencies between processes
@@ -64,14 +66,14 @@ graph TB
             OUTPUT[JSON Output<br/>output/json/]
             LOGS[Log Files<br/>/tmp/ETL_*/]
         end
-        
+
         subgraph Processes["Running Processes"]
             CRON_SERVICE[Cron Service<br/>Scheduled Jobs]
             ETL_PROC[ETL Process<br/>Running/Idle]
             DATAMART_PROC[Datamart Process<br/>Running/Idle]
             EXPORT_PROC[Export Process<br/>Running/Idle]
         end
-        
+
         subgraph Scheduler["Scheduler (Cron)"]
             CRON_ETL[ETL Job<br/>Every 15 min]
             CRON_DATAMART[Datamart Job<br/>Daily 2 AM]
@@ -79,41 +81,41 @@ graph TB
             CRON_CLEANUP[Cleanup Job<br/>Weekly]
         end
     end
-    
+
     subgraph Database_Server["Database Server"]
         POSTGRES[PostgreSQL<br/>+ PostGIS]
         BASE_SCHEMA[public Schema<br/>Base Tables]
         DWH_SCHEMA[dwh Schema<br/>data warehouse]
     end
-    
+
     subgraph External["External Systems"]
         INGESTION[OSM-Notes-Ingestion<br/>Updates Base Tables]
         VIEWER[OSM-Notes-Viewer<br/>Reads JSON Files]
     end
-    
+
     CRON_SERVICE -->|Triggers| CRON_ETL
     CRON_SERVICE -->|Triggers| CRON_DATAMART
     CRON_SERVICE -->|Triggers| CRON_EXPORT
     CRON_SERVICE -->|Triggers| CRON_CLEANUP
-    
+
     CRON_ETL -->|Executes| ETL_PROC
     CRON_DATAMART -->|Executes| DATAMART_PROC
     CRON_EXPORT -->|Executes| EXPORT_PROC
-    
+
     ETL_PROC -->|Reads| SCRIPTS
     ETL_PROC -->|Reads| CONFIG
     ETL_PROC -->|Writes| POSTGRES
     ETL_PROC -->|Writes| LOGS
-    
+
     DATAMART_PROC -->|Reads| POSTGRES
     DATAMART_PROC -->|Writes| POSTGRES
-    
+
     EXPORT_PROC -->|Reads| POSTGRES
     EXPORT_PROC -->|Writes| OUTPUT
-    
+
     INGESTION -->|Updates| BASE_SCHEMA
     VIEWER -->|Reads| OUTPUT
-    
+
     POSTGRES -->|Stores| BASE_SCHEMA
     POSTGRES -->|Stores| DWH_SCHEMA
 ```
@@ -127,29 +129,29 @@ graph TB
         ETL_CRON[Cron Jobs]
         ETL_LOGS[ETL Logs]
     end
-    
+
     subgraph DB_Server["Database Server"]
         POSTGRES[PostgreSQL<br/>+ PostGIS]
         REPLICA[Read Replica<br/>Optional]
     end
-    
+
     subgraph Export_Server["Export Server"]
         EXPORT_SCRIPTS[Export Scripts]
         EXPORT_CRON[Cron Jobs]
         JSON_STORAGE[JSON Storage<br/>NFS/Shared]
     end
-    
+
     subgraph Web_Server["Web Server"]
         VIEWER_APP[OSM-Notes-Viewer<br/>Web Application]
     end
-    
+
     ETL_CRON -->|Runs ETL| ETL_SCRIPTS
     ETL_SCRIPTS -->|Writes| POSTGRES
-    
+
     EXPORT_CRON -->|Runs Export| EXPORT_SCRIPTS
     EXPORT_SCRIPTS -->|Reads| REPLICA
     EXPORT_SCRIPTS -->|Writes| JSON_STORAGE
-    
+
     VIEWER_APP -->|Reads| JSON_STORAGE
     VIEWER_APP -->|Queries| REPLICA
 ```
@@ -165,24 +167,24 @@ gantt
     title Production ETL Schedule
     dateFormat HH:mm
     axisFormat %H:%M
-    
+
     section Hourly
     ETL Incremental    :active, etl1, 00:00, 00:15
     ETL Incremental    :etl2, 00:15, 00:15
     ETL Incremental    :etl3, 00:30, 00:15
     ETL Incremental    :etl4, 00:45, 00:15
-    
+
     section Daily
     Datamart Users     :crit, dm1, 02:00, 00:20
     Datamart Countries :crit, dm2, 02:20, 00:05
     Datamart Global    :dm3, 02:25, 00:05
-    
+
     section Every 15 min
     JSON Export        :active, exp1, 00:00, 00:10
     JSON Export        :exp2, 00:15, 00:10
     JSON Export        :exp3, 00:30, 00:10
     JSON Export        :exp4, 00:45, 00:10
-    
+
     section Weekly
     Log Cleanup        :cleanup, 03:30, 00:30
     VACUUM ANALYZE     :vacuum, 03:00, 01:00
@@ -210,15 +212,15 @@ gantt
 
 **Schedule Breakdown:**
 
-| Process | Frequency | Time | Duration | Purpose |
-|---------|-----------|------|----------|---------|
-| **ETL Incremental** | Every 15 min | All day | 5-15 min | Process new notes |
-| **User Datamart** | Daily | 02:00 | ~20 min | Update user analytics |
-| **Country Datamart** | Daily | 02:30 | ~5 min | Update country analytics |
-| **Global Datamart** | Daily | 02:35 | ~2 min | Update global stats |
-| **JSON Export** | Every 15 min | All day | ~10 min | Export for viewer |
-| **VACUUM ANALYZE** | Weekly | Sunday 03:00 | ~1 hour | Database optimization |
-| **Log Cleanup** | Weekly | Sunday 03:30 | ~5 min | Remove old logs |
+| Process              | Frequency    | Time         | Duration | Purpose                  |
+| -------------------- | ------------ | ------------ | -------- | ------------------------ |
+| **ETL Incremental**  | Every 15 min | All day      | 5-15 min | Process new notes        |
+| **User Datamart**    | Daily        | 02:00        | ~20 min  | Update user analytics    |
+| **Country Datamart** | Daily        | 02:30        | ~5 min   | Update country analytics |
+| **Global Datamart**  | Daily        | 02:35        | ~2 min   | Update global stats      |
+| **JSON Export**      | Every 15 min | All day      | ~10 min  | Export for viewer        |
+| **VACUUM ANALYZE**   | Weekly       | Sunday 03:00 | ~1 hour  | Database optimization    |
+| **Log Cleanup**      | Weekly       | Sunday 03:30 | ~5 min   | Remove old logs          |
 
 ---
 
@@ -229,33 +231,34 @@ gantt
 ```mermaid
 graph TD
     INGESTION[OSM-Notes-Ingestion<br/>Updates Base Tables]
-    
+
     ETL[ETL Process<br/>Auto-detect]
-    
+
     DATAMART_USERS[User Datamart]
     DATAMART_COUNTRIES[Country Datamart]
     DATAMART_GLOBAL[Global Datamart]
-    
+
     EXPORT[JSON Export]
-    
+
     VIEWER[OSM-Notes-Viewer<br/>Consumes JSON]
-    
+
     INGESTION -->|Must Complete| ETL
-    
+
     ETL -->|Creates/Updates DWH| DATAMART_USERS
     ETL -->|Creates/Updates DWH| DATAMART_COUNTRIES
     ETL -->|Creates/Updates DWH| DATAMART_GLOBAL
-    
+
     DATAMART_USERS -->|Required| EXPORT
     DATAMART_COUNTRIES -->|Required| EXPORT
     DATAMART_GLOBAL -->|Optional| EXPORT
-    
+
     EXPORT -->|Provides| VIEWER
 ```
 
 ### Execution Order
 
 **Initial Deployment:**
+
 1. Deploy OSM-Notes-Ingestion (populate base tables)
 2. Wait for base tables to have data
 3. Run ETL (auto-detects first execution, creates DWH)
@@ -264,6 +267,7 @@ graph TD
 6. Deploy OSM-Notes-Viewer
 
 **Regular Operations:**
+
 1. OSM-Notes-Ingestion runs (updates base tables)
 2. ETL runs (every 15 minutes, auto-detects incremental)
 3. Datamarts update (daily at 2 AM)
@@ -278,25 +282,26 @@ graph TD
 
 #### Minimum Requirements
 
-| Component | Specification | Purpose |
-|-----------|---------------|---------|
-| **CPU** | 4 cores | Parallel ETL processing |
-| **RAM** | 8 GB | Database operations |
-| **Disk** | 100 GB | Database + logs |
-| **Network** | 100 Mbps | Database connectivity |
+| Component   | Specification | Purpose                 |
+| ----------- | ------------- | ----------------------- |
+| **CPU**     | 4 cores       | Parallel ETL processing |
+| **RAM**     | 8 GB          | Database operations     |
+| **Disk**    | 100 GB        | Database + logs         |
+| **Network** | 100 Mbps      | Database connectivity   |
 
 #### Recommended Production
 
-| Component | Specification | Purpose |
-|-----------|---------------|---------|
-| **CPU** | 8+ cores | Faster parallel processing |
-| **RAM** | 16+ GB | Larger datasets |
-| **Disk** | 500+ GB SSD | Fast I/O for database |
-| **Network** | 1 Gbps | Database connectivity |
+| Component   | Specification | Purpose                    |
+| ----------- | ------------- | -------------------------- |
+| **CPU**     | 8+ cores      | Faster parallel processing |
+| **RAM**     | 16+ GB        | Larger datasets            |
+| **Disk**    | 500+ GB SSD   | Fast I/O for database      |
+| **Network** | 1 Gbps        | Database connectivity      |
 
 ### Database Server
 
 **PostgreSQL Configuration:**
+
 - **Version**: 12 or higher
 - **PostGIS**: 3.0 or higher
 - **Shared Memory**: 4 GB minimum
@@ -305,6 +310,7 @@ graph TD
 - **Max Connections**: 100
 
 **Storage:**
+
 - **Base Tables**: ~50 GB (depends on ingestion)
 - **data warehouse**: ~100 GB (facts + dimensions)
 - **Datamarts**: ~5 GB
@@ -420,7 +426,7 @@ sequenceDiagram
     participant ETL as ETL.sh
     participant DB as PostgreSQL
     participant Logs as Log Files
-    
+
     Cron->>ETL: Trigger (every 15 min)
     ETL->>ETL: Check lock file
     alt Lock exists and fresh
@@ -447,13 +453,13 @@ sequenceDiagram
     participant DM_Users as datamartUsers.sh
     participant DM_Countries as datamartCountries.sh
     participant DB as PostgreSQL
-    
+
     Cron->>DM_Users: Trigger (02:00)
     DM_Users->>DB: Check facts table
     DM_Users->>DB: Process 500 users
     DM_Users->>DB: Update datamartusers
     DM_Users->>Cron: Complete
-    
+
     Cron->>DM_Countries: Trigger (02:30)
     DM_Countries->>DB: Check facts table
     DM_Countries->>DB: Process all countries
@@ -470,7 +476,7 @@ sequenceDiagram
     participant DB as PostgreSQL
     participant Validator as Schema Validator
     participant FS as File System
-    
+
     Cron->>Export: Trigger (every 15 min)
     Export->>DB: Query datamartusers
     Export->>DB: Query datamartcountries
@@ -709,20 +715,20 @@ MAX_MEMORY_USAGE=85
 
 ### Recovery Time Objectives (RTO)
 
-| Component | RTO | Recovery Method |
-|-----------|-----|-----------------|
-| **ETL Process** | 1 hour | Re-run ETL from last checkpoint |
-| **Datamarts** | 2 hours | Re-run datamart scripts |
-| **JSON Export** | 15 minutes | Re-run export script |
-| **Database** | 4 hours | Restore from backup + re-run ETL |
+| Component       | RTO        | Recovery Method                  |
+| --------------- | ---------- | -------------------------------- |
+| **ETL Process** | 1 hour     | Re-run ETL from last checkpoint  |
+| **Datamarts**   | 2 hours    | Re-run datamart scripts          |
+| **JSON Export** | 15 minutes | Re-run export script             |
+| **Database**    | 4 hours    | Restore from backup + re-run ETL |
 
 ### Recovery Point Objectives (RPO)
 
-| Component | RPO | Backup Frequency |
-|-----------|-----|------------------|
-| **data warehouse** | 24 hours | Daily backups |
-| **JSON Exports** | 24 hours | Daily backups |
-| **Configuration** | 7 days | Weekly backups |
+| Component          | RPO      | Backup Frequency |
+| ------------------ | -------- | ---------------- |
+| **data warehouse** | 24 hours | Daily backups    |
+| **JSON Exports**   | 24 hours | Daily backups    |
+| **Configuration**  | 7 days   | Weekly backups   |
 
 ---
 
@@ -740,4 +746,3 @@ MAX_MEMORY_USAGE=85
 - [PostgreSQL Administration](https://www.postgresql.org/docs/current/admin.html)
 - [Cron Documentation](https://man7.org/linux/man-pages/man5/crontab.5.html)
 - [Disaster Recovery Planning](https://www.postgresql.org/docs/current/backup.html)
-

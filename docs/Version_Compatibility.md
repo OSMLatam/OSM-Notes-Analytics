@@ -2,7 +2,9 @@
 
 ## Overview
 
-The JSON export system uses semantic versioning to ensure compatibility between exported data and the web viewer. This document explains how the versioning system works and how the viewer should verify compatibility.
+The JSON export system uses semantic versioning to ensure compatibility between exported data and
+the web viewer. This document explains how the versioning system works and how the viewer should
+verify compatibility.
 
 ## Version Format
 
@@ -25,6 +27,7 @@ Examples:
 The current export version is tracked in: `.json_export_version`
 
 Example:
+
 ```
 1.2.3
 ```
@@ -78,7 +81,7 @@ The web viewer should perform the following compatibility checks before consumin
 
 ```javascript
 // Fetch metadata.json from the data repository
-const response = await fetch('/data/metadata.json');
+const response = await fetch("/data/metadata.json");
 const metadata = await response.json();
 ```
 
@@ -87,9 +90,9 @@ const metadata = await response.json();
 ```javascript
 // Compare viewer version with minimum required version
 function versionCompare(v1, v2) {
-  const a = v1.split('.').map(Number);
-  const b = v2.split('.').map(Number);
-  
+  const a = v1.split(".").map(Number);
+  const b = v2.split(".").map(Number);
+
   for (let i = 0; i < 3; i++) {
     if (a[i] < b[i]) return -1;
     if (a[i] > b[i]) return 1;
@@ -101,7 +104,9 @@ function versionCompare(v1, v2) {
 const VIEWER_VERSION = "1.0.0"; // Replace with actual viewer version
 
 if (versionCompare(VIEWER_VERSION, metadata.api_compat_min) < 0) {
-  throw new Error(`Viewer version ${VIEWER_VERSION} is too old. Minimum required: ${metadata.api_compat_min}`);
+  throw new Error(
+    `Viewer version ${VIEWER_VERSION} is too old. Minimum required: ${metadata.api_compat_min}`,
+  );
 }
 ```
 
@@ -109,28 +114,28 @@ if (versionCompare(VIEWER_VERSION, metadata.api_compat_min) < 0) {
 
 ```javascript
 // Compare major version numbers
-const [major] = metadata.version.split('.').map(Number);
-const [currentMajor] = localStorage.getItem('lastVersion', '1.0.0').split('.').map(Number);
+const [major] = metadata.version.split(".").map(Number);
+const [currentMajor] = localStorage.getItem("lastVersion", "1.0.0").split(".").map(Number);
 
 if (major > currentMajor) {
-  console.warn('Breaking changes detected! Viewer may need update.');
+  console.warn("Breaking changes detected! Viewer may need update.");
   // Show warning to user
 }
 
 // Store current version
-localStorage.setItem('lastVersion', metadata.version);
+localStorage.setItem("lastVersion", metadata.version);
 ```
 
 ### 4. Schema Hash Verification (Optional)
 
 ```javascript
 // Compare schema hashes for change detection
-const lastHash = localStorage.getItem('lastSchemaHash');
+const lastHash = localStorage.getItem("lastSchemaHash");
 if (lastHash && lastHash !== metadata.data_schema_hash) {
-  console.info('Schema changes detected. Data structure may have changed.');
+  console.info("Schema changes detected. Data structure may have changed.");
 }
 
-localStorage.setItem('lastSchemaHash', metadata.data_schema_hash);
+localStorage.setItem("lastSchemaHash", metadata.data_schema_hash);
 ```
 
 ## Complete Viewer Implementation Example
@@ -139,7 +144,7 @@ localStorage.setItem('lastSchemaHash', metadata.data_schema_hash);
 // api-compatibility.js
 
 const VIEWER_VERSION = "1.0.0"; // Set at build time
-const METADATA_URL = '/data/metadata.json';
+const METADATA_URL = "/data/metadata.json";
 
 class ApiCompatibilityChecker {
   constructor() {
@@ -156,7 +161,7 @@ class ApiCompatibilityChecker {
       if (this.versionCompare(VIEWER_VERSION, this.metadata.api_compat_min) < 0) {
         return {
           compatible: false,
-          error: `Viewer version ${VIEWER_VERSION} is incompatible. Minimum required: ${this.metadata.api_compat_min}`
+          error: `Viewer version ${VIEWER_VERSION} is incompatible. Minimum required: ${this.metadata.api_compat_min}`,
         };
       }
 
@@ -165,7 +170,7 @@ class ApiCompatibilityChecker {
       if (breakingChange) {
         return {
           compatible: true,
-          warning: breakingChange
+          warning: breakingChange,
         };
       }
 
@@ -175,21 +180,20 @@ class ApiCompatibilityChecker {
       return {
         compatible: true,
         version: this.metadata.version,
-        timestamp: this.metadata.export_timestamp
+        timestamp: this.metadata.export_timestamp,
       };
-
     } catch (error) {
       return {
         compatible: false,
-        error: `Failed to check compatibility: ${error.message}`
+        error: `Failed to check compatibility: ${error.message}`,
       };
     }
   }
 
   versionCompare(v1, v2) {
-    const a = v1.split('.').map(Number);
-    const b = v2.split('.').map(Number);
-    
+    const a = v1.split(".").map(Number);
+    const b = v2.split(".").map(Number);
+
     for (let i = 0; i < 3; i++) {
       if (a[i] < b[i]) return -1;
       if (a[i] > b[i]) return 1;
@@ -198,9 +202,9 @@ class ApiCompatibilityChecker {
   }
 
   detectBreakingChange(currentVersion) {
-    const lastVersion = localStorage.getItem('lastExportVersion') || '1.0.0';
-    const [lastMajor] = lastVersion.split('.').map(Number);
-    const [currentMajor] = currentVersion.split('.').map(Number);
+    const lastVersion = localStorage.getItem("lastExportVersion") || "1.0.0";
+    const [lastMajor] = lastVersion.split(".").map(Number);
+    const [currentMajor] = currentVersion.split(".").map(Number);
 
     if (currentMajor > lastMajor) {
       return `Breaking changes detected (v${lastVersion} → v${currentVersion}). Some features may not work correctly.`;
@@ -210,9 +214,9 @@ class ApiCompatibilityChecker {
   }
 
   updateStoredVersion(metadata) {
-    localStorage.setItem('lastExportVersion', metadata.version);
-    localStorage.setItem('lastExportTimestamp', metadata.export_timestamp);
-    localStorage.setItem('lastSchemaHash', metadata.data_schema_hash);
+    localStorage.setItem("lastExportVersion", metadata.version);
+    localStorage.setItem("lastExportTimestamp", metadata.export_timestamp);
+    localStorage.setItem("lastSchemaHash", metadata.data_schema_hash);
   }
 
   getMetadata() {
@@ -223,11 +227,11 @@ class ApiCompatibilityChecker {
 // Usage in viewer
 const checker = new ApiCompatibilityChecker();
 
-checker.check().then(result => {
+checker.check().then((result) => {
   if (!result.compatible) {
     // Display error and prevent data loading
-    document.getElementById('error').textContent = result.error;
-    document.getElementById('error').style.display = 'block';
+    document.getElementById("error").textContent = result.error;
+    document.getElementById("error").style.display = "block";
     return;
   }
 
@@ -287,13 +291,13 @@ VERSION_INCREMENT=major ./bin/dwh/exportDatamartsToJSON.sh
 
 ```javascript
 // Too old viewer
-"Your viewer is outdated. Please update to version 1.1.0 or later."
+"Your viewer is outdated. Please update to version 1.1.0 or later.";
 
 // Breaking changes detected
-"Data format has changed (v1 → v2). Some features may not work as expected."
+"Data format has changed (v1 → v2). Some features may not work as expected.";
 
 // Schema changes
-"The data structure has been updated. Refreshing..."
+"The data structure has been updated. Refreshing...";
 ```
 
 ## Testing Compatibility
@@ -331,4 +335,3 @@ When upgrading to a new major version:
 - [JSON Export Documentation](bin/dwh/export_json_readme.md)
 - [Atomic Validation Export](docs/Atomic_Validation_Export.md)
 - [ETL Process Documentation](docs/ETL_Enhanced_Features.md)
-

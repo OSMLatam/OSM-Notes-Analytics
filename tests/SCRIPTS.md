@@ -6,23 +6,25 @@ This document describes the test scripts in the `tests/` directory.
 
 ## Scripts Comparison
 
-| Script | Purpose | Requires DB? | Executes | Output |
-|--------|---------|--------------|----------|--------|
-| **run_all_tests.sh** | Master test runner - runs ALL test suites | Yes | run_quality_tests.sh + run_dwh_tests.sh | Comprehensive report |
-| **run_quality_tests.sh** | Code quality validation (NO database) | No | shellcheck, shfmt, file validation | Quality check results |
-| **run_dwh_tests.sh** | DWH/ETL/Datamart tests (with database) | Yes | run_mock_etl.sh + BATS tests | Test results |
-| **run_mock_etl.sh** | Populate test DB with mock data | Yes | generate_mock_staging_data.sql + DWH setup | Test data loaded |
+| Script                   | Purpose                                   | Requires DB? | Executes                                   | Output                |
+| ------------------------ | ----------------------------------------- | ------------ | ------------------------------------------ | --------------------- |
+| **run_all_tests.sh**     | Master test runner - runs ALL test suites | Yes          | run_quality_tests.sh + run_dwh_tests.sh    | Comprehensive report  |
+| **run_quality_tests.sh** | Code quality validation (NO database)     | No           | shellcheck, shfmt, file validation         | Quality check results |
+| **run_dwh_tests.sh**     | DWH/ETL/Datamart tests (with database)    | Yes          | run_mock_etl.sh + BATS tests               | Test results          |
+| **run_mock_etl.sh**      | Populate test DB with mock data           | Yes          | generate_mock_staging_data.sql + DWH setup | Test data loaded      |
 
 ## Detailed Description
 
 ### run_all_tests.sh
-**Purpose**: Orchestrates all test suites
-**Execution**:
+
+**Purpose**: Orchestrates all test suites **Execution**:
+
 1. Runs quality tests (code validation)
 2. Runs DWH tests (database + ETL)
 3. Shows overall summary
 
 **Usage**:
+
 ```bash
 export TEST_DBNAME="osm_notes_test"
 bash tests/run_all_tests.sh
@@ -33,16 +35,17 @@ bash tests/run_all_tests.sh
 ---
 
 ### run_quality_tests.sh
-**Purpose**: Validates code quality without requiring database
-**What it checks**:
+
+**Purpose**: Validates code quality without requiring database **What it checks**:
+
 - ✅ Shellcheck (bash syntax validation)
 - ✅ shfmt (code formatting)
 - ✅ Trailing whitespace
 - ✅ Shebangs
 - ✅ TODO/FIXME comments
 
-**Requires**: shellcheck, shfmt
-**Usage**:
+**Requires**: shellcheck, shfmt **Usage**:
+
 ```bash
 bash tests/run_quality_tests.sh
 ```
@@ -52,15 +55,16 @@ bash tests/run_quality_tests.sh
 ---
 
 ### run_dwh_tests.sh
-**Purpose**: Tests data warehouse, ETL, and Datamarts with real database
-**What it does**:
+
+**Purpose**: Tests data warehouse, ETL, and Datamarts with real database **What it does**:
+
 1. **Setup**: Runs `run_mock_etl.sh` to populate test database
 2. **Tests**: Executes all BATS test files in:
    - `tests/unit/bash/*.bats` - Unit tests
    - `tests/integration/*.bats` - Integration tests
 
-**Requires**: PostgreSQL database, BATS
-**Usage**:
+**Requires**: PostgreSQL database, BATS **Usage**:
+
 ```bash
 export TEST_DBNAME="osm_notes_test"
 bash tests/run_dwh_tests.sh
@@ -71,16 +75,17 @@ bash tests/run_dwh_tests.sh
 ---
 
 ### run_mock_etl.sh
-**Purpose**: Populates test database with mock data
-**What it does**:
+
+**Purpose**: Populates test database with mock data **What it does**:
+
 1. Generates mock staging data
 2. Creates DWH schema using ETL_22_createDWHTables.sql
 3. Populates dimensions (users, countries, applications)
 4. Inserts facts from staging data
 5. Updates datamarts
 
-**Requires**: PostgreSQL database
-**Usage**:
+**Requires**: PostgreSQL database **Usage**:
+
 ```bash
 export TEST_DBNAME="osm_notes_test"
 bash tests/run_mock_etl.sh
@@ -115,6 +120,7 @@ User runs: bash tests/run_all_tests.sh
 ## Available Tests
 
 ### Unit Tests (tests/unit/bash/)
+
 - `datamartGlobal_integration.test.bats` - Global datamart tests
 - `datamartCountries_integration.test.bats` - Country datamart tests
 - `datamartUsers_integration.test.bats` - User datamart tests
@@ -122,6 +128,7 @@ User runs: bash tests/run_all_tests.sh
 - `datamart_resolution_metrics.test.bats` - Resolution metrics
 
 ### Integration Tests (tests/integration/)
+
 - `ETL_enhanced_integration.test.bats` - ETL integration
 - `datamart_enhanced_integration.test.bats` - Datamart integration
 
@@ -146,8 +153,8 @@ bash tests/run_mock_etl.sh
 ## Configuration
 
 Set database in `tests/properties.sh` or environment variables:
+
 - `TEST_DBNAME` - Database name (default: dwh)
 - `TEST_DBUSER` - Database user
 - `TEST_DBHOST` - Database host
 - `TEST_DBPORT` - Database port
-

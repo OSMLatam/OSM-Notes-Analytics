@@ -29,11 +29,14 @@ OSM-Notes-Analytics is a data warehouse and analytics system for OpenStreetMap n
 - **Exports** data to JSON for web visualization
 - **Provides** comprehensive analytics with 70+ metrics per user/country
 
-> **Note:** Base data ingestion is handled by the [OSM-Notes-Ingestion](https://github.com/OSM-Notes/OSM-Notes-Ingestion) system. This analytics system reads from those base tables.
+> **Note:** Base data ingestion is handled by the
+> [OSM-Notes-Ingestion](https://github.com/OSM-Notes/OSM-Notes-Ingestion) system. This analytics
+> system reads from those base tables.
 
 ### Key Design Principles
 
-1. **Star Schema Design**: Dimensional modeling for fast analytical queries (see [DWH Star Schema ERD](../docs/DWH_Star_Schema_ERD.md))
+1. **Star Schema Design**: Dimensional modeling for fast analytical queries (see
+   [DWH Star Schema ERD](../docs/DWH_Star_Schema_ERD.md))
 2. **Performance**: Partitioned facts table, pre-computed datamarts, parallel processing
 3. **Reliability**: Comprehensive error handling, recovery mechanisms, data validation
 4. **Maintainability**: Modular design, shared libraries, comprehensive testing
@@ -47,21 +50,28 @@ Before contributing, familiarize yourself with:
 
 - **[README.md](../README.md)**: Project overview and quick start
 - **[docs/Rationale.md](../docs/Rationale.md)**: Project motivation and design decisions
-- **[docs/DWH_Star_Schema_ERD.md](../docs/DWH_Star_Schema_ERD.md)**: Data warehouse structure and relationships
-- **[docs/Troubleshooting_Guide.md](../docs/Troubleshooting_Guide.md)**: Centralized troubleshooting guide
+- **[docs/DWH_Star_Schema_ERD.md](../docs/DWH_Star_Schema_ERD.md)**: Data warehouse structure and
+  relationships
+- **[docs/Troubleshooting_Guide.md](../docs/Troubleshooting_Guide.md)**: Centralized troubleshooting
+  guide
 
 #### Technical Documentation
 
-- **[docs/ETL_Enhanced_Features.md](../docs/ETL_Enhanced_Features.md)**: ETL capabilities and features
-- **[docs/DWH_Star_Schema_Data_Dictionary.md](../docs/DWH_Star_Schema_Data_Dictionary.md)**: Complete schema reference
-- **[docs/DWH_Maintenance_Guide.md](../docs/DWH_Maintenance_Guide.md)**: Maintenance and cleanup procedures
-- **[docs/partitioning_strategy.md](../docs/partitioning_strategy.md)**: Facts table partitioning strategy
+- **[docs/ETL_Enhanced_Features.md](../docs/ETL_Enhanced_Features.md)**: ETL capabilities and
+  features
+- **[docs/DWH_Star_Schema_Data_Dictionary.md](../docs/DWH_Star_Schema_Data_Dictionary.md)**:
+  Complete schema reference
+- **[docs/DWH_Maintenance_Guide.md](../docs/DWH_Maintenance_Guide.md)**: Maintenance and cleanup
+  procedures
+- **[docs/partitioning_strategy.md](../docs/partitioning_strategy.md)**: Facts table partitioning
+  strategy
 
 #### Script Reference
 
 - **[bin/README.md](../bin/README.md)**: Script usage examples and workflows
 - **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/ENTRY_POINTS.md)**: Which scripts can be called directly
-- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)**: Environment variable documentation
+- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)**: Environment variable
+  documentation
 
 #### Testing Documentation
 
@@ -107,7 +117,8 @@ Output:
 
 #### 1. ETL Process (`bin/dwh/ETL.sh`)
 
-- **Purpose**: Transforms base data into [star schema data warehouse](../docs/DWH_Star_Schema_ERD.md)
+- **Purpose**: Transforms base data into
+  [star schema data warehouse](../docs/DWH_Star_Schema_ERD.md)
 - **Auto-detection**: Automatically detects first execution (creates DWH) vs incremental updates
 - **Features**:
   - Parallel processing by year (2013-present)
@@ -163,11 +174,13 @@ Output:
 ### Data Flow
 
 1. **ETL Flow**:
+
    ```
    Base Tables → Staging → Facts (partitioned) + Dimensions → Datamarts
    ```
 
 2. **Datamart Flow**:
+
    ```
    Facts + Dimensions → Aggregations → Datamart Tables (pre-computed)
    ```
@@ -183,10 +196,10 @@ For detailed flow diagrams, see [docs/DWH_Star_Schema_ERD.md](../docs/DWH_Star_S
 
 The system uses a **[star schema](../docs/DWH_Star_Schema_ERD.md)** design:
 
-- **Fact Table**: `dwh.facts` - One row per note action (open, comment, close, reopen) - see [Data Dictionary](../docs/DWH_Star_Schema_Data_Dictionary.md#table-dwhfacts) for complete details
+- **Fact Table**: `dwh.facts` - One row per note action (open, comment, close, reopen) - see
+  [Data Dictionary](../docs/DWH_Star_Schema_Data_Dictionary.md#table-dwhfacts) for complete details
   - Partitioned by year (2013-2025+)
   - Foreign keys to all dimension tables
-  
 - **Dimension Tables**: Descriptive attributes
   - `dimension_users` - User information (SCD2 for username changes)
   - `dimension_countries` - Country data with ISO codes
@@ -205,7 +218,8 @@ The system uses a **[star schema](../docs/DWH_Star_Schema_ERD.md)** design:
   - `datamartcountries` - Country analytics (70+ metrics)
   - `datamartglobal` - Global statistics
 
-For complete schema documentation, see [docs/DWH_Star_Schema_Data_Dictionary.md](../docs/DWH_Star_Schema_Data_Dictionary.md).
+For complete schema documentation, see
+[docs/DWH_Star_Schema_Data_Dictionary.md](../docs/DWH_Star_Schema_Data_Dictionary.md).
 
 ## Code Standards
 
@@ -623,7 +637,9 @@ Follow the naming pattern: `<Component>_<Phase><Step>_<Description>.sql`
 
 ### Library Organization
 
-The project uses shared libraries from [OSM-Notes-Common](https://github.com/OSM-Notes/OSM-Notes-Common) (Git submodule located at `lib/osm-common/`) to eliminate code duplication and improve maintainability:
+The project uses shared libraries from
+[OSM-Notes-Common](https://github.com/OSM-Notes/OSM-Notes-Common) (Git submodule located at
+`lib/osm-common/`) to eliminate code duplication and improve maintainability:
 
 **Repository**: [OSM-Notes-Common](https://github.com/OSM-Notes/OSM-Notes-Common)  
 **Location**: `lib/osm-common/` (Git submodule)  
@@ -658,7 +674,8 @@ The project uses shared libraries from [OSM-Notes-Common](https://github.com/OSM
 
 #### 5. Implementation Guidelines
 
-- **New Functions**: Add to appropriate library file in OSM-Notes-Common repository rather than duplicating
+- **New Functions**: Add to appropriate library file in OSM-Notes-Common repository rather than
+  duplicating
 - **Consistent Usage**: All scripts should source and use these libraries
 - **Testing**: Test library functions independently
 - **Submodule Updates**: Update submodule when new library features are needed
@@ -682,7 +699,9 @@ source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/errorHandlingFunctions.sh"
 source "${SCRIPT_BASE_DIRECTORY}/lib/osm-common/bash_logger.sh"
 ```
 
-**Note**: The `lib/osm-common/` directory is a Git submodule pointing to the [OSM-Notes-Common](https://github.com/OSM-Notes/OSM-Notes-Common) repository. Always initialize submodules when cloning:
+**Note**: The `lib/osm-common/` directory is a Git submodule pointing to the
+[OSM-Notes-Common](https://github.com/OSM-Notes/OSM-Notes-Common) repository. Always initialize
+submodules when cloning:
 
 ```bash
 git clone --recurse-submodules https://github.com/OSM-Notes/OSM-Notes-Analytics.git

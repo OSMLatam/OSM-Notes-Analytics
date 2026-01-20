@@ -16,7 +16,8 @@ Complete guide for setting up automated ETL execution using cron.
 
 ## Overview
 
-Cron automation allows the ETL process to run automatically at regular intervals without manual intervention. This is essential for keeping the data warehouse up-to-date with new OSM notes.
+Cron automation allows the ETL process to run automatically at regular intervals without manual
+intervention. This is essential for keeping the data warehouse up-to-date with new OSM notes.
 
 ### Why Use Cron?
 
@@ -64,12 +65,14 @@ Edit `/tmp/osm-notes-cron` and update the paths:
 ```
 
 **Production Configuration**:
+
 - `CLEAN=false`: Keeps temporary files for debugging (use `CLEAN=true` to save disk space)
 - `LOG_LEVEL=INFO`: Balanced logging (use `ERROR` for less verbose, `DEBUG` for debugging)
 - `DBNAME=notes`: Your database name
 - `DB_USER=notes`: Your database user
 
 Also update:
+
 - `SHELL=/bin/bash` (if using different shell)
 - `HOME=/home/your-username` (your actual home directory)
 - Any other paths as needed
@@ -91,6 +94,7 @@ crontab -l
 ```
 
 You should see output like:
+
 ```
 */15 * * * * export CLEAN=false ; export LOG_LEVEL=INFO ; export DBNAME=notes ; export DB_USER=notes ; /home/notes/OSM-Notes-Analytics/bin/dwh/ETL.sh
 0 2 15 * * /home/notes/OSM-Notes-Analytics/bin/dwh/exportAndPushCSVToGitHub.sh
@@ -105,12 +109,12 @@ You should see output like:
 
 Choose the appropriate frequency based on your needs:
 
-| Frequency | Schedule | Use Case |
-|-----------|----------|----------|
+| Frequency            | Schedule       | Use Case                     |
+| -------------------- | -------------- | ---------------------------- |
 | **Every 15 minutes** | `*/15 * * * *` | Production, frequent updates |
-| **Every hour** | `0 * * * *` | Standard updates |
-| **Every 3 hours** | `0 */3 * * *` | Moderate updates |
-| **Daily** | `0 2 * * *` | Low-frequency updates |
+| **Every hour**       | `0 * * * *`    | Standard updates             |
+| **Every 3 hours**    | `0 */3 * * *`  | Moderate updates             |
+| **Daily**            | `0 2 * * *`    | Low-frequency updates        |
 
 ### Lock File Behavior
 
@@ -121,6 +125,7 @@ The ETL automatically creates lock files to prevent concurrent execution:
 - **Lock created**: Current execution timestamp
 
 This ensures that:
+
 - If ETL takes >15 minutes, next job waits
 - No duplicate executions
 - System remains stable
@@ -130,6 +135,7 @@ This ensures that:
 ETL logs are stored in `/tmp/ETL_XXXXXX/` directories.
 
 **Automatic cleanup** is configured in cron:
+
 ```cron
 30 3 * * 0 find /tmp/ETL_* -type d -mtime +7 -exec rm -rf {} \; 2>/dev/null || true
 ```
@@ -140,9 +146,11 @@ This removes logs older than 7 days every Sunday at 3:30 AM.
 
 ## Monitoring
 
-Monitoring is handled by the **Monitoring project** (sister project located at the same filesystem level as this project). Configure monitoring tasks in that project instead.
+Monitoring is handled by the **Monitoring project** (sister project located at the same filesystem
+level as this project). Configure monitoring tasks in that project instead.
 
 The Monitoring project provides:
+
 - Process status monitoring (running/not running)
 - Last execution log tracking
 - Database connection status checks
@@ -157,6 +165,7 @@ The Monitoring project provides:
 ### Issue: Cron Job Not Running
 
 **Check cron service**:
+
 ```bash
 # Check if cron is running
 systemctl status cron
@@ -166,6 +175,7 @@ sudo systemctl start cron
 ```
 
 **Check cron logs**:
+
 ```bash
 # View cron execution logs
 sudo tail -f /var/log/syslog | grep CRON
@@ -177,6 +187,7 @@ sudo tail -f /var/log/cron
 ### Issue: "Permission Denied"
 
 **Check permissions**:
+
 ```bash
 # Script must be executable
 chmod +x bin/dwh/ETL.sh
@@ -333,7 +344,8 @@ You can run different ETL operations at different times:
 
 ### Custom Log Rotation
 
-ETL logs are stored in `/tmp/ETL_XXXXXX/` directories. Automatic cleanup is configured in cron (see `etc/cron.example`).
+ETL logs are stored in `/tmp/ETL_XXXXXX/` directories. Automatic cleanup is configured in cron (see
+`etc/cron.example`).
 
 ### Conditional Execution
 
@@ -348,13 +360,15 @@ Run ETL only during business hours:
 
 ## Related Documentation
 
-- **[Deployment Diagram](Deployment_Diagram.md)**: Complete deployment architecture and operational workflows
+- **[Deployment Diagram](Deployment_Diagram.md)**: Complete deployment architecture and operational
+  workflows
 - **[Troubleshooting Guide](Troubleshooting_Guide.md)**: Common cron and deployment issues
 - **[DWH Maintenance Guide](DWH_Maintenance_Guide.md)**: Database maintenance procedures
 
 ## Conclusion
 
-With cron automation configured, your OSM Notes Analytics data warehouse will stay current with minimal manual intervention. Regular monitoring and maintenance ensure optimal performance.
+With cron automation configured, your OSM Notes Analytics data warehouse will stay current with
+minimal manual intervention. Regular monitoring and maintenance ensure optimal performance.
 
-For complete deployment documentation including infrastructure, scheduling, and disaster recovery, see [Deployment Diagram](Deployment_Diagram.md).
-
+For complete deployment documentation including infrastructure, scheduling, and disaster recovery,
+see [Deployment Diagram](Deployment_Diagram.md).

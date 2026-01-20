@@ -8,14 +8,18 @@
 
 ## Executive Summary
 
-This document outlines a plan to implement real-time streaming analytics for the OSM Notes Analytics system using a **pure Bash approach with event queue table**. This would enable near-instantaneous processing of notes as they arrive, reducing latency from the current 15 minutes to seconds.
+This document outlines a plan to implement real-time streaming analytics for the OSM Notes Analytics
+system using a **pure Bash approach with event queue table**. This would enable near-instantaneous
+processing of notes as they arrive, reducing latency from the current 15 minutes to seconds.
 
-**Current State**: 
+**Current State**:
+
 - Ingestion: Daemon runs every minute
 - ETL: Runs every 15 minutes
 - **Latency**: ~15 minutes maximum
 
 **Proposed State**:
+
 - Ingestion: Daemon runs every minute + trigger writes to event queue
 - Streaming Processor: Polls event queue and processes immediately (pure Bash)
 - **Latency**: 2-5 seconds (polling interval)
@@ -89,19 +93,19 @@ graph TB
         DAEMON[Ingestion Daemon<br/>Every 1 minute]
         BASE[Base Tables<br/>public.notes<br/>public.note_comments]
     end
-    
+
     subgraph "PostgreSQL"
         TRIGGER[Database Trigger<br/>AFTER INSERT]
         QUEUE[Event Queue Table<br/>dwh.note_event_queue]
     end
-    
+
     subgraph "OSM-Notes-Analytics"
         POLLER[Streaming Processor<br/>Polling daemon (Bash)]
         ETL[Micro-ETL<br/>Process single note]
         DWH[DWH Schema<br/>dwh.facts]
         DATAMART[Datamarts<br/>Incremental update]
     end
-    
+
     API --> DAEMON
     DAEMON --> BASE
     BASE --> TRIGGER
@@ -137,7 +141,7 @@ BEGIN
         'pending'
     )
     ON CONFLICT (note_id, sequence_action, status) DO NOTHING;
-    
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -151,6 +155,7 @@ CREATE TRIGGER note_insert_notify
 #### 2. Streaming Processor (Analytics Side)
 
 A pure Bash daemon process that:
+
 - Polls the event queue table periodically (every 2-5 seconds)
 - Processes pending events in batches
 - Marks events as processed or failed
@@ -159,6 +164,7 @@ A pure Bash daemon process that:
 #### 3. Micro-ETL
 
 A lightweight ETL process that:
+
 - Processes a single note/comment
 - Updates dimensions if needed
 - Inserts fact row
@@ -170,7 +176,8 @@ A lightweight ETL process that:
 
 ### Approach: Event Table + Polling (Pure Bash)
 
-Since the project uses primarily Bash and we want to avoid Python dependencies, we'll use a **hybrid approach**:
+Since the project uses primarily Bash and we want to avoid Python dependencies, we'll use a **hybrid
+approach**:
 
 1. **Event Table**: Database trigger writes events to a queue table
 2. **Polling**: Bash script polls the table periodically
@@ -192,9 +199,11 @@ Since the project uses primarily Bash and we want to avoid Python dependencies, 
 
 ### Alternative: LISTEN/NOTIFY with psql (Possible but Complex)
 
-PostgreSQL's LISTEN/NOTIFY **does NOT require Python** - it's a native PostgreSQL feature. However, using it from Bash is complex:
+PostgreSQL's LISTEN/NOTIFY **does NOT require Python** - it's a native PostgreSQL feature. However,
+using it from Bash is complex:
 
 **Option 1: LISTEN/NOTIFY with psql (Complex)**
+
 ```bash
 # This is possible but requires:
 # 1. Running psql in background
@@ -211,12 +220,14 @@ EOF
 ```
 
 **Option 2: Event Table (Recommended)**
+
 - Simpler implementation
 - More reliable (events persist)
 - Easier to debug
 - Better error handling
 
-**Recommendation**: Use event table approach for simplicity and reliability, even though LISTEN/NOTIFY is technically possible in Bash.
+**Recommendation**: Use event table approach for simplicity and reliability, even though
+LISTEN/NOTIFY is technically possible in Bash.
 
 ### Channel Design
 
@@ -274,10 +285,10 @@ BEGIN
         'id_user', NEW.id_user,
         'table_name', TG_TABLE_NAME
     );
-    
+
     -- Send notification
     PERFORM pg_notify('note_inserted', v_payload::text);
-    
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -338,12 +349,12 @@ CREATE TABLE IF NOT EXISTS dwh.note_event_queue (
 );
 
 -- Index for efficient polling
-CREATE INDEX IF NOT EXISTS idx_note_event_queue_status_created 
+CREATE INDEX IF NOT EXISTS idx_note_event_queue_status_created
     ON dwh.note_event_queue(status, created_at)
     WHERE status = 'pending';
 
 -- Index for cleanup
-CREATE INDEX IF NOT EXISTS idx_note_event_queue_processed 
+CREATE INDEX IF NOT EXISTS idx_note_event_queue_processed
     ON dwh.note_event_queue(processed_at)
     WHERE status = 'processed';
 
@@ -374,11 +385,11 @@ BEGIN
         'id_user', NEW.id_user,
         'table_name', TG_TABLE_NAME
     );
-    
+
     -- Insert into event queue (if analytics DB is accessible)
     -- This requires dblink or FDW to access analytics DB
     -- Alternative: Write to local table, streaming processor reads via FDW
-    
+
     -- For same database, direct insert:
     INSERT INTO dwh.note_event_queue (
         note_id,
@@ -393,15 +404,15 @@ BEGIN
         v_payload,
         'pending'
     )
-    ON CONFLICT (note_id, sequence_action, status) 
+    ON CONFLICT (note_id, sequence_action, status)
     DO UPDATE SET
         payload = EXCLUDED.payload,
         created_at = EXCLUDED.created_at,
         retry_count = 0;
-    
+
     -- Also send NOTIFY for optional real-time listeners
     PERFORM pg_notify('note_inserted', v_payload::text);
-    
+
     RETURN NEW;
 EXCEPTION
     WHEN OTHERS THEN
@@ -504,9 +515,9 @@ process_event() {
     local note_id=$2
     local sequence_action=$3
     local event_type=$4
-    
+
     __log_event "${event_id}" "${note_id}"
-    
+
     # Call micro-ETL to process this note
     if "${SCRIPT_DIR}/micro_etl.sh" \
         --note-id "${note_id}" \
@@ -525,7 +536,7 @@ process_event() {
 # Get pending events
 get_pending_events() {
     psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -t -A -F'|' <<EOF
-        SELECT 
+        SELECT
             event_id,
             note_id,
             sequence_action,
@@ -554,11 +565,11 @@ EOF
 # Main polling loop
 poll_loop() {
     __log_start
-    
+
     while true; do
         # Reset stuck events
         reset_stuck_events
-        
+
         # Get pending events
         local events
         events=$(get_pending_events) || {
@@ -566,12 +577,12 @@ poll_loop() {
             sleep ${POLL_INTERVAL}
             continue
         }
-        
+
         # Process events if any
         if [ -n "${events}" ]; then
             local processed_count=0
             local failed_count=0
-            
+
             while IFS='|' read -r event_id note_id sequence_action event_type payload; do
                 # Mark as processing
                 if mark_event_processing "${event_id}" > /dev/null 2>&1; then
@@ -583,12 +594,12 @@ poll_loop() {
                     fi
                 fi
             done <<< "${events}"
-            
+
             if [ ${processed_count} -gt 0 ] || [ ${failed_count} -gt 0 ]; then
                 __logi "Processed: ${processed_count}, Failed: ${failed_count}"
             fi
         fi
-        
+
         # Sleep before next poll
         sleep ${POLL_INTERVAL}
     done
@@ -621,7 +632,7 @@ psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 <<EOF
     DELETE FROM dwh.note_event_queue
     WHERE status = 'processed'
       AND processed_at < NOW() - INTERVAL '${RETENTION_DAYS} days';
-    
+
     -- Also cleanup old failed events (keep for 30 days)
     DELETE FROM dwh.note_event_queue
     WHERE status = 'failed'
@@ -648,7 +659,7 @@ source "${SCRIPT_DIR}/../../etc/properties.sh" || exit 1
 BATCH_SIZE="${1:-10}"
 
 psql -d "${DBNAME_DWH}" -v ON_ERROR_STOP=1 -t -A -F'|' <<EOF | while IFS='|' read -r event_id note_id sequence_action event_type; do
-    SELECT 
+    SELECT
         event_id,
         note_id,
         sequence_action,
@@ -736,7 +747,7 @@ DECLARE
     v_fact_id BIGINT;
 BEGIN
     -- Get note data from base tables
-    SELECT 
+    SELECT
         c.note_id,
         c.sequence_action,
         c.event AS action_comment,
@@ -751,19 +762,19 @@ BEGIN
     INTO v_note_record
     FROM public.note_comments c
     JOIN public.notes n ON c.note_id = n.note_id
-    LEFT JOIN public.note_comments_text t 
-        ON c.note_id = t.note_id 
+    LEFT JOIN public.note_comments_text t
+        ON c.note_id = t.note_id
         AND c.sequence_action = t.sequence_action
     WHERE c.note_id = p_note_id
       AND c.sequence_action = p_sequence_action;
-    
+
     -- If note not found, raise error
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Note % sequence % not found', p_note_id, p_sequence_action;
     END IF;
-    
+
     -- Resolve dimension keys
-    SELECT 
+    SELECT
         dwh.get_or_create_user_dimension(v_note_record.action_id_user) AS action_user_id,
         dwh.get_or_create_user_dimension(v_note_record.created_id_user) AS created_user_id,
         dwh.get_or_create_country_dimension(v_note_record.id_country) AS country_id,
@@ -773,7 +784,7 @@ BEGIN
             COALESCE((v_note_record.comment_text::jsonb->>'created_by'), 'unknown')
         ) AS application_id
     INTO v_dimension_keys;
-    
+
     -- Calculate metrics
     DECLARE
         v_comment_length INTEGER := COALESCE(LENGTH(v_note_record.comment_text), 0);
@@ -816,16 +827,16 @@ BEGIN
             comment_length = EXCLUDED.comment_length,
             has_url = EXCLUDED.has_url,
             has_mention = EXCLUDED.has_mention;
-        
+
         -- Update affected datamarts incrementally
         -- (This would call incremental update procedures)
         PERFORM dwh.update_datamart_country_incremental(v_dimension_keys.country_id);
         PERFORM dwh.update_datamart_user_incremental(v_dimension_keys.action_user_id);
-        
+
     END;
-    
+
     COMMIT;
-    
+
 EXCEPTION
     WHEN OTHERS THEN
         ROLLBACK;
@@ -919,12 +930,12 @@ process_event_with_retry() {
     local sequence_action=$3
     local max_retries=3
     local attempt=0
-    
+
     while [ ${attempt} -lt ${max_retries} ]; do
         if process_event "${event_id}" "${note_id}" "${sequence_action}"; then
             return 0
         fi
-        
+
         attempt=$((attempt + 1))
         if [ ${attempt} -lt ${max_retries} ]; then
             local backoff=$((2 ** attempt))
@@ -932,7 +943,7 @@ process_event_with_retry() {
             sleep ${backoff}
         fi
     done
-    
+
     # Max retries reached, mark as failed
     mark_event_failed "${event_id}" "Max retries (${max_retries}) exceeded"
     return 1
@@ -984,7 +995,7 @@ psql -d "${DBNAME}" -t -A -c "
 
 # Check recent processing rate
 psql -d "${DBNAME}" -t -A -c "
-    SELECT 
+    SELECT
         COUNT(*) as processed_last_5min,
         MAX(processed_at) as last_processed
     FROM dwh.note_event_queue
@@ -1077,15 +1088,15 @@ psql -d "${DBNAME}" -t -A -c "
         INSERT INTO public.note_comments (note_id, sequence_action, event, id_user, created_at)
         VALUES (999999, 1, 'opened', 1, NOW());
     "
-    
+
     # Wait for processing
     sleep 2
-    
+
     # Verify fact was created
     run psql -d "${TEST_DBNAME}" -t -c "
         SELECT COUNT(*) FROM dwh.facts WHERE id_note = 999999;
     "
-    
+
     [ "$output" -eq 1 ]
 }
 ```
@@ -1112,15 +1123,19 @@ psql -d "${DBNAME}" -t -A -c "
 
 - **High Value**: For use cases requiring real-time data
 - **Low Value**: For batch analytics that don't need real-time
-- **Recommendation**: Implement if real-time is a requirement, otherwise current system is sufficient
+- **Recommendation**: Implement if real-time is a requirement, otherwise current system is
+  sufficient
 
 ---
 
 ## Conclusion
 
-The LISTEN/NOTIFY approach provides a native, efficient way to implement real-time streaming analytics without external dependencies. While it adds complexity, it offers significant benefits for use cases requiring low-latency data availability.
+The LISTEN/NOTIFY approach provides a native, efficient way to implement real-time streaming
+analytics without external dependencies. While it adds complexity, it offers significant benefits
+for use cases requiring low-latency data availability.
 
-**Recommendation**: 
+**Recommendation**:
+
 - **Priority**: LOW (current 15-minute latency is acceptable for most use cases)
 - **Implementation**: Consider if real-time requirements emerge
 - **Alternative**: Could reduce batch ETL frequency to 5 minutes as simpler alternative
@@ -1136,4 +1151,3 @@ The LISTEN/NOTIFY approach provides a native, efficient way to implement real-ti
 ---
 
 **Next Review**: When real-time requirements are identified
-

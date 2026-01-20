@@ -2,7 +2,9 @@
 
 ## Overview
 
-This comprehensive guide covers all aspects of testing in the OSM-Notes-Analytics project. The test suite includes **197+ tests** organized into unit tests, integration tests, and quality validation tests.
+This comprehensive guide covers all aspects of testing in the OSM-Notes-Analytics project. The test
+suite includes **197+ tests** organized into unit tests, integration tests, and quality validation
+tests.
 
 **Last Updated**: 2025-12-14  
 **Test Framework**: BATS (Bash Automated Testing System)  
@@ -115,17 +117,17 @@ tests/
 **Purpose**: Test individual components in isolation
 
 **Bash Unit Tests** (15 files, ~180+ tests):
-- **ETL Tests**: `ETL_enhanced.test.bats`, `ETL_integration.test.bats`, `ETL_internal_functions.test.bats`
+
+- **ETL Tests**: `ETL_enhanced.test.bats`, `ETL_integration.test.bats`,
+  `ETL_internal_functions.test.bats`
   - ETL script functions
   - ETL database integration
   - Internal ETL helper functions
-  
-- **Datamart Tests**: 
+- **Datamart Tests**:
   - `datamartCountries_integration.test.bats` - Country datamart validation
   - `datamartUsers_integration.test.bats` - User datamart validation
   - `datamartGlobal_integration.test.bats` - Global datamart validation
   - `datamart_full_integration.test.bats` - Complete datamart workflow
-  
 - **Metric Tests**:
   - `datamart_resolution_metrics.test.bats` - Resolution time metrics
   - `datamartUsers_resolution_metrics.test.bats` - User resolution metrics
@@ -133,11 +135,11 @@ tests/
   - `datamart_content_quality.test.bats` - Content quality metrics
   - `datamart_community_health.test.bats` - Community health metrics
   - `datamart_high_priority_metrics.test.bats` - High priority metrics (26 tests)
-  
 - **Hybrid Strategy Tests**:
   - `hybrid_strategy_copy_fdw.test.bats` - Hybrid ETL strategy
 
 **SQL Unit Tests** (3 files):
+
 - `dwh_cleanup.test.sql` - Cleanup procedures
 - `dwh_dimensions_enhanced.test.sql` - Dimension table validation
 - `dwh_functions_enhanced.test.sql` - SQL function validation
@@ -171,6 +173,7 @@ tests/
 ```
 
 **What it does**:
+
 1. Runs quality tests (fast, no database)
 2. Runs DWH tests (slower, requires database)
 3. Shows overall summary
@@ -183,6 +186,7 @@ tests/
 ```
 
 **Checks**:
+
 - ✅ Shellcheck (Bash syntax validation)
 - ✅ shfmt (code formatting)
 - ✅ Trailing whitespace
@@ -200,6 +204,7 @@ export DBNAME="osm_notes_test"
 ```
 
 **What it does**:
+
 1. Sets up test database with mock data (`run_mock_etl.sh`)
 2. Executes all BATS test files:
    - `tests/unit/bash/*.test.bats` (15 files, includes performance monitoring tests)
@@ -248,12 +253,14 @@ bats tests/unit/bash/datamart*.test.bats
 **Purpose**: Validate code quality and syntax
 
 **What it checks**:
+
 - Shell script syntax errors (shellcheck)
 - Code formatting consistency (shfmt)
 - File structure and naming
 - Configuration file validity
 
 **Usage**:
+
 ```bash
 ./tests/run_quality_tests.sh
 ```
@@ -267,6 +274,7 @@ bats tests/unit/bash/datamart*.test.bats
 **Purpose**: Test data warehouse, ETL, and datamarts
 
 **What it tests**:
+
 - ETL process execution
 - Dimension table population
 - Fact table population
@@ -275,6 +283,7 @@ bats tests/unit/bash/datamart*.test.bats
 - Metric calculations
 
 **Prerequisites**:
+
 ```bash
 # Create test database
 createdb osm_notes_test
@@ -285,6 +294,7 @@ export DBNAME="osm_notes_test"
 ```
 
 **Usage**:
+
 ```bash
 export DBNAME="osm_notes_test"
 ./tests/run_dwh_tests.sh
@@ -299,11 +309,13 @@ export DBNAME="osm_notes_test"
 **Purpose**: Run complete test suite
 
 **What it does**:
+
 1. Executes quality tests
 2. Executes DWH tests
 3. Shows comprehensive summary
 
 **Usage**:
+
 ```bash
 export DBNAME="osm_notes_test"
 ./tests/run_all_tests.sh
@@ -337,10 +349,10 @@ teardown() {
 @test "Description of what is being tested" {
   # Arrange
   local expected_value=42
-  
+
   # Act
   run psql -d "${DBNAME}" -tAc "SELECT COUNT(*) FROM dwh.facts"
-  
+
   # Assert
   [[ "${status}" -eq 0 ]]
   [[ "${output}" -gt 0 ]]
@@ -478,6 +490,7 @@ Test output is typically displayed in the terminal. For CI/CD, logs are captured
 ### Tests Fail with "Database does not exist"
 
 **Solution**:
+
 ```bash
 # Create test database
 createdb osm_notes_test
@@ -490,6 +503,7 @@ export DBNAME="osm_notes_test"
 ### BATS Not Found
 
 **Solution**:
+
 ```bash
 # Ubuntu/Debian
 sudo apt-get install bats
@@ -504,6 +518,7 @@ bats --version
 ### Permission Denied Errors
 
 **Solution**:
+
 ```bash
 # Make scripts executable
 chmod +x tests/run_*.sh
@@ -513,6 +528,7 @@ chmod +x tests/unit/bash/*.bats
 ### Database Connection Issues
 
 **Solution**:
+
 ```bash
 # Verify database exists and is accessible
 psql -d osm_notes_test -c "SELECT version();"
@@ -527,6 +543,7 @@ psql -d "${DBNAME}" -c "SELECT 1;"
 ### Tests Timeout
 
 **Solution**:
+
 - Some tests have timeout protection (e.g., 30 seconds)
 - If tests consistently timeout, check database performance
 - Verify test data size is reasonable
@@ -534,6 +551,7 @@ psql -d "${DBNAME}" -c "SELECT 1;"
 ### Test Data Issues
 
 **Solution**:
+
 ```bash
 # Reload test data
 export DBNAME="osm_notes_test"
@@ -591,6 +609,7 @@ psql -d "${DBNAME}" -f tests/sql/setup_base_tables_data.sql
 **Triggers**: Every push and pull request  
 **Duration**: ~1 minute  
 **What it does**:
+
 - Runs `run_quality_tests.sh`
 - Validates code quality
 - No database required
@@ -600,6 +619,7 @@ psql -d "${DBNAME}" -f tests/sql/setup_base_tables_data.sql
 **Triggers**: Push to main branch  
 **Duration**: ~10 minutes  
 **What it does**:
+
 - Sets up PostgreSQL database
 - Runs `run_all_tests.sh`
 - Executes full test suite
@@ -608,6 +628,7 @@ psql -d "${DBNAME}" -f tests/sql/setup_base_tables_data.sql
 
 **Triggers**: Weekly  
 **What it does**:
+
 - Checks for outdated dependencies
 - Validates required tools
 
@@ -616,15 +637,18 @@ psql -d "${DBNAME}" -f tests/sql/setup_base_tables_data.sql
 Git hooks are available in `.git-hooks/`:
 
 **Pre-commit Hook**:
+
 - Runs shellcheck on modified Bash scripts
 - Validates SQL syntax
 - Fast, focused on changed files
 
 **Pre-push Hook**:
+
 - Runs quality tests
 - Ensures code quality before pushing
 
 **Installation** (optional):
+
 ```bash
 # Copy hooks to .git/hooks/
 cp .git-hooks/pre-commit .git/hooks/
@@ -638,13 +662,13 @@ chmod +x .git/hooks/pre-*
 
 Approximate execution times:
 
-| Test Suite | Duration | Database Required |
-|------------|----------|------------------|
-| Quality Tests | < 1 minute | No |
-| DWH Tests | 5-10 minutes | Yes |
-| All Tests | 6-11 minutes | Yes |
-| Single Test File | 10-60 seconds | Depends |
-| Individual Test | 1-5 seconds | Depends |
+| Test Suite       | Duration      | Database Required |
+| ---------------- | ------------- | ----------------- |
+| Quality Tests    | < 1 minute    | No                |
+| DWH Tests        | 5-10 minutes  | Yes               |
+| All Tests        | 6-11 minutes  | Yes               |
+| Single Test File | 10-60 seconds | Depends           |
+| Individual Test  | 1-5 seconds   | Depends           |
 
 ---
 
@@ -715,6 +739,7 @@ The OSM-Notes-Analytics test suite provides comprehensive coverage with **197+ t
 - ✅ **Quality validation** (syntax, formatting, structure)
 
 **Quick Commands**:
+
 ```bash
 # Run all tests
 ./tests/run_all_tests.sh
@@ -736,4 +761,3 @@ bats tests/unit/bash/datamart_high_priority_metrics.test.bats
 
 **Last Updated**: 2025-12-14  
 **Maintained By**: Development Team
-

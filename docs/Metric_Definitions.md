@@ -1,6 +1,8 @@
 # Metric Definitions - Complete Reference
 
-This document provides comprehensive business definitions for all metrics available in the OSM-Notes-Analytics datamarts (77+ metrics for countries, 78+ metrics for users). Each metric includes business name, definition, calculation formula, unit, interpretation, and use cases.
+This document provides comprehensive business definitions for all metrics available in the
+OSM-Notes-Analytics datamarts (77+ metrics for countries, 78+ metrics for users). Each metric
+includes business name, definition, calculation formula, unit, interpretation, and use cases.
 
 ## Table of Contents
 
@@ -35,6 +37,7 @@ This document provides comprehensive business definitions for all metrics availa
 ## Overview
 
 The datamarts contain pre-computed metrics organized into categories:
+
 - **Historical Counts**: Activity counts by time period
 - **Resolution Metrics**: Time to resolution and resolution rates
 - **Application Statistics**: Tool usage patterns and trends
@@ -45,7 +48,8 @@ The datamarts contain pre-computed metrics organized into categories:
 - **User Behavior**: User responsiveness and collaboration patterns
 - **Hashtag Metrics**: Campaign and organization tracking
 
-**Total Metrics**: 
+**Total Metrics**:
+
 - **77+ metrics** per country
 - **78+ metrics** per user (includes `notes_opened_but_not_closed_by_user` added December 2025)
 
@@ -55,7 +59,8 @@ The datamarts contain pre-computed metrics organized into categories:
 
 ### 1. Historical Count Metrics
 
-These metrics count note actions (opened, commented, closed, reopened) across different time periods.
+These metrics count note actions (opened, commented, closed, reopened) across different time
+periods.
 
 #### 1.1 Whole History Metrics
 
@@ -65,12 +70,14 @@ These metrics count note actions (opened, commented, closed, reopened) across di
 **Definition**: Total number of notes opened by user/country since 2013.  
 **Formula**: `COUNT(*) WHERE action_comment = 'opened'`  
 **Unit**: Count (integer)  
-**Interpretation**: 
+**Interpretation**:
+
 - **High values** (>1000): Very active contributor/community
 - **Medium values** (100-1000): Active contributor/community
 - **Low values** (<100): Occasional contributor/community
 
 **Use Cases**:
+
 - User profile: "This user has created 1,234 notes"
 - Country comparison: "Colombia has 50,000 notes created"
 - Leaderboards: "Top 10 users by notes created"
@@ -85,11 +92,13 @@ These metrics count note actions (opened, commented, closed, reopened) across di
 **Definition**: Total number of comments added to notes (excluding opening/closing comments).  
 **Formula**: `COUNT(*) WHERE action_comment = 'commented'`  
 **Unit**: Count (integer)  
-**Interpretation**: 
+**Interpretation**:
+
 - **High values**: Active discussion participant
 - **Low values**: Creates notes but doesn't engage in discussion
 
 **Use Cases**:
+
 - Engagement measurement: "This user actively participates in discussions"
 - Community collaboration: "High comment counts show active community"
 
@@ -103,11 +112,13 @@ These metrics count note actions (opened, commented, closed, reopened) across di
 **Definition**: Total number of notes closed (resolved) by user/country.  
 **Formula**: `COUNT(*) WHERE action_comment = 'closed'`  
 **Unit**: Count (integer)  
-**Interpretation**: 
+**Interpretation**:
+
 - **High values**: Very active resolver
 - **Key indicator**: Shows contribution to note resolution
 
 **Use Cases**:
+
 - User profile: "This user has resolved 567 notes"
 - Country comparison: "Germany has resolved 80% of its notes"
 - Impact measurement: "This user's resolution activity helps the community"
@@ -122,11 +133,13 @@ These metrics count note actions (opened, commented, closed, reopened) across di
 **Definition**: Number of notes closed that include an explanatory comment.  
 **Formula**: `COUNT(*) WHERE action_comment = 'closed' AND comment_text IS NOT NULL`  
 **Unit**: Count (integer)  
-**Interpretation**: 
+**Interpretation**:
+
 - **High percentage** (>80%): Good communication practices
 - **Low percentage** (<50%): May indicate rushed closures
 
 **Use Cases**:
+
 - Quality measurement: "80% of resolutions include explanations"
 - User behavior: "This user always explains their resolutions"
 - Community standards: "Our community values explanatory closures"
@@ -141,11 +154,13 @@ These metrics count note actions (opened, commented, closed, reopened) across di
 **Definition**: Number of times notes were reopened after being closed.  
 **Formula**: `COUNT(*) WHERE action_comment = 'reopened'`  
 **Unit**: Count (integer)  
-**Interpretation**: 
+**Interpretation**:
+
 - **High values**: May indicate complex issues or quality problems
 - **Low values**: Good resolution quality
 
 **Use Cases**:
+
 - Problem identification: "This note was reopened 3 times (complex issue)"
 - Quality measurement: "Low reopen rate indicates good resolution quality"
 - User behavior: "This user reopens notes that weren't properly fixed"
@@ -163,7 +178,8 @@ These metrics follow the same pattern as whole history but for specific time per
 **Business Name**: Notes Created This Year  
 **Definition**: Count of notes opened in the current year.  
 **Formula**: `COUNT(*) WHERE action_comment = 'opened' AND action_dimension_id_date IN (SELECT dimension_day_id FROM dimension_days WHERE year = CURRENT_YEAR)`  
-**Unit**: Count (integer)  
+**Unit**:
+Count (integer)  
 **Interpretation**: Shows current year activity level
 
 **Available In**: `datamartusers`, `datamartcountries`
@@ -199,7 +215,8 @@ These metrics follow the same pattern as whole history but for specific time per
 **Business Name**: Notes Created in Year YYYY  
 **Definition**: Count of notes opened in a specific year (2013-2024+).  
 **Formula**: `COUNT(*) WHERE action_comment = 'opened' AND action_dimension_id_date IN (SELECT dimension_day_id FROM dimension_days WHERE year = YYYY)`  
-**Unit**: Count (integer)  
+**Unit**:
+Count (integer)  
 **Interpretation**: Shows activity for that specific year
 
 **Available In**: `datamartusers`, `datamartcountries`  
@@ -217,13 +234,15 @@ Metrics related to note resolution time and rates.
 **Definition**: Average number of days from when a note is opened until it is closed.  
 **Formula**: `AVG(days_to_resolution) WHERE days_to_resolution IS NOT NULL`  
 **Unit**: Days (decimal, e.g., 15.5)  
-**Interpretation**: 
+**Interpretation**:
+
 - **Excellent**: < 7 days
 - **Good**: 7-30 days
 - **Acceptable**: 30-90 days
 - **Needs Improvement**: > 90 days
 
 **Use Cases**:
+
 - Performance measurement: "Average resolution time is 15 days"
 - Community comparison: "Country A resolves notes 2x faster than Country B"
 - Trend analysis: "Resolution time improved from 45 to 20 days this year"
@@ -239,9 +258,11 @@ Metrics related to note resolution time and rates.
 **Definition**: The middle value when all resolution times are sorted (50th percentile).  
 **Formula**: `PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY days_to_resolution)`  
 **Unit**: Days (decimal)  
-**Interpretation**: Less affected by outliers than average. If median is much lower than average, there are some very long-resolution notes skewing the average.
+**Interpretation**: Less affected by outliers than average. If median is much lower than average,
+there are some very long-resolution notes skewing the average.
 
 **Use Cases**:
+
 - Robust performance measurement: "Median resolution time is 8 days (vs 15 day average)"
 - Outlier identification: "Average is high due to a few very old notes"
 - Community health: "50% of notes resolve within 8 days"
@@ -255,14 +276,17 @@ Metrics related to note resolution time and rates.
 **Business Name**: Note Resolution Rate  
 **Definition**: Percentage of opened notes that have been closed (resolved).  
 **Formula**: `(COUNT(*) WHERE action_comment = 'closed') / (COUNT(*) WHERE action_comment = 'opened') * 100`  
-**Unit**: Percentage (0-100, decimal)  
-**Interpretation**: 
+**Unit**:
+Percentage (0-100, decimal)  
+**Interpretation**:
+
 - **Excellent**: > 80%
 - **Good**: 60-80%
 - **Acceptable**: 40-60%
 - **Needs Improvement**: < 40%
 
 **Use Cases**:
+
 - Community health: "Colombia has an 85% resolution rate"
 - Trend analysis: "Resolution rate improved from 60% to 75% this year"
 - Comparison: "Country A resolves 90% of notes, Country B resolves 50%"
@@ -281,6 +305,7 @@ Metrics related to note resolution time and rates.
 **Interpretation**: Absolute number of resolved notes
 
 **Use Cases**:
+
 - Absolute measurement: "This user has resolved 500 notes"
 - Comparison: "Country A has resolved 10,000 notes vs Country B's 5,000"
 
@@ -293,12 +318,15 @@ Metrics related to note resolution time and rates.
 **Business Name**: Unresolved Notes Count  
 **Definition**: Number of notes opened but never closed.  
 **Formula**: `COUNT(DISTINCT id_note) WHERE action_comment = 'opened' AND id_note NOT IN (SELECT DISTINCT id_note WHERE action_comment = 'closed')`  
-**Unit**: Count (integer)  
-**Interpretation**: 
+**Unit**:
+Count (integer)  
+**Interpretation**:
+
 - **High values**: Large backlog
 - **Low values**: Good resolution coverage
 
 **Use Cases**:
+
 - Backlog measurement: "This user has 50 unresolved notes"
 - Community health: "Country has 1,000 unresolved notes (backlog)"
 
@@ -309,13 +337,16 @@ Metrics related to note resolution time and rates.
 #### 2.6 `resolution_by_year`
 
 **Business Name**: Resolution Metrics by Year  
-**Definition**: JSON array containing resolution metrics (average days, median days, resolution rate) for each year.  
+**Definition**: JSON array containing resolution metrics (average days, median days, resolution
+rate) for each year.  
 **Formula**: `json_agg(json_build_object('year', year, 'avg_days', avg_days, 'median_days', median_days, 'resolution_rate', resolution_rate)) GROUP BY year`  
-**Unit**: JSON array  
+**Unit**:
+JSON array  
 **Format**: `[{"year": 2023, "avg_days": 15.5, "median_days": 8.0, "resolution_rate": 75.0}, ...]`  
 **Interpretation**: Shows resolution trends over time
 
 **Use Cases**:
+
 - Trend analysis: "Resolution time improved from 30 days (2020) to 15 days (2024)"
 - Year-over-year comparison: "2024 resolution rate is 10% higher than 2023"
 
@@ -330,9 +361,11 @@ Metrics related to note resolution time and rates.
 **Formula**: Similar to `resolution_by_year` but grouped by year and month  
 **Unit**: JSON array  
 **Format**: `[{"year": 2024, "month": 1, "avg_days": 14.2, "median_days": 7.5, "resolution_rate": 78.0}, ...]`  
-**Interpretation**: Shows monthly resolution trends
+**Interpretation**:
+Shows monthly resolution trends
 
 **Use Cases**:
+
 - Monthly trends: "Resolution time varies by month (seasonal patterns)"
 - Short-term analysis: "Last 3 months show improving resolution rates"
 
@@ -349,11 +382,13 @@ Metrics related to applications and tools used to create notes.
 **Business Name**: Applications Used  
 **Definition**: JSON array of distinct applications used to create notes.  
 **Formula**: `json_agg(DISTINCT dimension_application_creation) WHERE dimension_application_creation IS NOT NULL`  
-**Unit**: JSON array of application IDs  
+**Unit**:
+JSON array of application IDs  
 **Format**: `[1, 5, 12, 23]` (application dimension IDs)  
 **Interpretation**: Shows tool diversity
 
 **Use Cases**:
+
 - Tool diversity: "This user uses 5 different applications"
 - Technology adoption: "Country uses diverse mapping tools"
 
@@ -370,6 +405,7 @@ Metrics related to applications and tools used to create notes.
 **Interpretation**: Shows the preferred tool for note creation
 
 **Use Cases**:
+
 - Tool popularity: "iD is the most used application in this country"
 - User preference: "This user primarily uses JOSM"
 - Platform trends: "Mobile apps are becoming the primary tool"
@@ -384,11 +420,13 @@ Metrics related to applications and tools used to create notes.
 **Definition**: Count of distinct mobile applications used to create notes.  
 **Formula**: `COUNT(DISTINCT dimension_application_creation) WHERE platform = 'mobile'`  
 **Unit**: Count (integer)  
-**Interpretation**: 
+**Interpretation**:
+
 - **High values**: Diverse mobile app usage
 - **Zero**: No mobile app usage
 
 **Use Cases**:
+
 - Platform adoption: "Users in this country use 5 different mobile apps"
 - Technology trends: "Mobile app usage increased 30% this year"
 - User behavior: "This user creates notes from 3 different mobile apps"
@@ -403,11 +441,13 @@ Metrics related to applications and tools used to create notes.
 **Definition**: Count of distinct desktop/web applications used to create notes.  
 **Formula**: `COUNT(DISTINCT dimension_application_creation) WHERE platform = 'desktop'`  
 **Unit**: Count (integer)  
-**Interpretation**: 
+**Interpretation**:
+
 - **High values**: Diverse desktop tool usage
 - **Zero**: No desktop app usage
 
 **Use Cases**:
+
 - Platform comparison: "Desktop users use more diverse tools than mobile users"
 - Tool adoption: "JOSM and iD are the most common desktop tools"
 - User preferences: "This user prefers desktop tools for note creation"
@@ -419,13 +459,16 @@ Metrics related to applications and tools used to create notes.
 #### 3.5 `application_usage_trends`
 
 **Business Name**: Application Usage Trends by Year  
-**Definition**: JSON array containing application usage statistics grouped by year, showing how application usage has changed over time.  
+**Definition**: JSON array containing application usage statistics grouped by year, showing how
+application usage has changed over time.  
 **Formula**: `json_agg(json_build_object('year', year, 'applications', app_data)) GROUP BY year`  
 **Unit**: JSON array  
 **Format**: `[{"year": 2023, "applications": [{"app_id": 1, "app_name": "iD", "count": 100, "pct": 45.5}, ...]}, ...]`  
-**Interpretation**: Shows how application preferences change over time
+**Interpretation**:
+Shows how application preferences change over time
 
 **Use Cases**:
+
 - Trend analysis: "Mobile app usage increased from 20% (2020) to 60% (2024)"
 - Technology adoption: "iD usage peaked in 2022, then declined"
 - Platform shifts: "Desktop tools declining, mobile tools increasing"
@@ -437,13 +480,16 @@ Metrics related to applications and tools used to create notes.
 #### 3.6 `version_adoption_rates`
 
 **Business Name**: Version Adoption Rates by Year  
-**Definition**: JSON array containing version adoption statistics grouped by year, showing which application versions are being used over time.  
+**Definition**: JSON array containing version adoption statistics grouped by year, showing which
+application versions are being used over time.  
 **Formula**: `json_agg(json_build_object('year', year, 'versions', version_data)) GROUP BY year`  
 **Unit**: JSON array  
 **Format**: `[{"year": 2023, "versions": [{"version": "2.20.0", "count": 50, "adoption_rate": 25.0}, ...]}, ...]`  
-**Interpretation**: Shows version adoption patterns and upgrade trends
+**Interpretation**:
+Shows version adoption patterns and upgrade trends
 
 **Use Cases**:
+
 - Version tracking: "Version 2.20.0 adoption rate is 25% in 2023"
 - Upgrade patterns: "Users are slow to adopt new versions"
 - Technology trends: "Latest version adoption rate is increasing"
@@ -462,12 +508,14 @@ Metrics related to comment quality and engagement.
 **Definition**: Average number of characters in comments added to notes.  
 **Formula**: `AVG(comment_length) WHERE comment_length IS NOT NULL`  
 **Unit**: Characters (decimal, e.g., 150.5)  
-**Interpretation**: 
+**Interpretation**:
+
 - **High values** (>200): Detailed explanations
 - **Medium values** (50-200): Standard communication
 - **Low values** (<50): Brief comments
 
 **Use Cases**:
+
 - Communication quality: "Average comment is 150 characters (detailed)"
 - User behavior: "This user writes detailed comments (avg 200 chars)"
 - Community standards: "Longer comments correlate with better resolution rates"
@@ -483,12 +531,14 @@ Metrics related to comment quality and engagement.
 **Formula**: `COUNT(*) WHERE has_url = TRUE`  
 **Unit**: Count (integer)  
 **Interpretation**: URLs in comments often provide:
+
 - Reference materials
 - Evidence for the issue
 - Related information
 - External resources
 
 **Use Cases**:
+
 - Quality indicator: "30% of comments include reference links"
 - User behavior: "This user frequently provides supporting links"
 - Information sharing: "URLs help provide context for note issues"
@@ -502,12 +552,15 @@ Metrics related to comment quality and engagement.
 **Business Name**: Percentage of Comments with URLs  
 **Definition**: Percentage of comments that contain URLs.  
 **Formula**: `(COUNT(*) WHERE has_url = TRUE) / (COUNT(*) WHERE action_comment = 'commented') * 100`  
-**Unit**: Percentage (0-100, decimal)  
-**Interpretation**: 
+**Unit**:
+Percentage (0-100, decimal)  
+**Interpretation**:
+
 - **High percentage** (>30%): Good use of external references
 - **Low percentage** (<10%): Few external references
 
 **Use Cases**:
+
 - Quality measurement: "25% of comments include URLs (good reference usage)"
 - Community comparison: "Country A uses URLs more than Country B"
 
@@ -522,12 +575,14 @@ Metrics related to comment quality and engagement.
 **Formula**: `COUNT(*) WHERE has_mention = TRUE`  
 **Unit**: Count (integer)  
 **Interpretation**: Mentions indicate:
+
 - Direct communication
 - Collaboration
 - Requesting help
 - Acknowledging contributions
 
 **Use Cases**:
+
 - Collaboration measurement: "This note has 5 mentions (active collaboration)"
 - User engagement: "This user frequently mentions others (collaborative)"
 - Community interaction: "High mention count shows active discussion"
@@ -541,12 +596,15 @@ Metrics related to comment quality and engagement.
 **Business Name**: Percentage of Comments with Mentions  
 **Definition**: Percentage of comments that mention other users.  
 **Formula**: `(COUNT(*) WHERE has_mention = TRUE) / (COUNT(*) WHERE action_comment = 'commented') * 100`  
-**Unit**: Percentage (0-100, decimal)  
-**Interpretation**: 
+**Unit**:
+Percentage (0-100, decimal)  
+**Interpretation**:
+
 - **High percentage** (>20%): High collaboration
 - **Low percentage** (<5%): Low collaboration
 
 **Use Cases**:
+
 - Collaboration measurement: "15% of comments mention other users"
 - Community health: "High mention rate indicates active collaboration"
 
@@ -560,12 +618,14 @@ Metrics related to comment quality and engagement.
 **Definition**: Average number of comments per note.  
 **Formula**: `AVG(total_comments_on_note) WHERE action_comment = 'commented'`  
 **Unit**: Count (decimal, e.g., 3.5)  
-**Interpretation**: 
+**Interpretation**:
+
 - **High values** (>5): Active discussion, complex issues
 - **Medium values** (2-5): Normal engagement
 - **Low values** (<2): Minimal discussion
 
 **Use Cases**:
+
 - Engagement measurement: "Average 4 comments per note (active discussion)"
 - Problem identification: "Notes with >10 comments may be controversial"
 - Community activity: "High comment count shows active community"
@@ -581,17 +641,21 @@ Metrics related to when notes are created/resolved.
 #### 5.1 `working_hours_of_week_opening`
 
 **Business Name**: Activity by Hour of Week (Opening)  
-**Definition**: JSON array showing note opening activity for each of the 168 hours of the week (7 days × 24 hours).  
+**Definition**: JSON array showing note opening activity for each of the 168 hours of the week (7
+days × 24 hours).  
 **Formula**: `json_agg(action_count) GROUP BY action_dimension_id_hour_of_week ORDER BY hour_of_week`  
-**Unit**: JSON array (168 integers)  
+**Unit**:
+JSON array (168 integers)  
 **Format**: `[5, 3, 2, 1, 0, 0, 4, 8, 12, 15, ...]` (one value per hour)  
 **Interpretation**: Shows when users are most active:
+
 - **Weekdays 9-17**: Typical work hours
 - **Evenings**: After-work activity
 - **Weekends**: Leisure time activity
 - **Night hours**: Different timezone or dedicated mappers
 
 **Use Cases**:
+
 - Activity patterns: "Users are most active Tuesday-Thursday 14:00-16:00"
 - Timezone analysis: "Activity peaks at different hours (global community)"
 - User behavior: "This user maps primarily on weekends"
@@ -610,6 +674,7 @@ Metrics related to when notes are created/resolved.
 **Interpretation**: Shows when users engage in discussions
 
 **Use Cases**:
+
 - Discussion patterns: "Comments peak during weekday afternoons"
 - Engagement analysis: "Users comment more on weekends"
 
@@ -626,6 +691,7 @@ Metrics related to when notes are created/resolved.
 **Interpretation**: Shows when users resolve notes
 
 **Use Cases**:
+
 - Resolution patterns: "Notes are closed primarily during work hours"
 - Productivity analysis: "Resolution activity peaks on weekday mornings"
 
@@ -636,16 +702,19 @@ Metrics related to when notes are created/resolved.
 #### 5.4 `last_year_activity`
 
 **Business Name**: GitHub-Style Activity Heatmap  
-**Definition**: String representation of activity over the last year (371 characters, one per day).  
+**Definition**: String representation of activity over the last year (371 characters, one per
+day).  
 **Formula**: Character encoding of daily activity counts  
 **Unit**: String (371 characters)  
 **Format**: Each character represents one day's activity level (encoded)  
 **Interpretation**: Visual representation similar to GitHub contribution graph:
+
 - Each character represents one day
 - Character intensity shows activity level
 - Patterns show consistency and engagement
 
 **Use Cases**:
+
 - Visual activity display: "Show activity heatmap on user profile"
 - Consistency measurement: "This user maps consistently (no gaps)"
 - Trend visualization: "Activity increased in recent months"
@@ -665,6 +734,7 @@ Metrics related to when notes are created/resolved.
 **Interpretation**: Shows peak activity dates (may indicate events, campaigns, or special dates)
 
 **Use Cases**:
+
 - Event identification: "Peak activity on mapathon dates"
 - Campaign tracking: "High activity during #MissingMaps campaign"
 - Pattern analysis: "Activity spikes on first Saturday of each month"
@@ -682,6 +752,7 @@ Metrics related to when notes are created/resolved.
 **Interpretation**: Shows peak resolution dates
 
 **Use Cases**:
+
 - Resolution patterns: "Most resolutions occur on weekends"
 - Productivity analysis: "Resolution spikes after mapathons"
 
@@ -700,12 +771,14 @@ Metrics related to where notes are created/resolved.
 **Formula**: `json_agg(DISTINCT dimension_id_country) WHERE action_comment = 'opened'`  
 **Unit**: JSON array of country IDs  
 **Format**: `[1, 5, 12, 23, 45]`  
-**Interpretation**: 
+**Interpretation**:
+
 - **Single country**: Local mapper
 - **Multiple countries**: Traveling mapper or global contributor
 - **Many countries**: Very active global contributor
 
 **Use Cases**:
+
 - User profile: "This user contributes in 5 countries"
 - Geographic diversity: "This user maps globally, not just locally"
 - Contribution scope: "User focuses on specific region"
@@ -723,6 +796,7 @@ Metrics related to where notes are created/resolved.
 **Interpretation**: Shows geographic scope of resolution activity
 
 **Use Cases**:
+
 - Resolution scope: "This user resolves notes in 3 countries"
 - Global contribution: "User helps resolve notes globally"
 
@@ -739,6 +813,7 @@ Metrics related to where notes are created/resolved.
 **Interpretation**: Shows community size and diversity
 
 **Use Cases**:
+
 - Community size: "500 users have created notes in this country"
 - Contributor diversity: "Large and diverse contributor base"
 
@@ -755,6 +830,7 @@ Metrics related to where notes are created/resolved.
 **Interpretation**: Shows resolver community size
 
 **Use Cases**:
+
 - Resolver community: "200 users actively resolve notes in this country"
 - Community health: "Large resolver community indicates healthy ecosystem"
 
@@ -767,11 +843,14 @@ Metrics related to where notes are created/resolved.
 **Business Name**: Top Countries by Activity (Year YYYY)  
 **Definition**: JSON array of top countries ranked by note opening activity for a specific year.  
 **Formula**: `json_agg(json_build_object('country_id', country_id, 'count', count, 'rank', rank) ORDER BY count DESC LIMIT 10)`  
-**Unit**: JSON array of objects  
+**Unit**:
+JSON array of objects  
 **Format**: `[{"country_id": 1, "count": 150, "rank": 1}, {"country_id": 5, "count": 120, "rank": 2}, ...]`  
-**Interpretation**: Shows which countries user is most active in for that year
+**Interpretation**:
+Shows which countries user is most active in for that year
 
 **Use Cases**:
+
 - Geographic focus: "User's top country in 2023 was Colombia"
 - Trend analysis: "User's activity shifted from Country A to Country B"
 
@@ -789,6 +868,7 @@ Metrics related to where notes are created/resolved.
 **Interpretation**: Shows top contributors for that year
 
 **Use Cases**:
+
 - Leaderboards: "Top 10 users by note activity in 2023"
 - Recognition: "Highlight top contributors for the year"
 
@@ -806,6 +886,7 @@ Metrics related to where notes are created/resolved.
 **Interpretation**: Shows top resolvers for that year
 
 **Use Cases**:
+
 - Resolver leaderboards: "Top 10 resolvers in 2023"
 - Recognition: "Acknowledge top resolvers"
 
@@ -822,12 +903,15 @@ Metrics related to backlog, active notes, and community activity.
 **Business Name**: Currently Open Notes  
 **Definition**: Number of notes that are currently open (not yet closed).  
 **Formula**: `COUNT(DISTINCT id_note) WHERE action_comment = 'opened' AND id_note NOT IN (SELECT DISTINCT id_note WHERE action_comment = 'closed')`  
-**Unit**: Count (integer)  
-**Interpretation**: 
+**Unit**:
+Count (integer)  
+**Interpretation**:
+
 - **High values**: Large active backlog
 - **Low values**: Most notes resolved
 
 **Use Cases**:
+
 - Backlog measurement: "500 notes currently open"
 - Community health: "Active notes count indicates current workload"
 
@@ -838,14 +922,17 @@ Metrics related to backlog, active notes, and community activity.
 #### 7.2 `notes_backlog_size`
 
 **Business Name**: Notes Backlog Size  
-**Definition**: Number of notes opened but not yet resolved. Same as `active_notes_count` but with different semantic meaning.  
+**Definition**: Number of notes opened but not yet resolved. Same as `active_notes_count` but with
+different semantic meaning.  
 **Formula**: Same as `active_notes_count`  
 **Unit**: Count (integer)  
-**Interpretation**: 
+**Interpretation**:
+
 - **High values**: Large backlog, may need community support
 - **Low values**: Good resolution coverage
 
 **Use Cases**:
+
 - Backlog tracking: "Backlog size is 1,000 notes"
 - Resource planning: "Large backlog indicates need for more resolvers"
 
@@ -858,13 +945,16 @@ Metrics related to backlog, active notes, and community activity.
 **Business Name**: Notes Age Distribution  
 **Definition**: JSON object showing distribution of note ages in buckets.  
 **Formula**: `json_build_object('0_7_days', count_0_7, '8_30_days', count_8_30, '31_90_days', count_31_90, '90_plus_days', count_90_plus)`  
-**Unit**: JSON object  
+**Unit**:
+JSON object  
 **Format**: `{"0_7_days": 100, "8_30_days": 50, "31_90_days": 25, "90_plus_days": 10}`  
-**Interpretation**: 
+**Interpretation**:
+
 - **High 0-7 days**: Recent activity, good responsiveness
 - **High 90+ days**: Old backlog, may need attention
 
 **Use Cases**:
+
 - Backlog analysis: "Most notes are recent (0-7 days)"
 - Problem identification: "Many notes are 90+ days old (stale backlog)"
 - Community health: "Age distribution shows healthy resolution patterns"
@@ -878,10 +968,12 @@ Metrics related to backlog, active notes, and community activity.
 **Business Name**: Notes Created in Last 30 Days  
 **Definition**: Number of notes opened in the last 30 days.  
 **Formula**: `COUNT(*) WHERE action_comment = 'opened' AND action_at >= CURRENT_DATE - INTERVAL '30 days'`  
-**Unit**: Count (integer)  
+**Unit**:
+Count (integer)  
 **Interpretation**: Shows recent activity level
 
 **Use Cases**:
+
 - Recent activity: "50 notes created in last 30 days"
 - Trend analysis: "Activity increased 20% in last month"
 
@@ -894,10 +986,12 @@ Metrics related to backlog, active notes, and community activity.
 **Business Name**: Notes Resolved in Last 30 Days  
 **Definition**: Number of notes closed in the last 30 days.  
 **Formula**: `COUNT(*) WHERE action_comment = 'closed' AND action_at >= CURRENT_DATE - INTERVAL '30 days'`  
-**Unit**: Count (integer)  
+**Unit**:
+Count (integer)  
 **Interpretation**: Shows recent resolution activity
 
 **Use Cases**:
+
 - Recent resolution: "40 notes resolved in last 30 days"
 - Productivity: "Resolution activity is steady"
 
@@ -908,16 +1002,20 @@ Metrics related to backlog, active notes, and community activity.
 #### 7.6 `notes_health_score` (Countries only)
 
 **Business Name**: Overall Notes Health Score  
-**Definition**: Composite score (0-100) that measures the overall health of notes in a country, based on resolution rate, backlog size, and recent activity.  
+**Definition**: Composite score (0-100) that measures the overall health of notes in a country,
+based on resolution rate, backlog size, and recent activity.  
 **Formula**: `(resolution_rate * 0.4) + ((100 - backlog_ratio) * 0.3) + (recent_activity_score * 0.3)`  
-**Unit**: Score (0-100, decimal)  
-**Interpretation**: 
+**Unit**:
+Score (0-100, decimal)  
+**Interpretation**:
+
 - **Excellent** (80-100): High resolution rate, low backlog, active community
 - **Good** (60-80): Decent resolution rate, manageable backlog
 - **Fair** (40-60): Moderate issues, some backlog
 - **Poor** (<40): Low resolution rate, high backlog, inactive community
 
 **Use Cases**:
+
 - Community health monitoring: "Country health score is 75 (good)"
 - Comparison: "Country A (85) is healthier than Country B (45)"
 - Trend analysis: "Health score improved from 50 to 75 this year"
@@ -932,13 +1030,15 @@ Metrics related to backlog, active notes, and community activity.
 **Definition**: Ratio of new notes created vs resolved notes in the last 30 days.  
 **Formula**: `notes_created_last_30_days / notes_resolved_last_30_days`  
 **Unit**: Ratio (decimal, can be 999.99 for infinite when no resolutions)  
-**Interpretation**: 
+**Interpretation**:
+
 - **< 1.0**: More notes resolved than created (backlog shrinking)
 - **= 1.0**: Balanced (same created as resolved)
 - **> 1.0**: More notes created than resolved (backlog growing)
 - **999.99**: No resolutions (infinite ratio)
 
 **Use Cases**:
+
 - Backlog trend: "Ratio is 0.8 (backlog shrinking)"
 - Problem identification: "Ratio is 2.5 (backlog growing rapidly)"
 - Community balance: "Ratio is 1.0 (balanced activity)"
@@ -954,15 +1054,18 @@ Metrics related to user behavior patterns, responsiveness, and collaboration.
 #### 8.1 `user_response_time` (Users only)
 
 **Business Name**: Average User Response Time  
-**Definition**: Average time in days from when a user opens a note to when they add their first comment.  
+**Definition**: Average time in days from when a user opens a note to when they add their first
+comment.  
 **Formula**: `AVG(EXTRACT(EPOCH FROM (first_comment_time - open_time)) / 86400.0)`  
 **Unit**: Days (decimal, e.g., 2.5 days)  
-**Interpretation**: 
+**Interpretation**:
+
 - **Low values** (<1 day): Very responsive user
 - **Medium values** (1-3 days): Responsive user
 - **High values** (>3 days): Less responsive user
 
 **Use Cases**:
+
 - User responsiveness: "This user responds within 1 day on average"
 - Community engagement: "Average response time is 2 days"
 - User comparison: "User A (0.5 days) is more responsive than User B (5 days)"
@@ -974,16 +1077,19 @@ Metrics related to user behavior patterns, responsiveness, and collaboration.
 #### 8.2 `days_since_last_action` (Users only)
 
 **Business Name**: Days Since Last Action  
-**Definition**: Number of days since the user last performed any action (opened, commented, closed, or reopened a note).  
+**Definition**: Number of days since the user last performed any action (opened, commented, closed,
+or reopened a note).  
 **Formula**: `CURRENT_DATE - MAX(action_at)`  
 **Unit**: Days (integer)  
-**Interpretation**: 
+**Interpretation**:
+
 - **0-7 days**: Very active user
 - **8-30 days**: Active user
 - **31-90 days**: Inactive user
 - **90+ days**: Very inactive or retired user
 
 **Use Cases**:
+
 - User activity status: "This user was active 5 days ago"
 - Inactive user detection: "User hasn't been active in 120 days"
 - Community engagement: "Most users were active in the last 30 days"
@@ -995,17 +1101,21 @@ Metrics related to user behavior patterns, responsiveness, and collaboration.
 #### 8.3 `collaboration_patterns` (Users only)
 
 **Business Name**: User Collaboration Patterns  
-**Definition**: JSON object containing metrics about user collaboration, including mentions given, mentions received, replies, and a collaboration score.  
+**Definition**: JSON object containing metrics about user collaboration, including mentions given,
+mentions received, replies, and a collaboration score.  
 **Formula**: `json_build_object('mentions_given', mentions_given, 'mentions_received', mentions_received, 'replies_count', replies_count, 'collaboration_score', total_score)`  
-**Unit**: JSON object  
+**Unit**:
+JSON object  
 **Format**: `{"mentions_given": 50, "mentions_received": 30, "replies_count": 25, "collaboration_score": 105}`  
-**Interpretation**: 
+**Interpretation**:
+
 - **High collaboration_score**: Very collaborative user
 - **High mentions_given**: User actively engages with others
 - **High mentions_received**: User is frequently mentioned by others
 - **High replies_count**: User actively responds to discussions
 
 **Use Cases**:
+
 - Collaboration measurement: "This user has a collaboration score of 105"
 - User engagement: "This user mentions others frequently (50 mentions given)"
 - Community recognition: "This user is frequently mentioned (30 mentions received)"
@@ -1017,22 +1127,30 @@ Metrics related to user behavior patterns, responsiveness, and collaboration.
 #### 8.4 `notes_opened_but_not_closed_by_user` (Users only)
 
 **Business Name**: Notes Opened But Not Closed By User  
-**Definition**: Number of notes opened by this user that were never closed by this same user (either closed by others or still open).  
+**Definition**: Number of notes opened by this user that were never closed by this same user (either
+closed by others or still open).  
 **Formula**: `COUNT(DISTINCT id_note) WHERE opened_dimension_id_user = user_id AND action_comment = 'opened' AND NOT EXISTS (SELECT 1 WHERE closed_dimension_id_user = user_id AND action_comment = 'closed')`  
-**Unit**: Count (integer)  
-**Interpretation**: 
-- **High values** (>50% of opened notes): User reports problems but depends on others to resolve them
+**Unit**:
+Count (integer)  
+**Interpretation**:
+
+- **High values** (>50% of opened notes): User reports problems but depends on others to resolve
+  them
 - **Low values** (<20% of opened notes): User resolves their own reports
 - **0**: User always closes their own notes, or never opens notes
 
 **Use Cases**:
+
 - User behavior analysis: "This user opened 100 notes but only closed 20 of them"
 - Dependency measurement: "60% of this user's opened notes were closed by others"
 - Self-sufficiency indicator: "User A closes 80% of their own notes vs User B closes 20%"
 - Community collaboration: "This user reports problems and the community helps resolve them"
 
 **Available In**: `datamartusers` only  
-**Note**: This metric complements `notes_resolved_count` and `notes_still_open_count` to provide a complete picture of user behavior. The relationship is: `history_whole_open = notes_resolved_count + notes_opened_but_not_closed_by_user + notes_still_open_count`
+**Note**: This metric complements `notes_resolved_count` and `notes_still_open_count` to provide a
+complete picture of user behavior. The relationship is:
+`history_whole_open = notes_resolved_count + notes_opened_but_not_closed_by_user + notes_still_open_count`
+
 - Community engagement: "User frequently mentions others (50 mentions given)"
 - Social patterns: "User is well-connected (30 mentions received)"
 
@@ -1054,6 +1172,7 @@ Metrics related to hashtag usage in notes.
 **Interpretation**: Shows hashtag diversity
 
 **Use Cases**:
+
 - Campaign tracking: "User participates in #MissingMaps campaign"
 - Organization: "Country uses diverse hashtags for organization"
 
@@ -1066,11 +1185,13 @@ Metrics related to hashtag usage in notes.
 **Business Name**: Top Hashtags in Opening Actions  
 **Definition**: JSON array of top hashtags used when opening notes.  
 **Formula**: `json_agg(json_build_object('hashtag_id', hashtag_id, 'count', count) ORDER BY count DESC LIMIT 10)`  
-**Unit**: JSON array of objects  
+**Unit**:
+JSON array of objects  
 **Format**: `[{"hashtag_id": 5, "count": 150}, {"hashtag_id": 12, "count": 120}, ...]`  
 **Interpretation**: Shows most popular hashtags for note creation
 
 **Use Cases**:
+
 - Campaign analysis: "#MissingMaps is most used opening hashtag"
 - Organization patterns: "Users organize notes by campaign hashtags"
 
@@ -1087,6 +1208,7 @@ Metrics related to hashtag usage in notes.
 **Interpretation**: Shows hashtags used in resolutions
 
 **Use Cases**:
+
 - Resolution patterns: "#Fixed is most common resolution hashtag"
 - Campaign tracking: "Resolution hashtags show campaign completion"
 
@@ -1103,6 +1225,7 @@ Metrics related to hashtag usage in notes.
 **Interpretation**: Shows hashtags used in discussions
 
 **Use Cases**:
+
 - Discussion patterns: "Hashtags used in comments show topic organization"
 
 **Available In**: `datamartusers`, `datamartcountries`
@@ -1118,10 +1241,12 @@ Metrics related to hashtag usage in notes.
 **Interpretation**: Shows primary campaign or organization method
 
 **Use Cases**:
+
 - Campaign identification: "User's favorite hashtag is #MissingMaps"
 - Organization: "Country primarily uses #Mapathon2024"
 
-**Available In**: `datamartusers` (favorite_opening_hashtag), `datamartcountries` (top_opening_hashtag)
+**Available In**: `datamartusers` (favorite_opening_hashtag), `datamartcountries`
+(top_opening_hashtag)
 
 ---
 
@@ -1134,9 +1259,11 @@ Metrics related to hashtag usage in notes.
 **Interpretation**: Shows primary resolution hashtag
 
 **Use Cases**:
+
 - Resolution patterns: "Most resolutions use #Fixed hashtag"
 
-**Available In**: `datamartusers` (favorite_resolution_hashtag), `datamartcountries` (top_resolution_hashtag)
+**Available In**: `datamartusers` (favorite_resolution_hashtag), `datamartcountries`
+(top_resolution_hashtag)
 
 ---
 
@@ -1149,6 +1276,7 @@ Metrics related to hashtag usage in notes.
 **Interpretation**: Shows hashtag usage frequency
 
 **Use Cases**:
+
 - Usage measurement: "User has used opening hashtags 500 times"
 
 **Available In**: `datamartusers`, `datamartcountries`
@@ -1164,6 +1292,7 @@ Metrics related to hashtag usage in notes.
 **Interpretation**: Shows resolution hashtag usage
 
 **Use Cases**:
+
 - Usage measurement: "Country uses resolution hashtags frequently"
 
 **Available In**: `datamartusers`, `datamartcountries`
@@ -1183,6 +1312,7 @@ Metrics tracking the first and most recent actions.
 **Interpretation**: Shows when user/country started contributing
 
 **Use Cases**:
+
 - User history: "User started creating notes in 2015"
 - Country history: "Country has notes since 2013"
 
@@ -1199,6 +1329,7 @@ Metrics tracking the first and most recent actions.
 **Interpretation**: Shows when user/country started resolving notes
 
 **Use Cases**:
+
 - Resolution history: "User started resolving notes in 2016"
 - Community evolution: "Country started resolving notes in 2014"
 
@@ -1215,6 +1346,7 @@ Metrics tracking the first and most recent actions.
 **Interpretation**: Reference to the first note
 
 **Use Cases**:
+
 - Historical reference: "Link to user's first note"
 - Milestone tracking: "Celebrate first note anniversary"
 
@@ -1243,6 +1375,7 @@ Metrics tracking the first and most recent actions.
 **Interpretation**: Reference to the most recent note
 
 **Use Cases**:
+
 - Recent activity: "Link to user's most recent note"
 - Activity verification: "User created a note yesterday"
 
@@ -1271,7 +1404,8 @@ Metrics for current time periods (month, day).
 **Business Name**: Countries This Month  
 **Definition**: JSON array of countries where user opened notes in current month.  
 **Formula**: `json_agg(DISTINCT dimension_id_country) WHERE action_comment = 'opened' AND action_dimension_id_date IN (current_month_dates)`  
-**Unit**: JSON array  
+**Unit**:
+JSON array  
 **Interpretation**: Shows recent geographic activity
 
 **Available In**: `datamartusers` only
@@ -1295,7 +1429,8 @@ Metrics for current time periods (month, day).
 **Business Name**: Contributors This Month  
 **Definition**: JSON array of users who opened notes in current month.  
 **Formula**: `json_agg(DISTINCT action_dimension_id_user) WHERE action_comment = 'opened' AND action_dimension_id_date IN (current_month_dates)`  
-**Unit**: JSON array  
+**Unit**:
+JSON array  
 **Interpretation**: Shows recent contributors
 
 **Available In**: `datamartcountries` only
@@ -1321,6 +1456,7 @@ Metrics for current time periods (month, day).
 **Business Name**: Contributor Type Classification  
 **Definition**: Classification of user based on activity level and patterns.  
 **Formula**: Classification algorithm based on:
+
 - Total actions
 - Activity consistency
 - Time since first action
@@ -1328,6 +1464,7 @@ Metrics for current time periods (month, day).
 
 **Unit**: Integer (FK to `dwh.contributor_types`)  
 **Types** (23 types available):
+
 - **Normal Notero** (1): Regular contributor
 - **Just starting notero** (2): New contributor
 - **Newbie Notero** (3): Beginner
@@ -1353,6 +1490,7 @@ Metrics for current time periods (month, day).
 - **OoM Exception notero** (23): Exceptionally high activity
 
 **Use Cases**:
+
 - User recognition: "This user is classified as Power Contributor"
 - Community analysis: "10% of users are Power Contributors"
 - Mentorship: "Power Contributors can mentor Normal Contributors"
@@ -1365,34 +1503,34 @@ Metrics for current time periods (month, day).
 
 ### User Datamart Metrics (78+ metrics)
 
-| Category | Metric Count | Examples |
-|----------|--------------|----------|
-| Historical Counts | 30+ | `history_whole_open`, `history_year_open`, `history_2013_open`, etc. |
-| Resolution Metrics | 7 | `avg_days_to_resolution`, `resolution_rate`, `resolution_by_year`, etc. |
-| Application Statistics | 4 | `applications_used`, `most_used_application_id`, `mobile_apps_count`, etc. |
-| Content Quality | 5 | `avg_comment_length`, `comments_with_url_pct`, `avg_comments_per_note`, etc. |
-| Temporal Patterns | 5 | `working_hours_of_week_opening`, `last_year_activity`, `dates_most_open`, etc. |
-| Geographic Patterns | 15+ | `countries_open_notes`, `ranking_countries_opening_2013`, etc. |
-| Community Health | 5 | `active_notes_count`, `notes_backlog_size`, `notes_age_distribution`, etc. |
-| Hashtag Metrics | 8 | `hashtags`, `hashtags_opening`, `favorite_opening_hashtag`, etc. |
-| First/Last Actions | 8 | `date_starting_creating_notes`, `first_open_note_id`, `lastest_open_note_id`, etc. |
-| User Classification | 1 | `id_contributor_type` |
+| Category               | Metric Count | Examples                                                                           |
+| ---------------------- | ------------ | ---------------------------------------------------------------------------------- |
+| Historical Counts      | 30+          | `history_whole_open`, `history_year_open`, `history_2013_open`, etc.               |
+| Resolution Metrics     | 7            | `avg_days_to_resolution`, `resolution_rate`, `resolution_by_year`, etc.            |
+| Application Statistics | 4            | `applications_used`, `most_used_application_id`, `mobile_apps_count`, etc.         |
+| Content Quality        | 5            | `avg_comment_length`, `comments_with_url_pct`, `avg_comments_per_note`, etc.       |
+| Temporal Patterns      | 5            | `working_hours_of_week_opening`, `last_year_activity`, `dates_most_open`, etc.     |
+| Geographic Patterns    | 15+          | `countries_open_notes`, `ranking_countries_opening_2013`, etc.                     |
+| Community Health       | 5            | `active_notes_count`, `notes_backlog_size`, `notes_age_distribution`, etc.         |
+| Hashtag Metrics        | 8            | `hashtags`, `hashtags_opening`, `favorite_opening_hashtag`, etc.                   |
+| First/Last Actions     | 8            | `date_starting_creating_notes`, `first_open_note_id`, `lastest_open_note_id`, etc. |
+| User Classification    | 1            | `id_contributor_type`                                                              |
 
 **Total**: 78+ metrics per user (includes `notes_opened_but_not_closed_by_user`)
 
 ### Country Datamart Metrics (77+ metrics)
 
-| Category | Metric Count | Examples |
-|----------|--------------|----------|
-| Historical Counts | 30+ | Same as user datamart |
-| Resolution Metrics | 7 | Same as user datamart |
-| Application Statistics | 4 | Same as user datamart |
-| Content Quality | 5 | Same as user datamart |
-| Temporal Patterns | 5 | Same as user datamart |
-| Geographic Patterns | 15+ | `users_open_notes`, `ranking_users_opening_2013`, etc. |
-| Community Health | 5 | Same as user datamart |
-| Hashtag Metrics | 8 | Same as user datamart |
-| First/Last Actions | 8 | Same as user datamart |
+| Category               | Metric Count | Examples                                               |
+| ---------------------- | ------------ | ------------------------------------------------------ |
+| Historical Counts      | 30+          | Same as user datamart                                  |
+| Resolution Metrics     | 7            | Same as user datamart                                  |
+| Application Statistics | 4            | Same as user datamart                                  |
+| Content Quality        | 5            | Same as user datamart                                  |
+| Temporal Patterns      | 5            | Same as user datamart                                  |
+| Geographic Patterns    | 15+          | `users_open_notes`, `ranking_users_opening_2013`, etc. |
+| Community Health       | 5            | Same as user datamart                                  |
+| Hashtag Metrics        | 8            | Same as user datamart                                  |
+| First/Last Actions     | 8            | Same as user datamart                                  |
 
 **Total**: 77+ metrics per country
 
@@ -1403,10 +1541,12 @@ Metrics for current time periods (month, day).
 ### How Metrics Are Calculated
 
 **Source Data**: All metrics are calculated from `dwh.facts` table aggregated by:
+
 - **User Datamart**: Grouped by `action_dimension_id_user`
 - **Country Datamart**: Grouped by `dimension_id_country`
 
 **Calculation Process**:
+
 1. Read facts from `dwh.facts`
 2. Filter by user/country
 3. Aggregate by time period (whole, year, month, day)
@@ -1414,6 +1554,7 @@ Metrics for current time periods (month, day).
 5. Store in datamart table
 
 **Update Frequency**:
+
 - **Incremental**: Only modified entities updated
 - **Full**: All entities recalculated (rare, for schema changes)
 
@@ -1424,16 +1565,19 @@ Metrics for current time periods (month, day).
 ### Understanding Metric Values
 
 **Count Metrics** (integers):
+
 - **High**: Above average for user/country type
 - **Medium**: Average for user/country type
 - **Low**: Below average
 
 **Rate Metrics** (percentages):
+
 - **Excellent**: Top 25% of values
 - **Good**: 25-75th percentile
 - **Needs Improvement**: Bottom 25%
 
 **Time Metrics** (days):
+
 - **Fast**: Below median
 - **Average**: Around median
 - **Slow**: Above median
@@ -1441,14 +1585,17 @@ Metrics for current time periods (month, day).
 ### Comparing Metrics
 
 **User vs Country**:
+
 - User metrics show individual contribution
 - Country metrics show community performance
 
 **Time Periods**:
+
 - Compare whole history vs current year to see trends
 - Compare year vs month to see recent activity
 
 **Ratios**:
+
 - Resolution rate = closed / opened
 - Comment rate = commented / opened
 - Reopen rate = reopened / opened
@@ -1469,4 +1616,3 @@ Metrics for current time periods (month, day).
 - [DAMA DMBOK - Metric Definitions](https://www.dama.org/)
 - [Kimball Group - Business Metrics](https://www.kimballgroup.com/)
 - [OSM Notes Documentation](https://wiki.openstreetmap.org/wiki/Notes)
-

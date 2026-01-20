@@ -1,16 +1,20 @@
 # Data Lineage Documentation
 
-This document provides complete data lineage for the OSM-Notes-Analytics system, tracing data from source to destination with all transformations, dependencies, and business rules applied at each stage.
+This document provides complete data lineage for the OSM-Notes-Analytics system, tracing data from
+source to destination with all transformations, dependencies, and business rules applied at each
+stage.
 
 ## Overview
 
 Data lineage shows the complete path data takes through the system:
+
 - **Source**: Where data originates
 - **Transformations**: How data is changed at each stage
 - **Destination**: Where data ends up
 - **Dependencies**: What processes depend on what data
 
 This documentation is essential for:
+
 - Understanding data flow and transformations
 - Debugging data quality issues
 - Impact analysis (what breaks if source changes)
@@ -25,7 +29,7 @@ flowchart LR
         OSM_API[OSM Notes API]
         PLANET[OSM Planet Dumps]
     end
-    
+
     subgraph Ingestion["OSM-Notes-Ingestion"]
         BASE_NOTES[public.notes]
         BASE_COMMENTS[public.note_comments]
@@ -33,11 +37,11 @@ flowchart LR
         BASE_USERS[public.users]
         BASE_COUNTRIES[public.countries]
     end
-    
+
     subgraph Staging["Staging Area"]
         STAGING_FACTS[staging.facts_YYYY]
     end
-    
+
     subgraph DWH["data warehouse"]
         DIM_USERS[dwh.dimension_users]
         DIM_COUNTRIES[dwh.dimension_countries]
@@ -46,41 +50,41 @@ flowchart LR
         DIM_APPS[dwh.dimension_applications]
         FACTS[dwh.facts]
     end
-    
+
     subgraph Datamarts["Datamarts"]
         DM_USERS[dwh.datamartusers]
         DM_COUNTRIES[dwh.datamartcountries]
         DM_GLOBAL[dwh.datamartglobal]
     end
-    
+
     subgraph Export["Export"]
         JSON_USERS[output/json/users/]
         JSON_COUNTRIES[output/json/countries/]
     end
-    
+
     OSM_API --> BASE_NOTES
     PLANET --> BASE_NOTES
     OSM_API --> BASE_COMMENTS
     PLANET --> BASE_COMMENTS
-    
+
     BASE_NOTES --> STAGING_FACTS
     BASE_COMMENTS --> STAGING_FACTS
     BASE_USERS --> DIM_USERS
     BASE_COUNTRIES --> DIM_COUNTRIES
-    
+
     STAGING_FACTS --> FACTS
     DIM_USERS --> FACTS
     DIM_COUNTRIES --> FACTS
     DIM_DAYS --> FACTS
     DIM_TIME --> FACTS
     DIM_APPS --> FACTS
-    
+
     FACTS --> DM_USERS
     FACTS --> DM_COUNTRIES
     FACTS --> DM_GLOBAL
     DIM_USERS --> DM_USERS
     DIM_COUNTRIES --> DM_COUNTRIES
-    
+
     DM_USERS --> JSON_USERS
     DM_COUNTRIES --> JSON_COUNTRIES
 ```
@@ -95,16 +99,16 @@ flowchart LR
 
 #### Source Columns
 
-| Source Column | Type | Description |
-|---------------|------|-------------|
-| `id_note` | INTEGER | OSM note identifier |
-| `id_comment` | INTEGER | Comment identifier |
-| `id_user` | INTEGER | User who created the comment |
-| `action` | VARCHAR | Action type (opened, closed, commented, reopened, hidden) |
-| `date_creation` | TIMESTAMP | When action occurred |
-| `comment` | TEXT | Comment text (if applicable) |
-| `id_application` | INTEGER | Application used |
-| `application` | VARCHAR | Application name |
+| Source Column    | Type      | Description                                               |
+| ---------------- | --------- | --------------------------------------------------------- |
+| `id_note`        | INTEGER   | OSM note identifier                                       |
+| `id_comment`     | INTEGER   | Comment identifier                                        |
+| `id_user`        | INTEGER   | User who created the comment                              |
+| `action`         | VARCHAR   | Action type (opened, closed, commented, reopened, hidden) |
+| `date_creation`  | TIMESTAMP | When action occurred                                      |
+| `comment`        | TEXT      | Comment text (if applicable)                              |
+| `id_application` | INTEGER   | Application used                                          |
+| `application`    | VARCHAR   | Application name                                          |
 
 #### Transformations Applied
 
@@ -127,7 +131,8 @@ flowchart LR
 4. **Country Dimension Resolution**
    - Source: `public.notes.country_id` (via JOIN)
    - Target: `dimension_id_country` (INTEGER FK to dimension_countries)
-   - Rule: Lookup `dimension_country_id` from `dimension_countries` where `country_id = notes.country_id`
+   - Rule: Lookup `dimension_country_id` from `dimension_countries` where
+     `country_id = notes.country_id`
    - If not found: Insert new country, use new `dimension_country_id`
 
 5. **Date Dimension Resolution**
@@ -139,7 +144,8 @@ flowchart LR
 6. **Time-of-Week Dimension Resolution**
    - Source: `date_creation` (TIMESTAMP)
    - Target: `action_dimension_id_hour_of_week` (SMALLINT FK to dimension_time_of_week)
-   - Rule: Calculate hour_of_week = (EXTRACT(DOW FROM date_creation) - 1) * 24 + EXTRACT(HOUR FROM date_creation)
+   - Rule: Calculate hour_of_week = (EXTRACT(DOW FROM date_creation) - 1) \* 24 + EXTRACT(HOUR FROM
+     date_creation)
    - Lookup `dimension_tow_id` from `dimension_time_of_week` where `hour_of_week = calculated_value`
 
 7. **Application Dimension Resolution**
@@ -149,73 +155,86 @@ flowchart LR
 
 8. **Note Opening Context**
    - Source: `public.notes` (JOIN to get note creation info)
-   - Target: `opened_dimension_id_date`, `opened_dimension_id_user`, `opened_dimension_id_hour_of_week`
+   - Target: `opened_dimension_id_date`, `opened_dimension_id_user`,
+     `opened_dimension_id_hour_of_week`
    - Rule: For each fact, lookup the note's opening action and resolve dimension keys
 
 9. **Note Closing Context**
    - Source: Previous closing actions (if any)
-   - Target: `closed_dimension_id_date`, `closed_dimension_id_user`, `closed_dimension_id_hour_of_week`
+   - Target: `closed_dimension_id_date`, `closed_dimension_id_user`,
+     `closed_dimension_id_hour_of_week`
    - Rule: For closing actions, set these fields. For other actions, lookup most recent close.
 
 10. **Recent Open Date**
-   - Source: All open/reopen actions for the note
-   - Target: `recent_opened_dimension_id_date`
-   - Rule: Most recent open or reopen date dimension key (calculated in unify step)
+
+- Source: All open/reopen actions for the note
+- Target: `recent_opened_dimension_id_date`
+- Rule: Most recent open or reopen date dimension key (calculated in unify step)
 
 #### Calculated Metrics
 
 11. **Days to Resolution**
-   - Source: `opened_dimension_id_date`, `closed_dimension_id_date`
-   - Target: `days_to_resolution` (INTEGER)
-   - Rule: `closed_dimension_id_date - opened_dimension_id_date` (in days)
-   - Applied: Only for closing actions, calculated by trigger
+
+- Source: `opened_dimension_id_date`, `closed_dimension_id_date`
+- Target: `days_to_resolution` (INTEGER)
+- Rule: `closed_dimension_id_date - opened_dimension_id_date` (in days)
+- Applied: Only for closing actions, calculated by trigger
 
 12. **Days to Resolution Active**
-   - Source: All open periods for the note
-   - Target: `days_to_resolution_active` (INTEGER)
-   - Rule: Sum of all days note was open (handles reopens)
-   - Applied: Calculated by trigger
+
+- Source: All open periods for the note
+- Target: `days_to_resolution_active` (INTEGER)
+- Rule: Sum of all days note was open (handles reopens)
+- Applied: Calculated by trigger
 
 13. **Days to Resolution from Reopen**
-   - Source: Last reopen date, close date
-   - Target: `days_to_resolution_from_reopen` (INTEGER)
-   - Rule: `closed_dimension_id_date - recent_opened_dimension_id_date`
-   - Applied: Calculated by trigger
+
+- Source: Last reopen date, close date
+- Target: `days_to_resolution_from_reopen` (INTEGER)
+- Rule: `closed_dimension_id_date - recent_opened_dimension_id_date`
+- Applied: Calculated by trigger
 
 14. **Comment Length**
-   - Source: `public.note_comments_text.comment` (TEXT)
-   - Target: `comment_length` (INTEGER)
-   - Rule: `LENGTH(comment)` or 0 if NULL
+
+- Source: `public.note_comments_text.comment` (TEXT)
+- Target: `comment_length` (INTEGER)
+- Rule: `LENGTH(comment)` or 0 if NULL
 
 15. **Has URL**
-   - Source: `public.note_comments_text.comment` (TEXT)
-   - Target: `has_url` (BOOLEAN)
-   - Rule: `comment ~* 'https?://'` (regex match for URLs)
+
+- Source: `public.note_comments_text.comment` (TEXT)
+- Target: `has_url` (BOOLEAN)
+- Rule: `comment ~* 'https?://'` (regex match for URLs)
 
 16. **Has Mention**
-   - Source: `public.note_comments_text.comment` (TEXT)
-   - Target: `has_mention` (BOOLEAN)
-   - Rule: `comment ~* '@[a-zA-Z0-9_]+'` (regex match for mentions)
+
+- Source: `public.note_comments_text.comment` (TEXT)
+- Target: `has_mention` (BOOLEAN)
+- Rule: `comment ~* '@[a-zA-Z0-9_]+'` (regex match for mentions)
 
 17. **Hashtag Count**
-   - Source: `public.note_comments_text.comment` (TEXT)
-   - Target: `hashtag_number` (INTEGER)
-   - Rule: Count of `#` followed by alphanumeric characters
+
+- Source: `public.note_comments_text.comment` (TEXT)
+- Target: `hashtag_number` (INTEGER)
+- Rule: Count of `#` followed by alphanumeric characters
 
 18. **Total Comments on Note**
-   - Source: All previous comment actions for the note
-   - Target: `total_comments_on_note` (INTEGER)
-   - Rule: COUNT of comment actions before this action (calculated by trigger)
+
+- Source: All previous comment actions for the note
+- Target: `total_comments_on_note` (INTEGER)
+- Rule: COUNT of comment actions before this action (calculated by trigger)
 
 19. **Total Reopenings Count**
-   - Source: All previous reopen actions for the note
-   - Target: `total_reopenings_count` (INTEGER)
-   - Rule: COUNT of reopen actions before this action (calculated by trigger)
+
+- Source: All previous reopen actions for the note
+- Target: `total_reopenings_count` (INTEGER)
+- Rule: COUNT of reopen actions before this action (calculated by trigger)
 
 20. **Total Actions on Note**
-   - Source: All previous actions for the note
-   - Target: `total_actions_on_note` (INTEGER)
-   - Rule: COUNT of all actions before this action (calculated by trigger)
+
+- Source: All previous actions for the note
+- Target: `total_actions_on_note` (INTEGER)
+- Rule: COUNT of all actions before this action (calculated by trigger)
 
 #### SQL Scripts
 
@@ -252,7 +271,8 @@ flowchart LR
 3. **Historical Counts - By Year**
    - Source: Facts filtered by year
    - Target: `history_2023_open`, `history_2024_open`, etc.
-   - Rule: `COUNT(*) WHERE action_comment = 'opened' AND action_dimension_id_date IN (SELECT dimension_day_id FROM dimension_days WHERE year = 2023)`
+   - Rule:
+     `COUNT(*) WHERE action_comment = 'opened' AND action_dimension_id_date IN (SELECT dimension_day_id FROM dimension_days WHERE year = 2023)`
 
 4. **Historical Counts - Current Period**
    - Source: Facts filtered by current month/day
@@ -265,14 +285,16 @@ flowchart LR
    - Rule:
      - `AVG(days_to_resolution)` for resolution_avg_days
      - `PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY days_to_resolution)` for median
-     - `COUNT(*) WHERE action_comment = 'closed' / COUNT(*) WHERE action_comment = 'opened'` for rate
+     - `COUNT(*) WHERE action_comment = 'closed' / COUNT(*) WHERE action_comment = 'opened'` for
+       rate
 
 6. **Application Statistics**
    - Source: Facts with `dimension_application_creation` not NULL
    - Target: `applications_mobile_count`, `applications_desktop_count`, `application_most_used`
    - Rule:
      - Count mobile apps: `COUNT(DISTINCT dimension_application_creation) WHERE platform = 'mobile'`
-     - Count desktop apps: `COUNT(DISTINCT dimension_application_creation) WHERE platform = 'desktop'`
+     - Count desktop apps:
+       `COUNT(DISTINCT dimension_application_creation) WHERE platform = 'desktop'`
      - Most used: `MODE() WITHIN GROUP (ORDER BY dimension_application_creation)`
 
 7. **Content Quality Metrics**
@@ -318,15 +340,18 @@ flowchart LR
 #### Transformations Applied
 
 Similar to User Datamart but:
+
 - **Grouping**: By `dimension_id_country` instead of `action_dimension_id_user`
 - **Geographic Patterns**: Replaced with user patterns (`users_open_notes`, `users_solving_notes`)
 - **Country Rankings**: Top countries by activity
 
 #### SQL Scripts
 
-- **Table Creation**: `sql/dwh/datamartCountries/datamartCountries_12_createDatamarCountriesTable.sql`
+- **Table Creation**:
+  `sql/dwh/datamartCountries/datamartCountries_12_createDatamarCountriesTable.sql`
 - **Procedure**: `sql/dwh/datamartCountries/datamartCountries_13_createProcedure.sql`
-- **Population**: `sql/dwh/datamartCountries/datamartCountries_31_populateDatamartCountriesTable.sql`
+- **Population**:
+  `sql/dwh/datamartCountries/datamartCountries_31_populateDatamartCountriesTable.sql`
 - **Script**: `bin/dwh/datamartCountries/datamartCountries.sh`
 
 ---
@@ -358,12 +383,14 @@ Similar to User Datamart but:
 #### Column Mappings
 
 **User Datamart → JSON:**
+
 - All columns mapped directly
 - JSON arrays preserved (countries, hashtags, rankings)
 - Dates converted to ISO format
 - NULLs handled appropriately
 
 **Country Datamart → JSON:**
+
 - All columns mapped directly
 - JSON arrays preserved (users, hashtags, rankings)
 - Dates converted to ISO format
@@ -472,32 +499,38 @@ Similar to User Datamart but:
 ## Business Rules Applied
 
 ### Rule 1: One Fact Per Action
+
 - **Source**: `public.note_comments` (one row per comment/action)
 - **Target**: `dwh.facts` (one row per action)
 - **Rule**: Each note action becomes exactly one fact row
 - **Exception**: None
 
 ### Rule 2: Dimension Key Resolution
+
 - **Rule**: All foreign keys must resolve to existing dimension rows
 - **Action if not found**: Insert new dimension row, then use new key
 - **Applied to**: Users, countries, dates, times, applications
 
 ### Rule 3: Resolution Metrics Calculation
+
 - **Rule**: Resolution metrics only calculated for closing actions
 - **Trigger**: `calculate_resolution_metrics()` trigger on INSERT
 - **Applied**: Automatically when closing action inserted
 
 ### Rule 4: Recent Open Date
+
 - **Rule**: `recent_opened_dimension_id_date` must be NOT NULL
 - **Enforcement**: After unify step (Staging_51_unify.sql)
 - **Calculation**: Most recent open or reopen date for the note
 
 ### Rule 5: Datamart Incremental Updates
+
 - **Rule**: Only update datamarts for modified entities
 - **Flag**: `modified` column in dimension tables
 - **Applied**: Datamart scripts check `modified = TRUE` before processing
 
 ### Rule 6: JSON Schema Validation
+
 - **Rule**: All JSON exports must validate against schema
 - **Action if invalid**: Keep existing files, log error, exit with error code
 - **Applied**: Before atomic file move
@@ -546,11 +579,13 @@ Similar to User Datamart but:
 ### If Base Tables Change
 
 **Impact on Facts:**
+
 - Column changes in `public.note_comments` may break ETL
 - New columns require ETL script updates
 - Data type changes require transformation updates
 
 **Mitigation:**
+
 - ETL scripts validate table structure before processing
 - Error handling logs missing columns
 - See [Troubleshooting Guide](Troubleshooting_Guide.md)
@@ -558,30 +593,36 @@ Similar to User Datamart but:
 ### If Dimension Tables Change
 
 **Impact on Facts:**
+
 - Foreign key violations if dimension rows deleted
 - New dimensions require fact table schema changes
 
 **Mitigation:**
+
 - Foreign key constraints prevent orphaned facts
 - Dimension updates are additive (new rows, not deletions)
 
 ### If Fact Table Schema Changes
 
 **Impact on Datamarts:**
+
 - New fact columns may enable new metrics
 - Datamart scripts may need updates
 
 **Mitigation:**
-- Datamart scripts use SELECT * or explicit column lists
+
+- Datamart scripts use SELECT \* or explicit column lists
 - New columns don't break existing aggregations
 
 ### If Datamart Schema Changes
 
 **Impact on JSON Export:**
+
 - Schema validation will fail if JSON schema not updated
 - Export script will keep existing files
 
 **Mitigation:**
+
 - Schema files versioned with datamart changes
 - Validation prevents invalid exports
 
@@ -629,32 +670,32 @@ Similar to User Datamart but:
 
 ### Source Metadata
 
-| Source | Last Updated | Update Frequency | Volume |
-|--------|--------------|------------------|--------|
-| OSM Notes API | Real-time | Every minute (daemon) | ~10K notes/day |
-| OSM Planet | Daily | Daily | Full history |
-| public.notes | Incremental | Every minute (via daemon) | ~20M+ rows |
-| public.note_comments | Incremental | Every minute (via daemon) | ~50M+ rows |
+| Source               | Last Updated | Update Frequency          | Volume         |
+| -------------------- | ------------ | ------------------------- | -------------- |
+| OSM Notes API        | Real-time    | Every minute (daemon)     | ~10K notes/day |
+| OSM Planet           | Daily        | Daily                     | Full history   |
+| public.notes         | Incremental  | Every minute (via daemon) | ~20M+ rows     |
+| public.note_comments | Incremental  | Every minute (via daemon) | ~50M+ rows     |
 
 ### Transformation Metadata
 
-| Process | Execution Time | Frequency | Dependencies |
-|---------|----------------|----------|--------------|
-| ETL (Full) | ~1-1.5 hours (typical production: ~5-6M facts) | Initial load | Base tables |
-| ETL (Incremental) | 5-15 minutes (normal) to 30-60 minutes (large) | Every 15 minutes | Base tables |
-| User Datamart | 15-20 minutes | Daily | Facts + Dimensions |
-| Country Datamart | 30-40 minutes (1.5-3 min per country) | Daily | Facts + Dimensions |
-| JSON Export | ~10 minutes | Every 15 minutes | Datamarts |
+| Process           | Execution Time                                 | Frequency        | Dependencies       |
+| ----------------- | ---------------------------------------------- | ---------------- | ------------------ |
+| ETL (Full)        | ~1-1.5 hours (typical production: ~5-6M facts) | Initial load     | Base tables        |
+| ETL (Incremental) | 5-15 minutes (normal) to 30-60 minutes (large) | Every 15 minutes | Base tables        |
+| User Datamart     | 15-20 minutes                                  | Daily            | Facts + Dimensions |
+| Country Datamart  | 30-40 minutes (1.5-3 min per country)          | Daily            | Facts + Dimensions |
+| JSON Export       | ~10 minutes                                    | Every 15 minutes | Datamarts          |
 
 ### Destination Metadata
 
-| Destination | Update Frequency | Format | Size |
-|-------------|-------------------|--------|------|
-| dwh.facts | Every 15 minutes (incremental) | PostgreSQL table | ~20M+ rows |
-| dwh.datamartusers | Daily | PostgreSQL table | ~500K rows |
-| dwh.datamartcountries | Daily | PostgreSQL table | ~200 rows |
-| output/json/users/ | Every 15 minutes | JSON files | ~500K files |
-| output/json/countries/ | Every 15 minutes | JSON files | ~200 files |
+| Destination            | Update Frequency               | Format           | Size        |
+| ---------------------- | ------------------------------ | ---------------- | ----------- |
+| dwh.facts              | Every 15 minutes (incremental) | PostgreSQL table | ~20M+ rows  |
+| dwh.datamartusers      | Daily                          | PostgreSQL table | ~500K rows  |
+| dwh.datamartcountries  | Daily                          | PostgreSQL table | ~200 rows   |
+| output/json/users/     | Every 15 minutes               | JSON files       | ~500K files |
+| output/json/countries/ | Every 15 minutes               | JSON files       | ~200 files  |
 
 ---
 
@@ -673,4 +714,3 @@ Similar to User Datamart but:
 - [DAMA DMBOK - Data Lineage](https://www.dama.org/)
 - [Data Lineage Best Practices](https://www.collibra.com/us/en/blog/data-lineage)
 - [Kimball Group - ETL Documentation](https://www.kimballgroup.com/)
-

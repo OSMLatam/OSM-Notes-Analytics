@@ -13,7 +13,8 @@ comprehensive data warehouse with pre-computed analytics datamarts.
 **New to the project?** Start here:
 
 - **[Entry Points Documentation](dwh/ENTRY_POINTS.md)** - Which scripts can be called directly
-- **[Environment Variables](dwh/ENVIRONMENT_VARIABLES.md)** - Configuration via environment variables
+- **[Environment Variables](dwh/ENVIRONMENT_VARIABLES.md)** - Configuration via environment
+  variables
 - **[DWH README](dwh/README.md)** - Detailed DWH documentation
 
 **Key Entry Points:**
@@ -71,7 +72,8 @@ bin/
 
 **Auto-detection:**
 
-- **First execution**: Automatically detects if DWH doesn't exist or is empty, creates all DWH objects and performs initial load
+- **First execution**: Automatically detects if DWH doesn't exist or is empty, creates all DWH
+  objects and performs initial load
 - **Subsequent runs**: Automatically detects existing data and processes only incremental updates
 - **Perfect for cron**: Same command works for both scenarios
 
@@ -167,9 +169,11 @@ tail -40f $(ls -1rtd /tmp/ETL_* | tail -1)/ETL.log
 
 **Location:** `bin/dwh/cleanupDWH.sh`
 
-**Purpose:** Removes data warehouse objects from the database and cleans up temporary files. Uses database configuration from `etc/properties.sh`.
+**Purpose:** Removes data warehouse objects from the database and cleans up temporary files. Uses
+database configuration from `etc/properties.sh`.
 
-**⚠️ WARNING:** This script can permanently delete data! Always use `--dry-run` first to see what will be removed.
+**⚠️ WARNING:** This script can permanently delete data! Always use `--dry-run` first to see what
+will be removed.
 
 **Usage:**
 
@@ -191,7 +195,7 @@ tail -40f $(ls -1rtd /tmp/ETL_* | tail -1)/ETL.log
 **DWH Objects** (`--remove-all-data` or default behavior):
 
 - Staging schema and all objects
-- Datamart tables (countries and users)  
+- Datamart tables (countries and users)
 - DWH schema with all dimensions and facts
 - All functions, procedures, and triggers
 - **⚠️ PERMANENT DATA LOSS - requires confirmation**
@@ -199,7 +203,7 @@ tail -40f $(ls -1rtd /tmp/ETL_* | tail -1)/ETL.log
 **Temporary Files** (`--remove-temp-files` or default behavior):
 
 - `/tmp/ETL_*` directories
-- `/tmp/datamartCountries_*` directories  
+- `/tmp/datamartCountries_*` directories
 - `/tmp/datamartUsers_*` directories
 - `/tmp/profile_*` directories
 - `/tmp/cleanupDWH_*` directories
@@ -294,7 +298,8 @@ it to run regularly until all users are processed.
 - Populates `dwh.datamartGlobal` table
 - Global statistics and aggregated metrics
 
-**Note:** This script is automatically called by `ETL.sh` after processing. Manual execution is usually not needed.
+**Note:** This script is automatically called by `ETL.sh` after processing. Manual execution is
+usually not needed.
 
 ### 7. exportDatamartsToJSON.sh - Export to JSON
 
@@ -321,6 +326,7 @@ it to run regularly until all users are processed.
 **Output:**
 
 Creates JSON files in `./output/json/`:
+
 - Individual files per user: `users/{user_id}.json`
 - Individual files per country: `countries/{country_id}.json`
 - Index files: `indexes/users.json`, `indexes/countries.json`
@@ -348,7 +354,8 @@ ls -lh ./output/json/countries/ | head -10
 
 **Location:** `bin/dwh/exportAndPushJSONToGitHub.sh`
 
-**Purpose:** Exports JSON files and automatically deploys them to GitHub Pages using intelligent incremental mode.
+**Purpose:** Exports JSON files and automatically deploys them to GitHub Pages using intelligent
+incremental mode.
 
 **Usage:**
 
@@ -359,7 +366,8 @@ ls -lh ./output/json/countries/ | head -10
 **Features:**
 
 - **Intelligent incremental export**: Exports countries one by one and pushes immediately
-- **Automatic detection**: Identifies missing, outdated (default: 30 days), or not exported countries
+- **Automatic detection**: Identifies missing, outdated (default: 30 days), or not exported
+  countries
 - **Cleanup**: Removes countries from GitHub that no longer exist in local database
 - **Documentation**: Auto-generates README.md with alphabetical list of countries
 - **Resilient**: Continues processing even if one country fails
@@ -369,7 +377,8 @@ ls -lh ./output/json/countries/ | head -10
 **Prerequisites:**
 
 - Datamarts must be populated
-- Git repository configured (`OSM-Notes-Data` cloned to `~/OSM-Notes-Data` or `~/github/OSM-Notes-Data`)
+- Git repository configured (`OSM-Notes-Data` cloned to `~/OSM-Notes-Data` or
+  `~/github/OSM-Notes-Data`)
 - GitHub Pages enabled
 - Git credentials configured
 
@@ -448,7 +457,8 @@ psql -d osm_notes -c "SELECT COUNT(*) FROM dwh.datamartusers;"
 # 30 2 * * * cd ~/OSM-Notes-Analytics && ./bin/dwh/datamartUsers/datamartUsers.sh >> /var/log/osm-analytics-datamart-users.log 2>&1
 ```
 
-**Note:** `ETL.sh` automatically updates all datamarts, so separate datamart cron jobs are usually not needed.
+**Note:** `ETL.sh` automatically updates all datamarts, so separate datamart cron jobs are usually
+not needed.
 
 ### Generating Profiles
 
@@ -523,7 +533,8 @@ export ETL_MAX_PARALLEL_JOBS=8
 ./bin/dwh/ETL.sh
 ```
 
-**See also:** [Environment Variables Documentation](dwh/ENVIRONMENT_VARIABLES.md) for complete variable reference.
+**See also:** [Environment Variables Documentation](dwh/ENVIRONMENT_VARIABLES.md) for complete
+variable reference.
 
 ## Logging and Monitoring
 
@@ -843,7 +854,8 @@ psql -d osm_notes -c "SELECT country_name_en FROM dwh.datamartcountries WHERE co
 ### Essential Reading
 
 - **[Entry Points](dwh/ENTRY_POINTS.md)** - Which scripts can be called directly
-- **[Environment Variables](dwh/ENVIRONMENT_VARIABLES.md)** - Complete environment variable reference
+- **[Environment Variables](dwh/ENVIRONMENT_VARIABLES.md)** - Complete environment variable
+  reference
 - **[DWH README](dwh/README.md)** - Detailed DWH documentation
 - **[Main README](../README.md)** - Project overview and quick start
 
@@ -871,16 +883,20 @@ psql -d osm_notes -c "SELECT country_name_en FROM dwh.datamartcountries WHERE co
 
 ### Related Projects
 
-- **[OSM-Notes-Ingestion](https://github.com/OSM-Notes/OSM-Notes-Ingestion)** - Data ingestion system (upstream)
-- **[OSM-Notes-Viewer](https://github.com/OSM-Notes/OSM-Notes-Viewer)** - Web application (sister project)
-- **[OSM-Notes-Common](https://github.com/OSM-Notes/OSM-Notes-Common)** - Shared libraries (Git submodule)
+- **[OSM-Notes-Ingestion](https://github.com/OSM-Notes/OSM-Notes-Ingestion)** - Data ingestion
+  system (upstream)
+- **[OSM-Notes-Viewer](https://github.com/OSM-Notes/OSM-Notes-Viewer)** - Web application (sister
+  project)
+- **[OSM-Notes-Common](https://github.com/OSM-Notes/OSM-Notes-Common)** - Shared libraries (Git
+  submodule)
 
 ## References
 
 ### Documentation
 
 - **[Entry Points](dwh/ENTRY_POINTS.md)** - Which scripts can be called directly
-- **[Environment Variables](dwh/ENVIRONMENT_VARIABLES.md)** - Complete environment variable reference
+- **[Environment Variables](dwh/ENVIRONMENT_VARIABLES.md)** - Complete environment variable
+  reference
 - **[DWH README](dwh/README.md)** - Detailed DWH documentation
 - **[ETL Enhanced Features](../docs/ETL_Enhanced_Features.md)** - Advanced ETL capabilities
 - **[DWH Star Schema ERD](../docs/DWH_Star_Schema_ERD.md)** - Entity-relationship diagram
@@ -889,8 +905,10 @@ psql -d osm_notes -c "SELECT country_name_en FROM dwh.datamartcountries WHERE co
 
 ### Related Projects
 
-- **[OSM-Notes-Ingestion](https://github.com/OSM-Notes/OSM-Notes-Ingestion)** - Data ingestion system (upstream)
-- **[OSM-Notes-Viewer](https://github.com/OSM-Notes/OSM-Notes-Viewer)** - Web application (sister project)
+- **[OSM-Notes-Ingestion](https://github.com/OSM-Notes/OSM-Notes-Ingestion)** - Data ingestion
+  system (upstream)
+- **[OSM-Notes-Viewer](https://github.com/OSM-Notes/OSM-Notes-Viewer)** - Web application (sister
+  project)
 
 ## Support
 

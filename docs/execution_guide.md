@@ -18,13 +18,13 @@ Complete guide for executing all components of the OSM Notes Analytics system.
 
 The OSM Notes Analytics system consists of several components:
 
-| Component | Script | Purpose |
-|-----------|--------|---------|
-| **ETL** | `bin/dwh/ETL.sh` | Transform raw notes into star schema DWH |
-| **Profiles** | `bin/dwh/profile.sh` | Generate user/country profiles |
-| **Datamarts** | `bin/dwh/datamart*/datamart*.sh` | Pre-compute aggregations |
-| **Export** | `bin/dwh/exportDatamartsToJSON.sh` | Export to JSON for web viewer |
-| **Cleanup** | `bin/dwh/cleanupDWH.sh` | Remove DWH objects |
+| Component     | Script                             | Purpose                                  |
+| ------------- | ---------------------------------- | ---------------------------------------- |
+| **ETL**       | `bin/dwh/ETL.sh`                   | Transform raw notes into star schema DWH |
+| **Profiles**  | `bin/dwh/profile.sh`               | Generate user/country profiles           |
+| **Datamarts** | `bin/dwh/datamart*/datamart*.sh`   | Pre-compute aggregations                 |
+| **Export**    | `bin/dwh/exportDatamartsToJSON.sh` | Export to JSON for web viewer            |
+| **Cleanup**   | `bin/dwh/cleanupDWH.sh`            | Remove DWH objects                       |
 
 ---
 
@@ -42,6 +42,7 @@ The ETL process transforms OSM notes from base tables into a star schema data wa
 ```
 
 This will:
+
 1. Create DWH schema and tables
 2. Create partitions for facts table
 3. Populate dimension tables
@@ -52,6 +53,7 @@ This will:
 **Expected Duration**: ~1-1.5 hours for typical production dataset (~5-6M facts)
 
 **Carga inicial (Initial Load)**: ~25 minutes
+
 - Copy base tables: 6 minutes (363 seconds)
 - Create base objects: < 1 second
 - Creating procedures: 1 second
@@ -64,13 +66,16 @@ This will:
 - **Total initial load**: ~25 minutes (1,487 seconds)
 
 **Datamarts**: 10-20 minutes total (with parallel processing)
+
 - **datamartCountries**: 5-10 minutes (parallel processing with work queue, nproc-2 threads)
   - **Sequential mode (legacy)**: 30-45 minutes
   - **Parallel mode (default)**: 5-10 minutes (3-6x faster)
   - Processing time per country varies by fact count:
     - Countries with < 100K facts: ~1.5-2 minutes (e.g., 58K facts = 1.6 min)
-    - Countries with 100K-500K facts: ~2-2.5 minutes (e.g., 164K facts = 1.8 min, 394K facts = 2.1 min)
-    - Countries with 500K-1M facts: ~2.5-4 minutes (e.g., 748K facts = 3.3 min, 949K facts = 2.4 min)
+    - Countries with 100K-500K facts: ~2-2.5 minutes (e.g., 164K facts = 1.8 min, 394K facts = 2.1
+      min)
+    - Countries with 500K-1M facts: ~2.5-4 minutes (e.g., 748K facts = 3.3 min, 949K facts = 2.4
+      min)
     - Countries with > 1M facts: ~3-6 minutes (e.g., 1.49M facts = 2.9 min, 924K facts = 5.7 min)
   - See `bin/dwh/datamartCountries/PARALLEL_PROCESSING.md` for details
 - **datamartUsers**: 15-20 minutes (parallel processing with prioritization, nproc-1 threads)
@@ -87,22 +92,25 @@ This will:
 ```
 
 This will:
+
 1. Auto-detect that DWH already exists
 2. Process only new notes/comments since last run
 3. Update affected datamarts
 4. Much faster than initial load
 
 **Expected Duration**: 5-15 minutes (normal) to 30-60 minutes (large updates)
+
 - **Normal**: Processes only new data since last run
 - **Large updates**: When significant backlog exists (> 100K facts)
-- **Timeout note**: Large incrementals may require `PSQL_STATEMENT_TIMEOUT=2h` (see [Environment Variables](bin/dwh/ENVIRONMENT_VARIABLES.md))
+- **Timeout note**: Large incrementals may require `PSQL_STATEMENT_TIMEOUT=2h` (see
+  [Environment Variables](bin/dwh/ENVIRONMENT_VARIABLES.md))
 
 ### ETL Process Types
 
-| Type | Command | Description |
-|------|---------|-------------|
+| Type            | Command            | Description                                                             |
+| --------------- | ------------------ | ----------------------------------------------------------------------- |
 | **Auto-detect** | `./bin/dwh/ETL.sh` | Automatically detects first execution (full load) or incremental update |
-| **Validation** | Built-in | Automatic validation after each run |
+| **Validation**  | Built-in           | Automatic validation after each run                                     |
 
 ### Environment Variables
 
@@ -129,7 +137,8 @@ export DBUSER="notes"
 export DBNAME="notes_dwh"  # Legacy: used when both databases are the same
 ```
 
-**Note:** For DWH operations, use `DBNAME_INGESTION` and `DBNAME_DWH`. The `DBNAME` variable is maintained for backward compatibility when both Ingestion and Analytics use the same database.
+**Note:** For DWH operations, use `DBNAME_INGESTION` and `DBNAME_DWH`. The `DBNAME` variable is
+maintained for backward compatibility when both Ingestion and Analytics use the same database.
 
 ### Monitoring ETL Progress
 
@@ -166,6 +175,7 @@ Generate profiles for users or countries with detailed analytics.
 ```
 
 **Example Output**:
+
 ```json
 {
   "type": "user",
@@ -189,6 +199,7 @@ Generate profiles for users or countries with detailed analytics.
 ```
 
 **Example Output**:
+
 ```json
 {
   "type": "country",
@@ -202,11 +213,11 @@ Generate profiles for users or countries with detailed analytics.
 
 ### Profile Output Formats
 
-| Format | Description | File Extension |
-|--------|-------------|----------------|
-| **json** | JSON format (default) | `.json` |
-| **html** | HTML report | `.html` |
-| **csv** | CSV format | `.csv` |
+| Format   | Description           | File Extension |
+| -------- | --------------------- | -------------- |
+| **json** | JSON format (default) | `.json`        |
+| **html** | HTML report           | `.html`        |
+| **csv**  | CSV format            | `.csv`         |
 
 ---
 
@@ -258,12 +269,14 @@ Automatically export JSON files and push them to the GitHub Pages data repositor
 ```
 
 This script will:
+
 1. Export all datamarts to JSON using `exportDatamartsToJSON.sh`
 2. Copy files to the GitHub Pages data repository
 3. Commit and push changes to GitHub
 4. Data becomes available at the GitHub Pages URL
 
 **Prerequisites:**
+
 - The `OSM-Notes-Data` repository must be cloned to `~/github/OSM-Notes-Data`
 - Git credentials must be configured for the push operation
 
@@ -284,33 +297,35 @@ Use case: Fresh start or reset after schema changes.
 
 ### Common Variables
 
-| Variable | Description | Default | Used By |
-|----------|-------------|---------|---------|
-| `LOG_LEVEL` | Logging verbosity | `ERROR` | All scripts |
-| `CLEAN` | Clean temporary files | `true` | All scripts |
-| `DBNAME_INGESTION` | Ingestion database name | `notes_dwh` | DWH scripts |
-| `DBNAME_DWH` | Analytics/DWH database name | `notes_dwh` | DWH scripts |
-| `DBNAME` | Database name (legacy/compatibility) | `notes_dwh` | All scripts (fallback) |
-| `DBHOST` | Database host | `localhost` | All scripts |
-| `DBPORT` | Database port | `5432` | All scripts |
-| `DBUSER` | Database user | `postgres` | All scripts |
+| Variable           | Description                          | Default     | Used By                |
+| ------------------ | ------------------------------------ | ----------- | ---------------------- |
+| `LOG_LEVEL`        | Logging verbosity                    | `ERROR`     | All scripts            |
+| `CLEAN`            | Clean temporary files                | `true`      | All scripts            |
+| `DBNAME_INGESTION` | Ingestion database name              | `notes_dwh` | DWH scripts            |
+| `DBNAME_DWH`       | Analytics/DWH database name          | `notes_dwh` | DWH scripts            |
+| `DBNAME`           | Database name (legacy/compatibility) | `notes_dwh` | All scripts (fallback) |
+| `DBHOST`           | Database host                        | `localhost` | All scripts            |
+| `DBPORT`           | Database port                        | `5432`      | All scripts            |
+| `DBUSER`           | Database user                        | `postgres`  | All scripts            |
 
-**Note:** `DBNAME_INGESTION` and `DBNAME_DWH` are the recommended variables for DWH operations. `DBNAME` is maintained for backward compatibility when both databases are the same. If `DBNAME_INGESTION` or `DBNAME_DWH` are not set, `DBNAME` is used as a fallback.
+**Note:** `DBNAME_INGESTION` and `DBNAME_DWH` are the recommended variables for DWH operations.
+`DBNAME` is maintained for backward compatibility when both databases are the same. If
+`DBNAME_INGESTION` or `DBNAME_DWH` are not set, `DBNAME` is used as a fallback.
 
 ### ETL-Specific Variables
 
-| Variable | Description | Default | Used By |
-|----------|-------------|---------|---------|
-| `ETL_BATCH_SIZE` | Records per batch | `1000` | ETL.sh |
-| `ETL_PARALLEL_ENABLED` | Enable parallel processing | `true` | ETL.sh |
-| `ETL_VACUUM_AFTER_LOAD` | Vacuum after load | `true` | ETL.sh |
-| `ETL_ANALYZE_AFTER_LOAD` | Analyze after load | `true` | ETL.sh |
+| Variable                 | Description                | Default | Used By |
+| ------------------------ | -------------------------- | ------- | ------- |
+| `ETL_BATCH_SIZE`         | Records per batch          | `1000`  | ETL.sh  |
+| `ETL_PARALLEL_ENABLED`   | Enable parallel processing | `true`  | ETL.sh  |
+| `ETL_VACUUM_AFTER_LOAD`  | Vacuum after load          | `true`  | ETL.sh  |
+| `ETL_ANALYZE_AFTER_LOAD` | Analyze after load         | `true`  | ETL.sh  |
 
 ### Profile-Specific Variables
 
-| Variable | Description | Default | Used By |
-|----------|-------------|---------|---------|
-| `OUTPUT_FORMAT` | Output format | `json` | profile.sh |
+| Variable        | Description   | Default | Used By    |
+| --------------- | ------------- | ------- | ---------- |
+| `OUTPUT_FORMAT` | Output format | `json`  | profile.sh |
 
 ### Configuration File
 
@@ -335,6 +350,7 @@ source etc/properties.sh
 **Problem**: Another ETL process is running
 
 **Solution**:
+
 ```bash
 # Check for running processes
 ps aux | grep ETL.sh
@@ -348,6 +364,7 @@ rm /tmp/ETL_*/ETL.lock
 **Problem**: Large dataset causes memory issues
 
 **Solution**:
+
 ```bash
 # Reduce batch size
 export ETL_BATCH_SIZE="500"
@@ -364,6 +381,7 @@ export ETL_PARALLEL_ENABLED="false"
 **Problem**: Cannot connect to database
 
 **Solution**:
+
 ```bash
 # Verify connection
 psql -h $DBHOST -p $DBPORT -U $DBUSER -d $DBNAME -c "SELECT 1"
@@ -377,6 +395,7 @@ cat etc/properties.sh
 **Problem**: Queries are slow
 
 **Solution**:
+
 ```bash
 # Run VACUUM ANALYZE
 psql -d $DBNAME -c "VACUUM ANALYZE dwh.facts"
@@ -389,7 +408,8 @@ psql -d $DBNAME -c "REINDEX SCHEMA dwh"
 
 1. Check logs: `/tmp/ETL_*/ETL.log`
 2. Review documentation: `docs/`
-3. Check GitHub Issues: [https://github.com/OSM-Notes/OSM-Notes-Analytics/issues](https://github.com/OSM-Notes/OSM-Notes-Analytics/issues)
+3. Check GitHub Issues:
+   [https://github.com/OSM-Notes/OSM-Notes-Analytics/issues](https://github.com/OSM-Notes/OSM-Notes-Analytics/issues)
 
 ---
 
@@ -438,4 +458,3 @@ psql -d $DBNAME -c "SELECT pg_size_pretty(pg_database_size('osm_notes'))"
 - [ETL Enhanced Features](ETL_Enhanced_Features.md)
 - [DWH Maintenance Guide](DWH_Maintenance_Guide.md)
 - [Partitioning Strategy](partitioning_strategy.md)
-

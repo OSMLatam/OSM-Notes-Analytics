@@ -2,7 +2,8 @@
 
 ## 📊 Overview
 
-The `dwh.facts` table is partitioned by year using the `action_at` column as the partitioning key. This dramatically improves the performance of queries that filter by date.
+The `dwh.facts` table is partitioned by year using the `action_at` column as the partitioning key.
+This dramatically improves the performance of queries that filter by date.
 
 ---
 
@@ -40,6 +41,7 @@ Partitions are created automatically during the ETL process:
 ```
 
 The ETL automatically detects first execution and executes these steps:
+
 1. `ETL_22_createDWHTables.sql` - Creates main partitioned table
 2. `ETL_22a_createFactPartitions.sql` - Creates partitions from 2013 to current_year + 1
 3. Loads data directly into partitions
@@ -123,7 +125,7 @@ CREATE TABLE dwh.facts_2027 PARTITION OF dwh.facts
   FOR VALUES FROM ('2027-01-01') TO ('2028-01-01');
 
 -- Verify creation
-SELECT tablename FROM pg_tables 
+SELECT tablename FROM pg_tables
 WHERE schemaname = 'dwh' AND tablename = 'facts_2027';
 ```
 
@@ -134,12 +136,12 @@ WHERE schemaname = 'dwh' AND tablename = 'facts_2027';
 ### List all partitions
 
 ```sql
-SELECT 
+SELECT
   schemaname,
   tablename,
   pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size
 FROM pg_tables
-WHERE schemaname = 'dwh' 
+WHERE schemaname = 'dwh'
   AND tablename LIKE 'facts_%'
 ORDER BY tablename;
 ```
@@ -147,7 +149,7 @@ ORDER BY tablename;
 ### View partition definitions
 
 ```sql
-SELECT 
+SELECT
   parent.relname AS parent_table,
   child.relname AS partition_name,
   pg_get_expr(child.relpartbound, child.oid, true) AS partition_expression
@@ -161,7 +163,7 @@ ORDER BY partition_name;
 ### View partition statistics
 
 ```sql
-SELECT 
+SELECT
   schemaname,
   tablename,
   n_tup_ins as inserts,
@@ -174,7 +176,7 @@ SELECT
   last_analyze,
   last_autoanalyze
 FROM pg_stat_user_tables
-WHERE schemaname = 'dwh' 
+WHERE schemaname = 'dwh'
   AND tablename LIKE 'facts_%'
 ORDER BY tablename;
 ```
@@ -189,19 +191,20 @@ PostgreSQL automatically uses **partition pruning** to avoid scanning unnecessar
 
 ```sql
 -- Only scans facts_2024
-SELECT COUNT(*) 
-FROM dwh.facts 
+SELECT COUNT(*)
+FROM dwh.facts
 WHERE action_at BETWEEN '2024-01-01' AND '2024-12-31';
 
 -- Verify partition pruning with EXPLAIN
 EXPLAIN (ANALYZE, BUFFERS)
-SELECT COUNT(*) 
-FROM dwh.facts 
-WHERE action_at >= '2024-01-01' 
+SELECT COUNT(*)
+FROM dwh.facts
+WHERE action_at >= '2024-01-01'
   AND action_at < '2025-01-01';
 ```
 
 **Expected output:**
+
 ```
 Aggregate  (actual time=123.456..123.457 rows=1 loops=1)
   ->  Seq Scan on facts_2024 facts  (actual time=0.015..98.765 rows=4000000 loops=1)
@@ -220,8 +223,8 @@ SELECT * FROM dwh.facts WHERE id_note = 12345;
 -- Scans ALL partitions
 
 -- ✅ GOOD: With filter on action_at
-SELECT * FROM dwh.facts 
-WHERE id_note = 12345 
+SELECT * FROM dwh.facts
+WHERE id_note = 12345
   AND action_at >= '2024-01-01';
 -- Only scans facts_2024
 ```
@@ -305,12 +308,14 @@ ALTER TABLE dwh.facts DROP PARTITION dwh.facts_2013;
 ### Problem: "no partition of relation for tuple"
 
 **Error:**
+
 ```
 ERROR: no partition of relation "facts" found for row
 DETAIL: Partition key of the failing row contains (action_at) = (2030-05-15).
 ```
 
 **Solution:**
+
 ```bash
 # Create partition for 2030
 ./bin/dwh/addNewYearPartition.sh 2030
@@ -321,16 +326,18 @@ DETAIL: Partition key of the failing row contains (action_at) = (2030-05-15).
 **Check:**
 
 1. Are you filtering by `action_at`?
+
    ```sql
    -- Check if it uses partition pruning
    EXPLAIN SELECT * FROM dwh.facts WHERE id_note = 123;
    ```
 
 2. Do indexes exist on partitions?
+
    ```sql
    -- Verify indexes
-   SELECT tablename, indexname 
-   FROM pg_indexes 
+   SELECT tablename, indexname
+   FROM pg_indexes
    WHERE schemaname = 'dwh' AND tablename LIKE 'facts_%'
    ORDER BY tablename, indexname;
    ```
@@ -345,20 +352,23 @@ DETAIL: Partition key of the failing row contains (action_at) = (2030-05-15).
 ## 📅 Maintenance Calendar
 
 ### Annual (January)
+
 - [x] ~~Create partition for new year~~ **✅ AUTOMATIC** (ETL does it)
 - [ ] Consider archiving partitions older than 5 years
 - [ ] Review autovacuum configuration on old partitions
 
 ### Monthly
+
 - [ ] Check partition sizes
   ```sql
   SELECT tablename, pg_size_pretty(pg_total_relation_size('dwh.'||tablename))
-  FROM pg_tables 
+  FROM pg_tables
   WHERE schemaname = 'dwh' AND tablename LIKE 'facts_%'
   ORDER BY pg_total_relation_size('dwh.'||tablename) DESC;
   ```
 
 ### Weekly
+
 - [ ] Review query performance
   ```sql
   SELECT query, calls, mean_exec_time, stddev_exec_time
@@ -369,6 +379,7 @@ DETAIL: Partition key of the failing row contains (action_at) = (2030-05-15).
   ```
 
 ### Automatic (Every ETL Execution)
+
 - [x] **Verify current year partition** ✅ AUTOMATIC
 - [x] **Create missing partitions** ✅ AUTOMATIC
 - [x] **2-year future buffer** ✅ AUTOMATIC
@@ -377,14 +388,17 @@ DETAIL: Partition key of the failing row contains (action_at) = (2030-05-15).
 
 ## 🔗 References
 
-- PostgreSQL Documentation: [Table Partitioning](https://www.postgresql.org/docs/current/ddl-partitioning.html)
-- PostgreSQL Documentation: [Partition Pruning](https://www.postgresql.org/docs/current/ddl-partitioning.html#DDL-PARTITION-PRUNING)
+- PostgreSQL Documentation:
+  [Table Partitioning](https://www.postgresql.org/docs/current/ddl-partitioning.html)
+- PostgreSQL Documentation:
+  [Partition Pruning](https://www.postgresql.org/docs/current/ddl-partitioning.html#DDL-PARTITION-PRUNING)
 
 ---
 
 ## 📞 Support
 
 For problems or questions about partitioning:
+
 1. Review this documentation
 2. Check ETL logs in `/tmp/ETL_*/ETL.log`
 3. Verify existing partitions with verification queries

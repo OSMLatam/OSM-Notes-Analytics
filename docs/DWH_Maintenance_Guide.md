@@ -2,7 +2,8 @@
 
 ## 📋 Overview
 
-This guide covers maintenance operations for the OSM-Notes-Analytics data warehouse, including when and how to use the cleanup script safely.
+This guide covers maintenance operations for the OSM-Notes-Analytics data warehouse, including when
+and how to use the cleanup script safely.
 
 ---
 
@@ -11,6 +12,7 @@ This guide covers maintenance operations for the OSM-Notes-Analytics data wareho
 ### Purpose
 
 The cleanup script removes data warehouse objects and temporary files. It's designed for:
+
 - Development environment resets
 - Troubleshooting corrupted objects
 - Regular maintenance of temporary files
@@ -32,24 +34,28 @@ The script includes several safety mechanisms:
 ### Safe Operations (No Data Loss)
 
 #### Regular Maintenance
+
 ```bash
 # Clean temporary files (safe, no confirmation)
 ./bin/dwh/cleanupDWH.sh --remove-temp-files
 ```
 
 **When to use:**
+
 - After ETL runs to free disk space
 - Before running tests to ensure clean environment
 - Regular maintenance (weekly/monthly)
 - When `/tmp` directory is getting full
 
 #### Preview Operations
+
 ```bash
 # See what would be removed (safe)
 ./bin/dwh/cleanupDWH.sh --dry-run
 ```
 
 **When to use:**
+
 - Before any destructive operation
 - Understanding what cleanup will do
 - Planning maintenance windows
@@ -58,24 +64,28 @@ The script includes several safety mechanisms:
 ### Destructive Operations (Data Loss)
 
 #### Complete Reset
+
 ```bash
 # Remove everything (requires confirmation)
 ./bin/dwh/cleanupDWH.sh
 ```
 
 **When to use:**
+
 - Starting fresh development environment
 - After major schema changes
 - Resolving complex corruption issues
 - Before initial ETL setup
 
 #### DWH Objects Only
+
 ```bash
 # Remove only database objects (requires confirmation)
 ./bin/dwh/cleanupDWH.sh --remove-all-data
 ```
 
 **When to use:**
+
 - Schema corruption issues
 - Before schema migrations
 - Testing schema changes
@@ -136,10 +146,12 @@ The script includes several safety mechanisms:
 ### DWH Objects (`--remove-all-data` or default)
 
 **Schemas:**
+
 - `staging` - Staging area objects
 - `dwh` - data warehouse schema
 
 **Tables:**
+
 - `dwh.facts` - Main fact table (partitioned)
 - `dwh.dimension_*` - All dimension tables
 - `dwh.datamartCountries` - Country analytics
@@ -147,16 +159,19 @@ The script includes several safety mechanisms:
 - `dwh.iso_country_codes` - ISO codes reference
 
 **Functions:**
+
 - `dwh.get_*` - Helper functions
 - `dwh.update_*` - Update functions
 - `dwh.refresh_*` - Refresh functions
 
 **Triggers:**
+
 - `update_days_to_resolution` - Fact table trigger
 
 ### Temporary Files (`--remove-temp-files` or default)
 
 **Directories removed:**
+
 - `/tmp/ETL_*` - ETL temporary files
 - `/tmp/datamartCountries_*` - Country datamart temp files
 - `/tmp/datamartUsers_*` - User datamart temp files
@@ -198,6 +213,7 @@ DB_USER="notes"
 ### Before Any Destructive Operation
 
 1. **Always run dry-run first:**
+
    ```bash
    ./bin/dwh/cleanupDWH.sh --dry-run
    ```
@@ -233,21 +249,27 @@ If cleanup fails or causes issues:
 ### Common Issues
 
 #### Permission Denied
+
 ```
 ERROR: Permission denied for schema dwh
 ```
+
 **Solution:** Ensure user has DROP privileges on schemas
 
 #### Database Not Found
+
 ```
 ERROR: Database 'osm_notes' does not exist
 ```
+
 **Solution:** Check `etc/properties.sh` configuration
 
 #### SQL Script Errors
+
 ```
 ERROR: SQL file validation failed
 ```
+
 **Solution:** Check SQL script syntax and file permissions
 
 ### Getting Help

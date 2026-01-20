@@ -2,10 +2,9 @@
 
 ## Overview
 
-The JSON export system has been optimized to use incremental processing, only
-exporting entities (users and countries) that have been modified. This
-significantly reduces export time and data transfer, especially for large
-datasets.
+The JSON export system has been optimized to use incremental processing, only exporting entities
+(users and countries) that have been modified. This significantly reduces export time and data
+transfer, especially for large datasets.
 
 ## How It Works
 
@@ -26,8 +25,7 @@ The export script uses the `modified` flag from dimension tables:
 - `dwh.dimension_users.modified`
 - `dwh.dimension_countries.modified`
 
-When entities are updated during the ETL process, their `modified` flag is
-set to `TRUE`.
+When entities are updated during the ETL process, their `modified` flag is set to `TRUE`.
 
 ### 3. Incremental Export Process
 
@@ -60,8 +58,7 @@ The export script:
 3. Validates only modified files
 4. Atomically replaces all files
 
-This ensures unchanged files remain unchanged and are not unnecessarily
-regenerated or re-validated.
+This ensures unchanged files remain unchanged and are not unnecessarily regenerated or re-validated.
 
 ## Benefits
 
@@ -75,6 +72,7 @@ regenerated or re-validated.
 ### Example Scenarios
 
 #### Initial Export (10,000 users)
+
 ```bash
 # Export all 10,000 users
 Time: ~15 minutes
@@ -82,6 +80,7 @@ Files: 10,000 JSON files
 ```
 
 #### Incremental Update (50 modified users)
+
 ```bash
 # Export only 50 modified users
 Time: ~30 seconds
@@ -91,11 +90,11 @@ Transfer: ~250 KB vs ~50 MB
 
 ### Real-World Performance
 
-| Scenario | Old System | Optimized | Improvement |
-|----------|-----------|-----------|-------------|
-| 10K users, full export | 15 min | 15 min | 0% (one-time) |
-| 10K users, 50 modified | 15 min | 30 sec | 97% faster |
-| 10K users, 5 modified | 15 min | 10 sec | 99% faster |
+| Scenario               | Old System | Optimized | Improvement   |
+| ---------------------- | ---------- | --------- | ------------- |
+| 10K users, full export | 15 min     | 15 min    | 0% (one-time) |
+| 10K users, 50 modified | 15 min     | 30 sec    | 97% faster    |
+| 10K users, 5 modified  | 15 min     | 10 sec    | 99% faster    |
 
 ## Integration with ETL
 
@@ -243,12 +242,14 @@ find output/json -type f ! -readable -ls
 If data appears stale despite exports:
 
 1. Check datamart population:
+
    ```bash
    ./bin/dwh/datamartUsers/datamartUsers.sh
    ./bin/dwh/datamartCountries/datamartCountries.sh
    ```
 
 2. Verify dimension modified flags:
+
    ```bash
    psql -d notes -c "SELECT * FROM dwh.dimension_users WHERE modified = TRUE LIMIT 5;"
    ```
@@ -264,4 +265,3 @@ If data appears stale despite exports:
 - [JSON Export System](bin/dwh/export_json_readme.md)
 - [Version Compatibility](docs/Version_Compatibility.md)
 - [ETL Process](bin/dwh/README.md)
-

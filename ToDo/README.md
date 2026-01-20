@@ -1,26 +1,31 @@
 # ToDo Directory
 
-This directory contains all TODO items, action plans, and progress tracking for the OSM-Notes-Analytics project.
+This directory contains all TODO items, action plans, and progress tracking for the
+OSM-Notes-Analytics project.
 
 ---
 
 ## Files Overview
 
 ### 📋 TODO_LIST.md
+
 **Purpose**: Consolidated TODO list with all identified tasks  
-**Use for**: 
+**Use for**:
+
 - Current tasks and priorities
 - Task status tracking
 - Detailed task breakdown
 - Complete project roadmap
 
 **How to use**:
+
 1. Find tasks by priority or category
 2. Mark [🔄] when starting work
 3. Mark [✅] when completed
 4. Add notes on implementation details
 
 **Status Markers**:
+
 - `[ ]` Not started
 - `[🔄]` In progress
 - `[✅]` Completed
@@ -29,14 +34,17 @@ This directory contains all TODO items, action plans, and progress tracking for 
 ---
 
 ### 🎯 ProgressTracker.md
+
 **Purpose**: Quick daily/weekly progress view  
 **Use for**:
+
 - Sprint planning
 - Daily updates
 - Weekly reviews
 - Quick statistics
 
 **How to use**:
+
 1. Update weekly goals at start of sprint
 2. Log daily progress in weekly section
 3. Update quick stats table
@@ -45,7 +53,6 @@ This directory contains all TODO items, action plans, and progress tracking for 
 **Update frequency**: Daily or as tasks complete
 
 ---
-
 
 ---
 
@@ -84,24 +91,28 @@ This directory contains all TODO items, action plans, and progress tracking for 
 ## Priority Guidelines
 
 ### 🔴 Critical
+
 - Breaking bugs or data quality issues
 - Test failures preventing deployment
 - Critical missing functionality
 - **Timeline**: Fix immediately
 
 ### 🟡 High
+
 - Important missing features
 - Significant accuracy improvements
 - High-impact metrics
 - **Timeline**: Fix within 1-2 weeks
 
 ### 🟠 Medium
+
 - Enhancements and optimizations
 - Code quality improvements
 - Documentation updates
 - **Timeline**: Fix within 1-2 months
 
 ### 🟢 Low
+
 - Nice-to-have features
 - Future enhancements
 - Documentation polish
@@ -158,12 +169,12 @@ Title: Add resolution time aggregates to datamarts
 **Reference**: TODO_LIST.md - Metrics #1  
 **Priority**: 🟡 High
 
-**Description**:
-Missing resolution time analytics in datamarts.
+**Description**: Missing resolution time analytics in datamarts.
 
 **Impact**: Critical for problem notes analysis
 
 **Files**:
+
 - sql/dwh/datamartCountries/
 - sql/dwh/datamartUsers/
 ```
@@ -175,10 +186,12 @@ Missing resolution time analytics in datamarts.
 Based on analysis in `docs/DASHBOARD_ANALYSIS.md`:
 
 ### Priority 1: Fix Current Issues
+
 - Fix failing unit tests
 - Verify datamart accuracy
 
 ### Priority 2: Add Missing Metrics
+
 - Resolution time analytics (⭐⭐⭐⭐⭐)
 - Community health indicators (⭐⭐⭐⭐⭐)
 - Application statistics (⭐⭐⭐⭐)
@@ -186,6 +199,7 @@ Based on analysis in `docs/DASHBOARD_ANALYSIS.md`:
 - User behavior patterns (⭐⭐⭐⭐)
 
 ### Priority 3: Polish
+
 - Documentation updates
 - Performance baselines
 - Dashboard guides
@@ -216,7 +230,3 @@ If you discover new bugs or have feature ideas:
 ---
 
 **Maintained By**: Project contributors
-
-
-
-

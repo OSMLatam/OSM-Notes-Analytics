@@ -90,4 +90,3 @@ BEGIN
  RAISE NOTICE 'Base tables validation passed. Found % notes in database.', qty;
 END;
 $$;
-

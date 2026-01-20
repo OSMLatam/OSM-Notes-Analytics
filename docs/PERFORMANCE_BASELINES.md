@@ -1,10 +1,13 @@
 # Query Performance Baselines
 
-This document provides performance baselines and expectations for common queries against the OSM Notes Analytics data warehouse. Use these baselines to understand what to expect when querying datamarts and the star schema.
+This document provides performance baselines and expectations for common queries against the OSM
+Notes Analytics data warehouse. Use these baselines to understand what to expect when querying
+datamarts and the star schema.
 
 ## Overview
 
 The data warehouse is optimized for analytics queries through:
+
 - **Pre-computed datamarts**: Fast lookups for country and user metrics
 - **Star schema**: Efficient joins between facts and dimensions
 - **Incremental updates**: Only modified data is recalculated
@@ -15,6 +18,7 @@ The data warehouse is optimized for analytics queries through:
 ### Data Volume Assumptions
 
 These baselines assume:
+
 - **Facts table**: ~10-50 million rows (typical production size)
 - **DatamartCountries**: ~200-250 countries
 - **DatamartUsers**: ~10,000-100,000 active users
@@ -264,7 +268,7 @@ WHERE dimension_country_id = 42;
 
 ```sql
 -- Count hashtags per country
-SELECT 
+SELECT
   country_name_en,
   json_array_length(hashtags) as hashtag_count
 FROM dwh.datamartcountries
@@ -299,7 +303,7 @@ WHERE action_comment = 'opened'
 
 ```sql
 -- Notes by country (join to dimension)
-SELECT 
+SELECT
   dc.country_name_en,
   COUNT(*) as note_count
 FROM dwh.facts f
@@ -319,7 +323,7 @@ LIMIT 10;
 
 ```sql
 -- User activity by country
-SELECT 
+SELECT
   dc.country_name_en,
   du.username,
   COUNT(*) as action_count
@@ -341,7 +345,7 @@ LIMIT 20;
 
 ```sql
 -- Resolution time analysis
-SELECT 
+SELECT
   AVG(days_to_resolution) as avg_resolution_days,
   PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY days_to_resolution) as median_resolution_days
 FROM dwh.facts
@@ -363,7 +367,7 @@ WHERE action_comment = 'closed'
 
 ```sql
 -- Monthly activity from datamart (pre-computed JSON)
-SELECT 
+SELECT
   country_name_en,
   activity_by_month
 FROM dwh.datamartcountries
@@ -377,7 +381,7 @@ WHERE dimension_country_id = 42;
 
 ```sql
 -- Yearly activity from datamart
-SELECT 
+SELECT
   country_name_en,
   activity_by_year
 FROM dwh.datamartcountries
@@ -391,7 +395,7 @@ WHERE dimension_country_id = 42;
 
 ```sql
 -- Monthly activity from facts (slower)
-SELECT 
+SELECT
   DATE_TRUNC('month', action_at) as month,
   COUNT(*) as action_count
 FROM dwh.facts
@@ -416,7 +420,7 @@ ORDER BY month;
 
 ```sql
 -- Compare country totals with user totals (validation query)
-SELECT 
+SELECT
   (SELECT SUM(history_whole_open) FROM dwh.datamartcountries) as country_total,
   (SELECT SUM(history_whole_open) FROM dwh.datamartusers) as user_total;
 ```
@@ -428,7 +432,7 @@ SELECT
 
 ```sql
 -- Users active in specific country (requires facts table)
-SELECT 
+SELECT
   du.username,
   COUNT(DISTINCT f.id_note) as notes_in_country
 FROM dwh.facts f
@@ -451,12 +455,14 @@ LIMIT 20;
 ### 1. Use Datamarts Instead of Facts
 
 **❌ Slow Query:**
+
 ```sql
 SELECT COUNT(*) FROM dwh.facts WHERE action_comment = 'opened';
 -- Expected: 2-10s
 ```
 
 **✅ Fast Query:**
+
 ```sql
 SELECT SUM(history_whole_open) FROM dwh.datamartcountries;
 -- Expected: 50-150ms
@@ -465,6 +471,7 @@ SELECT SUM(history_whole_open) FROM dwh.datamartcountries;
 ### 2. Use Pre-Computed JSON Fields
 
 **❌ Slow Query:**
+
 ```sql
 SELECT DATE_TRUNC('month', action_at), COUNT(*)
 FROM dwh.facts
@@ -474,6 +481,7 @@ GROUP BY DATE_TRUNC('month', action_at);
 ```
 
 **✅ Fast Query:**
+
 ```sql
 SELECT activity_by_month FROM dwh.datamartcountries
 WHERE dimension_country_id = 42;
@@ -483,14 +491,16 @@ WHERE dimension_country_id = 42;
 ### 3. Add LIMIT to Ranking Queries
 
 **❌ Slower:**
+
 ```sql
 SELECT * FROM dwh.datamartusers ORDER BY history_whole_open DESC;
 -- Returns all rows, then sorts
 ```
 
 **✅ Faster:**
+
 ```sql
-SELECT * FROM dwh.datamartusers 
+SELECT * FROM dwh.datamartusers
 ORDER BY history_whole_open DESC LIMIT 10;
 -- Sorts only what's needed
 ```
@@ -498,6 +508,7 @@ ORDER BY history_whole_open DESC LIMIT 10;
 ### 4. Use Indexed Columns
 
 Queries on these columns are faster:
+
 - `dimension_country_id` (primary key)
 - `dimension_user_id` (primary key)
 - `user_id` (indexed)
@@ -507,6 +518,7 @@ Queries on these columns are faster:
 ### 5. Avoid Full Table Scans on Facts
 
 The `dwh.facts` table is large. Always:
+
 - Use date filters: `WHERE action_at >= ...`
 - Use action filters: `WHERE action_comment = 'opened'`
 - Consider using datamarts instead
@@ -522,6 +534,7 @@ WHERE history_whole_open > 10000;
 ```
 
 This shows:
+
 - Execution plan
 - Actual execution time
 - Index usage
@@ -535,7 +548,7 @@ This shows:
 
 ```sql
 -- Find slow queries
-SELECT 
+SELECT
   pid,
   now() - pg_stat_activity.query_start AS duration,
   query
@@ -548,7 +561,7 @@ WHERE (now() - pg_stat_activity.query_start) > interval '5 seconds'
 
 ```sql
 -- Table sizes
-SELECT 
+SELECT
   schemaname,
   tablename,
   pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS size
@@ -561,7 +574,7 @@ ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
 
 ```sql
 -- Index usage statistics
-SELECT 
+SELECT
   schemaname,
   tablename,
   indexname,
@@ -577,23 +590,24 @@ ORDER BY idx_scan DESC;
 
 ## Expected Performance Summary
 
-| Query Type | Expected Time | Optimization |
-|------------|---------------|--------------|
-| Single row datamart lookup | < 10ms | Use primary key |
-| Filtered datamart query | 50-200ms | Add indexes if needed |
-| Top N ranking | 100-500ms | Use LIMIT |
-| Aggregation (datamart) | 50-200ms | Pre-computed |
-| Simple facts query | 500ms-2s | Use datamarts instead |
-| Facts with joins | 2-10s | Use datamarts instead |
-| Complex facts query | 5-20s | Consider materialized views |
-| JSON extraction | < 10ms (single) | Pre-computed JSON |
-| JSON parsing (all rows) | 100-300ms | Acceptable for small tables |
+| Query Type                 | Expected Time   | Optimization                |
+| -------------------------- | --------------- | --------------------------- |
+| Single row datamart lookup | < 10ms          | Use primary key             |
+| Filtered datamart query    | 50-200ms        | Add indexes if needed       |
+| Top N ranking              | 100-500ms       | Use LIMIT                   |
+| Aggregation (datamart)     | 50-200ms        | Pre-computed                |
+| Simple facts query         | 500ms-2s        | Use datamarts instead       |
+| Facts with joins           | 2-10s           | Use datamarts instead       |
+| Complex facts query        | 5-20s           | Consider materialized views |
+| JSON extraction            | < 10ms (single) | Pre-computed JSON           |
+| JSON parsing (all rows)    | 100-300ms       | Acceptable for small tables |
 
 ---
 
 ## When to Use Each Approach
 
 ### Use Datamarts When:
+
 - ✅ You need country-level or user-level aggregates
 - ✅ You need pre-computed metrics (resolution rates, health scores)
 - ✅ You need temporal patterns (monthly/yearly activity)
@@ -601,6 +615,7 @@ ORDER BY idx_scan DESC;
 - ✅ **Performance is critical** (< 200ms expected)
 
 ### Use Facts Table When:
+
 - ⚠️ You need note-level detail
 - ⚠️ You need custom date ranges not in datamarts
 - ⚠️ You need complex cross-dimensional analysis
@@ -608,6 +623,7 @@ ORDER BY idx_scan DESC;
 - ⚠️ **Performance is acceptable** (2-20s expected)
 
 ### Use Materialized Views When:
+
 - 💡 You need frequently-run complex queries
 - 💡 You need cross-datamart aggregations
 - 💡 You need custom time ranges
@@ -659,4 +675,3 @@ ORDER BY idx_scan DESC;
 
 **Last Updated**: 2025-12-14  
 **Version**: 1.0
-

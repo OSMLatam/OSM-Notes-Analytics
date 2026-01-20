@@ -2,13 +2,18 @@
 
 ## Overview
 
-The hybrid ETL execution scripts provide a complete end-to-end testing and execution pipeline that combines the OSM Notes ingestion process (`processAPINotes.sh`) with the analytics ETL process (`ETL.sh`). These scripts execute the ingestion process and then automatically run the ETL to update the data warehouse after each ingestion execution.
+The hybrid ETL execution scripts provide a complete end-to-end testing and execution pipeline that
+combines the OSM Notes ingestion process (`processAPINotes.sh`) with the analytics ETL process
+(`ETL.sh`). These scripts execute the ingestion process and then automatically run the ETL to update
+the data warehouse after each ingestion execution.
 
 **Key Feature:** The scripts use a **hybrid mode** that combines:
+
 - **Real database operations** (PostgreSQL with actual data)
 - **Mocked downloads** (simulated API/Planet downloads to avoid network dependencies)
 
-This approach allows testing the complete data pipeline with realistic database operations while avoiding slow and unreliable network downloads.
+This approach allows testing the complete data pipeline with realistic database operations while
+avoiding slow and unreliable network downloads.
 
 ## Available Scripts
 
@@ -17,12 +22,14 @@ This approach allows testing the complete data pipeline with realistic database 
 Executes the complete pipeline automatically with 4 sequential executions.
 
 **Usage:**
+
 ```bash
 cd tests
 ./run_processAPINotes_with_etl.sh
 ```
 
 **Features:**
+
 - Fully automated execution
 - 4 complete cycles (planet + 3 API executions)
 - ETL runs after each ingestion execution
@@ -33,12 +40,14 @@ cd tests
 Provides granular control over each step of the execution.
 
 **Usage:**
+
 ```bash
 cd tests
 ./run_processAPINotes_with_etl_controlled.sh [step]
 ```
 
 **Steps:**
+
 - `1` - Drop base tables and run processAPINotes.sh (planet/base)
 - `2` - Run ETL after step 1
 - `3` - Run processAPINotes.sh (API, 5 notes)
@@ -50,6 +59,7 @@ cd tests
 - `all` - Run all steps sequentially
 
 **Examples:**
+
 ```bash
 # Run only step 1
 ./run_processAPINotes_with_etl_controlled.sh 1
@@ -118,6 +128,7 @@ The scripts configure a **hybrid environment** that:
 ### PATH Configuration
 
 The scripts carefully configure the `PATH` environment variable to ensure:
+
 - Mock commands (`aria2c`, `wget`, `pgrep`, `ogr2ogr`) are found first
 - Real `psql` is used (not mock)
 - Real system commands (`gdalinfo`, etc.) are available
@@ -168,21 +179,24 @@ The scripts use and set these environment variables:
 
 ### Database Configuration Synchronization
 
-**Important:** Both `processAPINotes.sh` (from Ingestion) and `ETL.sh` (from Analytics) must use the **same database**. The scripts handle this automatically:
+**Important:** Both `processAPINotes.sh` (from Ingestion) and `ETL.sh` (from Analytics) must use the
+**same database**. The scripts handle this automatically:
 
 1. **Ingestion Properties Setup:**
    - The script replaces `INGESTION_ROOT/etc/properties.sh` with `properties_test.sh`
    - This ensures `processAPINotes.sh` uses the test database configuration
 
 2. **ETL Database Configuration:**
-   - Before running ETL, the script loads database configuration from `INGESTION_ROOT/etc/properties.sh` (which is now the test properties)
+   - Before running ETL, the script loads database configuration from
+     `INGESTION_ROOT/etc/properties.sh` (which is now the test properties)
    - It exports database variables for the ETL:
      ```bash
      export DBNAME="${DBNAME:-osm_notes}"           # Legacy: used when both DBs are same
      export DBNAME_INGESTION="${DBNAME:-osm_notes}"  # Ingestion database
      export DBNAME_DWH="${DBNAME:-osm_notes}"        # Analytics/DWH database
      ```
-   - In hybrid test mode, both use the same database, so all three variables are set to the same value
+   - In hybrid test mode, both use the same database, so all three variables are set to the same
+     value
    - This ensures the ETL uses the same database as the ingestion process
 
 3. **Configuration Priority:**
@@ -194,12 +208,16 @@ The scripts use and set these environment variables:
 
 4. **Automatic FDW Skip:**
    - When both processes use the same database, the ETL automatically detects this condition
-   - The ETL compares `DBNAME_INGESTION` (or `DBNAME` if not set) with `DBNAME_DWH` (or `DBNAME` if not set)
-   - If they are the same, FDW setup is **automatically skipped** since tables are directly accessible
+   - The ETL compares `DBNAME_INGESTION` (or `DBNAME` if not set) with `DBNAME_DWH` (or `DBNAME` if
+     not set)
+   - If they are the same, FDW setup is **automatically skipped** since tables are directly
+     accessible
    - The ETL logs: `"Ingestion and Analytics use same database, skipping FDW setup"`
-   - This prevents SQL errors that would occur when trying to create foreign tables pointing to the same database
+   - This prevents SQL errors that would occur when trying to create foreign tables pointing to the
+     same database
 
 **Verification:**
+
 ```bash
 # The script logs the database configuration being used:
 log_info "ETL will use database: ${DBNAME}"
@@ -207,22 +225,26 @@ log_info "Configuration: DBNAME_INGESTION='${DBNAME_INGESTION}', DBNAME_DWH='${D
 ```
 
 **Database Variable Usage:**
+
 - **Recommended**: Use `DBNAME_INGESTION` and `DBNAME_DWH` for DWH operations
-- **Legacy/Compatibility**: `DBNAME` is maintained for backward compatibility when both databases are the same
+- **Legacy/Compatibility**: `DBNAME` is maintained for backward compatibility when both databases
+  are the same
 - **Priority**: `DBNAME_INGESTION`/`DBNAME_DWH` > `DBNAME` (fallback)
 
-**Current Implementation:**
-The `ANALYTICS_ROOT/etc/properties.sh.example` already uses the correct pattern:
+**Current Implementation:** The `ANALYTICS_ROOT/etc/properties.sh.example` already uses the correct
+pattern:
+
 ```bash
 if [[ -z "${DBNAME:-}" ]]; then
  declare -r DBNAME="${DBNAME:-osm_notes}"
 fi
 ```
 
-This pattern respects environment variables: if `DBNAME` is already exported (as done by the hybrid script), it will not be overridden. The variable is only set if it doesn't already exist.
+This pattern respects environment variables: if `DBNAME` is already exported (as done by the hybrid
+script), it will not be overridden. The variable is only set if it doesn't already exist.
 
-**Verification:**
-To verify both processes use the same database, check the logs:
+**Verification:** To verify both processes use the same database, check the logs:
+
 ```bash
 # Ingestion log (from processAPINotes.sh)
 # Should show database from properties_test.sh
@@ -309,6 +331,7 @@ The automatic script executes 4 complete cycles:
 **Purpose:** Simulate initial data load from OSM Planet file.
 
 **Setup:**
+
 - Drops all base tables (`countries`, `notes`, `note_comments`, `logs`, `tries`)
 - Unsets `MOCK_NOTES_COUNT` (triggers planet mode)
 - Configures hybrid environment
@@ -335,6 +358,7 @@ The automatic script executes 4 complete cycles:
    - **Expected Result:** Complete DWH created with initial data
 
 **Verification:**
+
 ```sql
 -- Check base tables
 SELECT COUNT(*) FROM notes;
@@ -351,6 +375,7 @@ SELECT COUNT(*) FROM dwh.dimension_countries;
 **Purpose:** Test incremental API updates with small batch (sequential processing).
 
 **Setup:**
+
 - Base tables exist (from Execution #1)
 - Sets `MOCK_NOTES_COUNT=5` (triggers API mode with 5 notes)
 - No table drops
@@ -375,6 +400,7 @@ SELECT COUNT(*) FROM dwh.dimension_countries;
    - **Expected Result:** DWH updated with 5 new notes' data
 
 **Verification:**
+
 ```sql
 -- Check new notes added
 SELECT COUNT(*) FROM notes WHERE created_at > (SELECT MAX(created_at) - INTERVAL '1 hour' FROM notes);
@@ -388,6 +414,7 @@ SELECT COUNT(*) FROM dwh.facts WHERE action_at > (SELECT MAX(action_at) - INTERV
 **Purpose:** Test incremental API updates with larger batch (parallel processing).
 
 **Setup:**
+
 - Base tables exist
 - Sets `MOCK_NOTES_COUNT=20` (triggers API mode with 20 notes)
 - No table drops
@@ -412,6 +439,7 @@ SELECT COUNT(*) FROM dwh.facts WHERE action_at > (SELECT MAX(action_at) - INTERV
    - **Expected Result:** DWH updated with 20 new notes' data
 
 **Verification:**
+
 ```sql
 -- Check parallel processing worked
 SELECT COUNT(*) FROM notes WHERE created_at > (SELECT MAX(created_at) - INTERVAL '1 hour' FROM notes);
@@ -423,6 +451,7 @@ SELECT COUNT(*) FROM notes WHERE created_at > (SELECT MAX(created_at) - INTERVAL
 **Purpose:** Test handling of empty API responses (no new notes scenario).
 
 **Setup:**
+
 - Base tables exist
 - Sets `MOCK_NOTES_COUNT=0` (triggers API mode with empty response)
 - No table drops
@@ -445,6 +474,7 @@ SELECT COUNT(*) FROM notes WHERE created_at > (SELECT MAX(created_at) - INTERVAL
    - **Expected Result:** ETL completes successfully with no new data
 
 **Verification:**
+
 ```sql
 -- Verify no new data
 SELECT COUNT(*) FROM notes WHERE created_at > (SELECT MAX(created_at) - INTERVAL '1 hour' FROM notes);
@@ -493,6 +523,7 @@ The scripts automatically clean up on exit (via trap handlers):
 **Problem:** The script cannot find the Ingestion repository.
 
 **Solution:**
+
 ```bash
 # Verify directory structure
 ls -la ../OSM-Notes-Ingestion
@@ -509,6 +540,7 @@ ls -la ../OSM-Notes-Ingestion
 **Problem:** Missing `setup_hybrid_mock_environment.sh` in Ingestion repo.
 
 **Solution:**
+
 ```bash
 # Check if file exists
 ls -la ../OSM-Notes-Ingestion/tests/setup_hybrid_mock_environment.sh
@@ -521,6 +553,7 @@ ls -la ../OSM-Notes-Ingestion/tests/setup_hybrid_mock_environment.sh
 **Problem:** PATH configuration is incorrect, mock psql is being used.
 
 **Solution:**
+
 ```bash
 # Verify real psql is available
 which psql
@@ -535,6 +568,7 @@ echo $PATH | grep -o '[^:]*psql[^:]*'
 **Problem:** ETL script encountered an error.
 
 **Solution:**
+
 ```bash
 # Check ETL logs
 tail -50 $(ls -1rtd /tmp/ETL_* | tail -1)/ETL.log
@@ -551,6 +585,7 @@ psql -d osm-notes-test -c "SELECT COUNT(*) FROM notes;"
 **Problem:** Ingestion script failed (often related to missing dependencies or configuration).
 
 **Solution:**
+
 ```bash
 # Check Ingestion logs
 # Logs are typically in /tmp/processAPINotes_* or similar
@@ -592,5 +627,3 @@ These scripts are designed to be used in CI/CD pipelines:
 - [DWH Star Schema ERD](DWH_Star_Schema_ERD.md) - Data warehouse structure
 - [Troubleshooting Guide](Troubleshooting_Guide.md) - Common issues and solutions
 - [Execution Guide](execution_guide.md) - General execution documentation
-
-

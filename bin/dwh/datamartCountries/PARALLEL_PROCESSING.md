@@ -2,16 +2,21 @@
 
 ## Overview
 
-The datamart country processing system implements **parallel processing with a shared work queue** for dynamic load balancing. This ensures optimal CPU utilization by allowing worker threads to take the next available country after finishing one, preventing idle threads when some countries take longer to process than others.
+The datamart country processing system implements **parallel processing with a shared work queue**
+for dynamic load balancing. This ensures optimal CPU utilization by allowing worker threads to take
+the next available country after finishing one, preventing idle threads when some countries take
+longer to process than others.
 
 ## Problem Solved
 
 **Before:** Sequential processing resulted in:
+
 - 30-45 minutes for ~200 countries
 - One country at a time, regardless of complexity
 - No load balancing: fast countries waited for slow ones
 
 **Now:** With parallel processing and work queue:
+
 - 5-10 minutes for ~200 countries (3-6x faster)
 - Multiple countries processed simultaneously
 - Dynamic load balancing: threads stay busy
@@ -19,12 +24,14 @@ The datamart country processing system implements **parallel processing with a s
 ## Key Difference from DatamartUsers
 
 ### DatamartUsers Approach (Static Assignment)
+
 - Each process knows which user to process **at launch time**
 - Processes users in priority order
 - Pool-based: waits for oldest process before starting new one
 - Good for: Prioritized processing where order matters
 
 ### DatamartCountries Approach (Dynamic Work Queue)
+
 - Each thread **requests next country** after finishing one
 - Countries ordered by activity, but threads balance dynamically
 - Work queue: threads pull work as they become available
@@ -95,6 +102,7 @@ fi
 ```
 
 **Rationale:**
+
 - Leaves 2 cores free for system operations
 - Prevents CPU saturation
 - Allows other processes to run smoothly
@@ -120,6 +128,7 @@ __get_next_country_from_queue() {
 ```
 
 **Features:**
+
 - **Thread-safe:** Uses `flock` for atomic queue access
 - **Atomic operations:** File operations are atomic
 - **Non-blocking:** Returns empty string when queue is empty
@@ -132,22 +141,22 @@ for ((thread_num=1; thread_num<=adjusted_threads; thread_num++)); do
   (
     local thread_processed=0
     local thread_failed=0
-    
+
     while true; do
       # Get next country from queue
       country_id=$(__get_next_country_from_queue)
-      
+
       # Exit if queue is empty
       if [[ -z "${country_id}" ]]; then
         break
       fi
-      
+
       # Process country atomically
       if ! __psql_with_appname ... -c "
         BEGIN;
           CALL dwh.update_datamart_country(${country_id});
-          UPDATE dwh.dimension_countries 
-            SET modified = FALSE 
+          UPDATE dwh.dimension_countries
+            SET modified = FALSE
             WHERE dimension_country_id = ${country_id};
         COMMIT;
       "; then
@@ -156,7 +165,7 @@ for ((thread_num=1; thread_num<=adjusted_threads; thread_num++)); do
         thread_processed=$((thread_processed + 1))
       fi
     done
-    
+
     exit ${thread_failed}
   ) &
   pids+=($!)
@@ -178,6 +187,7 @@ ORDER BY MAX(f.action_at) DESC  -- Most active first
 ```
 
 **Benefits:**
+
 - Most active countries processed first (if threads are available)
 - Dynamic balancing still ensures optimal utilization
 - Fast countries don't wait for slow ones
@@ -189,13 +199,14 @@ Each country is processed in an explicit transaction:
 ```sql
 BEGIN;
   CALL dwh.update_datamart_country(country_id);
-  UPDATE dwh.dimension_countries 
-    SET modified = FALSE 
+  UPDATE dwh.dimension_countries
+    SET modified = FALSE
     WHERE dimension_country_id = country_id;
 COMMIT;
 ```
 
 **Benefits:**
+
 - **Atomicity:** If `update_datamart_country()` fails, country is not marked as processed
 - **Consistency:** The `modified` flag is only updated if processing succeeds
 - **Isolation:** Each country is processed independently
@@ -222,6 +233,7 @@ exit ${thread_failed}  # Exit code = number of failures
 ```
 
 **Features:**
+
 - Each thread tracks its own failures
 - Errors don't stop other threads
 - Final report shows total failures
@@ -243,6 +255,7 @@ done
 ### Logged Information
 
 1. **Initialization:**
+
    ```
    === PROCESSING COUNTRIES IN PARALLEL (WORK QUEUE) ===
    Using 6 parallel threads (nproc-2: 8 - 2)
@@ -250,6 +263,7 @@ done
    ```
 
 2. **Thread Start:**
+
    ```
    Started worker thread 1 (PID: 12345)
    Started worker thread 2 (PID: 12346)
@@ -257,12 +271,14 @@ done
    ```
 
 3. **Progress (every 5 countries per thread):**
+
    ```
    Thread 1: Processed 5 countries (current: country 42)
    Thread 2: Processed 10 countries (current: country 15)
    ```
 
 4. **Thread Completion:**
+
    ```
    Thread 1: Completed successfully (35 countries processed)
    Thread 2: Completed successfully (33 countries processed)
@@ -295,16 +311,19 @@ MAX_THREADS="${MAX_THREADS:-$(nproc)}"
 ### Recommended Adjustments
 
 **For systems with many countries:**
+
 - Default `nproc - 2` is usually optimal
 - Monitor PostgreSQL connections (`max_connections`)
 - Verify disk I/O can handle concurrent operations
 
 **For systems with limited resources:**
+
 - Reduce to `nproc - 3` or `nproc - 4`
 - Monitor CPU and memory usage
 - Consider sequential processing if resources are very limited
 
 **For systems with very fast storage (SSD):**
+
 - Can use `nproc - 1` if CPU is not saturated
 - Monitor for lock contention
 - Verify PostgreSQL can handle concurrent connections
@@ -314,21 +333,25 @@ MAX_THREADS="${MAX_THREADS:-$(nproc)}"
 ### Typical Scenarios
 
 **Case 1: ~200 countries (current production)**
+
 - **Sequential:** 30-45 minutes
 - **Parallel (6 threads):** 5-10 minutes
 - **Speedup:** 3-6x faster
 
 **Case 2: ~100 countries**
+
 - **Sequential:** 15-20 minutes
 - **Parallel (4 threads):** 3-5 minutes
 - **Speedup:** 3-4x faster
 
 **Case 3: ~50 countries**
+
 - **Sequential:** 5-10 minutes
 - **Parallel (2 threads):** 2-3 minutes
 - **Speedup:** 2-3x faster
 
 **Key factors:**
+
 - Number of countries
 - Complexity per country (number of facts)
 - Hardware (CPU cores, disk speed)
@@ -336,14 +359,14 @@ MAX_THREADS="${MAX_THREADS:-$(nproc)}"
 
 ## Comparison: Work Queue vs Static Assignment
 
-| Aspect | Work Queue (Countries) | Static Assignment (Users) |
-|--------|------------------------|---------------------------|
-| **Assignment** | Dynamic (pull-based) | Static (push-based) |
-| **Load Balancing** | Optimal (automatic) | Good (priority-based) |
-| **Thread Lifecycle** | Persistent (multiple items) | One-shot (single item) |
-| **Best For** | Variable processing times | Prioritized processing |
-| **Complexity** | Higher (queue management) | Lower (simple pool) |
-| **CPU Utilization** | Excellent | Very good |
+| Aspect               | Work Queue (Countries)      | Static Assignment (Users) |
+| -------------------- | --------------------------- | ------------------------- |
+| **Assignment**       | Dynamic (pull-based)        | Static (push-based)       |
+| **Load Balancing**   | Optimal (automatic)         | Good (priority-based)     |
+| **Thread Lifecycle** | Persistent (multiple items) | One-shot (single item)    |
+| **Best For**         | Variable processing times   | Prioritized processing    |
+| **Complexity**       | Higher (queue management)   | Lower (simple pool)       |
+| **CPU Utilization**  | Excellent                   | Very good                 |
 
 ## Security Considerations
 
@@ -374,12 +397,14 @@ MAX_THREADS="${MAX_THREADS:-$(nproc)}"
 ### Problem: Very slow processing
 
 **Possible causes:**
+
 - Too many countries with many facts
 - Lock contention in database
 - System resources saturated
 - Disk I/O bottleneck
 
 **Solutions:**
+
 - Verify work queue is being consumed (check logs)
 - Reduce `MAX_THREADS` to `nproc - 3` or `nproc - 4`
 - Verify indexes on `dwh.facts` and `dwh.dimension_countries`
@@ -389,11 +414,13 @@ MAX_THREADS="${MAX_THREADS:-$(nproc)}"
 ### Problem: Threads not balancing work
 
 **Possible causes:**
+
 - File lock contention
 - Queue file corruption
 - Threads crashing silently
 
 **Solutions:**
+
 - Check for lock file: `ls -la /tmp/datamartCountries_*/country_queue.lock`
 - Verify queue file exists and has countries: `head /tmp/datamartCountries_*/country_work_queue.txt`
 - Check thread logs for errors
@@ -402,12 +429,14 @@ MAX_THREADS="${MAX_THREADS:-$(nproc)}"
 ### Problem: Many errors
 
 **Possible causes:**
+
 - Corrupted data for some countries
 - Connection timeouts
 - Connection limit reached
 - Database deadlocks
 
 **Solutions:**
+
 - Review specific error logs per thread
 - Verify `max_connections` in PostgreSQL
 - Increase timeout if necessary: `PSQL_STATEMENT_TIMEOUT=1h`
@@ -417,12 +446,14 @@ MAX_THREADS="${MAX_THREADS:-$(nproc)}"
 ### Problem: Countries not being processed
 
 **Possible causes:**
+
 - Queue file not created
 - Lock file blocking access
 - Threads exiting early
 - Empty country list
 
 **Solutions:**
+
 - Verify countries query returns results
 - Check queue file exists: `ls -la /tmp/datamartCountries_*/country_work_queue.txt`
 - Verify threads are running: `ps aux | grep datamartCountries`
@@ -459,7 +490,7 @@ Parallel processing with work queue is the standard implementation. There is no 
 ## References
 
 - **Main file:** `bin/dwh/datamartCountries/datamartCountries.sh`
-- **Population SQL:** `sql/dwh/datamartCountries/datamartCountries_31_populateDatamartCountriesTable.sql`
+- **Population SQL:**
+  `sql/dwh/datamartCountries/datamartCountries_31_populateDatamartCountriesTable.sql`
 - **Procedure:** `sql/dwh/datamartCountries/datamartCountries_13_createProcedure.sql`
 - **Related:** `bin/dwh/datamartUsers/PARALLEL_PROCESSING.md` (different approach)
-

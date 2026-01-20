@@ -2,7 +2,8 @@
 
 ## Overview
 
-The ETL script provides essential functionality for transforming data from base tables into a star schema data warehouse. This document describes the available features and how to use them.
+The ETL script provides essential functionality for transforming data from base tables into a star
+schema data warehouse. This document describes the available features and how to use them.
 
 ## Features
 
@@ -20,7 +21,8 @@ The ETL now supports enhanced data warehouse capabilities:
 
 #### Enhanced Dimensions
 
-- **`dimension_time_of_week`**: Renamed from `dimension_hours_of_week` with enhanced attributes (hour_of_week, period_of_day)
+- **`dimension_time_of_week`**: Renamed from `dimension_hours_of_week` with enhanced attributes
+  (hour_of_week, period_of_day)
 - **`dimension_users`**: SCD2 implementation for username changes (valid_from, valid_to, is_current)
 - **`dimension_countries`**: ISO codes support (iso_alpha2, iso_alpha3)
 - **`dimension_days`**: Enhanced date attributes (ISO week, quarter, names, flags)
@@ -36,14 +38,16 @@ The ETL now supports enhanced data warehouse capabilities:
 
 #### Enhanced ETL
 
-- New columns in facts: `action_timezone_id`, `local_action_dimension_id_date`, `action_dimension_id_season`
+- New columns in facts: `action_timezone_id`, `local_action_dimension_id_date`,
+  `action_dimension_id_season`
 - SCD2 support for user dimension
 - Bridge table for hashtag relationships
 - Application version parsing and storage
 
 ### 2. Configuration Management
 
-The ETL now uses a dedicated configuration file (`etc/etl.properties`) that allows fine-tuning of various parameters without modifying the script.
+The ETL now uses a dedicated configuration file (`etc/etl.properties`) that allows fine-tuning of
+various parameters without modifying the script.
 
 #### Configuration Parameters
 
@@ -88,6 +92,7 @@ The ETL script uses auto-detection:
 #### Auto-detect Mode (Default)
 
 The script automatically detects if it's the first execution or a subsequent run:
+
 - **First execution**: Creates the entire data warehouse and performs initial load
 - **Subsequent runs**: Processes only new data since the last run (incremental updates)
 
@@ -99,7 +104,8 @@ Shows detailed help information.
 
 ### 4. Recovery System
 
-The ETL now includes a robust recovery system that tracks progress and allows resuming from the last successful step.
+The ETL now includes a robust recovery system that tracks progress and allows resuming from the last
+successful step.
 
 #### Recovery File Format
 
@@ -107,10 +113,10 @@ The recovery file (`/tmp/ETL_recovery.json`) contains:
 
 ```json
 {
-    "last_step": "process_notes_etl",
-    "status": "completed",
-    "timestamp": "1640995200",
-    "etl_start_time": "1640995200"
+  "last_step": "process_notes_etl",
+  "status": "completed",
+  "timestamp": "1640995200",
+  "etl_start_time": "1640995200"
 }
 ```
 
@@ -304,7 +310,8 @@ export LOG_LEVEL=DEBUG
 
 ## Migration from Previous Version
 
-The enhanced ETL is backward compatible. Existing scripts will continue to work with default settings. To enable new features:
+The enhanced ETL is backward compatible. Existing scripts will continue to work with default
+settings. To enable new features:
 
 1. Create `etc/etl.properties` file
 2. Set desired configuration parameters

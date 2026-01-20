@@ -1,12 +1,15 @@
 # Global Datamart
 
-The global datamart provides worldwide statistics for OSM notes, aggregated across all countries and users.
+The global datamart provides worldwide statistics for OSM notes, aggregated across all countries and
+users.
 
 ## Overview
 
-Unlike `datamartCountries` and `datamartUsers` which provide statistics filtered by country or user respectively, the global datamart provides aggregate statistics for the entire OSM notes database.
+Unlike `datamartCountries` and `datamartUsers` which provide statistics filtered by country or user
+respectively, the global datamart provides aggregate statistics for the entire OSM notes database.
 
-The global datamart contains a single record (dimension_global_id = 1) with aggregated metrics including:
+The global datamart contains a single record (dimension_global_id = 1) with aggregated metrics
+including:
 
 - Total notes opened, closed, commented, and reopened
 - Currently open notes
@@ -73,6 +76,7 @@ WHERE dimension_global_id = 1;
 ## Key Metrics
 
 ### Current Status
+
 - `currently_open_count` - Notes currently open
 - `currently_closed_count` - Notes currently closed
 - `notes_created_last_30_days` - Notes created in last 30 days
@@ -80,17 +84,20 @@ WHERE dimension_global_id = 1;
 - `notes_backlog_size` - Open notes older than 7 days
 
 ### Historical Totals
+
 - `history_whole_open` - Total opened notes in history
 - `history_whole_closed` - Total closed notes in history
 - `history_whole_reopened` - Total reopened notes in history
 - `history_whole_commented` - Total commented notes in history
 
 ### Current Year
+
 - `history_year_open` - Notes opened this year
 - `history_year_closed` - Notes closed this year
 - `history_year_reopened` - Notes reopened this year
 
 ### Resolution Metrics
+
 - `avg_days_to_resolution` - Average days to resolve (all time)
 - `median_days_to_resolution` - Median days to resolve (all time)
 - `avg_days_to_resolution_current_year` - Average days for notes created this year
@@ -98,6 +105,7 @@ WHERE dimension_global_id = 1;
 - `resolution_rate` - Percentage of notes resolved
 
 ### Additional Metrics
+
 - `active_users_count` - Users active in last 30 days
 - `top_countries` - Top countries by activity (JSON)
 - `applications_used` - Most used applications (JSON)
@@ -114,11 +122,9 @@ WHERE dimension_global_id = 1;
 
 ## Integration
 
-The global datamart is integrated into the main ETL process in `bin/dwh/ETL.sh` and is exported automatically during JSON export.
+The global datamart is integrated into the main ETL process in `bin/dwh/ETL.sh` and is exported
+automatically during JSON export.
 
 ## Author
 
-Andres Gomez (AngocA)
-OSM-LatAm, OSM-Colombia, MaptimeBogota.
-
-
+Andres Gomez (AngocA) OSM-LatAm, OSM-Colombia, MaptimeBogota.

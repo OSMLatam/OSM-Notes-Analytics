@@ -5,12 +5,14 @@ This directory contains utility scripts for project setup and development workfl
 ## Overview
 
 The scripts in this directory help with:
+
 - Initial project setup and configuration
 - Development environment preparation
 
 ## Available Scripts
 
-Currently, this directory contains minimal utility scripts. The main project functionality is in `bin/dwh/`.
+Currently, this directory contains minimal utility scripts. The main project functionality is in
+`bin/dwh/`.
 
 ## Setup
 
@@ -46,11 +48,13 @@ chmod +x .git-hooks/pre-push
 ### Required Tools
 
 1. **Bash 4.0+**
+
    ```bash
    bash --version
    ```
 
 2. **Git**
+
    ```bash
    git --version
    ```
@@ -63,28 +67,31 @@ chmod +x .git-hooks/pre-push
 ### Optional Development Tools
 
 1. **shellcheck** (shell script linter)
+
    ```bash
    # Ubuntu/Debian
    sudo apt-get install shellcheck
-   
+
    # macOS
    brew install shellcheck
    ```
 
 2. **shfmt** (shell script formatter)
+
    ```bash
    # Ubuntu/Debian
    sudo apt-get install shfmt
-   
+
    # macOS
    brew install shfmt
    ```
 
 3. **BATS** (test framework)
+
    ```bash
    # Ubuntu/Debian
    sudo apt-get install bats
-   
+
    # macOS
    brew install bats-core
    ```

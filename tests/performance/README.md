@@ -1,12 +1,14 @@
 # Performance Testing Suite
 
-This directory contains performance benchmarks and monitoring scripts for the OSM-Notes-Analytics data warehouse.
+This directory contains performance benchmarks and monitoring scripts for the OSM-Notes-Analytics
+data warehouse.
 
 ## Overview
 
 The performance testing suite helps monitor and optimize the ETL process, particularly focusing on:
 
-- **Trigger performance**: Impact of `calculate_note_activity_metrics()` trigger on INSERT operations
+- **Trigger performance**: Impact of `calculate_note_activity_metrics()` trigger on INSERT
+  operations
 - **Query performance**: Speed of common analytical queries
 - **Datamart performance**: Update times for pre-computed aggregations
 - **Database optimization**: Index usage and query plans
@@ -15,20 +17,24 @@ The performance testing suite helps monitor and optimize the ETL process, partic
 
 ### Trigger Performance Impact (TAREA 12)
 
-The `dwh.calculate_note_activity_metrics()` trigger adds **1 SELECT COUNT(*) query per INSERT** into `dwh.facts`.
+The `dwh.calculate_note_activity_metrics()` trigger adds **1 SELECT COUNT(\*) query per INSERT**
+into `dwh.facts`.
 
 **Expected Impact:**
+
 - Adds ~10-50ms per row inserted
 - Uses index `resolution_idx (id_note, fact_id)` for optimization
 - May increase ETL time by 5-15%
 
 **Monitoring:**
+
 - Run tests before and after enabling the trigger
 - Monitor ETL logs for execution time changes
 - Check query plans with EXPLAIN ANALYZE
 - Consider alternatives if degradation > 10%
 
 **Alternatives if Performance Unacceptable:**
+
 1. Calculate metrics in ETL before INSERT (no trigger)
 2. Use auxiliary table for accumulated metrics
 3. Calculate only when querying (don't store)
@@ -57,6 +63,7 @@ psql -d osm_notes -f tests/performance/benchmark_trigger_performance.sql > bench
 ```
 
 **Output includes:**
+
 - Execution time for each query
 - Buffer usage
 - Index scans vs sequential scans
@@ -99,11 +106,11 @@ ORDER BY date DESC;
 
 Based on testing environment:
 
-| Operation | Baseline | With Trigger | Degradation |
-|-----------|----------|-------------|-------------|
-| Single INSERT | 15ms | 25ms | +67% |
-| Bulk INSERT (100 rows) | 200ms | 350ms | +75% |
-| Full ETL run | 4-6 hours | 4.5-7 hours | +10-15% |
+| Operation              | Baseline  | With Trigger | Degradation |
+| ---------------------- | --------- | ------------ | ----------- |
+| Single INSERT          | 15ms      | 25ms         | +67%        |
+| Bulk INSERT (100 rows) | 200ms     | 350ms        | +75%        |
+| Full ETL run           | 4-6 hours | 4.5-7 hours  | +10-15%     |
 
 **Goal**: Keep degradation < 10% for full ETL runs.
 
@@ -116,7 +123,7 @@ Based on testing environment:
 psql -d osm_notes
 
 # Check trigger is enabled
-SELECT * FROM information_schema.triggers 
+SELECT * FROM information_schema.triggers
 WHERE trigger_name = 'calculate_note_activity_metrics_trigger';
 ```
 
@@ -139,17 +146,13 @@ psql -d osm_notes -c "
 
 ### Good Performance Indicators
 
-✅ Index scans instead of sequential scans
-✅ Low buffer cache hit ratio (> 95%)
-✅ Execution time scales linearly with data volume
-✅ Trigger adds < 50ms per INSERT
+✅ Index scans instead of sequential scans ✅ Low buffer cache hit ratio (> 95%) ✅ Execution time
+scales linearly with data volume ✅ Trigger adds < 50ms per INSERT
 
 ### Performance Issues
 
-❌ Sequential scans on large tables
-❌ High buffer cache misses (< 95%)
-❌ Degradation > 20% for full ETL
-❌ Trigger adds > 100ms per INSERT
+❌ Sequential scans on large tables ❌ High buffer cache misses (< 95%) ❌ Degradation > 20% for
+full ETL ❌ Trigger adds > 100ms per INSERT
 
 ### Taking Action
 
@@ -178,8 +181,8 @@ If performance is unacceptable:
 ## Support
 
 For performance issues:
+
 1. Review benchmark results
 2. Check recent changes to ETL scripts
 3. Monitor database statistics
 4. Create an issue with benchmark results attached
-

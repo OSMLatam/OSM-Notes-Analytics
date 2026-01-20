@@ -2,7 +2,9 @@
 
 ## Overview
 
-This directory contains optimized SQL queries and indexes for exporting closed notes to CSV files by country. The export process has been significantly optimized to reduce execution time, especially for countries with large numbers of closed notes.
+This directory contains optimized SQL queries and indexes for exporting closed notes to CSV files by
+country. The export process has been significantly optimized to reduce execution time, especially
+for countries with large numbers of closed notes.
 
 ## Files
 
@@ -14,13 +16,16 @@ This directory contains optimized SQL queries and indexes for exporting closed n
 ### SQL Query Optimizations (exportClosedNotesByCountry.sql)
 
 #### 1. Eliminated Correlated Subqueries
+
 **Before**: Subqueries executed for each row:
+
 ```sql
 -- Slow: Executes once per row
 (SELECT COUNT(*) FROM dwh.facts WHERE id_note = closed_fact.id_note ...) AS total_comments
 ```
 
 **After**: Pre-aggregated using GROUP BY:
+
 ```sql
 -- Fast: Single aggregation pass
 note_metrics AS (
@@ -32,6 +37,7 @@ note_metrics AS (
 **Impact**: Reduces query time from O(n²) to O(n) for countries with many notes.
 
 #### 2. Removed Duplicate Logic
+
 **Before**: Latest close logic duplicated in CTE and main query.
 
 **After**: Single `latest_closes` CTE used throughout.
@@ -39,9 +45,11 @@ note_metrics AS (
 **Impact**: Eliminates redundant work and improves query planner efficiency.
 
 #### 3. Optimized FDW JOINs with LATERAL
+
 **Before**: Subqueries with DISTINCT ON for opening/closing comments.
 
 **After**: LATERAL JOINs that push filters down to FDW queries:
+
 ```sql
 LEFT JOIN LATERAL (
   SELECT nct.body
@@ -55,6 +63,7 @@ LEFT JOIN LATERAL (
 **Impact**: Reduces network round-trips to Ingestion DB and improves query planning.
 
 #### 4. Created Helper Function
+
 **Before**: Inline REGEXP_REPLACE operations repeated multiple times.
 
 **After**: Reusable `dwh.clean_comment_for_csv()` function marked as IMMUTABLE.
@@ -62,9 +71,11 @@ LEFT JOIN LATERAL (
 **Impact**: Allows PostgreSQL to optimize and cache the function.
 
 #### 5. Limited Export Size for AI Context
+
 **New**: Export limited to most recent notes (configurable, default: 400,000 notes per country).
 
 **Rationale**:
+
 - **GitHub file size limit**: 100 MB per file
 - **Germany example**: 609,147 notes = 143 MB (exceeds limit)
 - **400K notes estimate**: ~94 MB (under limit)
@@ -73,7 +84,8 @@ LEFT JOIN LATERAL (
   - Old notes may contain outdated patterns
   - 400K notes provide sufficient diversity for AI training
 
-**Impact**: 
+**Impact**:
+
 - Keeps files under GitHub's 100MB limit
 - Faster exports (less data to process)
 - More relevant data for AI context (recent patterns)
@@ -101,12 +113,14 @@ export MAX_NOTES_PER_COUNTRY=500000
 ### Size Estimation
 
 Based on Germany's data:
+
 - **609,147 notes** = **143 MB**
 - **Average per note**: ~245 bytes
 - **400K notes estimate**: ~98 MB (under 100MB limit)
 - **500K notes estimate**: ~122 MB (exceeds limit)
 
-**Recommendation**: Use 400K as default to stay safely under GitHub's limit while providing sufficient context for AI.
+**Recommendation**: Use 400K as default to stay safely under GitHub's limit while providing
+sufficient context for AI.
 
 ## AI Context Considerations
 
@@ -119,12 +133,14 @@ For AI context on how to resolve notes in a country, you need:
 3. **Sufficient examples** (to learn common patterns)
 
 **Analysis**:
+
 - **10K-50K notes**: Good for basic patterns, but may miss edge cases
 - **100K-200K notes**: Good coverage of common patterns
 - **300K-400K notes**: Excellent coverage including edge cases
 - **500K+ notes**: Diminishing returns, very old data may be less relevant
 
 **Recommendation**: **400K notes** provides:
+
 - ✅ Excellent pattern coverage
 - ✅ Recent data (prioritized by `ORDER BY action_at DESC`)
 - ✅ Under GitHub's 100MB limit
@@ -133,6 +149,7 @@ For AI context on how to resolve notes in a country, you need:
 ### What Makes Good AI Context?
 
 The exported CSV includes:
+
 - **Opening comments**: What problems were reported
 - **Closing comments**: How they were resolved
 - **Resolution time**: How long it took
@@ -140,6 +157,7 @@ The exported CSV includes:
 - **User patterns**: Who opened/closed notes
 
 This provides sufficient context for AI to learn:
+
 - Common problem types in a country
 - Effective resolution strategies
 - Typical resolution timelines
@@ -164,6 +182,7 @@ See `export_optimize_indexes.sql` for specialized indexes that improve export pe
 ### Large Files Still Exceeding 100MB
 
 If a country still exceeds 100MB with 400K notes:
+
 1. Reduce `MAX_NOTES_PER_COUNTRY` to 300K or 200K
 2. Check if comments are unusually long (may need additional filtering)
 3. Consider excluding very old notes (e.g., only last 5 years)
@@ -177,5 +196,6 @@ If a country still exceeds 100MB with 400K notes:
 ### Missing Recent Notes
 
 The export prioritizes most recent notes (`ORDER BY action_at DESC`). If you need older notes:
+
 1. Increase `MAX_NOTES_PER_COUNTRY`
 2. Or modify SQL to use different ordering (e.g., random sampling)

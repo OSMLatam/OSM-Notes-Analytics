@@ -1,10 +1,13 @@
 # Troubleshooting Guide
 
-This comprehensive troubleshooting guide consolidates common problems and solutions for the OSM-Notes-Analytics system. Problems are organized by category for easy navigation.
+This comprehensive troubleshooting guide consolidates common problems and solutions for the
+OSM-Notes-Analytics system. Problems are organized by category for easy navigation.
 
 ## Database Configuration
 
-**Note:** For DWH operations, use `DBNAME_INGESTION` and `DBNAME_DWH` variables. The examples in this guide use `${DBNAME:-osm_notes}` as a fallback for simplicity, but in production you should use the specific variables:
+**Note:** For DWH operations, use `DBNAME_INGESTION` and `DBNAME_DWH` variables. The examples in
+this guide use `${DBNAME:-osm_notes}` as a fallback for simplicity, but in production you should use
+the specific variables:
 
 ```bash
 # Recommended configuration
@@ -80,6 +83,7 @@ free -h
 ### Problem: "Schema 'dwh' does not exist"
 
 **Symptoms:**
+
 - Error: `schema "dwh" does not exist`
 - ETL fails immediately
 - Cannot find DWH tables
@@ -97,6 +101,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT tablename FROM pg_tables WHERE scheman
 **Solutions:**
 
 1. **Run initial ETL:**
+
    ```bash
    ./bin/dwh/ETL.sh
    ```
@@ -110,6 +115,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT tablename FROM pg_tables WHERE scheman
 ### Problem: ETL Fails to Start
 
 **Symptoms:**
+
 - ETL script exits immediately
 - No logs generated
 - Error messages about prerequisites
@@ -135,16 +141,18 @@ ls -la etc/etl.properties
 **Solutions:**
 
 1. **Verify base tables exist:**
+
    ```bash
    # Base tables must be populated by OSM-Notes-Ingestion
    psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM notes;"
    psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM note_comments;"
-   
+
    # If empty, run ingestion system first
    # See: https://github.com/OSM-Notes/OSM-Notes-Ingestion
    ```
 
 2. **Create configuration files:**
+
    ```bash
    cp etc/properties.sh.example etc/properties.sh
    cp etc/etl.properties.example etc/etl.properties
@@ -160,6 +168,7 @@ ls -la etc/etl.properties
 ### Problem: ETL Takes Too Long
 
 **Symptoms:**
+
 - ETL runs for hours without progress
 - System becomes unresponsive
 - Timeout errors
@@ -190,18 +199,20 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT pid, application_name, state, now() - 
 **Solutions:**
 
 1. **Increase timeouts for large operations:**
+
    ```bash
    # For large incremental updates (> 100K facts)
    export PSQL_STATEMENT_TIMEOUT=2h
-   
+
    # For initial load
    export PSQL_STATEMENT_TIMEOUT=4h
    export ETL_TIMEOUT=129600  # 36 hours
-   
+
    # See bin/dwh/ENVIRONMENT_VARIABLES.md for details
    ```
 
 2. **Increase parallelism:**
+
    ```bash
    # Edit etc/etl.properties
    ETL_MAX_PARALLEL_JOBS=8  # Increase for more CPU cores
@@ -209,20 +220,22 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT pid, application_name, state, now() - 
    ```
 
 3. **Optimize base tables:**
+
    ```bash
    # Run VACUUM ANALYZE on base tables
    psql -d "${DBNAME:-osm_notes}" -c "VACUUM ANALYZE notes;"
    psql -d "${DBNAME:-osm_notes}" -c "VACUUM ANALYZE note_comments;"
    ```
 
-3. **Check for missing indexes:**
+4. **Check for missing indexes:**
+
    ```bash
    # Verify indexes exist on base tables
    psql -d "${DBNAME:-osm_notes}" -c "\d notes"
    psql -d "${DBNAME:-osm_notes}" -c "\d note_comments"
    ```
 
-4. **Run ETL for updates (auto-detects mode):**
+5. **Run ETL for updates (auto-detects mode):**
    ```bash
    # Same command works for both initial setup and incremental updates
    ./bin/dwh/ETL.sh
@@ -231,6 +244,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT pid, application_name, state, now() - 
 ### Problem: Statement Timeout Error
 
 **Symptoms:**
+
 - Error: `canceling statement due to statement timeout`
 - ETL fails during `process_notes_actions_into_dwh()` stage
 - Process runs for ~30 minutes then fails
@@ -251,11 +265,12 @@ psql -d "${DBNAME_DWH:-notes_dwh}" -c "SELECT MAX(action_at) FROM dwh.facts;"
 **Solutions:**
 
 1. **Increase statement timeout for large operations:**
+
    ```bash
    # For large incremental updates (> 100K facts)
    export PSQL_STATEMENT_TIMEOUT=2h
    ./bin/dwh/ETL.sh
-   
+
    # For initial load
    export PSQL_STATEMENT_TIMEOUT=4h
    export ETL_TIMEOUT=129600  # 36 hours
@@ -263,6 +278,7 @@ psql -d "${DBNAME_DWH:-notes_dwh}" -c "SELECT MAX(action_at) FROM dwh.facts;"
    ```
 
 2. **Configure permanently in properties file:**
+
    ```bash
    # Edit etc/properties.sh
    export PSQL_STATEMENT_TIMEOUT=2h  # For large incrementals
@@ -274,11 +290,13 @@ psql -d "${DBNAME_DWH:-notes_dwh}" -c "SELECT MAX(action_at) FROM dwh.facts;"
    - If processing > 1M facts, consider doing initial load
    - Initial load has longer timeouts and better parallelization
 
-**See also:** [Environment Variables](bin/dwh/ENVIRONMENT_VARIABLES.md) for timeout configuration details.
+**See also:** [Environment Variables](bin/dwh/ENVIRONMENT_VARIABLES.md) for timeout configuration
+details.
 
 ### Problem: ETL Fails Mid-Execution
 
 **Symptoms:**
+
 - ETL starts but fails partway through
 - Error messages in logs
 - Partial data loaded
@@ -300,6 +318,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM dwh.facts;"
 **Solutions:**
 
 1. **Check error messages:**
+
    ```bash
    # Review full error in log
    cat "$LATEST_ETL/ETL.log" | grep -A 10 -B 10 "ERROR"
@@ -312,6 +331,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM dwh.facts;"
    - Base table issues → Check ingestion system
 
 3. **Resume from checkpoint (if recovery enabled):**
+
    ```bash
    # ETL recovery should automatically resume from last checkpoint
    ./bin/dwh/ETL.sh
@@ -332,6 +352,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM dwh.facts;"
 ### Problem: Cannot Connect to Database
 
 **Symptoms:**
+
 - Error: "could not connect to server"
 - Scripts fail immediately
 - Database operations timeout
@@ -355,12 +376,14 @@ psql -l | grep "${DBNAME:-osm_notes}"
 **Solutions:**
 
 1. **Start PostgreSQL:**
+
    ```bash
    sudo systemctl start postgresql
    sudo systemctl enable postgresql
    ```
 
 2. **Verify credentials:**
+
    ```bash
    # Create properties file if missing
    cp etc/properties.sh.example etc/properties.sh
@@ -376,6 +399,7 @@ psql -l | grep "${DBNAME:-osm_notes}"
 ### Problem: Database Out of Space
 
 **Symptoms:**
+
 - Error: "No space left on device"
 - Database operations fail
 - Disk usage at 100%
@@ -391,7 +415,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT pg_size_pretty(pg_database_size('${DBN
 
 # Check table sizes
 psql -d "${DBNAME:-osm_notes}" -c "
-SELECT 
+SELECT
   schemaname,
   tablename,
   pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS size
@@ -407,6 +431,7 @@ du -sh /tmp/ETL_* 2>/dev/null
 **Solutions:**
 
 1. **Free up disk space:**
+
    ```bash
    # Remove old log directories
    find /tmp -name "ETL_*" -type d -mtime +7 -exec rm -rf {} \;
@@ -414,6 +439,7 @@ du -sh /tmp/ETL_* 2>/dev/null
    ```
 
 2. **Vacuum database:**
+
    ```bash
    psql -d "${DBNAME:-osm_notes}" -c "VACUUM ANALYZE dwh.facts;"
    psql -d "${DBNAME:-osm_notes}" -c "VACUUM ANALYZE dwh.datamartusers;"
@@ -433,6 +459,7 @@ du -sh /tmp/ETL_* 2>/dev/null
 ### Problem: "Table 'dwh.datamartusers' does not exist"
 
 **Symptoms:**
+
 - Error: `relation "dwh.datamartusers" does not exist`
 - Profile generation fails
 - Export fails
@@ -450,6 +477,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM dwh.facts;"
 **Solutions:**
 
 1. **Run datamart scripts:**
+
    ```bash
    ./bin/dwh/datamartUsers/datamartUsers.sh
    ./bin/dwh/datamartCountries/datamartCountries.sh
@@ -464,6 +492,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM dwh.facts;"
 ### Problem: Datamart Not Fully Populated
 
 **Symptoms:**
+
 - Datamart tables exist but have few rows
 - Missing users or countries
 - Incomplete data
@@ -486,6 +515,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM dwh.dimension_users WHER
 **Solutions:**
 
 1. **For users datamart (incremental processing):**
+
    ```bash
    # Run multiple times until all users processed
    while true; do
@@ -501,6 +531,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM dwh.dimension_users WHER
    ```
 
 2. **For countries datamart:**
+
    ```bash
    # Countries datamart processes all at once
    ./bin/dwh/datamartCountries/datamartCountries.sh
@@ -519,6 +550,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM dwh.dimension_users WHER
 ### Problem: Slow Queries
 
 **Symptoms:**
+
 - Queries take very long
 - Timeouts
 - High CPU usage
@@ -539,6 +571,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT schemaname, tablename, indexname, idx_
 **Solutions:**
 
 1. **Update statistics:**
+
    ```bash
    psql -d "${DBNAME:-osm_notes}" -c "ANALYZE dwh.facts;"
    psql -d "${DBNAME:-osm_notes}" -c "ANALYZE dwh.datamartusers;"
@@ -546,6 +579,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT schemaname, tablename, indexname, idx_
    ```
 
 2. **Vacuum tables:**
+
    ```bash
    psql -d "${DBNAME:-osm_notes}" -c "VACUUM ANALYZE dwh.facts;"
    ```
@@ -559,6 +593,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT schemaname, tablename, indexname, idx_
 ### Problem: Out of Memory
 
 **Symptoms:**
+
 - ETL fails with memory errors
 - System becomes unresponsive
 - OOM killer terminates processes
@@ -577,6 +612,7 @@ cat etc/etl.properties | grep -E "ETL_MAX_PARALLEL_JOBS|ETL_BATCH_SIZE"
 **Solutions:**
 
 1. **Reduce parallelism:**
+
    ```bash
    # Edit etc/etl.properties
    ETL_MAX_PARALLEL_JOBS=2  # Reduce from default 4
@@ -584,6 +620,7 @@ cat etc/etl.properties | grep -E "ETL_MAX_PARALLEL_JOBS|ETL_BATCH_SIZE"
    ```
 
 2. **Disable parallel processing:**
+
    ```bash
    export ETL_PARALLEL_ENABLED=false
    ./bin/dwh/ETL.sh
@@ -598,6 +635,7 @@ cat etc/etl.properties | grep -E "ETL_MAX_PARALLEL_JOBS|ETL_BATCH_SIZE"
 ### Problem: JSON Export is Empty
 
 **Symptoms:**
+
 - Export completes but no files created
 - Empty JSON files
 - Export fails silently
@@ -619,6 +657,7 @@ tail -f $(ls -1rtd /tmp/exportDatamartsToJSON_* | tail -1)/exportDatamartsToJSON
 **Solutions:**
 
 1. **Ensure datamarts are populated:**
+
    ```bash
    # Re-run datamart scripts
    ./bin/dwh/datamartUsers/datamartUsers.sh
@@ -626,6 +665,7 @@ tail -f $(ls -1rtd /tmp/exportDatamartsToJSON_* | tail -1)/exportDatamartsToJSON
    ```
 
 2. **Check output directory permissions:**
+
    ```bash
    mkdir -p ./output/json
    chmod 755 ./output/json
@@ -640,6 +680,7 @@ tail -f $(ls -1rtd /tmp/exportDatamartsToJSON_* | tail -1)/exportDatamartsToJSON
 ### Problem: JSON Export Validation Fails
 
 **Symptoms:**
+
 - Export fails with validation errors
 - Schema validation errors
 - Files not moved to final location
@@ -658,11 +699,13 @@ ajv --version
 **Solutions:**
 
 1. **Install validation tools:**
+
    ```bash
    sudo npm install -g ajv-cli
    ```
 
 2. **Check schema files:**
+
    ```bash
    ls -la lib/osm-common/schemas/
    ```
@@ -680,6 +723,7 @@ ajv --version
 ### Problem: "Profile not found"
 
 **Symptoms:**
+
 - Error: User or country not found
 - Profile script returns empty results
 - No data displayed
@@ -700,10 +744,11 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM dwh.datamartusers;"
 **Solutions:**
 
 1. **Use exact name as stored in database:**
+
    ```bash
    # Check exact spelling
    psql -d "${DBNAME:-osm_notes}" -c "SELECT username FROM dwh.datamartusers WHERE username ILIKE '%angoca%';"
-   
+
    # Try both English and Spanish for countries
    ./bin/dwh/profile.sh --country Colombia
    ./bin/dwh/profile.sh --pais Colombia
@@ -722,6 +767,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM dwh.datamartusers;"
 ### Problem: Configuration Not Found
 
 **Symptoms:**
+
 - Error: "properties.sh not found"
 - Scripts fail to start
 - Default values used incorrectly
@@ -741,6 +787,7 @@ ls -la etc/etl.properties.example
 **Solutions:**
 
 1. **Create configuration files:**
+
    ```bash
    cp etc/properties.sh.example etc/properties.sh
    cp etc/etl.properties.example etc/etl.properties
@@ -761,6 +808,7 @@ ls -la etc/etl.properties.example
 ### Problem: Base Tables Missing
 
 **Symptoms:**
+
 - Error: "relation 'notes' does not exist"
 - ETL cannot find base tables
 - Integration with ingestion system broken
@@ -779,6 +827,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM notes;"
 **Solutions:**
 
 1. **Run ingestion system first:**
+
    ```bash
    # See: https://github.com/OSM-Notes/OSM-Notes-Ingestion
    # Follow ingestion setup instructions
@@ -797,6 +846,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM notes;"
 ### Recovering from Failed ETL
 
 1. **Check logs:**
+
    ```bash
    LATEST_ETL=$(ls -1rtd /tmp/ETL_* | tail -1)
    tail -100 "$LATEST_ETL/ETL.log"
@@ -813,6 +863,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM notes;"
 ### Recovering from Corrupted Data
 
 1. **Backup current data:**
+
    ```bash
    pg_dump -d "${DBNAME:-osm_notes}" -n dwh > dwh_backup.sql
    ```
@@ -831,6 +882,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM notes;"
 ### Before Asking for Help
 
 1. **Check logs:**
+
    ```bash
    # Find latest logs
    ls -1rtd /tmp/ETL_* | tail -1
@@ -838,6 +890,7 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM notes;"
    ```
 
 2. **Run diagnostics:**
+
    ```bash
    # Use quick diagnostic commands above
    ```
@@ -889,4 +942,3 @@ tail -50 $(ls -1rtd /tmp/ETL_* | tail -1)/ETL.log
 - [Environment Variables](bin/dwh/ENVIRONMENT_VARIABLES.md) - Configuration
 - [ETL Enhanced Features](ETL_Enhanced_Features.md) - ETL capabilities
 - [DWH Maintenance Guide](DWH_Maintenance_Guide.md) - Maintenance procedures
-

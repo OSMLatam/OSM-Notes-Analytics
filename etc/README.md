@@ -35,6 +35,7 @@ nano etc/etl.properties
 - `etc/*_local` - All local overrides ignored
 
 **Only template files are versioned:**
+
 - `etc/properties.sh.example` - Template (safe to version)
 - `etc/etl.properties.example` - Template (safe to version)
 
@@ -45,8 +46,8 @@ nano etc/etl.properties
 3. Main configuration files (`properties.sh`, `etl.properties`)
 4. Script defaults (lowest)
 
-**Security:** Your credentials in `properties.sh` and `etl.properties` will never be committed to Git.
-Only the `.example` template files are versioned in the repository.
+**Security:** Your credentials in `properties.sh` and `etl.properties` will never be committed to
+Git. Only the `.example` template files are versioned in the repository.
 
 ### properties.sh
 
@@ -616,7 +617,8 @@ unset ETL_BATCH_SIZE
 ### Essential Reading
 
 - **[Main README](../README.md)** - Project overview and quick start guide
-- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)** - Complete environment variable reference
+- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)** - Complete environment
+  variable reference
 - **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/ENTRY_POINTS.md)** - Script entry points and usage
 
 ### Technical Documentation

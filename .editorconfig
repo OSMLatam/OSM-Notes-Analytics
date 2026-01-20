@@ -35,3 +35,13 @@ indent_size = 2
 indent_style = space
 indent_size = 2
 
+# XML files
+[*.xml]
+indent_style = space
+indent_size = 2
+
+# Dockerfile
+[Dockerfile*]
+indent_style = space
+indent_size = 2
+

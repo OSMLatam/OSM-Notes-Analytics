@@ -263,10 +263,13 @@ psql -d osm_notes_analytics_test -c "SELECT version();"
 
 Check `tests/properties.sh` settings match your database.
 
-**Important**: Tests will now **fail explicitly** if the database is not available, rather than silently skipping. This helps identify configuration issues early.
+**Important**: Tests will now **fail explicitly** if the database is not available, rather than
+silently skipping. This helps identify configuration issues early.
 
 If you see connection errors:
-1. Ensure PostgreSQL is running: `sudo systemctl status postgresql` (Linux) or `brew services list` (macOS)
+
+1. Ensure PostgreSQL is running: `sudo systemctl status postgresql` (Linux) or `brew services list`
+   (macOS)
 2. Create the test database: `createdb osm_notes_analytics_test`
 3. Verify connection: `psql -d osm_notes_analytics_test -c "SELECT 1;"`
 4. Check `tests/properties.sh` for correct database name
@@ -325,7 +328,8 @@ When adding new features:
 ### Configuration
 
 - **[etc/README.md](../etc/README.md)** - Configuration files for test environment
-- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)** - Environment variables
+- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)** - Environment
+  variables
 
 ### Troubleshooting
 

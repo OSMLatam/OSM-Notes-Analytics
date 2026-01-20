@@ -6,7 +6,8 @@ including the star schema, dimensions, facts, and datamarts.
 ## Overview
 
 The SQL scripts implement a complete ETL (Extract, Transform, Load) pipeline that transforms raw OSM
-notes data into a [star schema data warehouse](../docs/DWH_Star_Schema_ERD.md) with pre-computed datamarts for analytics.
+notes data into a [star schema data warehouse](../docs/DWH_Star_Schema_ERD.md) with pre-computed
+datamarts for analytics.
 
 ## Directory Structure
 
@@ -132,7 +133,9 @@ SQL scripts follow a structured naming pattern:
    - `dimension_seasons` - Seasonal information
 
 3. **Fact Table:**
-   - `dwh.facts` - Central fact table with all note actions (see [Data Dictionary](../docs/DWH_Star_Schema_Data_Dictionary.md#table-dwhfacts) for complete column definitions)
+   - `dwh.facts` - Central fact table with all note actions (see
+     [Data Dictionary](../docs/DWH_Star_Schema_Data_Dictionary.md#table-dwhfacts) for complete
+     column definitions)
 
 4. **Control Tables:**
    - `dwh.properties` - ETL metadata
@@ -278,7 +281,8 @@ enrichment data.
 
 #### ETL_41_addConstraintsIndexesTriggers.sql
 
-**Purpose:** Adds referential integrity, indexes, and triggers to [fact table](../docs/DWH_Star_Schema_Data_Dictionary.md#table-dwhfacts).
+**Purpose:** Adds referential integrity, indexes, and triggers to
+[fact table](../docs/DWH_Star_Schema_Data_Dictionary.md#table-dwhfacts).
 
 **Adds:**
 
@@ -435,7 +439,8 @@ Computes last year activity patterns (GitHub-style contribution graph).
 
 ### Initial Load (first execution - auto-detected)
 
-**For detailed ETL process documentation, see [ETL Enhanced Features](../docs/ETL_Enhanced_Features.md).**
+**For detailed ETL process documentation, see
+[ETL Enhanced Features](../docs/ETL_Enhanced_Features.md).**
 
 ```mermaid
 graph TD
@@ -465,6 +470,7 @@ graph TD
 ```
 
 **For complete ETL flow documentation, see:**
+
 - [ETL Enhanced Features](../docs/ETL_Enhanced_Features.md) - ETL capabilities and features
 - [bin/dwh/README.md](../bin/dwh/README.md#etl-flow-high-level) - High-level ETL overview
 
@@ -473,13 +479,17 @@ graph TD
 ### Star Schema Overview
 
 The data warehouse uses a **star schema design** with:
+
 - **Fact Table**: `dwh.facts` - One row per note action (partitioned by year)
 - **Dimension Tables**: Users, countries, dates, times, applications, hashtags, and more
 - **Datamart Tables**: Pre-computed analytics for users and countries
 
 **For complete schema documentation:**
-- **[DWH Star Schema ERD](../docs/DWH_Star_Schema_ERD.md)** - Complete entity-relationship diagram with all relationships and cardinalities
-- **[Data Dictionary](../docs/DWH_Star_Schema_Data_Dictionary.md)** - Detailed column definitions for all tables
+
+- **[DWH Star Schema ERD](../docs/DWH_Star_Schema_ERD.md)** - Complete entity-relationship diagram
+  with all relationships and cardinalities
+- **[Data Dictionary](../docs/DWH_Star_Schema_Data_Dictionary.md)** - Detailed column definitions
+  for all tables
 
 ### Table Sizes (Approximate)
 
@@ -667,7 +677,8 @@ SELECT pg_terminate_backend(pid);
 ### Configuration
 
 - **[etc/README.md](../etc/README.md)** - Configuration files and ETL properties
-- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)** - Environment variables
+- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)** - Environment
+  variables
 
 ### Maintenance and Troubleshooting
 

@@ -2,23 +2,28 @@
 
 ## Overview
 
-The datamart user processing system implements an **intelligent prioritization** scheme that processes the most relevant users first, followed by parallel processing to maximize performance. This ensures that active user data is available quickly, even when there are thousands of modified users.
+The datamart user processing system implements an **intelligent prioritization** scheme that
+processes the most relevant users first, followed by parallel processing to maximize performance.
+This ensures that active user data is available quickly, even when there are thousands of modified
+users.
 
 ## Problem Solved
 
 **Before:** Sequential processing without prioritization resulted in:
+
 - Days of processing without completion
 - Active users waiting hours/days for updated data
 - Inactive users consuming valuable resources
 
 **Now:** With intelligent prioritization and work queue parallel processing:
+
 - Active users processed in minutes
 - Fresh data available quickly for queries
 - Inactive users processed in background without affecting active users
 - **Optimal CPU utilization:** Fast users don't leave threads idle
 - **Dynamic load balancing:** Threads always stay busy
-- **Cycle-based processing:** Processes MAX_USERS_PER_CYCLE users per cycle (default: 1000)
-  to allow ETL to complete quickly and update data promptly
+- **Cycle-based processing:** Processes MAX_USERS_PER_CYCLE users per cycle (default: 1000) to allow
+  ETL to complete quickly and update data promptly
 
 ## Prioritization System
 
@@ -29,7 +34,7 @@ The system orders users using multiple cascading criteria:
 #### **Level 1: Activity Recency** (Primary Criterion)
 
 ```sql
-CASE 
+CASE
   WHEN MAX(f.action_at) >= CURRENT_DATE - INTERVAL '7 days' THEN 1   -- CRITICAL
   WHEN MAX(f.action_at) >= CURRENT_DATE - INTERVAL '30 days' THEN 2  -- HIGH
   WHEN MAX(f.action_at) >= CURRENT_DATE - INTERVAL '90 days' THEN 3 -- MEDIUM
@@ -45,7 +50,7 @@ END
 #### **Level 2: Historical Activity** (Secondary Criterion)
 
 ```sql
-CASE 
+CASE
   WHEN COUNT(*) > 100 THEN 1   -- Very active historically
   WHEN COUNT(*) > 10 THEN 2    -- Moderately active
   ELSE 3                        -- Low activity
@@ -77,14 +82,14 @@ MAX(f.action_at) DESC NULLS LAST
 ### Complete Prioritization Query
 
 ```sql
-SELECT DISTINCT 
+SELECT DISTINCT
   f.action_dimension_id_user
 FROM dwh.facts f
 JOIN dwh.dimension_users u
   ON (f.action_dimension_id_user = u.dimension_user_id)
 WHERE u.modified = TRUE
 GROUP BY f.action_dimension_id_user
-ORDER BY 
+ORDER BY
   -- Priority 1: Very recent activity (last 7 days) = highest
   CASE WHEN MAX(f.action_at) >= CURRENT_DATE - INTERVAL '7 days' THEN 1
        WHEN MAX(f.action_at) >= CURRENT_DATE - INTERVAL '30 days' THEN 2
@@ -105,7 +110,9 @@ LIMIT ${MAX_USERS_PER_CYCLE}  -- Process only N users per cycle (default: 1000)
 
 ### Architecture (Work Queue System)
 
-The system processes users in parallel using a **shared work queue** for dynamic load balancing. Each worker thread takes the next available user from the queue after finishing one, ensuring optimal CPU utilization.
+The system processes users in parallel using a **shared work queue** for dynamic load balancing.
+Each worker thread takes the next available user from the queue after finishing one, ensuring
+optimal CPU utilization.
 
 ```
 ┌─────────────────────────────────────────┐
@@ -155,6 +162,7 @@ done
 ```
 
 **Features:**
+
 - Uses `nproc - 1` threads to leave one core free
 - **Work queue:** Threads pull work as they become available
 - **Dynamic load balancing:** Fast users don't leave threads idle
@@ -168,13 +176,14 @@ Each user is processed in an explicit transaction:
 ```sql
 BEGIN;
   CALL dwh.update_datamart_user(user_id);
-  UPDATE dwh.dimension_users 
-    SET modified = FALSE 
+  UPDATE dwh.dimension_users
+    SET modified = FALSE
     WHERE dimension_user_id = user_id;
 COMMIT;
 ```
 
 **Benefits:**
+
 - **Atomicity:** If `update_datamart_user()` fails, user is not marked as processed
 - **Consistency:** The `modified` flag is only updated if processing succeeds
 - **Isolation:** Each user is processed independently
@@ -187,7 +196,7 @@ COMMIT;
 ```sql
 BEGIN
   CALL dwh.update_datamart_user(r.dimension_user_id);
-  UPDATE dwh.dimension_users SET modified = FALSE 
+  UPDATE dwh.dimension_users SET modified = FALSE
     WHERE dimension_user_id = r.dimension_user_id;
 EXCEPTION WHEN OTHERS THEN
   RAISE WARNING 'Failed to process user %: %', r.dimension_user_id, SQLERRM;
@@ -196,6 +205,7 @@ END;
 ```
 
 **Features:**
+
 - Captures errors without stopping entire process
 - Logs warnings for debugging
 - Continues with next user
@@ -221,6 +231,7 @@ done
 ```
 
 **Features:**
+
 - Each process reports its own status
 - Errors don't stop other processes
 - Failure counter for final report
@@ -231,23 +242,27 @@ done
 ### Logged Information
 
 1. **Processing Start:**
+
    ```
    Found X users to process (prioritized by relevance)
    Using Y parallel threads for user processing
    ```
 
 2. **Progress (every 100 users per thread):**
+
    ```
    Thread 1: Processed 100 users (current: user 12345)
    Thread 2: Processed 200 users (current: user 67890)
    ```
 
 3. **Individual Errors:**
+
    ```
    Thread 1: ERROR: Failed to process user 12345
    ```
 
 4. **Thread Completion:**
+
    ```
    Thread 1: Completed successfully (1250 users processed)
    Thread 2: Completed successfully (1248 users processed)
@@ -277,28 +292,33 @@ done
 The system processes a **limited number of users per ETL cycle** (default: 1000) to ensure:
 
 1. **ETL Completes Quickly:** The ETL process can finish in a reasonable time and free up resources
-2. **Prompt Data Updates:** Most active users are processed first, so fresh data is available quickly
+2. **Prompt Data Updates:** Most active users are processed first, so fresh data is available
+   quickly
 3. **System Responsiveness:** The system remains responsive for ongoing incremental updates
-4. **Progressive Processing:** Less active users are processed in subsequent cycles without blocking active users
+4. **Progressive Processing:** Less active users are processed in subsequent cycles without blocking
+   active users
 
 ### How It Works
 
 - **Prioritization:** Users are ordered by activity (most active first)
 - **Limit:** Only the top N users (MAX_USERS_PER_CYCLE) are processed per cycle
 - **Next Cycle:** Remaining users are processed in the next ETL cycle
-- **Result:** Most important users get fresh data quickly, while less active users are processed progressively
+- **Result:** Most important users get fresh data quickly, while less active users are processed
+  progressively
 
 ### Example Scenario
 
 **Initial State:** 50,000 modified users
 
 **Cycle 1 (1000 users):**
+
 - 50 users with activity in last 7 days → **Processed first**
 - 200 users with activity in last 30 days → **Processed next**
 - 750 users with high historical activity → **Processed next**
 - **Result:** ETL completes in ~30 minutes, most active users have fresh data
 
 **Cycle 2 (next ETL run, 1000 users):**
+
 - Next batch of prioritized users
 - **Result:** More users get fresh data, ETL still completes quickly
 
@@ -310,22 +330,28 @@ The system processes a **limited number of users per ETL cycle** (default: 1000)
 
 ### ⚠️ NOT RECOMMENDED - Use Only for Initial Load
 
-The `PROCESS_OLD_USERS` option processes **all users** including inactive ones (users with ≤20 actions, which represent ~95% of users). This is **extremely slow** and **not recommended** for regular ETL cycles.
+The `PROCESS_OLD_USERS` option processes **all users** including inactive ones (users with ≤20
+actions, which represent ~95% of users). This is **extremely slow** and **not recommended** for
+regular ETL cycles.
 
 ### Why It's Slow
 
-1. **OFFSET Pagination:** Uses `OFFSET` which requires PostgreSQL to count and skip all previous rows. Each batch becomes slower than the previous one.
+1. **OFFSET Pagination:** Uses `OFFSET` which requires PostgreSQL to count and skip all previous
+   rows. Each batch becomes slower than the previous one.
 2. **No Prioritization:** Processes users in order of `user_id`, not by activity or relevance.
-3. **Full Table Scans:** Requires `GROUP BY` and `HAVING` on the entire `facts` table for each batch.
+3. **Full Table Scans:** Requires `GROUP BY` and `HAVING` on the entire `facts` table for each
+   batch.
 4. **Estimated Time:** Can take **days or weeks** to complete (e.g., 239 days at current rate).
 
 ### When to Use
 
 **Only use `PROCESS_OLD_USERS=yes` for:**
+
 - Initial datamart creation when you need to process ALL users
 - One-time historical data backfill
 
 **Never use for:**
+
 - Regular ETL cycles
 - Incremental updates
 - Production environments with active data
@@ -337,7 +363,8 @@ Instead of `PROCESS_OLD_USERS=yes`, use the default behavior (`PROCESS_OLD_USERS
 1. **Process modified users only** - Much faster, only processes users with changes
 2. **Intelligent prioritization** - Most active users processed first
 3. **Cycle-based processing** - Limits users per cycle (default: 1000) for quick ETL completion
-4. **Incremental updates** - Users are marked as `modified=TRUE` when their data changes, so they'll be processed in subsequent cycles
+4. **Incremental updates** - Users are marked as `modified=TRUE` when their data changes, so they'll
+   be processed in subsequent cycles
 
 ### Configuration
 
@@ -349,10 +376,10 @@ PROCESS_OLD_USERS=no  # Recommended (default)
 
 ### Performance Comparison
 
-| Approach | Users Processed | Time | Use Case |
-|----------|----------------|------|----------|
+| Approach                         | Users Processed                  | Time             | Use Case           |
+| -------------------------------- | -------------------------------- | ---------------- | ------------------ |
 | `PROCESS_OLD_USERS=no` (default) | Modified users only (~1000-5000) | Minutes to hours | Regular ETL cycles |
-| `PROCESS_OLD_USERS=yes` | ALL users (~547K) | Days to weeks | Initial load only |
+| `PROCESS_OLD_USERS=yes`          | ALL users (~547K)                | Days to weeks    | Initial load only  |
 
 ## Configuration
 
@@ -374,6 +401,7 @@ batch_size=1000
 ### Recommended Adjustments
 
 **For systems with many users:**
+
 - Increase `MAX_THREADS` if resources are available
 - Monitor `max_connections` in PostgreSQL
 - Adjust `MAX_USERS_PER_CYCLE` based on ETL cycle time requirements
@@ -383,6 +411,7 @@ batch_size=1000
 - Adjust `batch_size` for logging based on volume
 
 **For systems with limited resources:**
+
 - Reduce `MAX_THREADS` to `nproc - 2`
 - Reduce `MAX_USERS_PER_CYCLE` to 500 for faster ETL completion
 - Increase `batch_size` for less logging
@@ -393,12 +422,14 @@ batch_size=1000
 ### Typical Scenarios
 
 **Case 1: 1000 modified users (all processed in one cycle)**
+
 - Active users (7 days): ~50 users → **2-5 minutes**
 - Active users (30 days): ~200 users → **10-15 minutes**
 - Inactive users: ~750 users → **30-60 minutes**
 - **Total:** ~1 hour (vs. days without prioritization)
 
 **Case 2: 10000 modified users (processed across multiple cycles)**
+
 - **Cycle 1 (1000 users):**
   - Active users (7 days): ~50 users → **2-5 minutes**
   - Active users (30 days): ~200 users → **10-15 minutes**
@@ -408,6 +439,7 @@ batch_size=1000
 - **Key benefit:** Most active users have fresh data in ~1 hour, not days/weeks
 
 **Case 3: 50000 modified users (large initial load)**
+
 - **Cycle 1 (1000 users):** Most active users → **~1 hour**
 - **Cycles 2-50:** Remaining users processed progressively
 - **Key benefit:** Active users have fresh data quickly, ETL completes promptly each cycle
@@ -441,11 +473,13 @@ batch_size=1000
 ### Problem: Very slow processing
 
 **Possible causes:**
+
 - Too many inactive users being processed first
 - Lock contention in database
 - System resources saturated
 
 **Solutions:**
+
 - Verify prioritization is working (check logs)
 - Reduce `MAX_THREADS`
 - Verify indexes on `dwh.facts` and `dwh.dimension_users`
@@ -454,11 +488,13 @@ batch_size=1000
 ### Problem: Many errors
 
 **Possible causes:**
+
 - Corrupted data for some user
 - Connection timeouts
 - Connection limit reached
 
 **Solutions:**
+
 - Review specific error logs
 - Verify `max_connections` in PostgreSQL
 - Increase timeout if necessary
@@ -467,11 +503,13 @@ batch_size=1000
 ### Problem: Users not being processed
 
 **Possible causes:**
+
 - Prioritization query too slow
 - Memory limit reached
 - Deadlocks
 
 **Solutions:**
+
 - Verify `action_at` has index
 - Reduce batch size
 - Check deadlocks: `SELECT * FROM pg_stat_activity WHERE wait_event_type = 'Lock';`

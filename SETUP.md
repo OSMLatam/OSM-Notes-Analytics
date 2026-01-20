@@ -168,6 +168,7 @@ git submodule update --init --recursive
 ### Configuration not taking effect?
 
 Check file priority:
+
 ```bash
 # Verify local files exist
 ls -la etc/*.local
@@ -203,7 +204,7 @@ nano etc/etl.properties
 ## Support
 
 For more information, see:
+
 - `etc/README.md` - Detailed configuration guide
 - `docs/ETL_Enhanced_Features.md` - ETL features documentation
 - `bin/dwh/ETL.sh --help` - Command-line help
-

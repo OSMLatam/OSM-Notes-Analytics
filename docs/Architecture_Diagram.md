@@ -1,10 +1,13 @@
 # Architecture Diagram
 
-This document provides architecture diagrams for the OSM-Notes-Analytics system, following the C4 model for software architecture documentation. These diagrams help understand the system structure, components, and their interactions.
+This document provides architecture diagrams for the OSM-Notes-Analytics system, following the C4
+model for software architecture documentation. These diagrams help understand the system structure,
+components, and their interactions.
 
 ## Overview
 
 The architecture documentation uses the C4 model:
+
 - **Level 1 (System Context)**: System and its relationships with external entities
 - **Level 2 (Container)**: High-level technical building blocks
 - **Level 3 (Component)**: Components within containers (detailed in other docs)
@@ -20,44 +23,46 @@ graph TB
         PLANET[OSM Planet Dumps<br/>planet.openstreetmap.org]
         OVERPASS[Overpass API<br/>overpass-api.de]
     end
-    
+
     subgraph Ecosystem["OSM Notes Ecosystem"]
         INGESTION[OSM-Notes-Ingestion<br/>Data Ingestion System]
         ANALYTICS[OSM-Notes-Analytics<br/>data warehouse & ETL<br/>This System]
         VIEWER[OSM-Notes-Viewer<br/>Web Application]
         COMMON[OSM-Notes-Common<br/>Shared Libraries<br/>Git Submodule]
     end
-    
+
     subgraph Users["Users"]
         DATA_ENG[Data Engineers<br/>ETL Operations]
         ANALYSTS[Data Analysts<br/>Query DWH]
         WEB_USERS[Web Users<br/>View Dashboards]
         DEVS[Developers<br/>Maintain System]
     end
-    
+
     OSM_API -->|Raw Note Data| INGESTION
     PLANET -->|Historical Data| INGESTION
     OVERPASS -->|Boundary Data| INGESTION
-    
+
     INGESTION -->|Base Tables| ANALYTICS
     ANALYTICS -->|JSON Datamarts| VIEWER
     VIEWER -->|Visualizations| WEB_USERS
-    
+
     COMMON -.->|Shared Libraries| INGESTION
     COMMON -.->|Shared Libraries| ANALYTICS
     COMMON -.->|Shared Libraries| VIEWER
-    
+
     DATA_ENG -->|Run ETL| ANALYTICS
     ANALYSTS -->|Query DWH| ANALYTICS
     DEVS -->|Maintain| ANALYTICS
 ```
 
 **System Relationships:**
+
 - **OSM-Notes-Ingestion**: Upstream system providing base data
 - **OSM-Notes-Viewer**: Downstream system consuming JSON exports
 - **OSM-Notes-Common**: Shared library used by all three systems
 
 **User Types:**
+
 - **Data Engineers**: Run ETL processes, maintain data pipeline
 - **Data Analysts**: Query data warehouse for analysis
 - **Web Users**: Consume visualizations via web interface
@@ -79,61 +84,61 @@ graph TB
             EXPORT_JSON[exportDatamartsToJSON.sh<br/>JSON Export]
             PROFILE[profile.sh<br/>Profile Generator]
         end
-        
+
         subgraph SQL_Layer["SQL Layer"]
             ETL_SQL[ETL SQL Scripts<br/>Schema Creation]
             STAGING_SQL[Staging Procedures<br/>Data Transformation]
             DATAMART_SQL[Datamart SQL<br/>Aggregations]
         end
-        
+
         subgraph Database["PostgreSQL Database"]
             BASE_SCHEMA[public Schema<br/>Base Tables<br/>from Ingestion]
             DWH_SCHEMA[dwh Schema<br/>Star Schema DWH]
             STAGING_SCHEMA[staging Schema<br/>Temporary Processing]
         end
-        
+
         subgraph Libraries["Shared Libraries"]
             COMMON_LIBS[OSM-Notes-Common<br/>lib/osm-common/]
         end
-        
+
         subgraph Config["Configuration"]
             PROPS[properties.sh<br/>Database Config]
             ETL_PROPS[etl.properties<br/>ETL Config]
         end
-        
+
         subgraph Output["Output Files"]
             JSON_FILES[JSON Files<br/>output/json/]
         end
     end
-    
+
     subgraph External_Systems["External Systems"]
         INGESTION_SYS[OSM-Notes-Ingestion<br/>Base Tables Provider]
         VIEWER_SYS[OSM-Notes-Viewer<br/>JSON Consumer]
     end
-    
+
     INGESTION_SYS -->|Base Tables| BASE_SCHEMA
-    
+
     ETL_SCRIPT -->|Executes| ETL_SQL
     ETL_SCRIPT -->|Reads| PROPS
     ETL_SCRIPT -->|Reads| ETL_PROPS
     ETL_SCRIPT -->|Uses| COMMON_LIBS
-    
+
     ETL_SQL -->|Creates| DWH_SCHEMA
     STAGING_SQL -->|Uses| STAGING_SCHEMA
     STAGING_SQL -->|Reads| BASE_SCHEMA
     STAGING_SQL -->|Writes| DWH_SCHEMA
-    
+
     DATAMART_USERS -->|Executes| DATAMART_SQL
     DATAMART_COUNTRIES -->|Executes| DATAMART_SQL
     DATAMART_SQL -->|Reads| DWH_SCHEMA
     DATAMART_SQL -->|Writes| DWH_SCHEMA
-    
+
     EXPORT_JSON -->|Reads| DWH_SCHEMA
     EXPORT_JSON -->|Writes| JSON_FILES
     EXPORT_JSON -->|Uses| COMMON_LIBS
-    
+
     JSON_FILES -->|Consumed by| VIEWER_SYS
-    
+
     PROFILE -->|Reads| DWH_SCHEMA
 ```
 
@@ -177,7 +182,7 @@ graph TB
     subgraph Data_Sources["Data Sources"]
         BASE_TABLES[Base Tables<br/>public schema<br/>PostgreSQL]
     end
-    
+
     subgraph ETL_Process["ETL Process"]
         ETL_ORCHESTRATOR[ETL.sh<br/>Bash Script]
         STAGING_PROC[Staging Procedures<br/>PostgreSQL Functions]
@@ -185,39 +190,39 @@ graph TB
         FACT_LOADER[Fact Loader<br/>Parallel by Year]
         UNIFY[Unify Process<br/>Cross-Year Metrics]
     end
-    
+
     subgraph Data_Warehouse["data warehouse"]
         FACTS_TABLE[facts Table<br/>Partitioned by Year<br/>~20M+ rows]
         DIM_TABLES[Dimension Tables<br/>users, countries,<br/>days, times, apps]
         INDEXES[Indexes & Constraints<br/>Performance Optimization]
     end
-    
+
     subgraph Datamart_Process["Datamart Process"]
         USER_DATAMART[datamartUsers.sh<br/>Bash Script]
         COUNTRY_DATAMART[datamartCountries.sh<br/>Bash Script]
         GLOBAL_DATAMART[datamartGlobal.sh<br/>Bash Script]
         AGGREGATION_SQL[Aggregation SQL<br/>77+ (countries)<br/>78+ (users)]
     end
-    
+
     subgraph Datamart_Storage["Datamart Storage"]
         DM_USERS[datamartusers<br/>~500K rows]
         DM_COUNTRIES[datamartcountries<br/>~200 rows]
         DM_GLOBAL[datamartglobal<br/>1 row]
     end
-    
+
     subgraph Export_Process["Export Process"]
         EXPORT_SCRIPT[exportDatamartsToJSON.sh<br/>Bash Script]
         JSON_CONVERTER[SQL to JSON<br/>Conversion]
         VALIDATOR[Schema Validator<br/>JSON Schema]
         ATOMIC_WRITER[Atomic File Writer<br/>Temp → Final]
     end
-    
+
     subgraph Output["Output"]
         JSON_USERS[JSON Users<br/>output/json/users/]
         JSON_COUNTRIES[JSON Countries<br/>output/json/countries/]
         JSON_INDEXES[JSON Indexes<br/>output/json/indexes/]
     end
-    
+
     BASE_TABLES -->|Read| ETL_ORCHESTRATOR
     ETL_ORCHESTRATOR -->|Execute| STAGING_PROC
     STAGING_PROC -->|Transform| DIMENSION_LOADER
@@ -227,21 +232,21 @@ graph TB
     FACTS_TABLE -->|Unify| UNIFY
     UNIFY -->|Update| FACTS_TABLE
     FACTS_TABLE -->|Add| INDEXES
-    
+
     FACTS_TABLE -->|Read| USER_DATAMART
     DIM_TABLES -->|Read| USER_DATAMART
     USER_DATAMART -->|Execute| AGGREGATION_SQL
     AGGREGATION_SQL -->|Write| DM_USERS
-    
+
     FACTS_TABLE -->|Read| COUNTRY_DATAMART
     DIM_TABLES -->|Read| COUNTRY_DATAMART
     COUNTRY_DATAMART -->|Execute| AGGREGATION_SQL
     AGGREGATION_SQL -->|Write| DM_COUNTRIES
-    
+
     FACTS_TABLE -->|Read| GLOBAL_DATAMART
     GLOBAL_DATAMART -->|Execute| AGGREGATION_SQL
     AGGREGATION_SQL -->|Write| DM_GLOBAL
-    
+
     DM_USERS -->|Read| EXPORT_SCRIPT
     DM_COUNTRIES -->|Read| EXPORT_SCRIPT
     EXPORT_SCRIPT -->|Convert| JSON_CONVERTER
@@ -258,32 +263,32 @@ graph TB
 
 ### Core Technologies
 
-| Layer | Technology | Version | Purpose |
-|-------|------------|---------|---------|
-| **Database** | PostgreSQL | 12+ | Data storage and processing |
-| **Spatial** | PostGIS | 3.0+ | Geographic data support |
-| **Scripting** | Bash | 4.0+ | ETL orchestration and automation |
-| **SQL** | PostgreSQL SQL | 12+ | Data transformations and queries |
+| Layer         | Technology     | Version | Purpose                          |
+| ------------- | -------------- | ------- | -------------------------------- |
+| **Database**  | PostgreSQL     | 12+     | Data storage and processing      |
+| **Spatial**   | PostGIS        | 3.0+    | Geographic data support          |
+| **Scripting** | Bash           | 4.0+    | ETL orchestration and automation |
+| **SQL**       | PostgreSQL SQL | 12+     | Data transformations and queries |
 
 ### Supporting Technologies
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| **Logging** | bash_logger.sh | Structured logging (log4j-style) |
-| **Validation** | JSON Schema | Export validation |
-| **Testing** | BATS | Bash script testing |
-| **CI/CD** | GitHub Actions | Automated testing and validation |
-| **Code Quality** | shellcheck, shfmt | Code linting and formatting |
-| **Parallel Processing** | GNU Parallel | Year-based parallel ETL |
+| Component               | Technology        | Purpose                          |
+| ----------------------- | ----------------- | -------------------------------- |
+| **Logging**             | bash_logger.sh    | Structured logging (log4j-style) |
+| **Validation**          | JSON Schema       | Export validation                |
+| **Testing**             | BATS              | Bash script testing              |
+| **CI/CD**               | GitHub Actions    | Automated testing and validation |
+| **Code Quality**        | shellcheck, shfmt | Code linting and formatting      |
+| **Parallel Processing** | GNU Parallel      | Year-based parallel ETL          |
 
 ### Shared Libraries
 
-| Library | Location | Purpose |
-|---------|----------|---------|
-| **bash_logger.sh** | lib/osm-common/ | Logging framework |
-| **commonFunctions.sh** | lib/osm-common/ | Common utilities |
-| **validationFunctions.sh** | lib/osm-common/ | Data validation |
-| **errorHandlingFunctions.sh** | lib/osm-common/ | Error handling |
+| Library                       | Location        | Purpose           |
+| ----------------------------- | --------------- | ----------------- |
+| **bash_logger.sh**            | lib/osm-common/ | Logging framework |
+| **commonFunctions.sh**        | lib/osm-common/ | Common utilities  |
+| **validationFunctions.sh**    | lib/osm-common/ | Data validation   |
+| **errorHandlingFunctions.sh** | lib/osm-common/ | Error handling    |
 
 ---
 
@@ -298,7 +303,7 @@ sequenceDiagram
     participant DB as PostgreSQL
     participant Staging as Staging Schema
     participant DWH as DWH Schema
-    
+
     ETL->>DB: Check base tables exist
     ETL->>SQL: Execute ETL_22_createDWHTables.sql
     SQL->>DWH: Create star schema
@@ -323,7 +328,7 @@ sequenceDiagram
     participant SQL as Datamart SQL
     participant DWH as DWH Schema
     participant DM as Datamart Table
-    
+
     Script->>DWH: Check facts table exists
     Script->>SQL: Execute datamartUsers_12_createDatamartUsersTable.sql
     SQL->>DM: Create datamartusers table
@@ -342,7 +347,7 @@ sequenceDiagram
     participant DB as PostgreSQL
     participant Validator as Schema Validator
     participant FS as File System
-    
+
     Export->>DB: Query datamartusers
     DB-->>Export: Return user rows
     Export->>Export: Convert SQL to JSON
@@ -424,7 +429,7 @@ graph TB
             DATAMART_PROC[Datamart Process<br/>Daily]
             EXPORT_PROC[Export Process<br/>Every 15 min]
         end
-        
+
         subgraph Storage["Local Storage"]
             SCRIPTS[Scripts<br/>bin/, sql/]
             CONFIG[Configuration<br/>etc/]
@@ -432,35 +437,35 @@ graph TB
             LOGS[Log Files<br/>/tmp/]
         end
     end
-    
+
     subgraph Database_Server["Database Server"]
         POSTGRES[PostgreSQL<br/>+ PostGIS]
         DB_STORAGE[Database Files<br/>Base Tables + DWH]
     end
-    
+
     subgraph External["External"]
         INGESTION[OSM-Notes-Ingestion<br/>Updates Base Tables]
         VIEWER[OSM-Notes-Viewer<br/>Reads JSON Files]
     end
-    
+
     CRON -->|Triggers| ETL_PROC
     CRON -->|Triggers| DATAMART_PROC
     CRON -->|Triggers| EXPORT_PROC
-    
+
     ETL_PROC -->|Reads| SCRIPTS
     ETL_PROC -->|Reads| CONFIG
     ETL_PROC -->|Writes| POSTGRES
     ETL_PROC -->|Writes| LOGS
-    
+
     DATAMART_PROC -->|Reads| POSTGRES
     DATAMART_PROC -->|Writes| POSTGRES
-    
+
     EXPORT_PROC -->|Reads| POSTGRES
     EXPORT_PROC -->|Writes| OUTPUT
-    
+
     INGESTION -->|Updates| POSTGRES
     VIEWER -->|Reads| OUTPUT
-    
+
     POSTGRES -->|Stores| DB_STORAGE
 ```
 
@@ -496,35 +501,36 @@ graph TB
         READ_ONLY[Read-Only User<br/>Read dwh only]
         WEB_USER[Web User<br/>Read JSON files only]
     end
-    
+
     subgraph Database["PostgreSQL"]
         PUBLIC_SCHEMA[public Schema<br/>Base Tables]
         DWH_SCHEMA[dwh Schema<br/>data warehouse]
         STAGING_SCHEMA[staging Schema<br/>Temporary]
     end
-    
+
     subgraph Files["File System"]
         SCRIPTS_DIR[Scripts<br/>bin/, sql/]
         CONFIG_DIR[Config<br/>etc/]
         OUTPUT_DIR[JSON Output<br/>output/json/]
     end
-    
+
     DB_ADMIN -->|Full Access| PUBLIC_SCHEMA
     DB_ADMIN -->|Full Access| DWH_SCHEMA
     DB_ADMIN -->|Full Access| STAGING_SCHEMA
-    
+
     ETL_USER -->|Read| PUBLIC_SCHEMA
     ETL_USER -->|Read/Write| DWH_SCHEMA
     ETL_USER -->|Read/Write| STAGING_SCHEMA
     ETL_USER -->|Execute| SCRIPTS_DIR
     ETL_USER -->|Read| CONFIG_DIR
-    
+
     READ_ONLY -->|Read Only| DWH_SCHEMA
-    
+
     WEB_USER -->|Read Only| OUTPUT_DIR
 ```
 
 **Security Practices:**
+
 - Database credentials stored in `etc/properties.sh` (not in Git)
 - JSON exports are read-only for web users
 - ETL user has minimal required permissions
@@ -539,32 +545,33 @@ graph TB
 ```mermaid
 graph TB
     ETL_MAIN[ETL.sh Main Process]
-    
+
     subgraph Parallel_Years["Parallel Year Processing"]
         YEAR_2013[Year 2013<br/>Background Process]
         YEAR_2014[Year 2014<br/>Background Process]
         YEAR_2015[Year 2015<br/>Background Process]
         YEAR_N[Year N<br/>Background Process]
     end
-    
+
     MERGE[Merge Results]
     FINALIZE[Finalize DWH]
-    
+
     ETL_MAIN -->|Spawn| YEAR_2013
     ETL_MAIN -->|Spawn| YEAR_2014
     ETL_MAIN -->|Spawn| YEAR_2015
     ETL_MAIN -->|Spawn| YEAR_N
-    
+
     YEAR_2013 -->|Complete| MERGE
     YEAR_2014 -->|Complete| MERGE
     YEAR_2015 -->|Complete| MERGE
     YEAR_N -->|Complete| MERGE
-    
+
     MERGE -->|Wait All| FINALIZE
     FINALIZE -->|Complete| ETL_MAIN
 ```
 
 **Performance Features:**
+
 - **Parallel Processing**: Multiple years processed simultaneously
 - **Partitioning**: Fast date-based queries
 - **Indexing**: Optimized foreign keys and common queries
@@ -606,4 +613,3 @@ graph TB
 - [C4 Model](https://c4model.com/) - Software architecture documentation
 - [PostgreSQL Architecture](https://www.postgresql.org/docs/current/architecture.html)
 - [Star Schema Design](https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/star-schema/)
-

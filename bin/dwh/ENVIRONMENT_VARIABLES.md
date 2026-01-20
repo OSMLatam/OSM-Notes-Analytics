@@ -4,7 +4,9 @@
 
 ## Overview
 
-This document defines all environment variables used across the OSM-Notes-Analytics DWH system, categorized as:
+This document defines all environment variables used across the OSM-Notes-Analytics DWH system,
+categorized as:
+
 - **Common**: Used by all scripts
 - **ETL-Specific**: Specific to ETL process
 - **Per-Script**: Specific to individual entry points
@@ -21,7 +23,7 @@ These variables are used across **all scripts** and should be standardized:
 - **Values**: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL`
 - **Default**: `ERROR`
 - **Usage**: Set higher for debugging, lower for production
-- **Example**: 
+- **Example**:
   ```bash
   export LOG_LEVEL=DEBUG
   ./bin/dwh/ETL.sh
@@ -33,7 +35,7 @@ These variables are used across **all scripts** and should be standardized:
 - **Values**: `true`, `false`
 - **Default**: `true`
 - **Usage**: Set to `false` to keep files for debugging
-- **Example**: 
+- **Example**:
   ```bash
   export CLEAN=false
   ./bin/dwh/ETL.sh
@@ -48,7 +50,7 @@ These variables are used across **all scripts** and should be standardized:
 - **Values**: String (e.g., `notes_dwh`)
 - **Default**: `notes_dwh` (from `etc/properties.sh`, or `DBNAME` if not set)
 - **Usage**: Specify the Ingestion database when it differs from Analytics database
-- **Example**: 
+- **Example**:
   ```bash
   export DBNAME_INGESTION=osm_notes
   export DBNAME_DWH=notes_dwh
@@ -61,7 +63,7 @@ These variables are used across **all scripts** and should be standardized:
 - **Values**: String (e.g., `notes_dwh`)
 - **Default**: `notes_dwh` (from `etc/properties.sh`, or `DBNAME` if not set)
 - **Usage**: Specify the Analytics database when it differs from Ingestion database
-- **Example**: 
+- **Example**:
   ```bash
   export DBNAME_INGESTION=osm_notes
   export DBNAME_DWH=notes_dwh
@@ -73,14 +75,17 @@ These variables are used across **all scripts** and should be standardized:
 - **Purpose**: PostgreSQL database name (legacy variable for backward compatibility)
 - **Values**: String (e.g., `notes_dwh`, `osm_notes_analytics_test`)
 - **Default**: `notes_dwh` (from `etc/properties.sh`)
-- **Usage**: Use when both Ingestion and Analytics use the same database. This is a fallback if `DBNAME_INGESTION` or `DBNAME_DWH` are not set.
-- **Example**: 
+- **Usage**: Use when both Ingestion and Analytics use the same database. This is a fallback if
+  `DBNAME_INGESTION` or `DBNAME_DWH` are not set.
+- **Example**:
   ```bash
   export DBNAME=osm_notes_test
   ./bin/dwh/ETL.sh
   ```
 
-**Note:** For DWH operations, `DBNAME_INGESTION` and `DBNAME_DWH` are recommended. The `DBNAME` variable is maintained for backward compatibility and is used as a fallback when the specific variables are not set.
+**Note:** For DWH operations, `DBNAME_INGESTION` and `DBNAME_DWH` are recommended. The `DBNAME`
+variable is maintained for backward compatibility and is used as a fallback when the specific
+variables are not set.
 
 ### `DB_USER`
 
@@ -88,7 +93,7 @@ These variables are used across **all scripts** and should be standardized:
 - **Values**: String (e.g., `notes`, `postgres`)
 - **Default**: `notes` (from `etc/properties.sh`)
 - **Usage**: Override for different database users
-- **Example**: 
+- **Example**:
   ```bash
   export DB_USER=postgres
   ./bin/dwh/ETL.sh
@@ -106,7 +111,7 @@ These variables control the ETL process behavior:
 - **Values**: Integer (e.g., `1000`, `5000`)
 - **Default**: `1000`
 - **Usage**: Increase for better throughput on powerful systems
-- **Example**: 
+- **Example**:
   ```bash
   export ETL_BATCH_SIZE=5000
   ./bin/dwh/ETL.sh
@@ -118,7 +123,7 @@ These variables control the ETL process behavior:
 - **Values**: Integer (e.g., `100`, `500`)
 - **Default**: `100`
 - **Usage**: Balance between performance and transaction safety
-- **Example**: 
+- **Example**:
   ```bash
   export ETL_COMMIT_INTERVAL=500
   ./bin/dwh/ETL.sh
@@ -130,7 +135,7 @@ These variables control the ETL process behavior:
 - **Values**: Integer (e.g., `4`, `8`, `16`)
 - **Default**: `4`
 - **Usage**: Increase for multi-core systems (should be less than CPU cores)
-- **Example**: 
+- **Example**:
   ```bash
   export ETL_MAX_PARALLEL_JOBS=8
   ./bin/dwh/ETL.sh
@@ -142,7 +147,7 @@ These variables control the ETL process behavior:
 - **Values**: `true`, `false`
 - **Default**: `true`
 - **Usage**: Disable for debugging or single-core systems
-- **Example**: 
+- **Example**:
   ```bash
   export ETL_PARALLEL_ENABLED=false
   ./bin/dwh/ETL.sh
@@ -156,7 +161,7 @@ These variables control the ETL process behavior:
 - **Values**: Integer 0-100 (e.g., `80`, `90`)
 - **Default**: `80`
 - **Usage**: Adjust based on available system memory
-- **Example**: 
+- **Example**:
   ```bash
   export MAX_MEMORY_USAGE=90
   ./bin/dwh/ETL.sh
@@ -168,7 +173,7 @@ These variables control the ETL process behavior:
 - **Values**: Integer 0-100 (e.g., `85`, `95`)
 - **Default**: `90`
 - **Usage**: Adjust based on available disk space
-- **Example**: 
+- **Example**:
   ```bash
   export MAX_DISK_USAGE=85
   ./bin/dwh/ETL.sh
@@ -183,7 +188,7 @@ These variables control the ETL process behavior:
 - **Recommendations**:
   - **Incremental updates**: 2 hours (default OK)
   - **Initial load**: 36 hours (`export ETL_TIMEOUT=129600`)
-- **Example**: 
+- **Example**:
   ```bash
   export ETL_TIMEOUT=129600  # 36 hours for initial load
   ./bin/dwh/ETL.sh
@@ -191,7 +196,8 @@ These variables control the ETL process behavior:
 
 #### `PSQL_STATEMENT_TIMEOUT`
 
-- **Purpose**: Maximum time a single SQL statement can run (prevents long-running queries from hanging)
+- **Purpose**: Maximum time a single SQL statement can run (prevents long-running queries from
+  hanging)
 - **Values**: PostgreSQL interval format (e.g., `30min`, `2h`, `4h`)
 - **Default**: `30min` (configured in `etc/properties.sh`)
 - **Usage**: Critical for preventing timeout errors during ETL execution
@@ -199,13 +205,15 @@ These variables control the ETL process behavior:
   - **Normal incremental**: 30 minutes (default OK)
   - **Large incremental** (> 10M facts): 2 hours (`export PSQL_STATEMENT_TIMEOUT=2h`)
   - **Initial load**: 4 hours (`export PSQL_STATEMENT_TIMEOUT=4h`)
-- **Common issue**: Large incremental updates can exceed 30min timeout, causing `canceling statement due to statement timeout` errors
+- **Common issue**: Large incremental updates can exceed 30min timeout, causing
+  `canceling statement due to statement timeout` errors
 - **Example**:
+
   ```bash
   # For large incremental updates
   export PSQL_STATEMENT_TIMEOUT=2h
   ./bin/dwh/ETL.sh
-  
+
   # For initial load
   export PSQL_STATEMENT_TIMEOUT=4h
   ./bin/dwh/ETL.sh
@@ -219,7 +227,7 @@ These variables control the ETL process behavior:
 - **Values**: `true`, `false`
 - **Default**: `true`
 - **Usage**: Disable for faster execution (not recommended for production)
-- **Example**: 
+- **Example**:
   ```bash
   export ETL_VACUUM_AFTER_LOAD=false
   ./bin/dwh/ETL.sh
@@ -231,7 +239,7 @@ These variables control the ETL process behavior:
 - **Values**: `true`, `false`
 - **Default**: `true`
 - **Usage**: Disable for faster execution (not recommended for production)
-- **Example**: 
+- **Example**:
   ```bash
   export ETL_ANALYZE_AFTER_LOAD=false
   ./bin/dwh/ETL.sh
@@ -245,7 +253,7 @@ These variables control the ETL process behavior:
 - **Values**: `true`, `false`
 - **Default**: `true`
 - **Usage**: Disable for testing or if recovery causes issues
-- **Example**: 
+- **Example**:
   ```bash
   export ETL_RECOVERY_ENABLED=false
   ./bin/dwh/ETL.sh
@@ -257,7 +265,7 @@ These variables control the ETL process behavior:
 - **Values**: `true`, `false`
 - **Default**: `true`
 - **Usage**: Disable for faster execution (not recommended)
-- **Example**: 
+- **Example**:
   ```bash
   export ETL_VALIDATE_INTEGRITY=false
   ./bin/dwh/ETL.sh
@@ -269,7 +277,7 @@ These variables control the ETL process behavior:
 - **Values**: `true`, `false`
 - **Default**: `true`
 - **Usage**: Disable for faster execution during development
-- **Example**: 
+- **Example**:
   ```bash
   export ETL_VALIDATE_DIMENSIONS=false
   ./bin/dwh/ETL.sh
@@ -281,7 +289,7 @@ These variables control the ETL process behavior:
 - **Values**: `true`, `false`
 - **Default**: `true`
 - **Usage**: Disable for faster execution during development
-- **Example**: 
+- **Example**:
   ```bash
   export ETL_VALIDATE_FACTS=false
   ./bin/dwh/ETL.sh
@@ -295,7 +303,7 @@ These variables control the ETL process behavior:
 - **Values**: `true`, `false`
 - **Default**: `true`
 - **Usage**: Disable for minimal overhead (not recommended)
-- **Example**: 
+- **Example**:
   ```bash
   export ETL_MONITOR_RESOURCES=false
   ./bin/dwh/ETL.sh
@@ -307,7 +315,7 @@ These variables control the ETL process behavior:
 - **Values**: Integer in seconds (e.g., `30`, `60`)
 - **Default**: `30`
 - **Usage**: Adjust based on monitoring needs
-- **Example**: 
+- **Example**:
   ```bash
   export ETL_MONITOR_INTERVAL=60
   ./bin/dwh/ETL.sh
@@ -321,7 +329,7 @@ These variables control the ETL process behavior:
 - **Values**: `true`, `false`
 - **Default**: `false`
 - **Usage**: Enable for quick testing, then use incremental mode for remaining years
-- **Example**: 
+- **Example**:
   ```bash
   export ETL_TEST_MODE=true
   ./bin/dwh/ETL.sh
@@ -331,7 +339,8 @@ These variables control the ETL process behavior:
 
 ## 📋 Properties File Variables
 
-Defined in `etc/properties.sh` (created from `etc/properties.sh.example`, can be overridden by environment):
+Defined in `etc/properties.sh` (created from `etc/properties.sh.example`, can be overridden by
+environment):
 
 ### Database Configuration
 
@@ -356,7 +365,8 @@ Defined in `etc/properties.sh` (created from `etc/properties.sh.example`, can be
 
 Defined in `etc/etl.properties` (created from `etc/etl.properties.example`):
 
-All ETL-specific variables listed above can be set in `etc/etl.properties` instead of environment variables. The properties file is loaded first, then environment variables override if set.
+All ETL-specific variables listed above can be set in `etc/etl.properties` instead of environment
+variables. The properties file is loaded first, then environment variables override if set.
 
 ## 🎯 Standard Usage Patterns
 
@@ -456,6 +466,7 @@ Configuration is loaded in this order (later values override earlier ones):
 6. **Environment variables** (highest priority, overrides all)
 
 Example:
+
 ```bash
 # etc/properties.sh sets DBNAME=notes
 # etc/etl.properties sets ETL_BATCH_SIZE=1000
@@ -472,4 +483,3 @@ export ETL_BATCH_SIZE=5000
 - `etc/etl.properties.example` - ETL configuration template
 - `README.md` - General usage guide
 - `bin/README.md` - Script documentation
-

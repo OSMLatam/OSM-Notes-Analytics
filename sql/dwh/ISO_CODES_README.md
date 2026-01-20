@@ -1,13 +1,12 @@
 # ISO Country Codes Reference
 
-This file explains how to maintain the ISO country codes reference table used in the data
-warehouse.
+This file explains how to maintain the ISO country codes reference table used in the data warehouse.
 
 ## Overview
 
-The `dwh.iso_country_codes` table provides a mapping between OSM relation IDs and ISO 3166-1
-country codes (alpha-2 and alpha-3). This table is used to enrich the `dimension_countries` table
-with standardized country codes.
+The `dwh.iso_country_codes` table provides a mapping between OSM relation IDs and ISO 3166-1 country
+codes (alpha-2 and alpha-3). This table is used to enrich the `dimension_countries` table with
+standardized country codes.
 
 ## Table Structure
 
@@ -39,7 +38,7 @@ INSERT INTO dwh.iso_country_codes (osm_country_id, iso_alpha2, iso_alpha3, count
 VALUES
  -- Existing countries...
  (192796, 'ZA', 'ZAF', 'South Africa'),
- 
+
  -- Add your new country here:
  (123456, 'XX', 'XXX', 'New Country Name')
 ;

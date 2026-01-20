@@ -2,15 +2,20 @@
 
 ## Overview
 
-This document describes how to implement atomic validation in the export process: generate files in a temporary location, validate them, and only move them to the final destination if validation passes.
+This document describes how to implement atomic validation in the export process: generate files in
+a temporary location, validate them, and only move them to the final destination if validation
+passes.
 
-**Note:** Examples in this document use `DBNAME` for simplicity. For DWH operations, use `DBNAME_DWH` (or `DBNAME_INGESTION` for Ingestion tables). The `DBNAME` variable is maintained for backward compatibility when both databases are the same.
+**Note:** Examples in this document use `DBNAME` for simplicity. For DWH operations, use
+`DBNAME_DWH` (or `DBNAME_INGESTION` for Ingestion tables). The `DBNAME` variable is maintained for
+backward compatibility when both databases are the same.
 
 ## Strategy: Atomic Write with Validation
 
 ### Problem Statement
 
 When exporting JSON files via cron:
+
 - Invalid data should **never** replace valid data
 - The destination should always have valid files
 - Failed exports should not break the viewer
@@ -274,27 +279,32 @@ echo "  Output directory: ${OUTPUT_DIR}"
 ## Key Features
 
 ### 1. Temporary Directory
+
 - All files generated in `${TMP_DIR}/atomic_export` (where TMP_DIR is created with `mktemp`)
 - Prevents partial writes to destination
 - Isolated from live data
 - Uses standard project pattern with SCRIPT_BASE_DIRECTORY
 
 ### 2. Validation During Export
+
 - Each file validated immediately after creation
 - Errors tracked in `VALIDATION_ERRORS` counter
 - Detailed logging for debugging
 
 ### 3. Atomic Move
+
 - Only moves files if all validations pass
 - Uses `mv` command (atomic operation)
 - No partially written files in destination
 
 ### 4. Error Handling
+
 - On validation failure: keep old files, exit with error
 - Temp directory kept for inspection
 - Cron job fails, viewer shows old data
 
 ### 5. Cleanup
+
 - `trap` ensures temp directory cleaned up
 - Runs on script exit (success or failure)
 - Prevents disk space issues
@@ -305,7 +315,7 @@ echo "  Output directory: ${OUTPUT_DIR}"
 ✅ **No Partial Updates** - Either all files updated or none  
 ✅ **Fail Fast** - Stop immediately on validation error  
 ✅ **Inspectable** - Failed files remain in temp for debugging  
-✅ **Resilient** - Viewer continues working with old data  
+✅ **Resilient** - Viewer continues working with old data
 
 ## Cron Job Integration
 
@@ -332,6 +342,7 @@ echo "SUCCESS: All exports validated and moved to destination"
 ## Monitoring
 
 ### Success Log
+
 ```
 2025-10-23 19:45:00 - Starting datamart JSON export to temporary directory
   ✓ Valid: user 123
@@ -348,6 +359,7 @@ echo "SUCCESS: All exports validated and moved to destination"
 ```
 
 ### Failure Log
+
 ```
 2025-10-23 19:45:00 - Starting datamart JSON export to temporary directory
   ✓ Valid: user 123
@@ -380,9 +392,11 @@ bin/dwh/exportDatamartsToJSON.sh
 ## Files Affected
 
 ### Analytics Repository
+
 - `bin/dwh/exportDatamartsToJSON.sh` - Modified to use temp directory and validation
 
 ### Viewer Repository
+
 - `scripts/validate-schemas.sh` - Still useful for manual testing/debugging
 - `docs/Atomic_Validation_Export.md` - This document
 
@@ -398,4 +412,3 @@ bin/dwh/exportDatamartsToJSON.sh
 - See `exportDatamartsToJSON.sh` for current implementation
 - See `docs/DATA_CONTRACT.md` for schema documentation
 - See `lib/OSM-Notes-Common/schemas/` for schema definitions
-

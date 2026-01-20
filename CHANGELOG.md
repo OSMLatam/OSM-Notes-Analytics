@@ -6,7 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- **pgml Extension Installation**: Complete installation script for PostgreSQL Machine Learning extension
+- **pgml Extension Installation**: Complete installation script for PostgreSQL Machine Learning
+  extension
   - `sql/dwh/ml/install_pgml.sh`: Automated script to compile and install pgml from source
   - Supports multiple PostgreSQL versions (14+)
   - Automatic detection of installed PostgreSQL versions
@@ -14,7 +15,8 @@ All notable changes to this project will be documented in this file.
   - Documentation: `sql/dwh/ml/README.md` with installation and usage guide
 - **User Contribution Statistics (DOC-001)**: Complete implementation of user contribution analysis
   - `sql/dwh/queries/DOC_001_user_contribution_stats.sql`: Query for users with single contribution
-  - Enhanced query with distribution by contribution levels (1, 2-5, 6-10, 11-50, 51-100, 101-500, 501-1000, 1000+)
+  - Enhanced query with distribution by contribution levels (1, 2-5, 6-10, 11-50, 51-100, 101-500,
+    501-1000, 1000+)
   - View `dwh.v_user_contribution_distribution` for easy access
   - Function `dwh.get_user_contribution_summary()` for programmatic statistics
 - **Complete Datamart Implementation (DM-001 to DM-016)**: All datamart features completed
@@ -72,7 +74,8 @@ All notable changes to this project will be documented in this file.
 
 ### Technical Details
 
-- **pgml Installation**: Script handles multiple PostgreSQL versions, Rust installation, pgrx configuration, and compilation with Python support
+- **pgml Installation**: Script handles multiple PostgreSQL versions, Rust installation, pgrx
+  configuration, and compilation with Python support
 - **Parallel Processing**: Uses Bash process management with PostgreSQL transactions for atomicity
 - **ETL Validation**: Compares comment counts at multiple levels (total, per note, by action type)
 - **Datamart Metrics**: All new metrics automatically calculated during datamart updates
@@ -100,7 +103,8 @@ All notable changes to this project will be documented in this file.
 
 ### Documentation
 
-- Added `bin/dwh/datamartUsers/PARALLEL_PROCESSING.md`: Complete documentation of parallel processing system
+- Added `bin/dwh/datamartUsers/PARALLEL_PROCESSING.md`: Complete documentation of parallel
+  processing system
 - Added `sql/dwh/ml/README.md`: pgml installation and usage guide
 - Updated `ToDo/TODO_LIST.md`: All datamart tasks marked as completed
 - Removed obsolete files: `ToDo/ToDos.md`, `ToDo/DATAMARTS_IMPLEMENTATION_PLAN.md`
@@ -111,10 +115,14 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- **ETL Report Generation**: `sql/dwh/ETL_56_generateETLReport.sql` for comprehensive ETL execution reports
-- **Note Current Status Tracking**: `sql/dwh/ETL_55_createNoteCurrentStatus.sql` for efficient note state tracking
-- **Shared Helper Functions**: `sql/dwh/Staging_30_sharedHelperFunctions.sql` for code reuse in staging procedures
-- **Profile Script Enhancements**: Improved visualization with `jq` for hashtags, quality metrics, and achievements
+- **ETL Report Generation**: `sql/dwh/ETL_56_generateETLReport.sql` for comprehensive ETL execution
+  reports
+- **Note Current Status Tracking**: `sql/dwh/ETL_55_createNoteCurrentStatus.sql` for efficient note
+  state tracking
+- **Shared Helper Functions**: `sql/dwh/Staging_30_sharedHelperFunctions.sql` for code reuse in
+  staging procedures
+- **Profile Script Enhancements**: Improved visualization with `jq` for hashtags, quality metrics,
+  and achievements
 
 ### Changed
 
@@ -155,7 +163,8 @@ All notable changes to this project will be documented in this file.
 
 - **JSON Export Script**: `bin/dwh/exportAndPushJSONToGitHub.sh` for JSON export and deployment
 - **CSV Export Script**: `bin/dwh/exportAndPushCSVToGitHub.sh` for closed notes CSV export
-- **Contributor Type Information**: Enhanced `exportDatamartsToJSON` script to include contributor type information
+- **Contributor Type Information**: Enhanced `exportDatamartsToJSON` script to include contributor
+  type information
 
 ### Changed
 
@@ -247,13 +256,16 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
-- **PostgreSQL Application Name**: All scripts now set `PGAPPNAME` to display script names instead of "psql" in `pg_stat_activity`
+- **PostgreSQL Application Name**: All scripts now set `PGAPPNAME` to display script names instead
+  of "psql" in `pg_stat_activity`
   - `ETL.sh` processes show as `ETL` instead of `psql`
   - Parallel year loads show as `ETL-year-2017`, `ETL-year-2018`, etc. for better identification
-  - `datamartUsers.sh` shows as `datamartUsers` with specific names for parallel batches (`datamartUsers-batch-1-1000`, `datamartUsers-user-123`)
+  - `datamartUsers.sh` shows as `datamartUsers` with specific names for parallel batches
+    (`datamartUsers-batch-1-1000`, `datamartUsers-user-123`)
   - `datamartCountries.sh` shows as `datamartCountries`
   - `datamartGlobal.sh` shows as `datamartGlobal`
-- Improved process monitoring: All PostgreSQL connections now use descriptive application names for easier identification in `pg_stat_activity`
+- Improved process monitoring: All PostgreSQL connections now use descriptive application names for
+  easier identification in `pg_stat_activity`
 
 ### Technical Details
 
@@ -266,7 +278,8 @@ All notable changes to this project will be documented in this file.
 
 - `bin/dwh/ETL.sh`: Added helper function and updated all `psql` calls
 - `bin/dwh/datamartUsers/datamartUsers.sh`: Added helper function and updated all `psql` calls
-- `bin/dwh/datamartCountries/datamartCountries.sh`: Added helper function and updated all `psql` calls
+- `bin/dwh/datamartCountries/datamartCountries.sh`: Added helper function and updated all `psql`
+  calls
 - `bin/dwh/datamartGlobal/datamartGlobal.sh`: Added helper function and updated all `psql` calls
 
 ### Documentation
@@ -280,7 +293,8 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - **User Behavior Metric**: Completed user behavior analysis with final missing metric
-  - `notes_opened_but_not_closed_by_user` (INTEGER): Number of notes opened by user but never closed by same user (closed by others or still open)
+  - `notes_opened_but_not_closed_by_user` (INTEGER): Number of notes opened by user but never closed
+    by same user (closed by others or still open)
 
 ### Changed
 
@@ -298,14 +312,17 @@ All notable changes to this project will be documented in this file.
 
 ### Technical Details
 
-- Metric calculated using NOT EXISTS subquery to find notes opened by user but not closed by same user
+- Metric calculated using NOT EXISTS subquery to find notes opened by user but not closed by same
+  user
 - Includes notes closed by others and notes still open
-- Relationship: `history_whole_open = notes_resolved_count + notes_opened_but_not_closed_by_user + notes_still_open_count`
+- Relationship:
+  `history_whole_open = notes_resolved_count + notes_opened_but_not_closed_by_user + notes_still_open_count`
 
 ### Documentation
 
 - Added complete metric definition in `docs/Metric_Definitions.md`:
-  - Section 8.4: `notes_opened_but_not_closed_by_user` with business definition, formula, interpretation, and use cases
+  - Section 8.4: `notes_opened_but_not_closed_by_user` with business definition, formula,
+    interpretation, and use cases
 
 ---
 
@@ -317,12 +334,14 @@ All notable changes to this project will be documented in this file.
   - `application_usage_trends` (JSON): Application usage trends by year for countries and users
   - `version_adoption_rates` (JSON): Version adoption rates by year for countries and users
 - **Community Health Metrics** (Countries):
-  - `notes_health_score` (DECIMAL): Overall notes health score (0-100) based on resolution rate, backlog size, and recent activity
+  - `notes_health_score` (DECIMAL): Overall notes health score (0-100) based on resolution rate,
+    backlog size, and recent activity
   - `new_vs_resolved_ratio` (DECIMAL): Ratio of new notes created vs resolved notes (last 30 days)
 - **User Behavior Metrics** (Users):
   - `user_response_time` (DECIMAL): Average time in days from note open to first comment by user
   - `days_since_last_action` (INTEGER): Days since user last performed any action
-  - `collaboration_patterns` (JSON): Collaboration metrics including mentions given/received, replies count, and collaboration score
+  - `collaboration_patterns` (JSON): Collaboration metrics including mentions given/received,
+    replies count, and collaboration score
 
 ### Changed
 
@@ -342,8 +361,10 @@ All notable changes to this project will be documented in this file.
 ### Technical Details
 
 - All new metrics are calculated during datamart update procedures
-- JSON metrics (`application_usage_trends`, `version_adoption_rates`, `collaboration_patterns`) use PostgreSQL JSON aggregation
-- Health score uses weighted formula: resolution_rate (40%) + backlog_ratio (30%) + recent_activity (30%)
+- JSON metrics (`application_usage_trends`, `version_adoption_rates`, `collaboration_patterns`) use
+  PostgreSQL JSON aggregation
+- Health score uses weighted formula: resolution_rate (40%) + backlog_ratio (30%) + recent_activity
+  (30%)
 - New metrics are automatically exported to JSON (schemas have `additionalProperties: true`)
 - Schema hash detection will automatically detect changes for versioning
 
@@ -373,7 +394,8 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
-- Fixed FDW setup logic to only configure Foreign Data Wrappers when Ingestion and Analytics databases are different
+- Fixed FDW setup logic to only configure Foreign Data Wrappers when Ingestion and Analytics
+  databases are different
 - Improved error handling when databases are the same (skips FDW setup to avoid conflicts)
 - Enhanced database comparison logic in ETL incremental processing
 
@@ -381,8 +403,10 @@ All notable changes to this project will be documented in this file.
 
 - Updated `sql/dwh/ETL_60_setupFDW.sql` version to 2025-12-13
 - Improved logging in ETL process to show database configuration before FDW setup
-- Enhanced `bin/dwh/copyBaseTables.sh` and `bin/dwh/dropCopiedBaseTables.sh` with better error handling and code formatting
-- Updated test suite `tests/unit/bash/hybrid_strategy_copy_fdw.test.bats` with improved robustness and error handling
+- Enhanced `bin/dwh/copyBaseTables.sh` and `bin/dwh/dropCopiedBaseTables.sh` with better error
+  handling and code formatting
+- Updated test suite `tests/unit/bash/hybrid_strategy_copy_fdw.test.bats` with improved robustness
+  and error handling
 
 ### Technical Details
 
@@ -395,17 +419,21 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - Hybrid strategy for separating Ingestion and Analytics databases
-- `bin/dwh/copyBaseTables.sh`: Script to copy base tables from Ingestion DB to Analytics DB for initial load
+- `bin/dwh/copyBaseTables.sh`: Script to copy base tables from Ingestion DB to Analytics DB for
+  initial load
 - `bin/dwh/dropCopiedBaseTables.sh`: Script to drop copied tables after DWH population
-- `sql/dwh/ETL_60_setupFDW.sql`: SQL script to configure Foreign Data Wrappers (FDW) for incremental processing
+- `sql/dwh/ETL_60_setupFDW.sql`: SQL script to configure Foreign Data Wrappers (FDW) for incremental
+  processing
 - Support for separate database configuration:
   - `DBNAME_INGESTION` and `DBNAME_DWH` variables for separate databases
   - `DB_USER_INGESTION` and `DB_USER_DWH` variables for different database users
-  - `FDW_INGESTION_*` variables for Foreign Data Wrappers configuration (host, dbname, port, user, password)
+  - `FDW_INGESTION_*` variables for Foreign Data Wrappers configuration (host, dbname, port, user,
+    password)
 - Automatic detection of first execution vs incremental execution in ETL process
 - Foreign Data Wrappers (postgres_fdw) support for remote table access
 - Foreign tables for: `notes`, `note_comments`, `note_comments_text`, `users`, `countries`
-- Performance optimization: Copy tables locally for initial load (avoids millions of cross-database queries)
+- Performance optimization: Copy tables locally for initial load (avoids millions of cross-database
+  queries)
 - Row count verification after table copying
 - Automatic index recreation on copied tables
 - Comprehensive test suite: `tests/unit/bash/hybrid_strategy_copy_fdw.test.bats`
@@ -421,10 +449,14 @@ All notable changes to this project will be documented in this file.
 
 ### Technical Details
 
-- Copy method uses PostgreSQL COPY with piping for maximum performance (estimated 10-40 minutes for all tables)
-- Tables copied in dependency order: `countries`, `users`, `notes`, `note_comments`, `note_comments_text`
-- Foreign Data Wrappers configured with `fetch_size='10000'` and `use_remote_estimate='true'` for optimization
-- Backward compatibility: Falls back to single database mode if separate databases are not configured
+- Copy method uses PostgreSQL COPY with piping for maximum performance (estimated 10-40 minutes for
+  all tables)
+- Tables copied in dependency order: `countries`, `users`, `notes`, `note_comments`,
+  `note_comments_text`
+- Foreign Data Wrappers configured with `fetch_size='10000'` and `use_remote_estimate='true'` for
+  optimization
+- Backward compatibility: Falls back to single database mode if separate databases are not
+  configured
 - Supports peer authentication when database users are not explicitly provided
 
 ### Documentation
@@ -438,4 +470,3 @@ All notable changes to this project will be documented in this file.
 - Added unit tests for hybrid strategy: `tests/unit/bash/hybrid_strategy_copy_fdw.test.bats`
 - Tests cover table copying, FDW setup, and incremental processing scenarios
 - Tests validate row count verification and error handling
-

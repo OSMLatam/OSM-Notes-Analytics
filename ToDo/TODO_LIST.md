@@ -4,7 +4,8 @@ Este documento consolida todos los pendientes del proyecto organizados por categ
 
 **Última actualización**: 2025-12-28
 
-**Nota**: Este documento consolida todos los pendientes. El ActionPlan.md ha sido eliminado y su contenido relevante (ML pendiente) ha sido movido aquí.
+**Nota**: Este documento consolida todos los pendientes. El ActionPlan.md ha sido eliminado y su
+contenido relevante (ML pendiente) ha sido movido aquí.
 
 ---
 
@@ -26,7 +27,8 @@ Todas las tareas de alta prioridad han sido completadas.
 
 - [✅] **ETL-001**: Generar un reporte de cambios identificados al cargar la ETL - COMPLETADO
   - Los select cambiarlos a exports para mostrar otras cosas
-  - **Status**: ✅ Implementado procedimiento `dwh.generate_etl_report()` y script `sql/dwh/ETL_56_generateETLReport.sql`
+  - **Status**: ✅ Implementado procedimiento `dwh.generate_etl_report()` y script
+    `sql/dwh/ETL_56_generateETLReport.sql`
   - **Features**:
     - ✅ Reporte completo de ejecución ETL con métricas de facts, dimensiones, datamarts
     - ✅ Estadísticas de usuarios, países, hashtags
@@ -50,31 +52,40 @@ Todas las tareas de alta prioridad han sido completadas.
     - ✅ Vistas `dwh.v_currently_open_notes_by_user` y `dwh.v_currently_open_notes_by_country`
     - ✅ Procedimientos `dwh.initialize_note_current_status()` y `dwh.update_note_current_status()`
     - ✅ Integrado en datamarts para mejor rendimiento
-  - Archivos: `sql/dwh/ETL_55_createNoteCurrentStatus.sql`, `sql/dwh/datamartUsers/datamartUsers_13_createProcedure.sql`, `sql/dwh/datamartCountries/datamartCountries_13_createProcedure.sql`
+  - Archivos: `sql/dwh/ETL_55_createNoteCurrentStatus.sql`,
+    `sql/dwh/datamartUsers/datamartUsers_13_createProcedure.sql`,
+    `sql/dwh/datamartCountries/datamartCountries_13_createProcedure.sql`
 
 - [✅] **ETL-004**: En el ETL mantener la cantidad de notas abiertas en el país - COMPLETADO
   - **Status**: ✅ Implementado junto con ETL-003 usando `dwh.note_current_status`
   - **Features**:
     - ✅ Vista `dwh.v_currently_open_notes_by_country` para consultas eficientes
     - ✅ Integrado en `dwh.datamartCountries` para métricas de backlog
-  - Archivos: `sql/dwh/ETL_55_createNoteCurrentStatus.sql`, `sql/dwh/datamartCountries/datamartCountries_13_createProcedure.sql`
+  - Archivos: `sql/dwh/ETL_55_createNoteCurrentStatus.sql`,
+    `sql/dwh/datamartCountries/datamartCountries_13_createProcedure.sql`
 
 - [✅] **ETL-005**: Usar la secuencia de comentarios en los facts - COMPLETADO
   - **Status**: ✅ Implementado campo `sequence_action` en `dwh.facts`
   - **Features**:
     - ✅ Campo `sequence_action` agregado a todos los INSERT en staging procedures
     - ✅ Secuencia de comentarios rastreada correctamente en facts
-  - Archivos: `sql/dwh/Staging_32_createStagingObjects.sql`, `sql/dwh/Staging_34_initialFactsLoadCreate.sql`, `sql/dwh/Staging_34_initialFactsLoadCreate_Parallel.sql`, `sql/dwh/Staging_35_initialFactsLoadExecute_Simple.sql`
+  - Archivos: `sql/dwh/Staging_32_createStagingObjects.sql`,
+    `sql/dwh/Staging_34_initialFactsLoadCreate.sql`,
+    `sql/dwh/Staging_34_initialFactsLoadCreate_Parallel.sql`,
+    `sql/dwh/Staging_35_initialFactsLoadExecute_Simple.sql`
 
-- [✅] **ETL-006**: Factorizar CREATE and INITIAL en Staging, ya que tiene partes comunes - COMPLETADO
-  - **Status**: ✅ Creado archivo `sql/dwh/Staging_30_sharedHelperFunctions.sql` con funciones comunes
+- [✅] **ETL-006**: Factorizar CREATE and INITIAL en Staging, ya que tiene partes comunes -
+  COMPLETADO
+  - **Status**: ✅ Creado archivo `sql/dwh/Staging_30_sharedHelperFunctions.sql` con funciones
+    comunes
   - **Features**:
     - ✅ Función `staging.get_or_create_country_dimension()` para manejo de países
     - ✅ Procedimiento `staging.process_hashtags()` para procesamiento de hashtags
     - ✅ Función `staging.calculate_comment_metrics()` para métricas de comentarios
     - ✅ Función `staging.get_timezone_and_local_metrics()` para métricas de timezone
     - ✅ Reducción de duplicación de código en staging procedures
-  - Archivos: `sql/dwh/Staging_30_sharedHelperFunctions.sql`, `sql/dwh/Staging_34_initialFactsLoadCreate.sql`, `sql/dwh/Staging_32_createStagingObjects.sql`
+  - Archivos: `sql/dwh/Staging_30_sharedHelperFunctions.sql`,
+    `sql/dwh/Staging_34_initialFactsLoadCreate.sql`, `sql/dwh/Staging_32_createStagingObjects.sql`
 
 - [✅] **ETL-007**: Cuando se actualizan los países, actualizar datamarts afectados - COMPLETADO
   - Puede que algunas notas cambien de país
@@ -85,21 +96,27 @@ Todas las tareas de alta prioridad han sido completadas.
     - ✅ `staging.get_or_create_country_dimension()` marca países como modificados
     - ✅ `sql/dwh/ETL_26_updateDimensionTables.sql` marca países modificados al actualizar
     - ✅ Datamarts procesan automáticamente países marcados como modificados
-  - Archivos: `sql/dwh/Staging_30_sharedHelperFunctions.sql`, `sql/dwh/ETL_26_updateDimensionTables.sql`, `sql/dwh/datamartCountries/`, `sql/dwh/datamartUsers/`
+  - Archivos: `sql/dwh/Staging_30_sharedHelperFunctions.sql`,
+    `sql/dwh/ETL_26_updateDimensionTables.sql`, `sql/dwh/datamartCountries/`,
+    `sql/dwh/datamartUsers/`
 
 ### Monitor ETL
 
 - [✅] **MON-001**: Revisar cuando una nota se reabre, que se quite el closed en DWH - COMPLETADO
   - Pero implica un update lo cual es malo
   - O procesar estos de una manera diferente. Por ejemplo teniendo el max action
-  - **Status**: ✅ Implementado validación que verifica que `note_current_status` refleja correctamente el estado actual
+  - **Status**: ✅ Implementado validación que verifica que `note_current_status` refleja
+    correctamente el estado actual
   - **Features**:
     - ✅ Validación que detecta notas cerradas con reaperturas posteriores
-    - ✅ Validación que verifica que `note_current_status` coincide con la acción más reciente en facts
-    - ✅ La tabla `note_current_status` ya maneja correctamente las reaperturas usando `DISTINCT ON` con `ORDER BY action_at DESC`
+    - ✅ Validación que verifica que `note_current_status` coincide con la acción más reciente en
+      facts
+    - ✅ La tabla `note_current_status` ya maneja correctamente las reaperturas usando `DISTINCT ON`
+      con `ORDER BY action_at DESC`
   - Archivos: `sql/dwh/ETL_57_validateETLIntegrity.sql`
 
-- [✅] **MON-002**: Monitor debe revisar que la cantidad de comentarios es la misma de actions en facts - COMPLETADO
+- [✅] **MON-002**: Monitor debe revisar que la cantidad de comentarios es la misma de actions en
+  facts - COMPLETADO
   - Algo similar para los datamarts
   - **Status**: ✅ Implementado validación completa de integridad de datos
   - **Features**:
@@ -120,7 +137,8 @@ Todas las tareas de alta prioridad han sido completadas.
   - Se identifican a partir del texto de los comentarios
   - **Status**: ✅ Implementado completamente en datamarts y visualización en `profile.sh`
   - **Features**:
-    - ✅ Columnas `applications_used`, `most_used_application_id`, `mobile_apps_count`, `desktop_apps_count`
+    - ✅ Columnas `applications_used`, `most_used_application_id`, `mobile_apps_count`,
+      `desktop_apps_count`
     - ✅ Visualización mejorada con `jq` para mostrar aplicaciones y conteos
     - ✅ Integrado en perfiles de usuarios y países
   - Archivos: `sql/dwh/datamartCountries/`, `sql/dwh/datamartUsers/`, `bin/dwh/profile.sh`
@@ -133,17 +151,22 @@ Todas las tareas de alta prioridad han sido completadas.
   - **Features**:
     - ✅ Hashtags por tipo de acción (opening, resolution, comments)
     - ✅ Hashtag favorito de apertura y resolución con conteos
-    - ✅ Funciones para filtrar notas por hashtags (`get_notes_by_hashtag_for_user`, `get_notes_by_hashtag_for_country`)
+    - ✅ Funciones para filtrar notas por hashtags (`get_notes_by_hashtag_for_user`,
+      `get_notes_by_hashtag_for_country`)
     - ✅ Estadísticas detalladas de hashtags por usuario y país
     - ✅ Visualización mejorada en `profile.sh` con `jq`
-  - Archivos: `sql/dwh/datamartCountries/`, `sql/dwh/datamartUsers/`, `sql/dwh/datamarts/63_completeHashtagAnalysis.sql`, `bin/dwh/profile.sh`
+  - Archivos: `sql/dwh/datamartCountries/`, `sql/dwh/datamartUsers/`,
+    `sql/dwh/datamarts/63_completeHashtagAnalysis.sql`, `bin/dwh/profile.sh`
 
-- [✅] **DM-003**: Ajustar los queries de los hashtags para relacionar con la secuencia de comentario - COMPLETADO
+- [✅] **DM-003**: Ajustar los queries de los hashtags para relacionar con la secuencia de
+  comentario - COMPLETADO
   - **Status**: ✅ Implementado funciones que usan `sequence_action` de facts
   - **Features**:
-    - ✅ Funciones `calculate_user_hashtag_metrics_with_sequence()` y `calculate_country_hashtag_metrics_with_sequence()`
+    - ✅ Funciones `calculate_user_hashtag_metrics_with_sequence()` y
+      `calculate_country_hashtag_metrics_with_sequence()`
     - ✅ Integración con `sequence_action` para ordenar hashtags por secuencia de comentarios
-  - Archivos: `sql/dwh/datamartCountries/`, `sql/dwh/datamartUsers/`, `sql/dwh/datamarts/60_enhanceHashtagQueriesWithSequence.sql`
+  - Archivos: `sql/dwh/datamartCountries/`, `sql/dwh/datamartUsers/`,
+    `sql/dwh/datamarts/60_enhanceHashtagQueriesWithSequence.sql`
 
 - [✅] **DM-004**: Definir los badges y asignarlos - COMPLETADO
   - **Status**: ✅ Sistema de badges implementado completamente
@@ -163,7 +186,9 @@ Todas las tareas de alta prioridad han sido completadas.
     - ✅ Transacciones atómicas para garantizar integridad
     - ✅ Manejo de errores robusto
     - ✅ Documentación completa en `bin/dwh/datamartUsers/PARALLEL_PROCESSING.md`
-  - Archivos: `bin/dwh/datamartUsers/datamartUsers.sh`, `sql/dwh/datamartUsers/datamartUsers_32_populateDatamartUsersTable.sql`, `bin/dwh/datamartUsers/PARALLEL_PROCESSING.md`
+  - Archivos: `bin/dwh/datamartUsers/datamartUsers.sh`,
+    `sql/dwh/datamartUsers/datamartUsers_32_populateDatamartUsersTable.sql`,
+    `bin/dwh/datamartUsers/PARALLEL_PROCESSING.md`
 
 - [✅] **DM-006**: Calidad de la nota - COMPLETADO
   - Menos de 5 caracteres es mala
@@ -172,21 +197,28 @@ Todas las tareas de alta prioridad han sido completadas.
   - Más de 500 un tratado
   - **Status**: ✅ Implementado clasificación por longitud de comentario inicial
   - **Features**:
-    - ✅ Columnas `note_quality_poor_count`, `note_quality_fair_count`, `note_quality_good_count`, `note_quality_complex_count`, `note_quality_treatise_count`
+    - ✅ Columnas `note_quality_poor_count`, `note_quality_fair_count`, `note_quality_good_count`,
+      `note_quality_complex_count`, `note_quality_treatise_count`
     - ✅ Cálculo basado en longitud del comentario inicial de la nota
-  - Archivos: `sql/dwh/datamartCountries/`, `sql/dwh/datamartUsers/`, `sql/dwh/datamarts/58_addNewDatamartMetrics.sql`, `sql/dwh/datamarts/59_calculateNewDatamartMetrics.sql`
+  - Archivos: `sql/dwh/datamartCountries/`, `sql/dwh/datamartUsers/`,
+    `sql/dwh/datamarts/58_addNewDatamartMetrics.sql`,
+    `sql/dwh/datamarts/59_calculateNewDatamartMetrics.sql`
 
 - [✅] **DM-007**: Día con más notas creadas - COMPLETADO
   - **Status**: ✅ Implementado en datamarts de usuarios y países
   - **Features**:
     - ✅ Columnas `peak_day_notes_created` (día de la semana) y `peak_day_notes_created_count`
-  - Archivos: `sql/dwh/datamartCountries/`, `sql/dwh/datamartUsers/`, `sql/dwh/datamarts/58_addNewDatamartMetrics.sql`, `sql/dwh/datamarts/59_calculateNewDatamartMetrics.sql`
+  - Archivos: `sql/dwh/datamartCountries/`, `sql/dwh/datamartUsers/`,
+    `sql/dwh/datamarts/58_addNewDatamartMetrics.sql`,
+    `sql/dwh/datamarts/59_calculateNewDatamartMetrics.sql`
 
 - [✅] **DM-008**: Hora con más notas creadas - COMPLETADO
   - **Status**: ✅ Implementado en datamarts de usuarios y países
   - **Features**:
     - ✅ Columnas `peak_hour_notes_created` (hora 0-23) y `peak_hour_notes_created_count`
-  - Archivos: `sql/dwh/datamartCountries/`, `sql/dwh/datamartUsers/`, `sql/dwh/datamarts/58_addNewDatamartMetrics.sql`, `sql/dwh/datamarts/59_calculateNewDatamartMetrics.sql`
+  - Archivos: `sql/dwh/datamartCountries/`, `sql/dwh/datamartUsers/`,
+    `sql/dwh/datamarts/58_addNewDatamartMetrics.sql`,
+    `sql/dwh/datamarts/59_calculateNewDatamartMetrics.sql`
 
 - [✅] **DM-009**: Tabla de notas aún en estado abierto de cada año - COMPLETADO
   - Las columnas son los años desde 2013
@@ -197,14 +229,17 @@ Todas las tareas de alta prioridad han sido completadas.
   - **Features**:
     - ✅ Columna `open_notes_by_year` (JSONB) con estructura `{"2013": count, "2014": count, ...}`
     - ✅ Función `dwh.update_country_open_notes_by_year()` para calcular métricas
-  - Archivos: `sql/dwh/datamartCountries/`, `sql/dwh/datamarts/58_addNewDatamartMetrics.sql`, `sql/dwh/datamarts/59_calculateNewDatamartMetrics.sql`
+  - Archivos: `sql/dwh/datamartCountries/`, `sql/dwh/datamarts/58_addNewDatamartMetrics.sql`,
+    `sql/dwh/datamarts/59_calculateNewDatamartMetrics.sql`
 
 - [✅] **DM-010**: Por país, las notas que tomaron más tiempo en cerrarse - COMPLETADO
   - **Status**: ✅ Implementado en datamart de países
   - **Features**:
-    - ✅ Columna `longest_resolution_notes` (JSONB) con top N notas que tomaron más tiempo en cerrarse
+    - ✅ Columna `longest_resolution_notes` (JSONB) con top N notas que tomaron más tiempo en
+      cerrarse
     - ✅ Función `dwh.update_country_longest_resolution_notes()` para calcular métricas
-  - Archivos: `sql/dwh/datamartCountries/`, `sql/dwh/datamarts/58_addNewDatamartMetrics.sql`, `sql/dwh/datamarts/59_calculateNewDatamartMetrics.sql`
+  - Archivos: `sql/dwh/datamartCountries/`, `sql/dwh/datamarts/58_addNewDatamartMetrics.sql`,
+    `sql/dwh/datamarts/59_calculateNewDatamartMetrics.sql`
 
 - [✅] **DM-011**: Mostrar el timestamp del comentario más reciente en la DB - COMPLETADO
   - Última actualización de la db
@@ -212,7 +247,8 @@ Todas las tareas de alta prioridad han sido completadas.
   - **Features**:
     - ✅ Columna `last_comment_timestamp` en `dwh.datamartGlobal`
     - ✅ Función `dwh.update_global_last_comment_timestamp()` para actualizar
-  - Archivos: `sql/dwh/datamartGlobal/`, `sql/dwh/datamarts/58_addNewDatamartMetrics.sql`, `sql/dwh/datamarts/59_calculateNewDatamartMetrics.sql`
+  - Archivos: `sql/dwh/datamartGlobal/`, `sql/dwh/datamarts/58_addNewDatamartMetrics.sql`,
+    `sql/dwh/datamarts/59_calculateNewDatamartMetrics.sql`
 
 - [✅] **DM-012**: Tener rankings de los 100 histórico, último año, último mes, hoy - COMPLETADO
   - El que más ha abierto, más cerrado, más comentado, más reabierto
@@ -221,7 +257,8 @@ Todas las tareas de alta prioridad han sido completadas.
     - ✅ Funciones para generar rankings por período (histórico, último año, último mes, hoy)
     - ✅ Rankings por métricas (abierto, cerrado, comentado, reabierto)
     - ✅ Vistas materializadas para acceso rápido
-  - Archivos: `sql/dwh/datamartUsers/`, `sql/dwh/datamartCountries/`, `sql/dwh/datamarts/61_createRankingSystem.sql`
+  - Archivos: `sql/dwh/datamartUsers/`, `sql/dwh/datamartCountries/`,
+    `sql/dwh/datamarts/61_createRankingSystem.sql`
 
 - [✅] **DM-013**: Mostrar el ranking de países - COMPLETADO
   - Abiertas, cerradas, actualmente abiertas, y la tasa
@@ -254,11 +291,12 @@ Todas las tareas de alta prioridad han sido completadas.
 
 - [✅] **EXP-001**: Exportar la DB en formato CSV para publicación - COMPLETADO
   - Exportar datos de notas cerradas
-  - Información: comentario inicial, comentario de cierre, usuario que abrió, usuario que cerró, país
+  - Información: comentario inicial, comentario de cierre, usuario que abrió, usuario que cerró,
+    país
   - Un archivo por país
   - Propósito: Dar contexto a AI para saber cómo cerrar notas
   - **Status**: ✅ Scripts creados y documentados
-  - Archivos: 
+  - Archivos:
     - `bin/dwh/exportAndPushCSVToGitHub.sh` ✅ (creado - script único que hace todo)
     - `sql/dwh/export/exportClosedNotesByCountry.sql` ✅ (creado)
   - **Features**:
@@ -273,7 +311,7 @@ Todas las tareas de alta prioridad han sido completadas.
 - [✅] **EXP-002**: Mecanismo que exporte periódicamente y publique - COMPLETADO
   - ✅ Integrado con cron (mensual, 1er día del mes)
   - ✅ Script de publicación a GitHub creado
-  - Archivos: 
+  - Archivos:
     - `bin/dwh/exportAndPushCSVToGitHub.sh` ✅ (creado)
     - `etc/cron.example` ✅ (actualizado)
 
@@ -293,25 +331,32 @@ Todas las tareas de alta prioridad han sido completadas.
     - ✅ Feature views for ML training and prediction
     - ✅ Usage examples and helper functions
     - ✅ **pgml extension installed** for PostgreSQL 14 (and 16) on production server
-    - ✅ **Python dependencies installed** (numpy, scipy, xgboost, lightgbm, scikit-learn) for Python 3.10
+    - ✅ **Python dependencies installed** (numpy, scipy, xgboost, lightgbm, scikit-learn) for
+      Python 3.10
     - ✅ **shared_preload_libraries configured** correctly
     - ✅ **Extension created** in `notes_dwh` database and verified working
-    - ✅ **Installation script updated** (`sql/dwh/ml/install_pgml.sh`) with all required Python packages
-    - ✅ **Documentation updated** with troubleshooting steps for Python dependencies and shared_preload_libraries
+    - ✅ **Installation script updated** (`sql/dwh/ml/install_pgml.sh`) with all required Python
+      packages
+    - ✅ **Documentation updated** with troubleshooting steps for Python dependencies and
+      shared_preload_libraries
   - **Remaining**:
-    - ⏳ Train hierarchical classification models (main category, specific type, action recommendation)
+    - ⏳ Train hierarchical classification models (main category, specific type, action
+      recommendation)
     - ⏳ Integrate predictions into ETL workflow
-  - **Files**: `sql/dwh/ml/`, `docs/ML_Implementation_Plan.md`, `docs/Note_Categorization.md`, `docs/External_Classification_Strategies.md`
+  - **Files**: `sql/dwh/ml/`, `docs/ML_Implementation_Plan.md`, `docs/Note_Categorization.md`,
+    `docs/External_Classification_Strategies.md`
 
 ### Documentación
 
-- [✅] **DOC-001**: Query pendiente - Mostrar cuántos usuarios solo han hecho una contribución - COMPLETADO
+- [✅] **DOC-001**: Query pendiente - Mostrar cuántos usuarios solo han hecho una contribución -
+  COMPLETADO
   - Query SQL original solicitado para análisis de distribución de contribuciones
   - Podría convertirse para mostrar la tasa de usuarios que poco hacen
   - **Status**: ✅ Implementado query completo con análisis de distribución de contribuciones
   - **Features**:
     - ✅ Query básico para contar usuarios con una sola contribución
-    - ✅ Query mejorado con distribución por niveles de contribución (1, 2-5, 6-10, 11-50, 51-100, 101-500, 501-1000, 1000+)
+    - ✅ Query mejorado con distribución por niveles de contribución (1, 2-5, 6-10, 11-50, 51-100,
+      101-500, 501-1000, 1000+)
     - ✅ Estadísticas resumidas (total usuarios, porcentajes, promedio, mediana, min/max)
     - ✅ Vista `dwh.v_user_contribution_distribution` para acceso fácil
     - ✅ Función `dwh.get_user_contribution_summary()` para obtener estadísticas programáticamente
@@ -355,6 +400,6 @@ Todas las tareas de alta prioridad han sido completadas.
 ---
 
 **Referencias**:
+
 - `ToDo/TODO_LIST.md` - Este documento (lista consolidada de pendientes)
 - `ToDo/ProgressTracker.md` - Seguimiento de progreso semanal
-

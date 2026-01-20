@@ -13,7 +13,8 @@ testing strategies, and development workflows.
 ### Core Documentation
 
 - **`Rationale.md`**: Project motivation, background, and design decisions
-- **`Troubleshooting_Guide.md`**: Centralized troubleshooting guide for common problems and solutions
+- **`Troubleshooting_Guide.md`**: Centralized troubleshooting guide for common problems and
+  solutions
 
 ### data warehouse Documentation
 
@@ -28,6 +29,7 @@ testing strategies, and development workflows.
 - Process descriptions and frequencies
 
 **Contents:**
+
 - Context diagram showing system boundaries
 - Process decomposition diagrams
 - Data store documentation
@@ -37,6 +39,7 @@ testing strategies, and development workflows.
 **Audience:** Data engineers, system architects, business analysts
 
 **When to read:**
+
 - Understanding overall data flow
 - Designing new data pipelines
 - Troubleshooting data flow issues
@@ -55,6 +58,7 @@ testing strategies, and development workflows.
 - Impact analysis for schema changes
 
 **Contents:**
+
 - Lineage diagram (source → staging → DWH → datamarts → JSON)
 - Detailed transformation rules for each path
 - Dimension lineage (users, countries, dates)
@@ -65,6 +69,7 @@ testing strategies, and development workflows.
 **Audience:** Data engineers, data quality analysts, compliance officers
 
 **When to read:**
+
 - Understanding data transformations
 - Debugging data quality issues
 - Impact analysis (what breaks if source changes)
@@ -84,6 +89,7 @@ testing strategies, and development workflows.
 - Example calculations
 
 **Contents:**
+
 - Core business terms (Note, Resolution, Community Health, etc.)
 - Key metrics overview (historical counts, resolution, applications, content quality)
 - Business rules documentation
@@ -92,10 +98,12 @@ testing strategies, and development workflows.
 **Audience:** Business analysts, product managers, stakeholders, new team members
 
 **When to read:**
+
 - Understanding core business concepts
 - Getting overview of available metrics
 - Communicating with non-technical stakeholders
-- See also: [Metric Definitions](Metric_Definitions.md) for complete 77+ (countries) and 78+ (users) metrics reference
+- See also: [Metric Definitions](Metric_Definitions.md) for complete 77+ (countries) and 78+ (users)
+  metrics reference
 
 ---
 
@@ -109,6 +117,7 @@ testing strategies, and development workflows.
 - Metric summary tables
 
 **Contents:**
+
 - Historical count metrics (30+ metrics across time periods)
 - Resolution metrics (7 metrics: avg, median, rate, by year/month)
 - Application statistics (4 metrics: mobile/desktop counts, most used)
@@ -125,6 +134,7 @@ testing strategies, and development workflows.
 **Audience:** Data analysts, BI developers, dashboard builders, business analysts
 
 **When to read:**
+
 - Building dashboards and reports
 - Understanding all available metrics
 - Interpreting metric values
@@ -143,6 +153,7 @@ testing strategies, and development workflows.
 - Recent enhancements documentation
 
 **Contents:**
+
 - Star schema data availability
 - Datamart metrics overview (77+ for countries, 78+ for users)
 - Dashboard-ready data analysis
@@ -152,10 +163,12 @@ testing strategies, and development workflows.
 **Audience:** Dashboard developers, data analysts, product managers
 
 **When to read:**
+
 - Planning dashboard implementation
 - Understanding available metrics
 - Identifying data gaps
-- See also: [Dashboard Implementation Guide](Dashboard_Implementation_Guide.md) for implementation details
+- See also: [Dashboard Implementation Guide](Dashboard_Implementation_Guide.md) for implementation
+  details
 
 ---
 
@@ -169,6 +182,7 @@ testing strategies, and development workflows.
 - Best practices and troubleshooting
 
 **Contents:**
+
 - 8 dashboard types with complete examples
 - SQL queries for each dashboard type
 - JavaScript/frontend integration code
@@ -178,6 +192,7 @@ testing strategies, and development workflows.
 **Audience:** Frontend developers, dashboard builders, full-stack developers
 
 **When to read:**
+
 - Building dashboards from scratch
 - Integrating with frontend applications
 - Optimizing dashboard performance
@@ -195,6 +210,7 @@ testing strategies, and development workflows.
 - Common workflows and best practices
 
 **Contents:**
+
 - Individual Contributor persona
 - Community Leader persona
 - Data Analyst persona
@@ -207,6 +223,7 @@ testing strategies, and development workflows.
 **Audience:** Product managers, UX designers, developers, stakeholders
 
 **When to read:**
+
 - Understanding user needs
 - Designing features and dashboards
 - Prioritizing development work
@@ -225,6 +242,7 @@ testing strategies, and development workflows.
 - Data requirements and model specifications
 
 **Contents:**
+
 - 3 main use cases (resolution prediction, classification, risk detection)
 - Available data for training (facts table + datamarts)
 - Model architecture (regression, classification, binary classification)
@@ -239,6 +257,7 @@ testing strategies, and development workflows.
 **Audience:** Data scientists, ML engineers, system architects, project managers
 
 **When to read:**
+
 - Planning ML implementation
 - Understanding ML requirements
 - Evaluating feasibility
@@ -248,7 +267,9 @@ testing strategies, and development workflows.
 **Status:** Future enhancement (not yet implemented)
 
 **Related Resources:**
-- [External Classification Strategies](External_Classification_Strategies.md) - Analysis of external tools and keyword-based approaches
+
+- [External Classification Strategies](External_Classification_Strategies.md) - Analysis of external
+  tools and keyword-based approaches
 
 ---
 
@@ -261,6 +282,7 @@ testing strategies, and development workflows.
 - Reduces latency from 15 minutes to seconds
 
 **Contents:**
+
 - Architecture using PostgreSQL LISTEN/NOTIFY mechanism
 - Database trigger setup in Ingestion system
 - Streaming processor implementation (Python + Bash)
@@ -274,6 +296,7 @@ testing strategies, and development workflows.
 **Audience:** System architects, database administrators, DevOps engineers, project managers
 
 **When to read:**
+
 - Planning real-time analytics implementation
 - Understanding event-driven architecture
 - Evaluating LISTEN/NOTIFY approach
@@ -283,6 +306,7 @@ testing strategies, and development workflows.
 **Status:** Future enhancement (not yet implemented, LOW priority)
 
 **Key Features:**
+
 - Native PostgreSQL solution (no external message queue)
 - Event-driven processing
 - Automatic reconnection and error handling
@@ -290,11 +314,13 @@ testing strategies, and development workflows.
 - Works alongside existing batch ETL
 
 **Current State:**
+
 - Ingestion: Every 1 minute
 - ETL: Every 15 minutes
 - Latency: ~15 minutes maximum
 
 **Proposed State:**
+
 - Streaming: Real-time (seconds)
 - Batch ETL: Continues as safety net
 - Latency: Seconds to minutes
@@ -311,6 +337,7 @@ testing strategies, and development workflows.
 - Integration opportunities with our ML system
 
 **Contents:**
+
 - DE:Notes Map v2.5 analysis (keyword and hashtag-based classification)
 - How external strategies could enhance our ML system
 - Keyword lists for feature engineering
@@ -320,6 +347,7 @@ testing strategies, and development workflows.
 **Audience:** ML engineers, data scientists, system architects
 
 **When to read:**
+
 - Researching classification strategies
 - Enhancing ML feature engineering
 - Understanding keyword-based approaches
@@ -338,6 +366,7 @@ testing strategies, and development workflows.
 - Use cases for mappers, community leaders, and analysts
 
 **Contents:**
+
 - Two main note categories (contribute vs don't contribute with change)
 - 18+ detailed note subtypes with examples
 - Available metrics for categorization
@@ -348,6 +377,7 @@ testing strategies, and development workflows.
 **Audience:** Mappers, community leaders, data analysts, note resolution campaign organizers
 
 **When to read:**
+
 - Understanding note classification system
 - Planning note resolution campaigns
 - Analyzing note patterns
@@ -355,11 +385,15 @@ testing strategies, and development workflows.
 - Learning about note types and characteristics
 
 **Related Articles:**
-- [Tipos de notas](https://www.openstreetmap.org/user/AngocA/diary/398472) - Comprehensive note type classification
+
+- [Tipos de notas](https://www.openstreetmap.org/user/AngocA/diary/398472) - Comprehensive note type
+  classification
 - [Manipulación de notas](https://www.openstreetmap.org/user/AngocA/diary/397284) - Note workflows
 - [Análisis de notas](https://www.openstreetmap.org/user/AngocA/diary/397548) - Analysis techniques
-- [Técnicas de creación y resolución de notas](https://www.openstreetmap.org/user/AngocA/diary/398514) - Best practices
-- [Proyecto de resolución de notas](https://wiki.openstreetmap.org/wiki/ES:LatAm/Proyectos/Resoluci%C3%B3n_de_notas/Preparaci%C3%B3n_premios) - Campaign documentation
+- [Técnicas de creación y resolución de notas](https://www.openstreetmap.org/user/AngocA/diary/398514) -
+  Best practices
+- [Proyecto de resolución de notas](https://wiki.openstreetmap.org/wiki/ES:LatAm/Proyectos/Resoluci%C3%B3n_de_notas/Preparaci%C3%B3n_premios) -
+  Campaign documentation
 
 ---
 
@@ -373,6 +407,7 @@ testing strategies, and development workflows.
 - Troubleshooting slow queries
 
 **Contents:**
+
 - 8 categories of common queries
 - Expected execution times for each query type
 - Performance optimization strategies
@@ -382,6 +417,7 @@ testing strategies, and development workflows.
 **Audience:** Developers, data analysts, system administrators
 
 **When to read:**
+
 - Understanding query performance expectations
 - Optimizing dashboard queries
 - Troubleshooting slow queries
@@ -400,6 +436,7 @@ testing strategies, and development workflows.
 - Deployment and security architecture
 
 **Contents:**
+
 - C4 Level 1: System context (system and external entities)
 - C4 Level 2: Container diagram (high-level building blocks)
 - Detailed architecture with components
@@ -411,6 +448,7 @@ testing strategies, and development workflows.
 **Audience:** System architects, DevOps engineers, developers, technical leads
 
 **When to read:**
+
 - Understanding overall system structure
 - Planning deployments
 - Designing new features
@@ -430,6 +468,7 @@ testing strategies, and development workflows.
 - Monitoring, backup, and disaster recovery
 
 **Contents:**
+
 - Deployment architecture diagrams
 - Production schedule (Gantt chart)
 - Cron configuration examples
@@ -445,6 +484,7 @@ testing strategies, and development workflows.
 **Audience:** DevOps engineers, system administrators, SREs, deployment teams
 
 **When to read:**
+
 - Planning production deployment
 - Setting up cron automation
 - Understanding operational dependencies
@@ -464,6 +504,7 @@ testing strategies, and development workflows.
 - Best practices for production
 
 **Contents:**
+
 - Installation and configuration
 - Scheduling options
 - Lock file behavior
@@ -475,6 +516,7 @@ testing strategies, and development workflows.
 **Audience:** System administrators, DevOps engineers
 
 **When to read:**
+
 - Setting up automated ETL execution
 - Configuring cron jobs
 - Troubleshooting cron issues
@@ -700,6 +742,7 @@ For comprehensive testing documentation, see **[tests/README.md](../tests/README
 - Foreign Data Wrappers (FDW) for incremental execution
 
 **Contents:**
+
 - Configuration and usage
 - Implementation scripts
 - Troubleshooting
@@ -708,6 +751,7 @@ For comprehensive testing documentation, see **[tests/README.md](../tests/README
 **Audience:** Developers, database administrators
 
 **When to read:**
+
 - Configuring database separation
 - Understanding how the hybrid strategy works
 - Troubleshooting table copy or FDW issues
@@ -762,9 +806,11 @@ For comprehensive testing documentation, see **[tests/README.md](../tests/README
 
 **GitHub Push Setup for Production**
 
-Configuration guide for automated git pushes to GitHub from production servers, particularly for non-interactive users (e.g., `notes` user in cron jobs).
+Configuration guide for automated git pushes to GitHub from production servers, particularly for
+non-interactive users (e.g., `notes` user in cron jobs).
 
 **Contents:**
+
 - SSH key setup (recommended)
 - Personal Access Token configuration
 - Deploy key setup
@@ -775,6 +821,7 @@ Configuration guide for automated git pushes to GitHub from production servers, 
 **Audience:** System administrators, DevOps engineers
 
 **When to read:**
+
 - Setting up automated exports to GitHub
 - Configuring git credentials for production
 - Troubleshooting push failures
@@ -838,13 +885,15 @@ Configuration guide for automated git pushes to GitHub from production servers, 
 
 **Total time: ~1.5 hours** for a complete overview.
 
-For detailed navigation paths by role, see [Recommended Reading Paths by Role](#recommended-reading-paths-by-role) below.
+For detailed navigation paths by role, see
+[Recommended Reading Paths by Role](#recommended-reading-paths-by-role) below.
 
 ## Recommended Reading Paths by Role
 
 ### For New Users (~2 hours total)
 
 **Step 1: Project Context** (50 min)
+
 - **[Rationale.md](./Rationale.md)** (30 min) - Project purpose and motivation
   - Why this project exists
   - Problem statement
@@ -855,6 +904,7 @@ For detailed navigation paths by role, see [Recommended Reading Paths by Role](#
   - Basic workflows
 
 **Step 2: System Overview** (60 min)
+
 - **[Data_Flow_Diagrams.md](./Data_Flow_Diagrams.md)** (20 min) - System data flow
   - Context diagram
   - Process decomposition
@@ -868,6 +918,7 @@ For detailed navigation paths by role, see [Recommended Reading Paths by Role](#
   - Basic usage examples
 
 **Step 3: Getting Started** (25 min)
+
 - **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/ENTRY_POINTS.md)** (15 min) - Which scripts to use
   - Entry points documentation
   - Usage examples
@@ -878,19 +929,23 @@ For detailed navigation paths by role, see [Recommended Reading Paths by Role](#
 ### For Developers (~3 hours total)
 
 **Step 1: Foundation** (75 min)
+
 - **[Rationale.md](./Rationale.md)** (30 min) - Project context
 - **[Main README](../README.md)** (20 min) - Overview and architecture
 - **[DWH_Star_Schema_ERD.md](./DWH_Star_Schema_ERD.md)** (25 min) - Data model
 
 **Step 2: Implementation Details** (60 min)
+
 - **[ETL_Enhanced_Features.md](./ETL_Enhanced_Features.md)** (30 min) - ETL capabilities
   - Parallel processing
   - Recovery mechanisms
   - Performance optimization
 - **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/ENTRY_POINTS.md)** (15 min) - Script entry points
-- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)** (15 min) - Configuration
+- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)** (15 min) -
+  Configuration
 
 **Step 3: Development Workflow** (45 min)
+
 - **[tests/README.md](../tests/README.md)** (20 min) - Testing guide
 - **[CI_CD_Guide.md](./CI_CD_Guide.md)** (25 min) - CI/CD workflows
   - GitHub Actions
@@ -898,22 +953,27 @@ For detailed navigation paths by role, see [Recommended Reading Paths by Role](#
   - Quality gates
 
 **Step 4: Deep Dive** (as needed)
-- **[DWH_Star_Schema_Data_Dictionary.md](./DWH_Star_Schema_Data_Dictionary.md)** - Complete schema reference
+
+- **[DWH_Star_Schema_Data_Dictionary.md](./DWH_Star_Schema_Data_Dictionary.md)** - Complete schema
+  reference
 - **[CONTRIBUTING.md](../CONTRIBUTING.md)** - Contribution guidelines
 - **[bin/README.md](../bin/README.md)** - Script documentation
 
 ### For Data Analysts (~2 hours total)
 
 **Step 1: Data Model** (60 min)
+
 - **[DWH_Star_Schema_ERD.md](./DWH_Star_Schema_ERD.md)** (30 min) - Schema overview
   - Table relationships
   - Fact and dimension tables
-- **[DWH_Star_Schema_Data_Dictionary.md](./DWH_Star_Schema_Data_Dictionary.md)** (30 min) - Column definitions
+- **[DWH_Star_Schema_Data_Dictionary.md](./DWH_Star_Schema_Data_Dictionary.md)** (30 min) - Column
+  definitions
   - Complete data dictionary
   - Business rules
   - Sample queries
 
 **Step 2: Data Access** (45 min)
+
 - **[Main README](../README.md)** (15 min) - Quick start
 - **[ETL_Enhanced_Features.md](./ETL_Enhanced_Features.md)** (15 min) - Data freshness
 - **[bin/dwh/profile.sh](../bin/dwh/profile.sh)** (15 min) - Profile generation
@@ -922,12 +982,14 @@ For detailed navigation paths by role, see [Recommended Reading Paths by Role](#
   - Statistics
 
 **Step 3: Advanced Topics** (45 min)
+
 - **[Dashboard_Analysis.md](./Dashboard_Analysis.md)** (15 min) - Available metrics
   - Resolution metrics
   - Application statistics
   - Content quality metrics
   - Community health indicators
-- **[Dashboard_Implementation_Guide.md](./Dashboard_Implementation_Guide.md)** (15 min) - Building dashboards
+- **[Dashboard_Implementation_Guide.md](./Dashboard_Implementation_Guide.md)** (15 min) - Building
+  dashboards
   - SQL query examples
   - Frontend integration
   - Performance optimization
@@ -939,11 +1001,14 @@ For detailed navigation paths by role, see [Recommended Reading Paths by Role](#
 ### For DevOps/SRE (~2.5 hours total)
 
 **Step 1: Deployment** (45 min)
+
 - **[Main README](../README.md)** (20 min) - Setup and deployment
 - **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/ENTRY_POINTS.md)** (15 min) - Script entry points
-- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)** (10 min) - Configuration
+- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)** (10 min) -
+  Configuration
 
 **Step 2: Operations** (60 min)
+
 - **[ETL_Enhanced_Features.md](./ETL_Enhanced_Features.md)** (30 min) - ETL operations
   - Performance tuning
   - Resource monitoring
@@ -954,14 +1019,17 @@ For detailed navigation paths by role, see [Recommended Reading Paths by Role](#
   - Performance optimization
 
 **Step 3: Monitoring and Troubleshooting** (60 min)
+
 - **[Troubleshooting_Guide.md](./Troubleshooting_Guide.md)** (30 min) - Problem resolution
   - Common issues
   - Diagnostic commands
   - Recovery procedures
-- **[PERFORMANCE_BASELINES.md](./PERFORMANCE_BASELINES.md)** (15 min) - Query performance expectations
+- **[PERFORMANCE_BASELINES.md](./PERFORMANCE_BASELINES.md)** (15 min) - Query performance
+  expectations
   - Performance baselines
   - Optimization tips
-- **[sql/dwh/datamartPerformance/README.md](../sql/dwh/datamartPerformance/README.md)** (15 min) - Performance monitoring
+- **[sql/dwh/datamartPerformance/README.md](../sql/dwh/datamartPerformance/README.md)** (15 min) -
+  Performance monitoring
   - Datamart update timing
   - Performance analysis queries
 - **[CI_CD_Guide.md](./CI_CD_Guide.md)** (15 min) - CI/CD pipelines
@@ -969,16 +1037,20 @@ For detailed navigation paths by role, see [Recommended Reading Paths by Role](#
 ### For System Administrators (~2 hours total)
 
 **Step 1: System Overview** (45 min)
+
 - **[Rationale.md](./Rationale.md)** (30 min) - Project purpose
 - **[Main README](../README.md)** (15 min) - Architecture overview
 
 **Step 2: Operations** (60 min)
+
 - **[bin/README.md](../bin/README.md)** (20 min) - Scripts and workflows
 - **[DWH_Maintenance_Guide.md](./DWH_Maintenance_Guide.md)** (20 min) - Maintenance procedures
 - **[Troubleshooting_Guide.md](./Troubleshooting_Guide.md)** (20 min) - Problem resolution
 
 **Step 3: Configuration** (15 min)
-- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)** - Environment variables
+
+- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)** - Environment
+  variables
 - **[etc/README.md](../etc/README.md)** - Configuration files
 
 ## Quick Reference
@@ -993,12 +1065,14 @@ For detailed navigation paths by role, see [Recommended Reading Paths by Role](#
 ### Script Documentation
 
 - **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/ENTRY_POINTS.md)** - Which scripts can be called directly
-- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)** - Configuration variables
+- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)** - Configuration
+  variables
 - **[bin/README.md](../bin/README.md)** - Complete script documentation
 
 ### Technical Reference
 
-- **[DWH_Star_Schema_Data_Dictionary.md](./DWH_Star_Schema_Data_Dictionary.md)** - Complete schema reference
+- **[DWH_Star_Schema_Data_Dictionary.md](./DWH_Star_Schema_Data_Dictionary.md)** - Complete schema
+  reference
 - **[ETL_Enhanced_Features.md](./ETL_Enhanced_Features.md)** - ETL capabilities
 - **[DWH_Maintenance_Guide.md](./DWH_Maintenance_Guide.md)** - Maintenance procedures
 

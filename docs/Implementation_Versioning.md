@@ -2,8 +2,8 @@
 
 ## Overview
 
-A comprehensive semantic versioning system has been implemented for JSON
-exports to ensure compatibility between exported data and the web viewer.
+A comprehensive semantic versioning system has been implemented for JSON exports to ensure
+compatibility between exported data and the web viewer.
 
 ## What Was Implemented
 
@@ -205,4 +205,3 @@ To complete the implementation, you may want to:
 - [Version Compatibility Guide](docs/Version_Compatibility.md)
 - [JSON Export Documentation](bin/dwh/export_json_readme.md)
 - [Atomic Validation Export](docs/Atomic_Validation_Export.md)
-

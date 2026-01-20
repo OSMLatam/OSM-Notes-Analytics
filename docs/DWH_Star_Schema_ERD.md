@@ -1,7 +1,7 @@
 # DWH Star Schema ERD
 
-This document shows the entity–relationship diagram (ERD) of the star schema.
-The central fact table is `dwh.facts`, connected to its dimensions.
+This document shows the entity–relationship diagram (ERD) of the star schema. The central fact table
+is `dwh.facts`, connected to its dimensions.
 
 ```mermaid
 erDiagram
@@ -139,9 +139,8 @@ erDiagram
 
 Notes:
 
-- The ERD shows logical relationships aligned with foreign keys defined in
-  the SQL DDL. The hashtags relationship is a shorthand for up to five
-  optional links to `dimension_hashtags`.
+- The ERD shows logical relationships aligned with foreign keys defined in the SQL DDL. The hashtags
+  relationship is a shorthand for up to five optional links to `dimension_hashtags`.
 - Cardinalities:
   - Facts to dimensions are many-to-one.
   - Countries to regions are many-to-one.

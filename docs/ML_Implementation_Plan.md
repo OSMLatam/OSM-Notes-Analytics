@@ -9,36 +9,48 @@
 
 ## 📋 Overview
 
-This document outlines the plan for implementing Machine Learning (ML) capabilities in the OSM Notes Analytics system. **The ML implementation builds upon and enhances existing manual and automated analysis methods** that are already being used to classify and understand notes.
+This document outlines the plan for implementing Machine Learning (ML) capabilities in the OSM Notes
+Analytics system. **The ML implementation builds upon and enhances existing manual and automated
+analysis methods** that are already being used to classify and understand notes.
 
 ### Existing Analysis Context
 
 **Current Analysis Methods** (documented in [Note_Categorization.md](Note_Categorization.md)):
 
-1. **Manual Classification**: Comprehensive note type system based on years of experience (18+ specific types)
-2. **Metric-Based Analysis**: SQL queries using metrics like `comment_length`, `has_url`, `total_comments_on_note`, `days_to_resolution`
-3. **Application Pattern Analysis**: Identifying note types based on source applications (Maps.me, StreetComplete, etc.)
-4. **Hashtag Analysis**: Pattern recognition using hashtags (see `sql/dwh/ml/ml_00_analyzeHashtagsForClassification.sql`)
+1. **Manual Classification**: Comprehensive note type system based on years of experience (18+
+   specific types)
+2. **Metric-Based Analysis**: SQL queries using metrics like `comment_length`, `has_url`,
+   `total_comments_on_note`, `days_to_resolution`
+3. **Application Pattern Analysis**: Identifying note types based on source applications (Maps.me,
+   StreetComplete, etc.)
+4. **Hashtag Analysis**: Pattern recognition using hashtags (see
+   `sql/dwh/ml/ml_00_analyzeHashtagsForClassification.sql`)
 5. **Text Pattern Analysis**: Keyword searches and text pattern matching
-6. **Historical Outcome Analysis**: Learning from past note resolutions (processed vs closed vs needs more data)
+6. **Historical Outcome Analysis**: Learning from past note resolutions (processed vs closed vs
+   needs more data)
 7. **User Behavior Analysis**: Patterns in user response times, collaboration, and note handling
 
-**These existing analyses provide rich context and knowledge** that informs and enhances the ML implementation.
+**These existing analyses provide rich context and knowledge** that informs and enhances the ML
+implementation.
 
 ### ML Enhancement Strategy
 
 **ML doesn't replace existing analysis—it enhances it** by:
 
-1. **Learning from Manual Classifications**: Using the comprehensive note type system as training labels
-2. **Combining Multiple Signals**: Integrating metrics, text patterns, hashtags, and historical outcomes
+1. **Learning from Manual Classifications**: Using the comprehensive note type system as training
+   labels
+2. **Combining Multiple Signals**: Integrating metrics, text patterns, hashtags, and historical
+   outcomes
 3. **Context Understanding**: Going beyond keyword matching to understand semantic meaning
 4. **Pattern Recognition**: Identifying subtle patterns that are difficult to express as rules
 5. **Continuous Improvement**: Learning from new data and outcomes over time
 
-The primary goal is to **classify notes** according to the comprehensive system described in [Note_Categorization.md](Note_Categorization.md), which includes:
+The primary goal is to **classify notes** according to the comprehensive system described in
+[Note_Categorization.md](Note_Categorization.md), which includes:
 
 1. **Main Category**: Does the note contribute with a change or not?
-2. **Specific Type**: One of 18+ detailed note types (adds_to_map, modifies_map, personal_data, etc.)
+2. **Specific Type**: One of 18+ detailed note types (adds_to_map, modifies_map, personal_data,
+   etc.)
 3. **Action Recommendation**: Should it be processed, closed, or needs more data?
 
 **ML builds upon existing knowledge** to provide more accurate, context-aware classification.
@@ -49,19 +61,23 @@ The primary goal is to **classify notes** according to the comprehensive system 
 
 ### Current Analysis Capabilities
 
-The OSM Notes Analytics system already provides extensive analysis capabilities that inform note classification:
+The OSM Notes Analytics system already provides extensive analysis capabilities that inform note
+classification:
 
 #### 1. Manual Classification System
 
-**Source**: [Note_Categorization.md](Note_Categorization.md) based on [AngocA's comprehensive note type analysis](https://www.openstreetmap.org/user/AngocA/diary/398472)
+**Source**: [Note_Categorization.md](Note_Categorization.md) based on
+[AngocA's comprehensive note type analysis](https://www.openstreetmap.org/user/AngocA/diary/398472)
 
 **Knowledge Captured**:
+
 - 18+ specific note types with detailed characteristics
 - Examples and patterns for each type
 - Indicators and markers for classification
 - Best practices for handling each type
 
 **How ML Uses This**:
+
 - **Training Labels**: Manual classifications provide high-quality labeled data
 - **Feature Engineering**: Characteristics and indicators become ML features
 - **Validation**: Manual classifications validate ML predictions
@@ -69,9 +85,11 @@ The OSM Notes Analytics system already provides extensive analysis capabilities 
 
 #### 2. Metric-Based Classification Queries
 
-**Source**: [Note_Categorization.md - Classification Queries](Note_Categorization.md#classification-queries)
+**Source**:
+[Note_Categorization.md - Classification Queries](Note_Categorization.md#classification-queries)
 
 **Existing Patterns**:
+
 ```sql
 -- Notes needing more data: comment_length < 50 AND total_comments_on_note > 2
 -- Notes likely processed: Maps.me/StreetComplete apps AND comment_length > 30
@@ -80,36 +98,44 @@ The OSM Notes Analytics system already provides extensive analysis capabilities 
 ```
 
 **How ML Uses This**:
-- **Feature Engineering**: These metrics become ML features (`comment_length`, `has_url`, `total_comments_on_note`, `days_to_resolution`)
+
+- **Feature Engineering**: These metrics become ML features (`comment_length`, `has_url`,
+  `total_comments_on_note`, `days_to_resolution`)
 - **Baseline Rules**: Existing SQL patterns inform initial feature importance
 - **Validation**: Compare ML predictions with metric-based rules
 - **Hybrid Approach**: Use rules for clear cases, ML for ambiguous
 
 #### 3. Application Pattern Analysis
 
-**Source**: [Note_Categorization.md](Note_Categorization.md) - Notes from assisted apps (Maps.me, StreetComplete, OrganicMaps) are more likely actionable
+**Source**: [Note_Categorization.md](Note_Categorization.md) - Notes from assisted apps (Maps.me,
+StreetComplete, OrganicMaps) are more likely actionable
 
 **Existing Knowledge**:
+
 - Application-to-note-type correlations
 - Mobile vs desktop app patterns
 - Application version impact on note quality
 
 **How ML Uses This**:
+
 - **Categorical Features**: `dimension_application_creation` as a feature
 - **Pattern Learning**: ML learns application-specific patterns
 - **Context Features**: Application type informs classification confidence
 
 #### 4. Hashtag Pattern Analysis
 
-**Source**: `sql/dwh/ml/ml_00_analyzeHashtagsForClassification.sql` and [External_Classification_Strategies.md](External_Classification_Strategies.md)
+**Source**: `sql/dwh/ml/ml_00_analyzeHashtagsForClassification.sql` and
+[External_Classification_Strategies.md](External_Classification_Strategies.md)
 
 **Existing Analysis**:
+
 - Most common hashtags and their usage patterns
 - Hashtag-to-outcome correlations (processed vs closed)
 - Hashtag co-occurrence patterns
 - Category indicators from hashtags
 
 **How ML Uses This**:
+
 - **Hashtag Features**: Presence of specific hashtags as boolean features
 - **Hashtag Categories**: Pre-classified hashtag categories inform ML
 - **Pattern Recognition**: ML learns which hashtag combinations indicate note types
@@ -117,14 +143,17 @@ The OSM Notes Analytics system already provides extensive analysis capabilities 
 
 #### 5. Text Pattern Analysis
 
-**Source**: Manual text analysis, keyword searches, and [External_Classification_Strategies.md](External_Classification_Strategies.md)
+**Source**: Manual text analysis, keyword searches, and
+[External_Classification_Strategies.md](External_Classification_Strategies.md)
 
 **Existing Patterns**:
+
 - Keyword lists for different note types (firefighter, airplane, wheelchair, etc.)
 - Text patterns indicating note types ("new", "missing", "wrong", "casa de", etc.)
 - Semantic patterns (action phrases, question phrases, closing phrases)
 
 **How ML Uses This**:
+
 - **Keyword Features**: Presence of known keywords as features
 - **Text Embeddings**: Full text analysis goes beyond keyword matching
 - **Semantic Understanding**: ML understands context, not just keywords
@@ -132,14 +161,17 @@ The OSM Notes Analytics system already provides extensive analysis capabilities 
 
 #### 6. Historical Outcome Analysis
 
-**Source**: Analysis of resolved notes in `dwh.facts` - which notes were processed, closed, or needed more data
+**Source**: Analysis of resolved notes in `dwh.facts` - which notes were processed, closed, or
+needed more data
 
 **Existing Knowledge**:
+
 - Patterns in notes that were successfully processed
 - Characteristics of notes that were simply closed
 - Indicators of notes that needed clarification
 
 **How ML Uses This**:
+
 - **Training Data**: Historical outcomes provide labels for supervised learning
 - **Pattern Learning**: ML learns from thousands of historical examples
 - **Outcome Prediction**: ML predicts likely outcomes based on historical patterns
@@ -150,11 +182,13 @@ The OSM Notes Analytics system already provides extensive analysis capabilities 
 **Source**: User metrics in `dwh.datamartUsers` and analysis patterns
 
 **Existing Patterns**:
+
 - User response time patterns
 - User expertise levels and note type preferences
 - Collaboration patterns
 
 **How ML Uses This**:
+
 - **User Features**: User characteristics as context features
 - **Personalization**: ML can learn user-specific patterns
 - **Expertise Matching**: Match notes to appropriate users based on expertise
@@ -173,52 +207,55 @@ The OSM Notes Analytics system already provides extensive analysis capabilities 
 
 ## 🔍 Rule-Based Classification (Baseline)
 
-**Before implementing ML**, the system can classify notes using rule-based approaches that codify existing manual analysis patterns. This provides immediate value and establishes a baseline for ML improvements.
+**Before implementing ML**, the system can classify notes using rule-based approaches that codify
+existing manual analysis patterns. This provides immediate value and establishes a baseline for ML
+improvements.
 
 ### Rule-Based Classification Methods
 
 #### 1. Keyword-Based Classification
 
-Uses keyword lists (inspired by [DE:Notes Map](https://greymiche.lima-city.de/osm_notes/index.html) and [External_Classification_Strategies.md](External_Classification_Strategies.md)):
+Uses keyword lists (inspired by [DE:Notes Map](https://greymiche.lima-city.de/osm_notes/index.html)
+and [External_Classification_Strategies.md](External_Classification_Strategies.md)):
 
 ```sql
 -- Example: Classify notes using keywords
 WITH keyword_classifications AS (
-  SELECT 
+  SELECT
     f.id_note,
     f.comment_length,
     nct.body as comment_text,
     CASE
       -- Adds to map
-      WHEN LOWER(nct.body) LIKE '%new%' OR 
+      WHEN LOWER(nct.body) LIKE '%new%' OR
            LOWER(nct.body) LIKE '%missing%' OR
            LOWER(nct.body) LIKE '%not mapped%' OR
            LOWER(nct.body) LIKE '%doesn''t exist%'
       THEN 'adds_to_map'
-      
+
       -- Modifies map
-      WHEN LOWER(nct.body) LIKE '%wrong%' OR 
+      WHEN LOWER(nct.body) LIKE '%wrong%' OR
            LOWER(nct.body) LIKE '%incorrect%' OR
            LOWER(nct.body) LIKE '%should be%' OR
            LOWER(nct.body) LIKE '%change%'
       THEN 'modifies_map'
-      
+
       -- Personal data
       WHEN LOWER(nct.body) LIKE '%casa de%' OR
            LOWER(nct.body) LIKE '%tel%' OR
            LOWER(nct.body) LIKE '%phone%' OR
            LOWER(nct.body) ~ '[0-9]{8,}'  -- Phone number pattern
       THEN 'personal_data'
-      
+
       -- Empty
       WHEN f.comment_length < 10
       THEN 'empty'
-      
+
       -- More patterns...
     END as specific_type
   FROM dwh.facts f
-  JOIN public.note_comments_text nct 
-    ON f.id_note = nct.note_id 
+  JOIN public.note_comments_text nct
+    ON f.id_note = nct.note_id
     AND f.sequence_action = nct.sequence_action
   WHERE f.action_comment = 'opened'
 )
@@ -227,19 +264,20 @@ SELECT * FROM keyword_classifications;
 
 #### 2. Hashtag-Based Classification
 
-Uses hashtag patterns from `dwh.fact_hashtags` (see `sql/dwh/ml/ml_00_analyzeHashtagsForClassification.sql`):
+Uses hashtag patterns from `dwh.fact_hashtags` (see
+`sql/dwh/ml/ml_00_analyzeHashtagsForClassification.sql`):
 
 ```sql
 -- Classify notes using hashtags
-SELECT 
+SELECT
   f.id_note,
   h.hashtag_name,
   CASE
-    WHEN LOWER(h.hashtag_name) LIKE '%fire%' OR 
-         LOWER(h.hashtag_name) LIKE '%bomber%' 
+    WHEN LOWER(h.hashtag_name) LIKE '%fire%' OR
+         LOWER(h.hashtag_name) LIKE '%bomber%'
     THEN 'firefighter'
-    WHEN LOWER(h.hashtag_name) LIKE '%air%' OR 
-         LOWER(h.hashtag_name) LIKE '%plane%' 
+    WHEN LOWER(h.hashtag_name) LIKE '%air%' OR
+         LOWER(h.hashtag_name) LIKE '%plane%'
     THEN 'airplane'
     -- More hashtag patterns...
   END as specific_type
@@ -255,7 +293,7 @@ Uses existing metrics from `dwh.facts` and datamarts:
 
 ```sql
 -- Classify notes using metrics
-SELECT 
+SELECT
   f.id_note,
   f.comment_length,
   f.has_url,
@@ -264,19 +302,19 @@ SELECT
   CASE
     -- Empty notes
     WHEN f.comment_length < 10 THEN 'empty'
-    
+
     -- Notes needing more data (short + many comments)
-    WHEN f.comment_length < 50 AND f.total_comments_on_note > 2 
+    WHEN f.comment_length < 50 AND f.total_comments_on_note > 2
     THEN 'lack_of_precision'
-    
+
     -- Advertising (long + URL)
-    WHEN f.comment_length > 200 AND f.has_url = TRUE 
+    WHEN f.comment_length > 200 AND f.has_url = TRUE
     THEN 'advertising'
-    
+
     -- Obsolete (very old)
-    WHEN EXTRACT(DAY FROM CURRENT_DATE - d.date_id) > 180 
+    WHEN EXTRACT(DAY FROM CURRENT_DATE - d.date_id) > 180
     THEN 'obsolete'
-    
+
     -- More metric-based patterns...
   END as specific_type
 FROM dwh.facts f
@@ -290,7 +328,7 @@ Uses application patterns (see [Note_Categorization.md](Note_Categorization.md))
 
 ```sql
 -- Classify notes based on application
-SELECT 
+SELECT
   f.id_note,
   a.application_name,
   CASE
@@ -299,7 +337,7 @@ SELECT
     -- More application patterns...
   END as specific_type
 FROM dwh.facts f
-JOIN dwh.dimension_applications a 
+JOIN dwh.dimension_applications a
   ON f.dimension_application_creation = a.dimension_application_id
 WHERE f.action_comment = 'opened';
 ```
@@ -329,7 +367,7 @@ BEGIN
   -- Then metric-based
   -- Then application-based
   -- Combine results with confidence scores
-  
+
   -- Store in dwh.note_type_classifications
   -- Set type_method = 'rule_based', 'keyword_based', 'hashtag_based', etc.
 END;
@@ -345,13 +383,16 @@ $$;
 ### Problem
 
 When a note is opened, it's difficult to know:
-- **What type of note is it?** (Based on the comprehensive classification system in [Note_Categorization.md](Note_Categorization.md))
+
+- **What type of note is it?** (Based on the comprehensive classification system in
+  [Note_Categorization.md](Note_Categorization.md))
 - **Will it contribute to the map?** (Actionable vs non-actionable)
 - **What specific subtype is it?** (18+ detailed note types)
 - **How should it be prioritized?** (High, medium, or low priority)
 - **What action should be taken?** (Process, close, or request more data)
 
 This classification helps:
+
 - **Prioritize notes** that will contribute to map improvements
 - **Identify problematic notes** that should be closed quickly
 - **Improve response times** by focusing on actionable notes
@@ -361,13 +402,16 @@ This classification helps:
 
 ### Solution
 
-Train a **hierarchical multi-class classification model** to predict note types based on the classification system described in [Note_Categorization.md](Note_Categorization.md):
+Train a **hierarchical multi-class classification model** to predict note types based on the
+classification system described in [Note_Categorization.md](Note_Categorization.md):
 
 **Level 1: Main Category** (2 classes)
+
 - `contributes_with_change` - Notes that will lead to map changes
 - `doesnt_contribute` - Notes that should be closed without changes
 
 **Level 2: Specific Type** (18+ classes)
+
 - **Contributes with change** (7 types):
   - `adds_to_map` - New places, complementing data
   - `modifies_map` - Corrects existing data
@@ -376,7 +420,6 @@ Train a **hierarchical multi-class classification model** to predict note types 
   - `imagery_related` - References satellite imagery
   - `innocent_note` - Correctable problems in large areas
   - `large_description` - Requires extensive mapping
-  
 - **Doesn't contribute** (11 types):
   - `personal_data` - Contains personal information (privacy concern)
   - `empty` - No content
@@ -391,6 +434,7 @@ Train a **hierarchical multi-class classification model** to predict note types 
   - `abstract` - Lacks details for mapping
 
 **Level 3: Action Recommendation** (3 classes)
+
 - `process` - Should be processed (leads to map change)
 - `close` - Should be closed (doesn't contribute)
 - `needs_more_data` - Needs clarification before action
@@ -416,49 +460,63 @@ Train a **hierarchical multi-class classification model** to predict note types 
 
 ### Analysis Output Format
 
-**Both rule-based and ML-based analysis produce the same output format**, stored in `dwh.note_type_classifications` (or `dwh.note_type_predictions` for ML):
+**Both rule-based and ML-based analysis produce the same output format**, stored in
+`dwh.note_type_classifications` (or `dwh.note_type_predictions` for ML):
 
 **Level 1 - Main Category**:
+
 - `main_category`: `contributes_with_change` or `doesnt_contribute`
 - `category_confidence`: Confidence score (0.0-1.0)
 - `category_method`: `rule_based` or `ml_based` (indicates how classification was determined)
 
 **Level 2 - Specific Type**:
-- `specific_type`: One of 18+ specific note types (see [Note_Categorization.md](Note_Categorization.md))
-  - **Contributes with change**: `adds_to_map`, `modifies_map`, `deletes_from_map`, `more_than_modification`, `imagery_related`, `innocent_note`, `large_description`
-  - **Doesn't contribute**: `personal_data`, `empty`, `personal_observation`, `service_description`, `advertising`, `obsolete`, `lack_of_precision`, `device_precision_problem`, `repetition`, `unnecessary`, `abstract`
+
+- `specific_type`: One of 18+ specific note types (see
+  [Note_Categorization.md](Note_Categorization.md))
+  - **Contributes with change**: `adds_to_map`, `modifies_map`, `deletes_from_map`,
+    `more_than_modification`, `imagery_related`, `innocent_note`, `large_description`
+  - **Doesn't contribute**: `personal_data`, `empty`, `personal_observation`, `service_description`,
+    `advertising`, `obsolete`, `lack_of_precision`, `device_precision_problem`, `repetition`,
+    `unnecessary`, `abstract`
 - `type_confidence`: Confidence score (0.0-1.0)
 - `type_probabilities`: JSONB with probabilities for all types (for ML-based)
 - `type_method`: `rule_based`, `keyword_based`, `hashtag_based`, or `ml_based`
 
 **Level 3 - Action Recommendation**:
+
 - `recommended_action`: `process`, `close`, or `needs_more_data`
 - `action_confidence`: Confidence score (0.0-1.0)
 - `priority_score`: 1-10 priority score (higher = more important)
 - `action_method`: `rule_based` or `ml_based`
 
 **Supporting Information**:
+
 - `classification_factors`: JSONB with key factors that influenced classification
-  - For rule-based: `{"keywords": ["new", "restaurant"], "hashtags": ["#missing"], "metrics": {"comment_length": 45, "has_url": false}}`
-  - For ML-based: `{"top_features": ["comment_length", "has_fire_keyword"], "feature_importance": {...}}`
+  - For rule-based:
+    `{"keywords": ["new", "restaurant"], "hashtags": ["#missing"], "metrics": {"comment_length": 45, "has_url": false}}`
+  - For ML-based:
+    `{"top_features": ["comment_length", "has_fire_keyword"], "feature_importance": {...}}`
 - `similar_notes`: INTEGER[] - Array of similar note IDs (for reference and validation)
 - `estimated_resolution_time`: INTEGER - Days (if processable, based on historical patterns)
 - `classification_timestamp`: TIMESTAMP - When classification was performed
 - `classification_version`: VARCHAR - Version of classification rules or ML model
 
 **Classification Methods**:
+
 - **Rule-based**: Uses SQL queries, keyword matching, hashtag analysis, and metric thresholds
-- **Keyword-based**: Uses keyword lists (inspired by [DE:Notes Map](https://greymiche.lima-city.de/osm_notes/index.html))
+- **Keyword-based**: Uses keyword lists (inspired by
+  [DE:Notes Map](https://greymiche.lima-city.de/osm_notes/index.html))
 - **Hashtag-based**: Uses hashtag patterns from `dwh.fact_hashtags`
 - **ML-based**: Uses trained machine learning models for context-aware classification
 
 ### Example Queries
 
-**Note**: These queries work with both rule-based and ML-based classifications, as they use the same output format.
+**Note**: These queries work with both rule-based and ML-based classifications, as they use the same
+output format.
 
 ```sql
 -- Get notes that need processing (high priority)
-SELECT 
+SELECT
   f.id_note,
   f.opened_dimension_id_date,
   ntc.main_category,
@@ -477,7 +535,7 @@ WHERE f.action_comment = 'opened'
 ORDER BY ntc.priority_score DESC, f.opened_dimension_id_date DESC;
 
 -- Get notes that should be closed quickly
-SELECT 
+SELECT
   f.id_note,
   f.opened_dimension_id_date,
   ntc.specific_type,
@@ -493,7 +551,7 @@ WHERE f.action_comment = 'opened'
 ORDER BY f.opened_dimension_id_date DESC;
 
 -- Get notes needing more information
-SELECT 
+SELECT
   f.id_note,
   f.opened_dimension_id_date,
   ntc.specific_type,
@@ -507,13 +565,13 @@ WHERE f.action_comment = 'opened'
 ORDER BY f.opened_dimension_id_date DESC;
 
 -- Compare rule-based vs ML-based classifications
-SELECT 
+SELECT
   ntc.id_note,
   ntc.main_category,
   ntc.specific_type,
   ntc.type_method,
   ntc.type_confidence,
-  CASE 
+  CASE
     WHEN ntc.type_method = 'ml_based' THEN 'ML Classification'
     WHEN ntc.type_method = 'hashtag_based' THEN 'Hashtag Classification'
     WHEN ntc.type_method = 'keyword_based' THEN 'Keyword Classification'
@@ -560,18 +618,22 @@ ORDER BY ntc.type_confidence DESC;
 **✅ Full Text Available via Foreign Data Wrapper (FDW)**
 
 **Primary Source**: `public.note_comments_text` (Foreign Table pointing to Ingestion DB)
+
 - **Column**: `body` (TEXT) - Full comment text
 - **Available for**: All note actions (opened, commented, closed)
 - **Access**: Through FDW from Ingestion database
 - **Status**: ✅ Already configured in `sql/dwh/ETL_60_setupFDW.sql`
 
-**Important**: 
+**Important**:
+
 - The full text is **NOT stored** in the DWH (`dwh.facts` table)
-- The DWH only stores **derived metrics**: `comment_length`, `has_url`, `has_mention`, `hashtag_number`
+- The DWH only stores **derived metrics**: `comment_length`, `has_url`, `has_mention`,
+  `hashtag_number`
 - The full text **IS accessible** via FDW for ML training and inference
 - This gives us **full access to text content** without duplicating storage
 
 **FDW Configuration**:
+
 ```sql
 -- Already exists in ETL_60_setupFDW.sql
 CREATE FOREIGN TABLE public.note_comments_text (
@@ -583,9 +645,10 @@ OPTIONS (schema_name 'public', table_name 'note_comments_text');
 ```
 
 **Access Pattern**:
+
 ```sql
 -- Example: Access text for ML features
-SELECT 
+SELECT
   f.id_note,
   f.sequence_action,
   nct.body as comment_text,
@@ -593,8 +656,8 @@ SELECT
   f.has_url,
   f.has_mention
 FROM dwh.facts f
-JOIN public.note_comments_text nct 
-  ON f.id_note = nct.note_id 
+JOIN public.note_comments_text nct
+  ON f.id_note = nct.note_id
   AND f.sequence_action = nct.sequence_action
 WHERE f.action_comment = 'opened';
 ```
@@ -604,42 +667,40 @@ WHERE f.action_comment = 'opened';
 **✅ Full Text Available via FDW** - This enables rich feature extraction!
 
 **Basic Metrics (Already in `dwh.facts`)**:
+
 - `comment_length` - Length of comment text (INTEGER)
 - `has_url` - Contains URL (BOOLEAN)
 - `has_mention` - Mentions another user (BOOLEAN)
 - `hashtag_number` - Number of hashtags (INTEGER)
 
 **Rich Text Features (Extracted from Full Text via FDW)**:
+
 - **Word-level**:
   - Word count
   - Average word length
   - Vocabulary richness (unique words / total words)
   - Common words ratio (stop words, technical terms)
-  
 - **Sentence-level**:
   - Sentence count
   - Average sentence length
   - Sentence complexity (punctuation patterns)
-  
 - **Punctuation & Formatting**:
   - Question marks count (indicates questions)
   - Exclamation marks count (indicates urgency)
   - Capital letters ratio (indicates emphasis)
   - Numbers count (indicates specific data)
   - Special characters count
-  
 - **Semantic Patterns** (via text analysis):
   - **Action phrases**: "fixed", "resolved", "done", "completed"
   - **Question phrases**: "need more info", "please provide", "can you", "what is"
   - **Closing phrases**: "close", "invalid", "duplicate", "not a problem"
   - **Request phrases**: "please check", "could you", "would you"
-  
-- **Category Keywords** (inspired by external tools like [DE:Notes Map](https://greymiche.lima-city.de/osm_notes/index.html)):
+- **Category Keywords** (inspired by external tools like
+  [DE:Notes Map](https://greymiche.lima-city.de/osm_notes/index.html)):
   - **Domain-specific keywords**: firefighter, airplane, wheelchair, etc.
   - **Keyword presence**: Boolean for each category
   - **Keyword density**: Ratio of category keywords to total words
   - **Multi-language keywords**: Support for different languages
-  
 - **Language Features**:
   - Language detection (if multilingual)
   - Sentiment indicators (positive/negative words)
@@ -647,13 +708,16 @@ WHERE f.action_comment = 'opened';
   - Geographic references (place names, coordinates)
 
 **Advantage of Full Text Access**:
+
 - Can extract **all text features** during training and inference
 - No need to store text in DWH (saves storage)
 - Access text on-demand via FDW
 - Can update feature extraction logic without schema changes
 
 **External Classification Strategies**:
-- **Keyword-based classification**: Inspired by tools like [DE:Notes Map](https://greymiche.lima-city.de/osm_notes/index.html)
+
+- **Keyword-based classification**: Inspired by tools like
+  [DE:Notes Map](https://greymiche.lima-city.de/osm_notes/index.html)
   - Uses keyword lists for domain-specific categories
   - Can be combined with ML for hybrid approach
   - See [External_Classification_Strategies.md](External_Classification_Strategies.md) for details
@@ -661,6 +725,7 @@ WHERE f.action_comment = 'opened';
 ### Context Features (from DWH)
 
 **Geographic**:
+
 - `dimension_id_country` - Country where note was created
 - Country-level aggregates from `datamartCountries`:
   - `resolution_rate` - Historical resolution rate
@@ -668,6 +733,7 @@ WHERE f.action_comment = 'opened';
   - `notes_health_score` - Community health
 
 **User**:
+
 - `opened_dimension_id_user` - User who opened note
 - User-level aggregates from `datamartUsers`:
   - `user_response_time` - User's typical response time
@@ -676,10 +742,12 @@ WHERE f.action_comment = 'opened';
   - `id_contributor_type` - User experience level
 
 **Application**:
+
 - `dimension_application_creation` - Application used
 - `dimension_application_version` - Version used
 
 **Temporal**:
+
 - `opened_dimension_id_date` - Date note was opened
 - `opened_dimension_id_hour_of_week` - Hour of week
 - Day of week, month, season
@@ -688,7 +756,8 @@ WHERE f.action_comment = 'opened';
 
 **Hierarchical Classification Targets**: Based on note's outcome, content, and characteristics
 
-For **training data**, we need to label notes at three levels based on the comprehensive classification system in [Note_Categorization.md](Note_Categorization.md):
+For **training data**, we need to label notes at three levels based on the comprehensive
+classification system in [Note_Categorization.md](Note_Categorization.md):
 
 #### Level 1: Main Category (2 classes)
 
@@ -798,7 +867,7 @@ For **training data**, we need to label notes at three levels based on the compr
 ```sql
 -- Label training data with hierarchical classification
 WITH note_classifications AS (
-  SELECT 
+  SELECT
     f.id_note,
     f.opened_dimension_id_date,
     f.closed_dimension_id_date,
@@ -806,30 +875,30 @@ WITH note_classifications AS (
     f.has_url,
     f.has_mention,
     -- Count comments before closing
-    (SELECT COUNT(*) 
-     FROM dwh.facts f2 
-     WHERE f2.id_note = f.id_note 
+    (SELECT COUNT(*)
+     FROM dwh.facts f2
+     WHERE f2.id_note = f.id_note
        AND f2.action_comment = 'commented'
        AND f2.action_at < COALESCE(
-         (SELECT MIN(action_at) 
-          FROM dwh.facts f3 
-          WHERE f3.id_note = f.id_note 
-            AND f3.action_comment = 'closed'), 
+         (SELECT MIN(action_at)
+          FROM dwh.facts f3
+          WHERE f3.id_note = f.id_note
+            AND f3.action_comment = 'closed'),
          CURRENT_TIMESTAMP
        )
     ) as comments_before_close,
     -- Get text for analysis
-    (SELECT body 
-     FROM public.note_comments_text nct 
-     WHERE nct.note_id = f.id_note 
+    (SELECT body
+     FROM public.note_comments_text nct
+     WHERE nct.note_id = f.id_note
        AND nct.sequence_action = f.sequence_action
     ) as note_text,
     -- Check for specific patterns in comments
     EXISTS (
-      SELECT 1 
+      SELECT 1
       FROM dwh.facts f4
-      JOIN public.note_comments_text nct 
-        ON f4.id_note = nct.note_id 
+      JOIN public.note_comments_text nct
+        ON f4.id_note = nct.note_id
         AND f4.sequence_action = nct.sequence_action
       WHERE f4.id_note = f.id_note
         AND f4.action_comment = 'commented'
@@ -846,7 +915,7 @@ WITH note_classifications AS (
   JOIN dwh.dimension_days d ON f.opened_dimension_id_date = d.dimension_day_id
   WHERE f.action_comment = 'opened'
 )
-SELECT 
+SELECT
   id_note,
   -- Level 1: Main category
   CASE
@@ -875,32 +944,33 @@ FROM note_classifications;
 ```
 
 **SQL Logic for Labeling**:
+
 ```sql
 -- Label training data
 WITH note_outcomes AS (
-  SELECT 
+  SELECT
     id_note,
     opened_dimension_id_date,
     closed_dimension_id_date,
     -- Count comments before closing
-    (SELECT COUNT(*) 
-     FROM dwh.facts f2 
-     WHERE f2.id_note = f.id_note 
+    (SELECT COUNT(*)
+     FROM dwh.facts f2
+     WHERE f2.id_note = f.id_note
        AND f2.action_comment = 'commented'
        AND f2.action_at < COALESCE(
-         (SELECT MIN(action_at) 
-          FROM dwh.facts f3 
-          WHERE f3.id_note = f.id_note 
-            AND f3.action_comment = 'closed'), 
+         (SELECT MIN(action_at)
+          FROM dwh.facts f3
+          WHERE f3.id_note = f.id_note
+            AND f3.action_comment = 'closed'),
          CURRENT_TIMESTAMP
        )
     ) as comments_before_close,
     -- Check if there's a comment asking for more info
     EXISTS (
-      SELECT 1 
+      SELECT 1
       FROM dwh.facts f4
-      JOIN public.note_comments_text nct 
-        ON f4.id_note = nct.note_id 
+      JOIN public.note_comments_text nct
+        ON f4.id_note = nct.note_id
         AND f4.sequence_action = nct.sequence_action
       WHERE f4.id_note = f.id_note
         AND f4.action_comment = 'commented'
@@ -915,7 +985,7 @@ WITH note_outcomes AS (
   FROM dwh.facts f
   WHERE f.action_comment = 'opened'
 )
-SELECT 
+SELECT
   id_note,
   CASE
     WHEN has_question_comment THEN 'needs_more_data'
@@ -935,12 +1005,14 @@ FROM note_outcomes;
 **Architecture**: Three-level hierarchical classification
 
 **Level 1 Model**: Binary Classification (Main Category)
+
 - **Algorithm**: Gradient Boosting Classifier (XGBoost or LightGBM)
 - **Classes**: 2 (`contributes_with_change`, `doesnt_contribute`)
 - **Purpose**: Fast initial filtering
 - **Expected Accuracy**: 90%+
 
 **Level 2 Model**: Multi-Class Classification (Specific Type)
+
 - **Algorithm**: Gradient Boosting Classifier (XGBoost or LightGBM)
 - **Classes**: 18+ (all specific note types)
 - **Purpose**: Detailed classification for analytics
@@ -948,6 +1020,7 @@ FROM note_outcomes;
 - **Class Weights**: Use to handle imbalance (some types are rare)
 
 **Level 3 Model**: Multi-Class Classification (Action Recommendation)
+
 - **Algorithm**: Gradient Boosting Classifier (XGBoost or LightGBM)
 - **Classes**: 3 (`process`, `close`, `needs_more_data`)
 - **Purpose**: Practical recommendation for mappers
@@ -955,12 +1028,14 @@ FROM note_outcomes;
 - **Combines**: Type prediction + context features
 
 **Why Hierarchical Approach?**
+
 - **Efficiency**: Level 1 filters quickly, Level 2 provides details
 - **Accuracy**: Each level optimized for its specific task
 - **Interpretability**: Clear progression from category → type → action
 - **Flexibility**: Can update one level without retraining others
 
 **Why Gradient Boosting?**
+
 - Handles mixed feature types (text + categorical + numerical)
 - Good interpretability (feature importance)
 - Handles class imbalance well (important for rare note types)
@@ -969,14 +1044,17 @@ FROM note_outcomes;
 
 ### Feature Engineering
 
-**ML features are derived from existing analysis patterns**, enhancing them with semantic understanding and pattern recognition.
+**ML features are derived from existing analysis patterns**, enhancing them with semantic
+understanding and pattern recognition.
 
 #### 1. Text Features (from `note_comments_text.body` via FDW)
 
 **✅ Full Text Access Enables Rich Feature Extraction**
 
 **Building on Existing Text Analysis**:
-- **Existing**: Keyword matching, text pattern searches (see [Note_Categorization.md](Note_Categorization.md))
+
+- **Existing**: Keyword matching, text pattern searches (see
+  [Note_Categorization.md](Note_Categorization.md))
 - **ML Enhancement**: Semantic understanding, context-aware classification, multi-language support
 
 ```python
@@ -986,34 +1064,34 @@ text_features = {
     'has_url': BOOLEAN (regex),  # Already in dwh.facts - indicator of advertising
     'has_mention': BOOLEAN (regex),  # Already in dwh.facts - indicates collaboration
     'hashtag_count': COUNT(hashtags),  # Already in dwh.facts - used in hashtag analysis
-    
+
     # Word-level features (from full text)
     'word_count': COUNT(words),
     'avg_word_length': AVG(word_lengths),
     'unique_words': COUNT(DISTINCT words),
     'vocabulary_richness': unique_words / word_count,
     'common_words_ratio': COUNT(common_words) / word_count,
-    
+
     # Sentence-level features (from full text)
     'sentence_count': COUNT(sentences),
     'avg_sentence_length': AVG(sentence_lengths),
     'sentence_complexity': punctuation_patterns,
-    
+
     # Punctuation & formatting (from full text)
     'question_mark_count': COUNT('?'),
     'exclamation_count': COUNT('!'),
     'number_count': COUNT(digits),
     'capital_ratio': UPPERCASE / total_chars,
     'special_chars_count': COUNT(special_chars),
-    
+
     # Semantic patterns (from full text) - KEY FEATURES
     # These patterns are derived from manual analysis of note text
     'has_fixed_phrase': BOOLEAN (
-        contains "fixed", "resolved", "done", "completed", 
+        contains "fixed", "resolved", "done", "completed",
         "corrected", "updated", "solved"
     ),
     'has_question_phrase': BOOLEAN (
-        contains "?", "need more", "please provide", "can you", 
+        contains "?", "need more", "please provide", "can you",
         "what is", "where is", "how to"
         # From manual analysis: indicates notes needing more data
     ),
@@ -1026,7 +1104,7 @@ text_features = {
         contains "please check", "could you", "would you",
         "can someone", "need help"
     ),
-    
+
     # Keyword-based features (from existing keyword lists)
     # Based on manual classification and external tools (DE:Notes Map)
     'has_add_keywords': BOOLEAN (
@@ -1041,7 +1119,7 @@ text_features = {
         contains "casa de", "tel", "phone", phone_number_pattern
         # From Note_Categorization.md: personal_data indicators
     ),
-    
+
     # Language features (from full text)
     'language': DETECT_LANGUAGE(body),  # Optional: if multilingual
     'sentiment_score': CALCULATE_SENTIMENT(body),  # Optional: sentiment analysis
@@ -1049,7 +1127,8 @@ text_features = {
 }
 ```
 
-**Key Advantage**: Full text access via FDW allows us to extract **all these features** without storing text in DWH, giving us maximum precision while maintaining efficient storage.
+**Key Advantage**: Full text access via FDW allows us to extract **all these features** without
+storing text in DWH, giving us maximum precision while maintaining efficient storage.
 
 #### 2. Context Features (from DWH)
 
@@ -1065,7 +1144,7 @@ context_features = {
         # Used in manual analysis: longer resolution times indicate complex notes
     'country_notes_health_score': from datamartCountries,
         # From manual analysis: overall community health indicator
-    
+
     # User (from datamartUsers analysis)
     'user_id': opened_dimension_id_user,
     'user_experience_level': id_contributor_type,
@@ -1075,20 +1154,20 @@ context_features = {
         # From manual analysis: fast responders handle different note types
     'user_notes_opened_but_not_closed': notes_opened_but_not_closed_by_user,
         # From manual analysis: indicates user behavior patterns
-    
+
     # Application (from application pattern analysis)
     'application_id': dimension_application_creation,
         # From Note_Categorization.md: Maps.me/StreetComplete create actionable notes
     'application_version': dimension_application_version,
     'is_assisted_app': BOOLEAN (application_name IN ('Maps.me', 'StreetComplete', ...)),
         # From manual analysis: assisted apps create adds_to_map notes
-    
+
     # Temporal (from temporal pattern analysis)
     'day_of_week': EXTRACT(DOW FROM date),
     'hour_of_day': EXTRACT(HOUR FROM date),
     'month': EXTRACT(MONTH FROM date),
     'season': action_dimension_id_season,
-    
+
     # Historical patterns (from outcome analysis)
     'days_since_opened': CURRENT_DATE - opened_dimension_id_date,
         # From manual analysis: old notes may be obsolete
@@ -1110,14 +1189,14 @@ pattern_features = {
         # Based on: notes with similar characteristics that were closed
     'similar_notes_needs_data_rate': AVG(needs_data_rate for similar notes),
         # Based on: notes with similar characteristics that needed more data
-    
+
     # Similarity based on existing analysis patterns:
     # - Same country (geographic patterns)
     # - Same application (application patterns)
     # - Similar text length (content quality patterns)
     # - Similar hashtags (hashtag patterns)
     # - Similar user experience level (user behavior patterns)
-    
+
     # Historical patterns by note type (from manual classification)
     'historical_type_processed_rate': AVG(processed_rate for this note type),
         # From manual analysis: some types are more likely to be processed
@@ -1128,20 +1207,21 @@ pattern_features = {
 
 #### 4. Hashtag Features (from Hashtag Analysis)
 
-**Building on existing hashtag pattern analysis** (`sql/dwh/ml/ml_00_analyzeHashtagsForClassification.sql`):
+**Building on existing hashtag pattern analysis**
+(`sql/dwh/ml/ml_00_analyzeHashtagsForClassification.sql`):
 
 ```python
 hashtag_features = {
     # From hashtag analysis: most common hashtags
     'hashtag_count': hashtag_number,  # Already in dwh.facts
     'hashtag_names': ARRAY(hashtag_names),  # From dwh.v_note_hashtag_features
-    
+
     # From hashtag analysis: category indicators
     'has_fire_keyword': BOOLEAN (hashtag LIKE '%fire%'),
     'has_air_keyword': BOOLEAN (hashtag LIKE '%air%'),
     'has_wheelchair_keyword': BOOLEAN (hashtag LIKE '%wheel%'),
     # ... more from hashtag analysis
-    
+
     # From hashtag analysis: outcome correlations
     'hashtag_processed_rate': AVG(processed_rate for notes with this hashtag),
         # From ml_00_analyzeHashtagsForClassification.sql analysis
@@ -1152,6 +1232,7 @@ hashtag_features = {
 ### Model Training
 
 **Training Dataset**:
+
 - **Source**: Historical notes with known outcomes (from existing analysis)
 - **Labeling**: Based on manual classification system and historical outcomes
 - **Minimum**: 10,000 labeled notes (more needed for 18+ types)
@@ -1159,6 +1240,7 @@ hashtag_features = {
 - **Quality**: Leverage existing manual classifications as high-quality labels
 
 **Features** (derived from existing analysis):
+
 - **Text features**: ~25 features (keywords, semantic patterns, text metrics)
   - Based on: Manual text analysis, keyword lists, semantic patterns
 - **Context features**: ~15 features (geographic, user, application, temporal)
@@ -1170,6 +1252,7 @@ hashtag_features = {
 - **Total**: ~58 features (all informed by existing analysis)
 
 **Targets**:
+
 - **Level 1**: 2 classes (`contributes_with_change`, `doesnt_contribute`)
 - **Level 2**: 18+ classes (all specific note types)
 - **Level 3**: 3 classes (`process`, `close`, `needs_more_data`)
@@ -1177,11 +1260,13 @@ hashtag_features = {
 **Evaluation Metrics**:
 
 **Level 1 (Main Category)**:
+
 - **Accuracy**: 90%+ (baseline: 50% for random)
 - **Precision/Recall**: Per category
 - **F1-Score**: Balanced performance
 
 **Level 2 (Specific Type)**:
+
 - **Accuracy**: 75-85% (baseline: ~5% for random with 18+ classes)
 - **Precision/Recall per type**: Performance for each note type
 - **F1-Score (macro)**: Balanced across all types
@@ -1189,12 +1274,14 @@ hashtag_features = {
 - **Confusion Matrix**: See which types are confused
 
 **Level 3 (Action Recommendation)**:
+
 - **Accuracy**: 80-85% (baseline: 33% for random)
 - **Precision for `process`**: 85%+ (high priority)
 - **Precision for `needs_more_data`**: 75%+ (important for intervention)
 - **Recall for `process`**: 80%+ (don't miss actionable notes)
 
 **Expected Performance**:
+
 - **Overall**: Hierarchical approach improves accuracy at each level
 - **Rare Types**: May need more training data or class weights
 - **Common Types**: High accuracy expected (adds_to_map, modifies_map, empty, etc.)
@@ -1206,6 +1293,7 @@ hashtag_features = {
 ### Option: Python ML Service + PostgreSQL (Recommended)
 
 **Architecture**:
+
 ```
 ┌─────────────────┐
 │ PostgreSQL DWH   │
@@ -1294,49 +1382,50 @@ docs/
 
 ```sql
 CREATE VIEW dwh.v_note_text_features_for_ml AS
-SELECT 
+SELECT
   f.id_note,
   f.sequence_action,
   f.opened_dimension_id_date,
   f.opened_dimension_id_user,
   f.dimension_id_country,
   f.dimension_application_creation,
-  
+
   -- Text metrics (already in facts - fast access)
   f.comment_length,
   f.has_url,
   f.has_mention,
   f.hashtag_number,
-  
+
   -- ✅ Full text (via FDW - accessed on-demand)
   nct.body as comment_text,
-  
+
   -- Context features (from datamarts)
   dc.resolution_rate as country_resolution_rate,
   dc.avg_days_to_resolution as country_avg_resolution_days,
   du.user_response_time,
   du.id_contributor_type as user_experience_level,
   du.history_whole_open as user_total_notes,
-  
+
   -- Target variable (for training)
   -- (calculated based on note outcome)
   NULL as action_label  -- Will be calculated in training script
-  
+
 FROM dwh.facts f
 -- ✅ JOIN with FDW table to get full text
-JOIN public.note_comments_text nct 
-  ON f.id_note = nct.note_id 
+JOIN public.note_comments_text nct
+  ON f.id_note = nct.note_id
   AND f.sequence_action = nct.sequence_action
-LEFT JOIN dwh.datamartCountries dc 
+LEFT JOIN dwh.datamartCountries dc
   ON f.dimension_id_country = dc.dimension_country_id
-LEFT JOIN dwh.datamartUsers du 
+LEFT JOIN dwh.datamartUsers du
   ON f.opened_dimension_id_user = du.dimension_user_id
 WHERE f.action_comment = 'opened'
   AND nct.body IS NOT NULL  -- Only notes with text
   AND LENGTH(TRIM(nct.body)) > 0;  -- Non-empty text
 ```
 
-**Performance Note**: 
+**Performance Note**:
+
 - FDW access is efficient for batch operations (training)
 - For real-time predictions, consider caching frequently accessed text
 - The view joins DWH tables (fast) with FDW table (slightly slower but necessary for full text)
@@ -1351,36 +1440,36 @@ WHERE f.action_comment = 'opened'
 CREATE TABLE dwh.note_type_classifications (
   classification_id BIGSERIAL PRIMARY KEY,
   id_note INTEGER NOT NULL,
-  
+
   -- Level 1: Main Category
   main_category VARCHAR(30) NOT NULL, -- 'contributes_with_change', 'doesnt_contribute'
   category_confidence DECIMAL(5,4) NOT NULL,
   category_method VARCHAR(20) NOT NULL, -- 'rule_based', 'ml_based'
-  
+
   -- Level 2: Specific Type
   specific_type VARCHAR(30) NOT NULL, -- One of 18+ specific types
   type_confidence DECIMAL(5,4) NOT NULL,
   type_probabilities JSONB, -- Probabilities for all types (ML only)
   type_method VARCHAR(20) NOT NULL, -- 'rule_based', 'keyword_based', 'hashtag_based', 'ml_based'
-  
+
   -- Level 3: Action Recommendation
   recommended_action VARCHAR(20) NOT NULL, -- 'process', 'close', 'needs_more_data'
   action_confidence DECIMAL(5,4) NOT NULL,
   priority_score INTEGER NOT NULL, -- 1-10 priority score
   action_method VARCHAR(20) NOT NULL, -- 'rule_based', 'ml_based'
-  
+
   -- Supporting Information
   classification_factors JSONB, -- Key factors that influenced classification
     -- Rule-based: {"keywords": [...], "hashtags": [...], "metrics": {...}}
     -- ML-based: {"top_features": [...], "feature_importance": {...}}
   similar_notes INTEGER[], -- Array of similar note IDs (for reference)
   estimated_resolution_time INTEGER, -- Days (if processable)
-  
+
   -- Metadata
   classification_version VARCHAR(50), -- Version of rules or ML model
   classification_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  
+
   UNIQUE(id_note, classification_version)
 );
 
@@ -1391,25 +1480,28 @@ CREATE INDEX idx_note_type_classifications_type ON dwh.note_type_classifications
 CREATE INDEX idx_note_type_classifications_action ON dwh.note_type_classifications(recommended_action);
 CREATE INDEX idx_note_type_classifications_priority ON dwh.note_type_classifications(priority_score DESC);
 CREATE INDEX idx_note_type_classifications_method ON dwh.note_type_classifications(type_method);
-CREATE INDEX idx_note_type_classifications_high_priority ON dwh.note_type_classifications(main_category, recommended_action, priority_score DESC) 
+CREATE INDEX idx_note_type_classifications_high_priority ON dwh.note_type_classifications(main_category, recommended_action, priority_score DESC)
   WHERE main_category = 'contributes_with_change' AND recommended_action = 'process';
 ```
 
 **Note**: This table stores classifications from both rule-based and ML-based approaches, enabling:
+
 - Comparison between methods
 - Gradual migration from rules to ML
 - Fallback to rules when ML confidence is low
 - Hybrid approaches (rules for clear cases, ML for ambiguous)
 
--- Indexes for common queries
-CREATE INDEX idx_note_type_predictions_note ON dwh.note_type_predictions(id_note);
-CREATE INDEX idx_note_type_predictions_category ON dwh.note_type_predictions(predicted_category);
-CREATE INDEX idx_note_type_predictions_type ON dwh.note_type_predictions(predicted_type);
-CREATE INDEX idx_note_type_predictions_action ON dwh.note_type_predictions(recommended_action);
-CREATE INDEX idx_note_type_predictions_priority ON dwh.note_type_predictions(priority_score DESC, opened_dimension_id_date DESC);
-CREATE INDEX idx_note_type_predictions_high_priority ON dwh.note_type_predictions(predicted_category, recommended_action, priority_score DESC) 
-  WHERE predicted_category = 'contributes_with_change' AND recommended_action = 'process';
-```
+-- Indexes for common queries CREATE INDEX idx_note_type_predictions_note ON
+dwh.note_type_predictions(id_note); CREATE INDEX idx_note_type_predictions_category ON
+dwh.note_type_predictions(predicted_category); CREATE INDEX idx_note_type_predictions_type ON
+dwh.note_type_predictions(predicted_type); CREATE INDEX idx_note_type_predictions_action ON
+dwh.note_type_predictions(recommended_action); CREATE INDEX idx_note_type_predictions_priority ON
+dwh.note_type_predictions(priority_score DESC, opened_dimension_id_date DESC); CREATE INDEX
+idx_note_type_predictions_high_priority ON dwh.note_type_predictions(predicted_category,
+recommended_action, priority_score DESC) WHERE predicted_category = 'contributes_with_change' AND
+recommended_action = 'process';
+
+````
 
 ### 3. Classification Procedures
 
@@ -1431,7 +1523,7 @@ BEGIN
   -- Set method fields to 'rule_based', 'keyword_based', 'hashtag_based'
 END;
 $$;
-```
+````
 
 **Procedure 2**: `dwh.classify_note_ml_based()` - ML-based classification
 
@@ -1471,7 +1563,8 @@ BEGIN
 END;
 $$;
 ```
-```
+
+````
 
 ### 4. ETL Integration
 
@@ -1480,31 +1573,32 @@ $$;
 ```bash
 # Option 1: Rule-based classification (no ML required)
 psql -c "CALL dwh.classify_note_rule_based(
-  ARRAY(SELECT id_note 
-        FROM dwh.facts 
-        WHERE action_comment='opened' 
+  ARRAY(SELECT id_note
+        FROM dwh.facts
+        WHERE action_comment='opened'
           AND id_note NOT IN (SELECT id_note FROM dwh.note_type_classifications))
 );"
 
 # Option 2: ML-based classification (requires trained model)
 bin/ml/predict_note_action.py \
   --notes $(psql -t -c "
-    SELECT id_note 
-    FROM dwh.facts 
-    WHERE action_comment='opened' 
+    SELECT id_note
+    FROM dwh.facts
+    WHERE action_comment='opened'
       AND id_note NOT IN (SELECT id_note FROM dwh.note_type_classifications WHERE type_method = 'ml_based')
   ")
 
 # Option 3: Hybrid approach (recommended)
 psql -c "CALL dwh.classify_note_hybrid(
-  ARRAY(SELECT id_note 
-        FROM dwh.facts 
-        WHERE action_comment='opened' 
+  ARRAY(SELECT id_note
+        FROM dwh.facts
+        WHERE action_comment='opened'
           AND id_note NOT IN (SELECT id_note FROM dwh.note_type_classifications))
 );"
-```
+````
 
 **ETL Strategy**:
+
 1. **Start with rule-based**: Provides immediate value without ML
 2. **Add ML gradually**: Train models and compare with rule-based results
 3. **Use hybrid approach**: Rules for clear cases, ML for ambiguous
@@ -1517,6 +1611,7 @@ psql -c "CALL dwh.classify_note_hybrid(
 ### Minimum Data Requirements
 
 **For Action Classification**:
+
 - At least 5,000 resolved notes (with known outcome)
 - Balanced classes:
   - ~1,500 `processed` notes
@@ -1528,7 +1623,7 @@ psql -c "CALL dwh.classify_note_hybrid(
 
 ### Data Quality Requirements
 
-1. **Text Completeness**: 
+1. **Text Completeness**:
    - All notes must have text in `note_comments_text.body`
    - Minimum text length: 10 characters
 
@@ -1702,6 +1797,7 @@ nltk>=3.8.0  # For text processing (optional)
 - Indexes for fast prediction lookups
 
 **FDW Configuration Status**: ✅ Already set up
+
 - No additional configuration needed
 - Can access full text immediately via `public.note_comments_text.body`
 
@@ -1719,6 +1815,7 @@ nltk>=3.8.0  # For text processing (optional)
 ### Classification Performance
 
 **Rule-Based Classification** (Phase 0):
+
 - **Level 1 (Main Category)**: 75-85% accuracy
   - High precision for clear cases (keyword/hashtag matches)
   - Lower recall for ambiguous cases
@@ -1730,6 +1827,7 @@ nltk>=3.8.0  # For text processing (optional)
 - **Advantage**: Immediate value, no training required, interpretable
 
 **ML-Based Classification** (Phase 3+):
+
 - **Level 1 (Main Category)**: 90%+ accuracy (improvement over rules)
 - **Level 2 (Specific Type)**: 75-85% accuracy (improvement over rules)
   - Common Types: 85%+ (adds_to_map, modifies_map, empty, etc.)
@@ -1741,7 +1839,9 @@ nltk>=3.8.0  # For text processing (optional)
 - **Advantage**: Better context understanding, handles ambiguous cases
 
 **Hybrid Approach** (Recommended):
-- **Combines strengths**: Rules for clear cases (fast, high precision), ML for ambiguous (better recall)
+
+- **Combines strengths**: Rules for clear cases (fast, high precision), ML for ambiguous (better
+  recall)
 - **Overall Accuracy**: 85-90% (best of both worlds)
 - **Performance**: Fast (rules) with fallback to ML for difficult cases
 
@@ -1817,12 +1917,13 @@ nltk>=3.8.0  # For text processing (optional)
 
 ## ⚠️ Limitations and Considerations
 
-1. **Text Availability**: ✅ **FDW already configured** - Full text accessible via `public.note_comments_text`
+1. **Text Availability**: ✅ **FDW already configured** - Full text accessible via
+   `public.note_comments_text`
    - No additional setup needed
    - Text accessed on-demand (not stored in DWH)
    - Slight performance overhead for FDW queries (acceptable for batch operations)
 
-2. **FDW Performance**: 
+2. **FDW Performance**:
    - FDW queries are slightly slower than local tables
    - Acceptable for training (batch operation)
    - For real-time predictions, consider caching or pre-extracting features
@@ -1840,7 +1941,7 @@ nltk>=3.8.0  # For text processing (optional)
 6. **Interpretability**: Ensure predictions are explainable
    - Feature importance analysis helps explain predictions
 
-7. **Storage Efficiency**: 
+7. **Storage Efficiency**:
    - ✅ **Advantage**: Full text not stored in DWH (saves storage)
    - Text accessed on-demand via FDW
    - Only derived metrics stored in `dwh.facts`
@@ -1863,7 +1964,8 @@ nltk>=3.8.0  # For text processing (optional)
 2. **Storage Efficiency**: DWH only stores derived metrics, not full text
 3. **Flexibility**: Can update feature extraction logic without schema changes
 4. **Already Configured**: FDW is already set up, no additional setup needed
-5. **Maximum Precision**: Access to full text enables rich feature extraction for better model accuracy
+5. **Maximum Precision**: Access to full text enables rich feature extraction for better model
+   accuracy
 
 ---
 
@@ -1890,7 +1992,11 @@ This ML implementation is based on the comprehensive note classification system 
 
 ### Related Articles
 
-- **[Manipulación de notas](https://www.openstreetmap.org/user/AngocA/diary/397284)**: Note creation and resolution workflows
-- **[Análisis de notas](https://www.openstreetmap.org/user/AngocA/diary/397548)**: Analysis techniques
-- **[Técnicas de creación y resolución de notas](https://www.openstreetmap.org/user/AngocA/diary/398514)**: Best practices
-- **[Proyecto de resolución de notas](https://wiki.openstreetmap.org/wiki/ES:LatAm/Proyectos/Resoluci%C3%B3n_de_notas/Preparaci%C3%B3n_premios)**: Campaign documentation
+- **[Manipulación de notas](https://www.openstreetmap.org/user/AngocA/diary/397284)**: Note creation
+  and resolution workflows
+- **[Análisis de notas](https://www.openstreetmap.org/user/AngocA/diary/397548)**: Analysis
+  techniques
+- **[Técnicas de creación y resolución de notas](https://www.openstreetmap.org/user/AngocA/diary/398514)**:
+  Best practices
+- **[Proyecto de resolución de notas](https://wiki.openstreetmap.org/wiki/ES:LatAm/Proyectos/Resoluci%C3%B3n_de_notas/Preparaci%C3%B3n_premios)**:
+  Campaign documentation

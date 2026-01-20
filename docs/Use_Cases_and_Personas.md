@@ -1,6 +1,8 @@
 # User Personas and Use Cases
 
-This document describes the typical users of the OSM Notes Analytics system, their goals, motivations, and specific use cases. Understanding these personas helps guide feature development, dashboard design, and documentation.
+This document describes the typical users of the OSM Notes Analytics system, their goals,
+motivations, and specific use cases. Understanding these personas helps guide feature development,
+dashboard design, and documentation.
 
 ## Table of Contents
 
@@ -21,7 +23,8 @@ This document describes the typical users of the OSM Notes Analytics system, the
 
 ## Overview
 
-The OSM Notes Analytics system serves multiple user types, each with different goals and technical expertise levels. Understanding these personas helps:
+The OSM Notes Analytics system serves multiple user types, each with different goals and technical
+expertise levels. Understanding these personas helps:
 
 - **Design better dashboards**: Tailor visualizations to user needs
 - **Prioritize features**: Focus on high-value use cases
@@ -48,7 +51,9 @@ The OSM Notes Analytics system serves multiple user types, each with different g
 
 #### Background
 
-Maria is an active OSM contributor who regularly opens and resolves notes in her city. She uses the OSM Notes Analytics system to:
+Maria is an active OSM contributor who regularly opens and resolves notes in her city. She uses the
+OSM Notes Analytics system to:
+
 - Track her personal contributions
 - See her activity patterns over time
 - Compare her activity with other contributors
@@ -82,6 +87,7 @@ Maria is an active OSM contributor who regularly opens and resolves notes in her
 #### Typical Queries
 
 Maria doesn't write queries directly. Instead, she:
+
 - Views her user profile dashboard
 - Checks her activity heatmap
 - Reviews her contribution statistics
@@ -106,7 +112,9 @@ Maria doesn't write queries directly. Instead, she:
 
 #### Background
 
-Carlos is a community leader for the Colombian OSM community. He organizes mapping events, coordinates note resolution efforts, and monitors community health. He uses analytics to:
+Carlos is a community leader for the Colombian OSM community. He organizes mapping events,
+coordinates note resolution efforts, and monitors community health. He uses analytics to:
+
 - Monitor community performance
 - Identify areas needing attention
 - Track campaign effectiveness
@@ -143,7 +151,7 @@ Carlos is a community leader for the Colombian OSM community. He organizes mappi
 
 ```sql
 -- Monitor community health
-SELECT 
+SELECT
   country_name_en,
   notes_health_score,
   new_vs_resolved_ratio,
@@ -153,7 +161,7 @@ FROM dwh.datamartcountries
 WHERE dimension_country_id = 42;  -- Colombia
 
 -- Track recent activity
-SELECT 
+SELECT
   notes_created_last_30_days,
   notes_resolved_last_30_days,
   currently_open_count
@@ -161,7 +169,7 @@ FROM dwh.datamartcountries
 WHERE dimension_country_id = 42;
 
 -- Top contributors
-SELECT 
+SELECT
   username,
   history_whole_closed,
   notes_resolved_last_30_days
@@ -190,7 +198,9 @@ LIMIT 10;
 
 #### Background
 
-Sarah is a data analyst who studies OSM notes patterns to understand community behavior, identify trends, and provide insights to the OSM Foundation. She uses analytics to:
+Sarah is a data analyst who studies OSM notes patterns to understand community behavior, identify
+trends, and provide insights to the OSM Foundation. She uses analytics to:
+
 - Analyze resolution patterns
 - Study application usage trends
 - Identify problem areas
@@ -228,8 +238,8 @@ Sarah is a data analyst who studies OSM notes patterns to understand community b
 
 ```sql
 -- Resolution time distribution
-SELECT 
-  CASE 
+SELECT
+  CASE
     WHEN days_to_resolution < 1 THEN 'Same day'
     WHEN days_to_resolution < 7 THEN 'Within week'
     WHEN days_to_resolution < 30 THEN 'Within month'
@@ -243,7 +253,7 @@ WHERE action_comment = 'closed'
   AND days_to_resolution IS NOT NULL
   AND action_at >= CURRENT_DATE - INTERVAL '1 year'
 GROUP BY resolution_bucket
-ORDER BY 
+ORDER BY
   CASE resolution_bucket
     WHEN 'Same day' THEN 1
     WHEN 'Within week' THEN 2
@@ -253,7 +263,7 @@ ORDER BY
   END;
 
 -- Application usage trends
-SELECT 
+SELECT
   da.application_name,
   COUNT(*) as usage_count,
   COUNT(DISTINCT f.dimension_id_country) as countries_count
@@ -265,7 +275,7 @@ GROUP BY da.application_name
 ORDER BY usage_count DESC;
 
 -- Problem notes (multiple reopens)
-SELECT 
+SELECT
   f.id_note,
   COUNT(*) FILTER (WHERE f.action_comment = 'reopened') as reopen_count,
   MAX(f.total_comments_on_note) as max_comments
@@ -296,7 +306,9 @@ LIMIT 20;
 
 #### Background
 
-Ahmed organizes mapping campaigns using hashtags (e.g., `#MapCairo2025`, `#MissingMapsEgypt`). He uses analytics to:
+Ahmed organizes mapping campaigns using hashtags (e.g., `#MapCairo2025`, `#MissingMapsEgypt`). He
+uses analytics to:
+
 - Track campaign participation
 - Measure campaign success
 - Identify active contributors
@@ -333,7 +345,7 @@ Ahmed organizes mapping campaigns using hashtags (e.g., `#MapCairo2025`, `#Missi
 
 ```sql
 -- Campaign participation (hashtag usage)
-SELECT 
+SELECT
   dc.country_name_en,
   COUNT(DISTINCT f.id_note) as campaign_notes,
   COUNT(DISTINCT f.dimension_id_user) as participants
@@ -347,7 +359,7 @@ WHERE dh.hashtag = '#MapCairo2025'
 GROUP BY dc.country_name_en;
 
 -- Campaign contributors
-SELECT 
+SELECT
   du.username,
   COUNT(DISTINCT f.id_note) as notes_opened,
   COUNT(DISTINCT f2.id_note) as notes_closed
@@ -355,8 +367,8 @@ FROM dwh.facts f
 JOIN dwh.dimension_users du ON f.dimension_id_user = du.dimension_user_id
 JOIN dwh.fact_hashtags fh ON f.fact_id = fh.fact_id
 JOIN dwh.dimension_hashtags dh ON fh.dimension_hashtag_id = dh.dimension_hashtag_id
-LEFT JOIN dwh.facts f2 ON f2.id_note = f.id_note 
-  AND f2.action_comment = 'closed' 
+LEFT JOIN dwh.facts f2 ON f2.id_note = f.id_note
+  AND f2.action_comment = 'closed'
   AND f2.dimension_id_user = f.dimension_id_user
 WHERE dh.hashtag = '#MapCairo2025'
   AND f.action_comment = 'opened'
@@ -366,7 +378,7 @@ ORDER BY notes_opened DESC
 LIMIT 20;
 
 -- Campaign resolution rate
-SELECT 
+SELECT
   COUNT(DISTINCT f1.id_note) FILTER (WHERE f1.action_comment = 'opened') as opened,
   COUNT(DISTINCT f2.id_note) FILTER (WHERE f2.action_comment = 'closed') as closed,
   ROUND(
@@ -401,7 +413,9 @@ WHERE dh.hashtag = '#MapCairo2025'
 
 #### Background
 
-Dr. James is an academic researcher studying open data communities and collaborative mapping. He uses analytics to:
+Dr. James is an academic researcher studying open data communities and collaborative mapping. He
+uses analytics to:
+
 - Study community behavior patterns
 - Analyze temporal patterns (time of day, seasonality)
 - Research application adoption
@@ -439,7 +453,7 @@ Dr. James is an academic researcher studying open data communities and collabora
 
 ```sql
 -- Temporal pattern analysis
-SELECT 
+SELECT
   dd.year,
   dd.month,
   dd.day_name,
@@ -456,7 +470,7 @@ GROUP BY dd.year, dd.month, dd.day_name, dtow.hour_of_day
 ORDER BY dd.year, dd.month, dd.day_name, dtow.hour_of_day;
 
 -- User behavior patterns
-SELECT 
+SELECT
   du.username,
   COUNT(*) FILTER (WHERE f.action_comment = 'opened') as notes_opened,
   COUNT(*) FILTER (WHERE f.action_comment = 'closed') as notes_closed,
@@ -470,7 +484,7 @@ GROUP BY du.username
 HAVING COUNT(*) FILTER (WHERE f.action_comment = 'opened') >= 10;
 
 -- Application adoption trends
-SELECT 
+SELECT
   dd.year,
   dd.quarter,
   da.application_name,
@@ -505,6 +519,7 @@ ORDER BY dd.year, dd.quarter, usage_count DESC;
 #### Background
 
 Alex is responsible for maintaining the OSM Notes Analytics infrastructure. They use analytics to:
+
 - Monitor system performance
 - Ensure data quality
 - Troubleshoot issues
@@ -542,14 +557,14 @@ Alex is responsible for maintaining the OSM Notes Analytics infrastructure. They
 
 ```sql
 -- Monitor datamart freshness
-SELECT 
+SELECT
   'datamartCountries' as datamart,
   COUNT(*) as total_records,
   COUNT(*) FILTER (WHERE json_exported = FALSE) as pending_export,
   MAX(last_updated_at) as last_update
 FROM dwh.datamartcountries
 UNION ALL
-SELECT 
+SELECT
   'datamartUsers' as datamart,
   COUNT(*) as total_records,
   COUNT(*) FILTER (WHERE json_exported = FALSE) as pending_export,
@@ -557,10 +572,10 @@ SELECT
 FROM dwh.datamartusers;
 
 -- Check data quality (missing metrics)
-SELECT 
+SELECT
   dimension_country_id,
   country_name_en,
-  CASE 
+  CASE
     WHEN avg_days_to_resolution IS NULL THEN 'Missing resolution metric'
     WHEN resolution_rate IS NULL THEN 'Missing resolution rate'
     WHEN notes_health_score IS NULL THEN 'Missing health score'
@@ -573,7 +588,7 @@ WHERE avg_days_to_resolution IS NULL
 LIMIT 20;
 
 -- Identify slow queries (using pg_stat_statements)
-SELECT 
+SELECT
   query,
   calls,
   total_exec_time,
@@ -599,9 +614,11 @@ LIMIT 10;
 ### Individual Contributor Use Cases
 
 #### UC-1.1: View Personal Profile
+
 **Actor**: Individual Contributor  
 **Goal**: See personal contribution statistics  
 **Steps**:
+
 1. Navigate to user profile page
 2. Enter OSM username or user ID
 3. View profile with activity heatmap, statistics, and trends
@@ -609,9 +626,11 @@ LIMIT 10;
 **Data Source**: `dwh.datamartUsers` or JSON export
 
 #### UC-1.2: Compare Activity with Others
+
 **Actor**: Individual Contributor  
 **Goal**: See how their activity compares to top contributors  
 **Steps**:
+
 1. View personal profile
 2. Navigate to "Compare" section
 3. See ranking and comparison charts
@@ -619,9 +638,11 @@ LIMIT 10;
 **Data Source**: `dwh.datamartUsers` (aggregated)
 
 #### UC-1.3: Share Profile
+
 **Actor**: Individual Contributor  
 **Goal**: Share profile link with others  
 **Steps**:
+
 1. View personal profile
 2. Copy profile URL
 3. Share on social media or forums
@@ -633,9 +654,11 @@ LIMIT 10;
 ### Community Leader Use Cases
 
 #### UC-2.1: Monitor Community Health
+
 **Actor**: Community Leader  
 **Goal**: Assess overall community health  
 **Steps**:
+
 1. Navigate to country profile
 2. Review health score, resolution rate, backlog
 3. Identify areas needing attention
@@ -643,9 +666,11 @@ LIMIT 10;
 **Data Source**: `dwh.datamartCountries`
 
 #### UC-2.2: Track Campaign Progress
+
 **Actor**: Community Leader  
 **Goal**: Monitor hashtag campaign effectiveness  
 **Steps**:
+
 1. Filter notes by hashtag
 2. View campaign metrics (participation, resolution rate)
 3. Export campaign report
@@ -653,9 +678,11 @@ LIMIT 10;
 **Data Source**: `dwh.facts` + `dwh.fact_hashtags`
 
 #### UC-2.3: Identify Top Contributors
+
 **Actor**: Community Leader  
 **Goal**: Recognize active contributors  
 **Steps**:
+
 1. Query top users by country
 2. Review contributor statistics
 3. Generate recognition list
@@ -667,9 +694,11 @@ LIMIT 10;
 ### Data Analyst Use Cases
 
 #### UC-3.1: Analyze Resolution Patterns
+
 **Actor**: Data Analyst  
 **Goal**: Understand resolution time distributions  
 **Steps**:
+
 1. Query facts table for closed notes
 2. Calculate resolution time buckets
 3. Generate distribution histogram
@@ -678,9 +707,11 @@ LIMIT 10;
 **Data Source**: `dwh.facts`
 
 #### UC-3.2: Compare Countries
+
 **Actor**: Data Analyst  
 **Goal**: Compare metrics across countries  
 **Steps**:
+
 1. Query datamartCountries for multiple countries
 2. Aggregate metrics
 3. Create comparison visualizations
@@ -689,9 +720,11 @@ LIMIT 10;
 **Data Source**: `dwh.datamartCountries`
 
 #### UC-3.3: Export Data for Analysis
+
 **Actor**: Data Analyst  
 **Goal**: Export data for external tools  
 **Steps**:
+
 1. Write SQL query
 2. Export results to CSV/JSON
 3. Import into Python/R/Excel
@@ -704,9 +737,11 @@ LIMIT 10;
 ### Campaign Organizer Use Cases
 
 #### UC-4.1: Track Campaign Participation
+
 **Actor**: Campaign Organizer  
 **Goal**: Measure campaign engagement  
 **Steps**:
+
 1. Filter notes by campaign hashtag
 2. Count participants and notes
 3. Track participation over time
@@ -714,9 +749,11 @@ LIMIT 10;
 **Data Source**: `dwh.facts` + `dwh.fact_hashtags`
 
 #### UC-4.2: Measure Campaign Impact
+
 **Actor**: Campaign Organizer  
 **Goal**: Assess campaign success  
 **Steps**:
+
 1. Query campaign notes (opened/resolved)
 2. Calculate resolution rate
 3. Compare with baseline metrics
@@ -729,9 +766,11 @@ LIMIT 10;
 ### Researcher Use Cases
 
 #### UC-5.1: Study Temporal Patterns
+
 **Actor**: Researcher  
 **Goal**: Analyze activity patterns over time  
 **Steps**:
+
 1. Query facts with time dimensions
 2. Aggregate by hour, day, season
 3. Perform statistical analysis
@@ -740,9 +779,11 @@ LIMIT 10;
 **Data Source**: `dwh.facts` + time dimensions
 
 #### UC-5.2: Research Application Adoption
+
 **Actor**: Researcher  
 **Goal**: Study application usage trends  
 **Steps**:
+
 1. Query facts with application dimensions
 2. Track usage over time
 3. Analyze adoption patterns
@@ -755,9 +796,11 @@ LIMIT 10;
 ### System Administrator Use Cases
 
 #### UC-6.1: Monitor ETL Performance
+
 **Actor**: System Administrator  
 **Goal**: Ensure ETL runs successfully  
 **Steps**:
+
 1. Check ETL logs
 2. Monitor datamart update times
 3. Verify data completeness
@@ -766,9 +809,11 @@ LIMIT 10;
 **Data Source**: System logs, database metadata
 
 #### UC-6.2: Optimize Query Performance
+
 **Actor**: System Administrator  
 **Goal**: Improve slow queries  
 **Steps**:
+
 1. Identify slow queries
 2. Analyze query plans
 3. Add indexes if needed
@@ -821,6 +866,7 @@ LIMIT 10;
 ### Individual Contributor
 
 **Pattern**: Single-row lookup by user ID
+
 ```sql
 SELECT * FROM dwh.datamartusers WHERE dimension_user_id = ?;
 ```
@@ -831,6 +877,7 @@ SELECT * FROM dwh.datamartusers WHERE dimension_user_id = ?;
 ### Community Leader
 
 **Pattern**: Single-row lookup by country ID + aggregations
+
 ```sql
 SELECT * FROM dwh.datamartcountries WHERE dimension_country_id = ?;
 SELECT * FROM dwh.datamartusers WHERE dimension_country_id = ? ORDER BY ...;
@@ -842,6 +889,7 @@ SELECT * FROM dwh.datamartusers WHERE dimension_country_id = ? ORDER BY ...;
 ### Data Analyst
 
 **Pattern**: Complex aggregations, joins, filters
+
 ```sql
 SELECT ... FROM dwh.facts f
 JOIN dwh.dimension_... d ON ...
@@ -857,6 +905,7 @@ ORDER BY ...;
 ### Campaign Organizer
 
 **Pattern**: Filtered queries with hashtag joins
+
 ```sql
 SELECT ... FROM dwh.facts f
 JOIN dwh.fact_hashtags fh ON ...
@@ -870,6 +919,7 @@ WHERE dh.hashtag = ? AND ...;
 ### Researcher
 
 **Pattern**: Large-scale aggregations, time-series analysis
+
 ```sql
 SELECT ... FROM dwh.facts f
 JOIN dwh.dimension_days dd ON ...
@@ -883,6 +933,7 @@ GROUP BY dd.year, dd.month, ...;
 ### System Administrator
 
 **Pattern**: Metadata queries, performance monitoring
+
 ```sql
 SELECT ... FROM pg_stat_... WHERE ...;
 SELECT ... FROM information_schema... WHERE ...;
@@ -898,6 +949,7 @@ SELECT ... FROM information_schema... WHERE ...;
 ### For Individual Contributors
 
 **Recommended Dashboards**:
+
 1. **User Profile Dashboard** (Primary)
    - Activity heatmap
    - Contribution statistics
@@ -905,6 +957,7 @@ SELECT ... FROM information_schema... WHERE ...;
    - Geographic distribution
 
 **Design Principles**:
+
 - Simple, visual, mobile-friendly
 - Focus on personal metrics
 - Easy sharing
@@ -912,11 +965,13 @@ SELECT ... FROM information_schema... WHERE ...;
 ### For Community Leaders
 
 **Recommended Dashboards**:
+
 1. **Country Profile Dashboard** (Primary)
 2. **Community Health Dashboard** (Secondary)
 3. **Campaign Tracking Dashboard** (As needed)
 
 **Design Principles**:
+
 - High-level metrics visible
 - Drill-down capabilities
 - Export functionality
@@ -925,11 +980,13 @@ SELECT ... FROM information_schema... WHERE ...;
 ### For Data Analysts
 
 **Recommended Dashboards**:
+
 1. **Custom Analysis Dashboard** (Primary)
 2. **Resolution Time Dashboard** (Secondary)
 3. **Application Usage Dashboard** (As needed)
 
 **Design Principles**:
+
 - Flexible, customizable
 - Raw data access
 - Export capabilities
@@ -938,12 +995,14 @@ SELECT ... FROM information_schema... WHERE ...;
 ### For Campaign Organizers
 
 **Recommended Dashboards**:
+
 1. **Campaign Dashboard** (Primary)
    - Hashtag filtering
    - Participation metrics
    - Resolution tracking
 
 **Design Principles**:
+
 - Campaign-focused
 - Real-time updates
 - Shareable reports
@@ -951,11 +1010,13 @@ SELECT ... FROM information_schema... WHERE ...;
 ### For Researchers
 
 **Recommended Dashboards**:
+
 1. **Temporal Analysis Dashboard** (Primary)
 2. **User Behavior Dashboard** (Secondary)
 3. **Application Adoption Dashboard** (As needed)
 
 **Design Principles**:
+
 - Data export focus
 - Statistical summaries
 - Reproducible queries
@@ -964,6 +1025,7 @@ SELECT ... FROM information_schema... WHERE ...;
 ### For System Administrators
 
 **Recommended Dashboards**:
+
 1. **System Health Dashboard** (Primary)
    - ETL status
    - Data freshness
@@ -971,6 +1033,7 @@ SELECT ... FROM information_schema... WHERE ...;
    - Error monitoring
 
 **Design Principles**:
+
 - Technical metrics
 - Alerting capabilities
 - Performance indicators
@@ -989,4 +1052,3 @@ SELECT ... FROM information_schema... WHERE ...;
 
 **Last Updated**: 2025-12-14  
 **Version**: 1.0
-

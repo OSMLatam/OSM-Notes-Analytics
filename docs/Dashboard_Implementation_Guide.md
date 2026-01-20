@@ -1,6 +1,8 @@
 # Dashboard Implementation Guide
 
-This guide provides step-by-step instructions for building dashboards using the OSM Notes Analytics data warehouse. It includes SQL queries, frontend integration examples, and best practices for creating effective visualizations.
+This guide provides step-by-step instructions for building dashboards using the OSM Notes Analytics
+data warehouse. It includes SQL queries, frontend integration examples, and best practices for
+creating effective visualizations.
 
 ## Table of Contents
 
@@ -41,7 +43,8 @@ The OSM Notes Analytics system provides multiple data sources for building dashb
    - `dwh.facts`: Note-level detail
    - Dimension tables for filtering and grouping
 
-**Recommendation**: Start with datamarts or JSON exports for best performance. Use star schema only when you need note-level detail or custom aggregations.
+**Recommendation**: Start with datamarts or JSON exports for best performance. Use star schema only
+when you need note-level detail or custom aggregations.
 
 ---
 
@@ -99,9 +102,9 @@ WHERE dimension_country_id = 42;
 
 ```javascript
 // Example: Load country profile from JSON
-fetch('/json/countries/colombia.json')
-  .then(response => response.json())
-  .then(data => {
+fetch("/json/countries/colombia.json")
+  .then((response) => response.json())
+  .then((data) => {
     // Use data.country_name_en, data.history_whole_open, etc.
   });
 ```
@@ -109,6 +112,7 @@ fetch('/json/countries/colombia.json')
 **Performance**: < 50ms (network dependent)
 
 **File Locations**:
+
 - User profiles: `output/json/users/{user_id}.json`
 - Country profiles: `output/json/countries/{country_name}.json`
 - Indexes: `output/json/users_index.json`, `output/json/countries_index.json`
@@ -118,7 +122,7 @@ fetch('/json/countries/colombia.json')
 
 **Best for**: Dynamic dashboards, real-time updates, mobile apps
 
-*Note: API endpoints are planned but not yet implemented*
+_Note: API endpoints are planned but not yet implemented_
 
 ---
 
@@ -134,7 +138,7 @@ fetch('/json/countries/colombia.json')
 
 ```sql
 -- Get global statistics
-SELECT 
+SELECT
   currently_open_count,
   currently_closed_count,
   history_whole_open,
@@ -156,25 +160,23 @@ WHERE dimension_global_id = 1;
 ```javascript
 // Load global stats from JSON
 async function loadGlobalStats() {
-  const response = await fetch('/json/global_stats.json');
+  const response = await fetch("/json/global_stats.json");
   const data = await response.json();
-  
+
   // Display key metrics
-  document.getElementById('total-notes').textContent = 
-    data.history_whole_open.toLocaleString();
-  document.getElementById('resolved-notes').textContent = 
+  document.getElementById("total-notes").textContent = data.history_whole_open.toLocaleString();
+  document.getElementById("resolved-notes").textContent =
     data.history_whole_closed.toLocaleString();
-  document.getElementById('open-notes').textContent = 
-    data.currently_open_count.toLocaleString();
-  document.getElementById('resolution-rate').textContent = 
-    (data.resolution_rate * 100).toFixed(1) + '%';
-  document.getElementById('avg-resolution').textContent = 
-    Math.round(data.avg_days_to_resolution) + ' days';
-  
+  document.getElementById("open-notes").textContent = data.currently_open_count.toLocaleString();
+  document.getElementById("resolution-rate").textContent =
+    (data.resolution_rate * 100).toFixed(1) + "%";
+  document.getElementById("avg-resolution").textContent =
+    Math.round(data.avg_days_to_resolution) + " days";
+
   // Parse and display top countries
   const topCountries = JSON.parse(data.top_countries);
   displayTopCountries(topCountries);
-  
+
   // Parse and display applications
   const apps = JSON.parse(data.applications_used);
   displayApplicationChart(apps);
@@ -207,7 +209,7 @@ function displayTopCountries(countries) {
 
 ```sql
 -- Get country profile
-SELECT 
+SELECT
   country_name_en,
   iso_alpha2,
   history_whole_open,
@@ -239,31 +241,31 @@ WHERE dimension_country_id = 42;  -- Replace with actual country ID
 async function loadCountryProfile(countryName) {
   const response = await fetch(`/json/countries/${countryName}.json`);
   const data = await response.json();
-  
+
   // Display basic metrics
   displayCountryMetrics(data);
-  
+
   // Parse and display activity heatmap
   const activityHeatmap = parseActivityHeatmap(data.last_year_activity);
   displayActivityHeatmap(activityHeatmap);
-  
+
   // Parse and display yearly trends
   const yearlyActivity = JSON.parse(data.activity_by_year);
   displayYearlyChart(yearlyActivity);
-  
+
   // Parse and display monthly trends
   const monthlyActivity = JSON.parse(data.activity_by_month);
   displayMonthlyChart(monthlyActivity);
-  
+
   // Parse and display working hours
   const workingHours = JSON.parse(data.working_hours_of_week_opening);
   displayWorkingHoursChart(workingHours);
-  
+
   // Parse and display top users
   const topOpeners = JSON.parse(data.users_open_notes);
   const topSolvers = JSON.parse(data.users_solving_notes);
   displayUserRankings(topOpeners, topSolvers);
-  
+
   // Parse and display hashtags
   const hashtags = JSON.parse(data.hashtags);
   displayHashtags(hashtags);
@@ -275,11 +277,13 @@ function parseActivityHeatmap(activityString) {
   const weeks = [];
   for (let i = 0; i < 53; i++) {
     const week = activityString.substring(i * 7, (i + 1) * 7);
-    weeks.push(week.split('').map(char => {
-      // Convert character to number (0-9 = 0-9, A-Z = 10-35)
-      if (char >= '0' && char <= '9') return parseInt(char);
-      return char.charCodeAt(0) - 'A'.charCodeAt(0) + 10;
-    }));
+    weeks.push(
+      week.split("").map((char) => {
+        // Convert character to number (0-9 = 0-9, A-Z = 10-35)
+        if (char >= "0" && char <= "9") return parseInt(char);
+        return char.charCodeAt(0) - "A".charCodeAt(0) + 10;
+      }),
+    );
   }
   return weeks;
 }
@@ -313,7 +317,7 @@ function displayActivityHeatmap(weeks) {
 
 ```sql
 -- Get user profile
-SELECT 
+SELECT
   username,
   user_id,
   history_whole_open,
@@ -349,35 +353,36 @@ WHERE dimension_user_id = 1234;  -- Replace with actual user ID
 async function loadUserProfile(userId) {
   const response = await fetch(`/json/users/${userId}.json`);
   const data = await response.json();
-  
+
   // Display user header
-  document.getElementById('username').textContent = data.username;
-  document.getElementById('user-id').textContent = `OSM User #${data.user_id}`;
-  document.getElementById('contributor-type').textContent = 
-    getContributorTypeLabel(data.id_contributor_type);
-  
+  document.getElementById("username").textContent = data.username;
+  document.getElementById("user-id").textContent = `OSM User #${data.user_id}`;
+  document.getElementById("contributor-type").textContent = getContributorTypeLabel(
+    data.id_contributor_type,
+  );
+
   // Display activity summary
   displayActivitySummary(data);
-  
+
   // Parse and display activity heatmap
   const activityHeatmap = parseActivityHeatmap(data.last_year_activity);
   displayActivityHeatmap(activityHeatmap);
-  
+
   // Parse and display yearly trends
   const yearlyActivity = JSON.parse(data.activity_by_year);
   displayYearlyChart(yearlyActivity);
-  
+
   // Parse and display working hours
   const openingHours = JSON.parse(data.working_hours_of_week_opening);
   const commentingHours = JSON.parse(data.working_hours_of_week_commenting);
   const closingHours = JSON.parse(data.working_hours_of_week_closing);
   displayWorkingHoursComparison(openingHours, commentingHours, closingHours);
-  
+
   // Parse and display geographic distribution
   const countriesOpened = JSON.parse(data.countries_where_opened_notes);
   const countriesSolved = JSON.parse(data.countries_where_solved_notes);
   displayGeographicMap(countriesOpened, countriesSolved);
-  
+
   // Display user behavior metrics
   displayUserBehaviorMetrics(data);
 }
@@ -386,20 +391,20 @@ function displayUserBehaviorMetrics(data) {
   // User response time
   if (data.user_response_time) {
     const avgResponseHours = data.user_response_time / 3600; // Convert seconds to hours
-    document.getElementById('avg-response-time').textContent = 
+    document.getElementById("avg-response-time").textContent =
       `${avgResponseHours.toFixed(1)} hours`;
   }
-  
+
   // Days since last action
   if (data.days_since_last_action !== null) {
-    document.getElementById('days-since-action').textContent = 
+    document.getElementById("days-since-action").textContent =
       `${data.days_since_last_action} days`;
   }
-  
+
   // Notes opened but not closed
-  document.getElementById('opened-not-closed').textContent = 
+  document.getElementById("opened-not-closed").textContent =
     data.notes_opened_but_not_closed_by_user || 0;
-  
+
   // Collaboration patterns
   if (data.collaboration_patterns) {
     const collab = JSON.parse(data.collaboration_patterns);
@@ -431,7 +436,7 @@ function displayUserBehaviorMetrics(data) {
 
 ```sql
 -- Resolution metrics by country
-SELECT 
+SELECT
   country_name_en,
   avg_days_to_resolution,
   median_days_to_resolution,
@@ -448,8 +453,8 @@ ORDER BY avg_days_to_resolution ASC;
 
 ```sql
 -- Resolution time distribution
-SELECT 
-  CASE 
+SELECT
+  CASE
     WHEN days_to_resolution < 1 THEN 'Same day'
     WHEN days_to_resolution < 7 THEN 'Within week'
     WHEN days_to_resolution < 30 THEN 'Within month'
@@ -464,7 +469,7 @@ WHERE action_comment = 'closed'
   AND days_to_resolution IS NOT NULL
   AND action_at >= CURRENT_DATE - INTERVAL '1 year'
 GROUP BY resolution_bucket
-ORDER BY 
+ORDER BY
   CASE resolution_bucket
     WHEN 'Same day' THEN 1
     WHEN 'Within week' THEN 2
@@ -481,21 +486,21 @@ ORDER BY
 // Load resolution data
 async function loadResolutionData() {
   // Option 1: Use country datamart (faster)
-  const countriesResponse = await fetch('/json/countries_index.json');
+  const countriesResponse = await fetch("/json/countries_index.json");
   const countries = await countriesResponse.json();
-  
+
   // Filter and sort by resolution time
   const resolutionData = countries
-    .filter(c => c.history_whole_open > 100)
-    .map(c => ({
+    .filter((c) => c.history_whole_open > 100)
+    .map((c) => ({
       country: c.country_name_en,
       avgDays: c.avg_days_to_resolution,
       resolutionRate: c.resolution_rate,
       resolved: c.notes_resolved_count,
-      open: c.notes_still_open_count
+      open: c.notes_still_open_count,
     }))
     .sort((a, b) => a.avgDays - b.avgDays);
-  
+
   displayResolutionChart(resolutionData);
 }
 
@@ -525,7 +530,7 @@ function displayResolutionChart(data) {
 
 ```sql
 -- Application usage by country
-SELECT 
+SELECT
   country_name_en,
   application_usage_trends,
   version_adoption_rates
@@ -540,16 +545,16 @@ LIMIT 20;
 ```javascript
 // Load application usage data
 async function loadApplicationUsage() {
-  const countriesResponse = await fetch('/json/countries_index.json');
+  const countriesResponse = await fetch("/json/countries_index.json");
   const countries = await countriesResponse.json();
-  
+
   // Aggregate application usage across all countries
   const appUsage = {};
-  
-  countries.forEach(country => {
+
+  countries.forEach((country) => {
     if (country.application_usage_trends) {
       const trends = JSON.parse(country.application_usage_trends);
-      Object.keys(trends).forEach(appId => {
+      Object.keys(trends).forEach((appId) => {
         if (!appUsage[appId]) {
           appUsage[appId] = 0;
         }
@@ -557,12 +562,12 @@ async function loadApplicationUsage() {
       });
     }
   });
-  
+
   // Convert to array and sort
   const appUsageArray = Object.entries(appUsage)
     .map(([appId, count]) => ({ appId, count }))
     .sort((a, b) => b.count - a.count);
-  
+
   displayApplicationChart(appUsageArray);
 }
 
@@ -594,7 +599,7 @@ function displayApplicationChart(data) {
 
 ```sql
 -- Community health metrics by country
-SELECT 
+SELECT
   country_name_en,
   notes_health_score,
   new_vs_resolved_ratio,
@@ -613,13 +618,13 @@ ORDER BY notes_health_score DESC;
 ```javascript
 // Load community health data
 async function loadCommunityHealth() {
-  const countriesResponse = await fetch('/json/countries_index.json');
+  const countriesResponse = await fetch("/json/countries_index.json");
   const countries = await countriesResponse.json();
-  
+
   // Calculate health indicators
   const healthData = countries
-    .filter(c => c.history_whole_open > 50)
-    .map(c => ({
+    .filter((c) => c.history_whole_open > 50)
+    .map((c) => ({
       country: c.country_name_en,
       healthScore: c.notes_health_score,
       newVsResolved: c.new_vs_resolved_ratio,
@@ -627,10 +632,10 @@ async function loadCommunityHealth() {
       created30d: c.notes_created_last_30_days,
       resolved30d: c.notes_resolved_last_30_days,
       open: c.currently_open_count,
-      resolutionRate: c.resolution_rate
+      resolutionRate: c.resolution_rate,
     }))
     .sort((a, b) => b.healthScore - a.healthScore);
-  
+
   displayHealthDashboard(healthData);
 }
 
@@ -662,7 +667,7 @@ function displayHealthDashboard(data) {
 
 ```sql
 -- Activity trends by country
-SELECT 
+SELECT
   country_name_en,
   activity_by_year,
   activity_by_month,
@@ -681,19 +686,19 @@ WHERE dimension_country_id = 42;
 async function loadTemporalAnalysis(countryId) {
   const response = await fetch(`/json/countries/${countryId}.json`);
   const data = await response.json();
-  
+
   // Parse yearly activity
   const yearlyActivity = JSON.parse(data.activity_by_year);
   displayYearlyTrendChart(yearlyActivity);
-  
+
   // Parse monthly activity
   const monthlyActivity = JSON.parse(data.activity_by_month);
   displayMonthlyTrendChart(monthlyActivity);
-  
+
   // Parse activity heatmap
   const heatmap = parseActivityHeatmap(data.last_year_activity);
   displayActivityHeatmap(heatmap);
-  
+
   // Parse working hours
   const openingHours = JSON.parse(data.working_hours_of_week_opening);
   const commentingHours = JSON.parse(data.working_hours_of_week_commenting);
@@ -733,7 +738,7 @@ function displayMonthlyTrendChart(monthlyData) {
 
 ```sql
 -- Country comparison
-SELECT 
+SELECT
   country_name_en,
   iso_alpha2,
   history_whole_open,
@@ -753,13 +758,13 @@ LIMIT 50;
 ```javascript
 // Load geographic comparison data
 async function loadGeographicComparison() {
-  const response = await fetch('/json/countries_index.json');
+  const response = await fetch("/json/countries_index.json");
   const countries = await response.json();
-  
+
   // Filter and prepare data
   const comparisonData = countries
-    .filter(c => c.history_whole_open > 100)
-    .map(c => ({
+    .filter((c) => c.history_whole_open > 100)
+    .map((c) => ({
       country: c.country_name_en,
       iso: c.iso_alpha2,
       opened: c.history_whole_open,
@@ -767,10 +772,10 @@ async function loadGeographicComparison() {
       resolutionRate: c.resolution_rate,
       avgResolution: c.avg_days_to_resolution,
       healthScore: c.notes_health_score,
-      activeUsers: c.active_users_count
+      activeUsers: c.active_users_count,
     }))
     .sort((a, b) => b.opened - a.opened);
-  
+
   displayGeographicMap(comparisonData);
   displayComparisonTable(comparisonData);
 }
@@ -802,12 +807,12 @@ function displayGeographicMap(data) {
 async function loadUserProfile(userId) {
   try {
     const response = await fetch(`/json/users/${userId}.json`);
-    if (!response.ok) throw new Error('User not found');
-    
+    if (!response.ok) throw new Error("User not found");
+
     const profile = await response.json();
     return profile;
   } catch (error) {
-    console.error('Error loading user profile:', error);
+    console.error("Error loading user profile:", error);
     return null;
   }
 }
@@ -819,14 +824,14 @@ async function loadUserProfile(userId) {
 async function loadCountryProfile(countryName) {
   try {
     // Normalize country name (lowercase, replace spaces with underscores)
-    const normalized = countryName.toLowerCase().replace(/\s+/g, '_');
+    const normalized = countryName.toLowerCase().replace(/\s+/g, "_");
     const response = await fetch(`/json/countries/${normalized}.json`);
-    if (!response.ok) throw new Error('Country not found');
-    
+    if (!response.ok) throw new Error("Country not found");
+
     const profile = await response.json();
     return profile;
   } catch (error) {
-    console.error('Error loading country profile:', error);
+    console.error("Error loading country profile:", error);
     return null;
   }
 }
@@ -836,13 +841,13 @@ async function loadCountryProfile(countryName) {
 
 ```javascript
 async function loadCountriesIndex() {
-  const response = await fetch('/json/countries_index.json');
+  const response = await fetch("/json/countries_index.json");
   const index = await response.json();
   return index; // Array of country summaries
 }
 
 async function loadUsersIndex() {
-  const response = await fetch('/json/users_index.json');
+  const response = await fetch("/json/users_index.json");
   const index = await response.json();
   return index; // Array of user summaries
 }
@@ -858,7 +863,7 @@ function parseJSONField(jsonString) {
   try {
     return JSON.parse(jsonString);
   } catch (error) {
-    console.error('Error parsing JSON field:', error);
+    console.error("Error parsing JSON field:", error);
     return null;
   }
 }
@@ -875,14 +880,14 @@ const hashtags = parseJSONField(profile.hashtags);
 
 ```javascript
 // Backend endpoint (Node.js/Express example)
-app.get('/api/countries/:countryId', async (req, res) => {
+app.get("/api/countries/:countryId", async (req, res) => {
   const { countryId } = req.params;
-  
+
   const query = `
     SELECT * FROM dwh.datamartcountries
     WHERE dimension_country_id = $1
   `;
-  
+
   const result = await db.query(query, [countryId]);
   res.json(result.rows[0]);
 });
@@ -928,11 +933,13 @@ const GET_COUNTRY = gql`
 ### 1. Use Datamarts Instead of Facts
 
 **❌ Slow (2-10s):**
+
 ```sql
 SELECT COUNT(*) FROM dwh.facts WHERE action_comment = 'opened';
 ```
 
 **✅ Fast (< 50ms):**
+
 ```sql
 SELECT SUM(history_whole_open) FROM dwh.datamartcountries;
 ```
@@ -940,13 +947,15 @@ SELECT SUM(history_whole_open) FROM dwh.datamartcountries;
 ### 2. Use JSON Exports for Static Dashboards
 
 **❌ Requires database connection:**
+
 ```javascript
 const profile = await loadFromDatabase(userId);
 ```
 
 **✅ No database connection needed:**
+
 ```javascript
-const profile = await fetch(`/json/users/${userId}.json`).then(r => r.json());
+const profile = await fetch(`/json/users/${userId}.json`).then((r) => r.json());
 ```
 
 ### 3. Cache JSON Files
@@ -959,7 +968,7 @@ async function loadCachedProfile(userId) {
   if (cache.has(userId)) {
     return cache.get(userId);
   }
-  
+
   const profile = await loadUserProfile(userId);
   cache.set(userId, profile);
   return profile;
@@ -971,7 +980,7 @@ async function loadCachedProfile(userId) {
 ```javascript
 // Only load heatmap when user scrolls to it
 const observer = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
+  entries.forEach((entry) => {
     if (entry.isIntersecting) {
       loadActivityHeatmap();
       observer.unobserve(entry.target);
@@ -979,7 +988,7 @@ const observer = new IntersectionObserver((entries) => {
   });
 });
 
-observer.observe(document.getElementById('heatmap-container'));
+observer.observe(document.getElementById("heatmap-container"));
 ```
 
 ### 5. Paginate Large Lists
@@ -1004,20 +1013,20 @@ async function loadCountriesPage(page = 1, pageSize = 50) {
 async function loadProfileWithErrorHandling(userId) {
   try {
     const response = await fetch(`/json/users/${userId}.json`);
-    
+
     if (!response.ok) {
       if (response.status === 404) {
-        showError('User not found');
+        showError("User not found");
         return null;
       }
       throw new Error(`HTTP ${response.status}`);
     }
-    
+
     const profile = await response.json();
     return profile;
   } catch (error) {
-    console.error('Error loading profile:', error);
-    showError('Failed to load profile. Please try again.');
+    console.error("Error loading profile:", error);
+    showError("Failed to load profile. Please try again.");
     return null;
   }
 }
@@ -1028,7 +1037,7 @@ async function loadProfileWithErrorHandling(userId) {
 ```javascript
 async function loadProfileWithLoading(userId) {
   showLoadingSpinner();
-  
+
   try {
     const profile = await loadUserProfile(userId);
     displayProfile(profile);
@@ -1043,17 +1052,17 @@ async function loadProfileWithLoading(userId) {
 ```javascript
 function validateProfile(profile) {
   if (!profile || !profile.user_id) {
-    throw new Error('Invalid profile data');
+    throw new Error("Invalid profile data");
   }
-  
+
   // Validate required fields
-  const required = ['username', 'history_whole_open', 'history_whole_closed'];
+  const required = ["username", "history_whole_open", "history_whole_closed"];
   for (const field of required) {
     if (profile[field] === undefined) {
       console.warn(`Missing required field: ${field}`);
     }
   }
-  
+
   return profile;
 }
 ```
@@ -1065,7 +1074,7 @@ function validateProfile(profile) {
 function resizeChart() {
   const width = window.innerWidth;
   const height = window.innerHeight;
-  
+
   if (width < 768) {
     // Mobile: smaller charts, stacked layout
     chart.resize(width - 20, 200);
@@ -1075,7 +1084,7 @@ function resizeChart() {
   }
 }
 
-window.addEventListener('resize', resizeChart);
+window.addEventListener("resize", resizeChart);
 ```
 
 ### 5. Accessibility
@@ -1083,18 +1092,18 @@ window.addEventListener('resize', resizeChart);
 ```javascript
 // Add ARIA labels and keyboard navigation
 function createAccessibleChart(data) {
-  const chart = document.createElement('div');
-  chart.setAttribute('role', 'img');
-  chart.setAttribute('aria-label', `Chart showing ${data.length} data points`);
-  chart.setAttribute('tabindex', '0');
-  
+  const chart = document.createElement("div");
+  chart.setAttribute("role", "img");
+  chart.setAttribute("aria-label", `Chart showing ${data.length} data points`);
+  chart.setAttribute("tabindex", "0");
+
   // Add keyboard navigation
-  chart.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowRight') {
+  chart.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight") {
       // Navigate to next data point
     }
   });
-  
+
   return chart;
 }
 ```
@@ -1112,9 +1121,7 @@ function createAccessibleChart(data) {
 **Solution**: Check if field is null/undefined before parsing
 
 ```javascript
-const activity = profile.activity_by_year 
-  ? JSON.parse(profile.activity_by_year) 
-  : {};
+const activity = profile.activity_by_year ? JSON.parse(profile.activity_by_year) : {};
 ```
 
 #### 2. Missing Data
@@ -1132,7 +1139,8 @@ const healthScore = profile.notes_health_score ?? 50;
 
 **Problem**: Loading too much data at once
 
-**Solution**: 
+**Solution**:
+
 - Use index files for lists (not full profiles)
 - Lazy load heavy visualizations
 - Paginate large datasets
@@ -1148,7 +1156,8 @@ const healthScore = profile.notes_health_score ?? 50;
 
 **Problem**: `working_hours_of_week_*` is a JSON array of 168 numbers (hours in a week)
 
-**Solution**: 
+**Solution**:
+
 ```javascript
 const hours = JSON.parse(profile.working_hours_of_week_opening);
 // hours is an array of 168 numbers (0-167)
@@ -1169,4 +1178,3 @@ const hours = JSON.parse(profile.working_hours_of_week_opening);
 
 **Last Updated**: 2025-12-14  
 **Version**: 1.0
-

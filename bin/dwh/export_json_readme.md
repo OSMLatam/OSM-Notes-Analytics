@@ -1,10 +1,12 @@
 # JSON Export System for Web Viewer
 
-This system exports the datamarts to precalculated JSON files, allowing the web viewer to consume data without direct database access.
+This system exports the datamarts to precalculated JSON files, allowing the web viewer to consume
+data without direct database access.
 
 ## Overview
 
-The export system generates individual JSON files for each user and country, plus index files for quick lookups. This approach provides:
+The export system generates individual JSON files for each user and country, plus index files for
+quick lookups. This approach provides:
 
 - **No database dependency for web viewer**: The web interface can be fully static
 - **Fast loading**: Small, targeted JSON files per entity
@@ -48,6 +50,7 @@ The script `exportAndPushJSONToGitHub.sh` exports and pushes countries intellige
 ```
 
 **Behavior:**
+
 1. Identifies countries that need export (missing, outdated, or marked as not exported)
 2. Removes countries from GitHub that no longer exist in local database
 3. Exports each country individually
@@ -57,6 +60,7 @@ The script `exportAndPushJSONToGitHub.sh` exports and pushes countries intellige
 7. Updates country index at the end
 
 **Features:**
+
 - **Resilient**: If one country fails, others continue processing
 - **Progress tracking**: See which countries are being processed
 - **Automatic detection**: Identifies missing or outdated countries (default: 30 days)
@@ -66,12 +70,14 @@ The script `exportAndPushJSONToGitHub.sh` exports and pushes countries intellige
 - **Less risk**: If process fails, only one country is lost
 
 **Environment variables:**
+
 - `MAX_AGE_DAYS`: Maximum age in days for country files before regeneration (default: 30)
   - Since cron runs monthly, default of 30 days ensures all countries are refreshed
 - `COUNTRIES_PER_BATCH`: Number of countries to process before taking a break (default: 10)
 - `DBNAME_DWH`: Database name for DWH (default: from etc/properties.sh)
 
 **Examples:**
+
 ```bash
 # Default: Export countries older than 30 days (monthly cron)
 ./bin/dwh/exportAndPushJSONToGitHub.sh
@@ -84,10 +90,12 @@ COUNTRIES_PER_BATCH=5 ./bin/dwh/exportAndPushJSONToGitHub.sh
 ```
 
 **Requirements:**
+
 - `OSM-Notes-Data` repository cloned to `~/github/OSM-Notes-Data` or `~/OSM-Notes-Data`
 - Git credentials configured for push access
 
 **Generated Files:**
+
 - `data/countries/README.md`: Alphabetical list of all countries with links to their JSON files
 
 ### Custom Output Directory
@@ -118,27 +126,33 @@ Add to crontab for automatic updates:
 The web viewer can access the data through these file paths:
 
 ### Get User Data
+
 ```
 GET /users/{user_id}.json
 ```
+
 Example: `/users/12345.json`
 
 Returns complete user profile with all statistics.
 
 ### Get Country Data
+
 ```
 GET /countries/{country_id}.json
 ```
+
 Example: `/countries/123456.json`
 
 Returns complete country profile with all statistics.
 
 ### Get User Index
+
 ```
 GET /indexes/users.json
 ```
 
 Returns array of all users with basic information:
+
 - user_id
 - username
 - history_whole_open
@@ -147,11 +161,13 @@ Returns array of all users with basic information:
 - history_year_closed
 
 ### Get Country Index
+
 ```
 GET /indexes/countries.json
 ```
 
 Returns array of all countries with basic information:
+
 - country_id
 - country_name (all languages)
 - history_whole_open
@@ -160,11 +176,13 @@ Returns array of all countries with basic information:
 - history_year_closed
 
 ### Get Metadata
+
 ```
 GET /metadata.json
 ```
 
 Returns export metadata:
+
 - export_date
 - total_users
 - total_countries
@@ -236,15 +254,15 @@ Returns export metadata:
 server {
     listen 80;
     server_name osm-notes.example.com;
-    
+
     root /var/www/html/osm-notes;
-    
+
     location /api/ {
         alias /var/www/html/osm-notes/api/;
         add_header Cache-Control "public, max-age=3600";
         add_header Access-Control-Allow-Origin "*";
     }
-    
+
     location / {
         try_files $uri $uri/ /index.html;
     }
@@ -257,7 +275,7 @@ server {
 <VirtualHost *:80>
     ServerName osm-notes.example.com
     DocumentRoot /var/www/html/osm-notes
-    
+
     <Directory /var/www/html/osm-notes/api>
         Header set Cache-Control "public, max-age=3600"
         Header set Access-Control-Allow-Origin "*"
@@ -276,7 +294,8 @@ server {
   - 10000 users ≈ 50 MB
   - 200 countries ≈ 2 MB
 
-- **Incremental updates**: Currently exports all data. For large datasets, consider implementing incremental exports based on `modified` flag in dimension tables.
+- **Incremental updates**: Currently exports all data. For large datasets, consider implementing
+  incremental exports based on `modified` flag in dimension tables.
 
 ## Troubleshooting
 
@@ -342,7 +361,3 @@ This ensures your GitHub Pages data repository is always up-to-date with the lat
 - Delta files for real-time updates
 - Search index generation
 - GraphQL API layer
-
-
-
-

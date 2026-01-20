@@ -2,7 +2,8 @@
 
 ## Overview
 
-This document explains how to integrate JSON Schema validation into the automated cron job workflow that generates and exports OSM Notes data.
+This document explains how to integrate JSON Schema validation into the automated cron job workflow
+that generates and exports OSM Notes data.
 
 ## Current Architecture
 
@@ -36,6 +37,7 @@ Cron Job (every 15 minutes)
 **When:** After each JSON file is created, before finalizing export
 
 **Pros:**
+
 - Catches errors immediately
 - Prevents invalid data from being written
 - Easy to integrate into existing workflow
@@ -77,6 +79,7 @@ __validate_json_with_schema \
 **When:** After all exports are complete
 
 **Pros:**
+
 - Cleaner separation of concerns
 - Easier to debug
 - Can run independently
@@ -172,20 +175,24 @@ aws s3 sync output/json/ s3://osm-notes-data/api/ --delete
 **Option 1:** Exit with error, cron job fails, no data exported
 
 **Pros:**
+
 - Prevents bad data from being served
 - Forces investigation
 
 **Cons:**
+
 - Viewer shows old data until fix
 - May cause gaps in data timeline
 
 **Option 2:** Log error but continue
 
 **Pros:**
+
 - More resilient
 - Partial data available
 
 **Cons:**
+
 - May serve inconsistent data
 - Harder to debug
 
@@ -229,12 +236,12 @@ cat /var/www/osm-notes-data/metadata.json | jq .export_date
 
 ## Validation Points Summary
 
-| **Validation Point** | **When** | **Why** |
-|---------------------|----------|---------|
-| During export | After each file | Fail fast, prevent bad data |
-| After export | At end of cron | Verify complete export |
-| In CI/CD | Before deployment | Catch issues before prod |
-| Manual | On demand | Debugging and testing |
+| **Validation Point** | **When**          | **Why**                     |
+| -------------------- | ----------------- | --------------------------- |
+| During export        | After each file   | Fail fast, prevent bad data |
+| After export         | At end of cron    | Verify complete export      |
+| In CI/CD             | Before deployment | Catch issues before prod    |
+| Manual               | On demand         | Debugging and testing       |
 
 ## Best Practices
 
@@ -270,4 +277,3 @@ cd bin/dwh
 - See `exportDatamartsToJSON.sh` for existing validation function
 - See `docs/DATA_CONTRACT.md` for schema documentation
 - See `lib/OSM-Notes-Common/schemas/` for schema definitions
-

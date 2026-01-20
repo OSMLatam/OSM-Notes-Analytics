@@ -1,10 +1,12 @@
 # Machine Learning with pgml
 
-This directory contains SQL scripts for implementing Machine Learning classification of OSM notes using **pgml** (PostgreSQL Machine Learning).
+This directory contains SQL scripts for implementing Machine Learning classification of OSM notes
+using **pgml** (PostgreSQL Machine Learning).
 
 ## Overview
 
-**pgml** allows us to train and use ML models directly in PostgreSQL, eliminating the need for external Python services. This approach:
+**pgml** allows us to train and use ML models directly in PostgreSQL, eliminating the need for
+external Python services. This approach:
 
 - ✅ **Simplifies deployment**: No separate ML service needed
 - ✅ **Integrates seamlessly**: Uses existing PostgreSQL infrastructure
@@ -35,7 +37,8 @@ This directory contains SQL scripts for implementing Machine Learning classifica
 
 **This must be done FIRST** - installing pgml at the operating system level:
 
-⚠️ **IMPORTANT**: pgml is **NOT available** as a standard apt/deb package. You must use one of the methods below.
+⚠️ **IMPORTANT**: pgml is **NOT available** as a standard apt/deb package. You must use one of the
+methods below.
 
 #### Option A: Automated Installation Script (RECOMMENDED for existing databases)
 
@@ -48,6 +51,7 @@ sudo ./install_pgml.sh
 ```
 
 This script will:
+
 - Install all required dependencies
 - Install Rust compiler
 - Clone and compile pgml from source
@@ -57,6 +61,7 @@ This script will:
 **After installation**, you need to:
 
 1. **Install Python ML dependencies** (required for pgml):
+
 ```bash
 # Install system packages (may not be sufficient - see troubleshooting below)
 sudo apt-get install python3-numpy python3-scipy python3-xgboost
@@ -68,6 +73,7 @@ sudo apt-get install python3-numpy python3-scipy python3-xgboost
 ```
 
 2. **Configure shared_preload_libraries** (required for model deployment):
+
 ```bash
 # Add pgml to shared_preload_libraries
 psql -d postgres -c "ALTER SYSTEM SET shared_preload_libraries = 'pg_stat_statements,pgml';"
@@ -89,6 +95,7 @@ sudo systemctl restart postgresql@14-main
 ```
 
 3. **Install Python packages for the specific Python version** (see troubleshooting section below):
+
 ```bash
 # pgml typically uses Python 3.10, check the error message to confirm
 # Install all required packages:
@@ -100,6 +107,7 @@ sudo -u postgres python3.10 -c "import numpy, scipy, xgboost, lightgbm, sklearn;
 ```
 
 4. **Enable extension in your database**:
+
 ```bash
 # Use the PostgreSQL 14 binary directly (if psql defaults to another version)
 sudo -u postgres /usr/lib/postgresql/14/bin/psql -d notes_dwh -c "CREATE EXTENSION IF NOT EXISTS pgml;"
@@ -109,6 +117,7 @@ sudo -u postgres /usr/lib/postgresql/14/bin/psql -d notes_dwh -c "SELECT pgml.ve
 ```
 
 **Note**: The `apt-get` packages may not be sufficient because:
+
 - They may be compiled for a different Python version than what pgml uses
 - `lightgbm` and `scikit-learn` are not available in standard apt repositories
 - You MUST install them with pip for the specific Python version (usually 3.10)
@@ -116,6 +125,7 @@ sudo -u postgres /usr/lib/postgresql/14/bin/psql -d notes_dwh -c "SELECT pgml.ve
 **Troubleshooting**: If you get errors about missing Python modules or numpy source directory:
 
 1. **Verify Python packages are accessible to PostgreSQL**:
+
 ```bash
 # Check what Python PostgreSQL is using
 sudo -u postgres python3 -c "import sys; print(sys.executable)"
@@ -123,7 +133,9 @@ sudo -u postgres python3 -c "import numpy; print(numpy.__version__)" || echo "nu
 sudo -u postgres python3 -c "import xgboost; print(xgboost.__version__)" || echo "xgboost not found"
 ```
 
-2. **If packages are missing for PostgreSQL's Python**, install them with pip using `--break-system-packages`:
+2. **If packages are missing for PostgreSQL's Python**, install them with pip using
+   `--break-system-packages`:
+
 ```bash
 # First, identify which Python version pgml is using (check the error message)
 # If pgml says "Python version: 3.10.12", you need Python 3.10 packages
@@ -152,9 +164,13 @@ sudo -u postgres python3.10 -c "import sklearn; print('sklearn:', sklearn.__vers
 sudo -u postgres python3.10 -c "import numpy, scipy, xgboost, lightgbm, sklearn; print('All packages available for Python 3.10')"
 ```
 
-**Important**: If you get errors about `numpy.core._multiarray_umath` or "numpy source directory", it means the numpy package is not properly installed for that Python version. The apt packages (`python3-numpy`) are compiled for the default Python version (usually 3.12), but pgml might be using Python 3.10. You MUST install with pip for the specific Python version.
+**Important**: If you get errors about `numpy.core._multiarray_umath` or "numpy source directory",
+it means the numpy package is not properly installed for that Python version. The apt packages
+(`python3-numpy`) are compiled for the default Python version (usually 3.12), but pgml might be
+using Python 3.10. You MUST install with pip for the specific Python version.
 
 3. **If you get numpy source directory error**, check PYTHONPATH in PostgreSQL environment:
+
 ```bash
 # Check PostgreSQL's environment
 sudo -u postgres env | grep PYTHONPATH
@@ -182,7 +198,9 @@ sudo systemctl daemon-reload
 sudo systemctl restart postgresql
 ```
 
-**Alternative solution**: If the above doesn't work, check if there's a numpy source directory in common locations:
+**Alternative solution**: If the above doesn't work, check if there's a numpy source directory in
+common locations:
+
 ```bash
 # Check for numpy source directories in /tmp (common build location)
 find /tmp -name "numpy" -type d 2>/dev/null | head -5
@@ -209,9 +227,12 @@ sudo systemctl daemon-reload
 sudo systemctl restart postgresql
 ```
 
-**If the problem persists**, the issue might be that pgml was compiled with a different Python version. The error message shows which Python version pgml is using (e.g., "Python version: 3.10.12"). 
+**If the problem persists**, the issue might be that pgml was compiled with a different Python
+version. The error message shows which Python version pgml is using (e.g., "Python version:
+3.10.12").
 
-**Solution**: Recompile pgml with the correct Python version, or install Python packages for the version pgml is using:
+**Solution**: Recompile pgml with the correct Python version, or install Python packages for the
+version pgml is using:
 
 ```bash
 # 1. Check what Python version pgml is using (from the error message)
@@ -234,15 +255,18 @@ psql -d notes_dwh -c 'CREATE EXTENSION IF NOT EXISTS pgml;'
 ```
 
 **Alternative**: If Python 3.10 is not available, you may need to recompile pgml with Python 3.11:
+
 ```bash
 # Re-run the installation script, which will recompile with current Python
 cd sql/dwh/ml
 sudo ./install_pgml.sh
 ```
 
-**Important Note**: If pgml was compiled with Python 3.10 but your system has Python 3.11, you have two options:
+**Important Note**: If pgml was compiled with Python 3.10 but your system has Python 3.11, you have
+two options:
 
 1. **Install Python 3.10 and packages for it** (if Python 3.10 is available):
+
 ```bash
 # Check if Python 3.10 is available
 python3.10 --version 2>/dev/null || echo "Python 3.10 not found"
@@ -256,6 +280,7 @@ sudo -u postgres python3.10 -c "import numpy, scipy, xgboost, lightgbm, sklearn;
 ```
 
 2. **Force pgml to use Python 3.11** by ensuring Python 3.11 is the default during compilation:
+
 ```bash
 # Make sure Python 3.11 is the default
 sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
@@ -269,7 +294,9 @@ cd sql/dwh/ml
 sudo ./install_pgml.sh
 ```
 
-**If the numpy source directory error persists**, it might be that pgml is finding a numpy source directory during import. Try:
+**If the numpy source directory error persists**, it might be that pgml is finding a numpy source
+directory during import. Try:
+
 ```bash
 # Find and remove any numpy source directories
 find /tmp -type d -name "numpy" -not -path "*/site-packages/*" -exec rm -rf {} + 2>/dev/null || true
@@ -281,13 +308,15 @@ find /root -type d -name "numpy" -not -path "*/site-packages/*" -exec rm -rf {} 
 ```
 
 4. **Restart PostgreSQL after installing packages**:
+
 ```bash
 sudo systemctl restart postgresql
 ```
 
 #### Option B: Using Docker (Only if starting fresh)
 
-⚠️ **Not recommended if you already have a database** - Docker requires migrating your entire database.
+⚠️ **Not recommended if you already have a database** - Docker requires migrating your entire
+database.
 
 This is only practical if you're starting a new project:
 
@@ -305,13 +334,16 @@ docker exec -it postgres-pgml psql -U postgres -d osm_notes
 ```
 
 **Note**: If using Docker with an existing database, you'll need to:
+
 1. Export your database: `pg_dump osm_notes > backup.sql`
-2. Import into Docker container: `docker exec -i postgres-pgml psql -U postgres -d osm_notes < backup.sql`
+2. Import into Docker container:
+   `docker exec -i postgres-pgml psql -U postgres -d osm_notes < backup.sql`
 3. Update all connection strings to point to the Docker container
 
 #### Option C: Manual Compilation from Source
 
 **Prerequisites**:
+
 - PostgreSQL 14+ development headers
 - Rust compiler (pgml is written in Rust)
 - Python 3.8+ with development headers
@@ -348,12 +380,14 @@ ls /usr/share/postgresql/15/extension/pgml*
 ```
 
 **For detailed build instructions**, see:
+
 - https://github.com/postgresml/postgresml#installation
 - https://postgresml.org/docs/guides/getting-started/installation
 
 #### Option D: Using Pre-built Binaries (If Available)
 
 Check the pgml releases page for pre-built binaries:
+
 - https://github.com/postgresml/postgresml/releases
 
 **Note**: Pre-built binaries may not be available for all platforms/PostgreSQL versions.
@@ -382,8 +416,9 @@ SELECT pgml.version();
 ```
 
 **Expected output**:
+
 ```
- extname | extversion 
+ extname | extversion
 ---------+------------
  pgml    | 2.8.0      (or similar version)
 ```
@@ -404,7 +439,8 @@ If you see errors, the system-level installation may be missing.
 
 **This is NOT just SQL - you must install pgml at the OS level first:**
 
-⚠️ **pgml is NOT available as a standard apt package**. Use the automated script or compile from source.
+⚠️ **pgml is NOT available as a standard apt package**. Use the automated script or compile from
+source.
 
 ```bash
 # Check PostgreSQL version (must be 14+)
@@ -430,11 +466,14 @@ psql -d notes_dwh -f sql/dwh/ml/ml_00_check_prerequisites.sql
 ```
 
 **What you need:**
+
 - ✅ **Required**: `dwh.facts`, `dwh.dimension_days`, `dwh.dimension_applications`
 - ⚠️ **Recommended**: `dwh.datamartCountries`, `dwh.datamartUsers` (for better features)
 - ⚠️ **Recommended**: `dwh.v_note_hashtag_features` (for hashtag features)
 
-**Note**: You can train **without datamarts** (they use LEFT JOIN with default values), but accuracy will be lower. Datamarts are automatically populated by ETL, but may take time to fully populate (especially `datamartUsers` which processes incrementally).
+**Note**: You can train **without datamarts** (they use LEFT JOIN with default values), but accuracy
+will be lower. Datamarts are automatically populated by ETL, but may take time to fully populate
+(especially `datamartUsers` which processes incrementally).
 
 ### Step 2: Enable Extension in Database
 
@@ -456,10 +495,12 @@ psql -d notes_dwh -f sql/dwh/ml/ml_01_setupPgML.sql
 ```
 
 This creates:
+
 - `dwh.v_note_ml_training_features`: Features + target variables for training
 - `dwh.v_note_ml_prediction_features`: Features for new notes (no targets)
 
-**Note**: The views use `LEFT JOIN` with `COALESCE`, so they work even if datamarts are empty (using default values of 0).
+**Note**: The views use `LEFT JOIN` with `COALESCE`, so they work even if datamarts are empty (using
+default values of 0).
 
 ### Step 4: Train Models
 
@@ -468,12 +509,14 @@ psql -d notes_dwh -f sql/dwh/ml/ml_02_trainPgMLModels.sql
 ```
 
 **⚠️ Training takes time** (several minutes to hours depending on data size):
+
 - This trains three hierarchical models:
   1. **Main Category** (2 classes): `contributes_with_change` vs `doesnt_contribute`
   2. **Specific Type** (18+ classes): `adds_to_map`, `modifies_map`, `personal_data`, etc.
   3. **Action Recommendation** (3 classes): `process`, `close`, `needs_more_data`
 
 **Monitor training**:
+
 ```sql
 -- Check training status
 SELECT * FROM pgml.training_runs ORDER BY created_at DESC LIMIT 5;
@@ -489,6 +532,7 @@ psql -d notes_dwh -f sql/dwh/ml/ml_03_predictWithPgML.sql
 ```
 
 Or use the helper function:
+
 ```sql
 -- Classify a single note
 SELECT * FROM dwh.predict_note_category_pgml(12345);
@@ -504,7 +548,8 @@ CALL dwh.classify_new_notes_pgml(1000);
 Features are derived from existing analysis patterns:
 
 1. **Text Features**: `comment_length`, `has_url`, `has_mention`, `hashtag_number`
-2. **Hashtag Features**: From `dwh.v_note_hashtag_features` (see `ml_00_analyzeHashtagsForClassification.sql`)
+2. **Hashtag Features**: From `dwh.v_note_hashtag_features` (see
+   `ml_00_analyzeHashtagsForClassification.sql`)
 3. **Application Features**: `is_assisted_app`, `is_mobile_app`
 4. **Geographic Features**: `country_resolution_rate`, `country_notes_health_score`
 5. **User Features**: `user_response_time`, `user_experience_level`
@@ -524,6 +569,7 @@ Level 3: Action Recommendation (3 classes)
 ```
 
 Each level is a separate model, allowing:
+
 - Independent optimization
 - Different algorithms per level
 - Easier debugging and interpretation
@@ -533,7 +579,7 @@ Each level is a separate model, allowing:
 ### Check Training Data
 
 ```sql
-SELECT 
+SELECT
   COUNT(*) as total_notes,
   COUNT(DISTINCT main_category) as categories,
   COUNT(DISTINCT specific_type) as types
@@ -554,27 +600,30 @@ SELECT * FROM pgml.train(
 );
 ```
 
-**Training without datamarts**: If datamarts are not populated, the model will still train but will use default values (0) for geographic and user features. You can re-train later when datamarts are populated for better accuracy.
+**Training without datamarts**: If datamarts are not populated, the model will still train but will
+use default values (0) for geographic and user features. You can re-train later when datamarts are
+populated for better accuracy.
 
 ## Training Time and Performance
 
 ### Expected Training Times
 
 Training time depends on:
+
 - **Data size**: Number of training samples
 - **Model complexity**: Number of classes and features
 - **Hardware**: CPU and memory available
 
 **Estimated times** (for typical dataset sizes):
 
-| Model | Classes | Training Samples | Estimated Time |
-|-------|---------|------------------|----------------|
-| Main Category | 2 | 10,000 | 5-15 minutes |
-| Main Category | 2 | 100,000 | 30-60 minutes |
-| Specific Type | 18+ | 10,000 | 15-30 minutes |
-| Specific Type | 18+ | 100,000 | 60-120 minutes |
-| Action Recommendation | 3 | 10,000 | 10-20 minutes |
-| Action Recommendation | 3 | 100,000 | 45-90 minutes |
+| Model                 | Classes | Training Samples | Estimated Time |
+| --------------------- | ------- | ---------------- | -------------- |
+| Main Category         | 2       | 10,000           | 5-15 minutes   |
+| Main Category         | 2       | 100,000          | 30-60 minutes  |
+| Specific Type         | 18+     | 10,000           | 15-30 minutes  |
+| Specific Type         | 18+     | 100,000          | 60-120 minutes |
+| Action Recommendation | 3       | 10,000           | 10-20 minutes  |
+| Action Recommendation | 3       | 100,000          | 45-90 minutes  |
 
 **Total for all 3 models**: 30-120 minutes (depending on data size)
 
@@ -599,30 +648,33 @@ Models should be retrained when:
 
 ### Retraining Frequency Recommendations
 
-| Frequency | Use Case | Command |
-|-----------|----------|---------|
-| **Monthly** | Recommended for production | `bin/dwh/ml_retrain.sh` (via cron) |
-| **Quarterly** | Stable systems with slow data growth | `bin/dwh/ml_retrain.sh` (via cron) |
-| **On-Demand** | After major data updates or when accuracy drops | `bin/dwh/ml_retrain.sh --force` |
-| **After Initial Training** | When datamarts are first populated | `bin/dwh/ml_retrain.sh --force` |
+| Frequency                  | Use Case                                        | Command                            |
+| -------------------------- | ----------------------------------------------- | ---------------------------------- |
+| **Monthly**                | Recommended for production                      | `bin/dwh/ml_retrain.sh` (via cron) |
+| **Quarterly**              | Stable systems with slow data growth            | `bin/dwh/ml_retrain.sh` (via cron) |
+| **On-Demand**              | After major data updates or when accuracy drops | `bin/dwh/ml_retrain.sh --force`    |
+| **After Initial Training** | When datamarts are first populated              | `bin/dwh/ml_retrain.sh --force`    |
 
 ### Automated Training/Retraining
 
 The script is **fully automatic** - it detects system state and decides what to do:
 
 **Decision Logic**:
+
 1. **No data** → Do nothing (exit silently)
 2. **Facts + dimensions ready** → Initial training (basic features)
 3. **Datamarts populated** → Full training (all features)
 4. **Models exist** → Retraining (if 10%+ new data or 30+ days old)
 
 **Usage**:
+
 ```bash
 # Just run it - no options needed!
 bin/dwh/ml_retrain.sh
 ```
 
 **Cron Example** (monthly - recommended):
+
 ```bash
 # Intelligent ML training/retraining (1st day of month at 2 AM)
 # Script automatically decides what to do based on system state
@@ -630,6 +682,7 @@ bin/dwh/ml_retrain.sh
 ```
 
 **What it does automatically**:
+
 - ✅ Checks if enough data exists (exits silently if not)
 - ✅ Detects if datamarts are populated
 - ✅ Checks if models already exist
@@ -640,7 +693,8 @@ bin/dwh/ml_retrain.sh
 
 ### Current Status: NOT Integrated
 
-**⚠️ Important**: ML training is **NOT currently integrated** into the ETL workflow. This is intentional:
+**⚠️ Important**: ML training is **NOT currently integrated** into the ETL workflow. This is
+intentional:
 
 - **Training is expensive**: Takes 30-120 minutes, CPU-intensive
 - **Not needed frequently**: Models don't need retraining every ETL run
@@ -652,11 +706,13 @@ bin/dwh/ml_retrain.sh
 **Recommended approach**:
 
 1. **Initial Training**: Manual (one-time setup)
+
    ```bash
    psql -d notes_dwh -f sql/dwh/ml/ml_02_trainPgMLModels.sql
    ```
 
 2. **Predictions**: Can be integrated into ETL (fast, uses trained models)
+
    ```sql
    -- In ETL, after processing new notes:
    CALL dwh.classify_new_notes_pgml(1000);
@@ -681,6 +737,7 @@ fi
 ```
 
 **Usage**:
+
 ```bash
 RETRAIN_ML=true ./bin/dwh/ETL.sh  # Only when you want to retrain
 ```
@@ -693,7 +750,7 @@ RETRAIN_ML=true ./bin/dwh/ETL.sh  # Only when you want to retrain
 
 ```sql
 -- Single note prediction
-SELECT 
+SELECT
   id_note,
   pgml.predict(
     'note_classification_main_category',
@@ -730,7 +787,7 @@ CALL dwh.classify_new_notes_pgml(1000);
 
 ```sql
 -- Get high-priority notes for dashboard
-SELECT 
+SELECT
   f.id_note,
   f.opened_dimension_id_date,
   c.country_name_en,
@@ -746,7 +803,7 @@ ORDER BY f.opened_dimension_id_date DESC;
 ### View Model Performance
 
 ```sql
-SELECT 
+SELECT
   project_name,
   algorithm,
   metrics->>'accuracy' as accuracy,
@@ -759,7 +816,7 @@ WHERE project_name LIKE 'note_classification%';
 
 ```sql
 -- Get prediction probabilities
-SELECT 
+SELECT
   id_note,
   pgml.predict('note_classification_main_category', ...)::VARCHAR as prediction,
   pgml.predict_proba('note_classification_main_category', ...) as probabilities
@@ -774,7 +831,7 @@ WHERE id_note = 12345;
 Predictions are stored in `dwh.note_type_classifications` (see `ML_Implementation_Plan.md`):
 
 ```sql
-SELECT 
+SELECT
   id_note,
   main_category,
   specific_type,
@@ -816,7 +873,7 @@ SELECT * FROM pgml.train(
 
 ```sql
 -- Track accuracy over time
-SELECT 
+SELECT
   created_at,
   metrics->>'accuracy' as accuracy
 FROM pgml.deployed_models
@@ -828,7 +885,7 @@ ORDER BY created_at DESC;
 
 ```sql
 -- Compare different algorithms
-SELECT 
+SELECT
   algorithm,
   AVG((metrics->>'accuracy')::numeric) as avg_accuracy
 FROM pgml.deployed_models
@@ -864,7 +921,8 @@ GROUP BY algorithm;
 
 - [ML Implementation Plan](../docs/ML_Implementation_Plan.md): Overall ML strategy
 - [Note Categorization](../docs/Note_Categorization.md): Classification system
-- [External Classification Strategies](../docs/External_Classification_Strategies.md): Keyword/hashtag approaches
+- [External Classification Strategies](../docs/External_Classification_Strategies.md):
+  Keyword/hashtag approaches
 - [Hashtag Analysis](ml_00_analyzeHashtagsForClassification.sql): Hashtag feature extraction
 
 ## References
@@ -877,4 +935,3 @@ GROUP BY algorithm;
 
 **Status**: Implementation Ready  
 **Dependencies**: pgml extension, training data, feature views
-
