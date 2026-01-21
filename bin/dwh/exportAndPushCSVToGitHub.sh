@@ -258,10 +258,12 @@ if ! flock -n 7; then
 fi
 
 # Write lock file information
+# Get current timestamp to avoid command substitution in heredoc
+start_timestamp=$(date '+%Y-%m-%d %H:%M:%S') || start_timestamp="unknown"
 cat > "${LOCK}" << EOF
 PID: $$
 Process: ${BASENAME}
-Started: $(date '+%Y-%m-%d %H:%M:%S')
+Started: ${start_timestamp}
 Temporary directory: ${TEMP_CSV_DIR}
 Main script: ${0}
 EOF
@@ -271,6 +273,7 @@ print_info "Step 1: Exporting CSV files from Analytics..."
 STEP1_START=$(date +%s)
 
 # Check if dwh schema exists
+# shellcheck disable=SC2310  # Function invocation in condition is intentional for error handling
 if ! __psql_with_appname -d "${DBNAME_DWH}" -Atq -c "SELECT 1 FROM information_schema.schemata WHERE schema_name = 'dwh'" | grep -q 1; then
  print_error "Schema 'dwh' does not exist. Please run the ETL process first."
  exit 1
@@ -364,6 +367,9 @@ function __generate_readme() {
  local readme_file="${CSV_TARGET_DIR}/README.md"
  local temp_readme
  temp_readme=$(mktemp)
+ # Get current timestamp to avoid command substitution in heredoc
+ local current_timestamp
+ current_timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ) || current_timestamp="unknown"
 
  # Header
  cat > "${temp_readme}" << 'EOF'
@@ -479,7 +485,7 @@ Each CSV file contains the following columns:
 
 ## Last Updated
 
-Generated: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+Generated: ${current_timestamp}
 EOF
 
  # Copy to target directory
@@ -617,6 +623,7 @@ function __commit_and_push_batch() {
 
  # Generate/update README.md with all countries (after copying all CSV files)
  # Don't fail if README generation fails (non-critical)
+ # shellcheck disable=SC2310  # Function invocation in || condition is intentional for error handling
  __generate_readme || print_warn "README generation failed, continuing anyway..."
 
  # Remove CSV directory from git index if this is the first batch
@@ -875,6 +882,7 @@ while IFS='|' read -r country_id country_name country_name_en last_close_date; d
   TOTAL_COUNTRIES=$((TOTAL_COUNTRIES + 1))
 
   # Check if CSV needs update
+  # shellcheck disable=SC2310  # Function invocation in condition is intentional for error handling
   if __csv_needs_update "${country_id}" "${country_name}" "${last_close_date}"; then
    # shellcheck disable=SC2310  # Function invocation in condition is intentional for error handling
    if __export_country_notes "${country_id}" "${country_name}"; then

@@ -265,10 +265,10 @@ get_user_subdir() {
  local d2
  local d3
  mod=$((user_id % 4096))
- hex_mod=$(printf "%03x" $mod)
- d1=$(echo "$hex_mod" | cut -c1)
- d2=$(echo "$hex_mod" | cut -c2)
- d3=$(echo "$hex_mod" | cut -c3)
+ hex_mod=$(printf "%03x" "${mod}")
+ d1=$(echo "${hex_mod}" | cut -c1)
+ d2=$(echo "${hex_mod}" | cut -c2)
+ d3=$(echo "${hex_mod}" | cut -c3)
  echo "${d1}/${d2}/${d3}"
 }
 

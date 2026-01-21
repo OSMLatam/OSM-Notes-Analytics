@@ -161,6 +161,7 @@ export_single_country() {
 
  # Validate JSON file
  local schema_file="${ANALYTICS_DIR}/lib/osm-common/schemas/country-profile.schema.json"
+ # shellcheck disable=SC2310  # Function invocation in condition is intentional for error handling
  if ! validate_json_with_schema "${output_file}" "${schema_file}" "country ${country_id}"; then
   print_error "Validation failed for country ${country_id}"
   return 1
@@ -422,6 +423,9 @@ ORDER BY COALESCE(country_name_en, country_name, 'Unknown');
  done
 
  # Footer
+ # Get current timestamp to avoid command substitution in heredoc
+ local current_timestamp
+ current_timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ) || current_timestamp="unknown"
  cat >> "${temp_readme}" << EOF
 
 ## Usage
@@ -436,7 +440,7 @@ Each JSON file contains complete country profile data including:
 
 ## Last Updated
 
-Generated: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+Generated: ${current_timestamp}
 EOF
 
  # Copy to repository
@@ -625,6 +629,7 @@ remove_obsolete_countries
 
 # Get list of countries to export
 print_info "Identifying countries that need export..."
+# shellcheck disable=SC2311  # Function invocation in command substitution is intentional
 countries_to_export=$(get_countries_to_export)
 
 if [[ -z "${countries_to_export}" ]]; then
@@ -667,11 +672,13 @@ while IFS='|' read -r country_id country_name; do
  temp_file=$(mktemp "/tmp/country_${country_id}_XXXXXX.json")
 
  # Export country
+ # shellcheck disable=SC2310  # Function invocation in condition is intentional for error handling
  if export_single_country "${country_id}" "${country_name}" "${temp_file}"; then
   # Copy to data repository
   cp "${temp_file}" "${DATA_REPO_DIR}/data/countries/${country_id}.json"
 
   # Commit and push
+  # shellcheck disable=SC2310  # Function invocation in condition is intentional for error handling
   if commit_and_push_country "${country_id}" "${country_name}"; then
    successful=$((successful + 1))
 
