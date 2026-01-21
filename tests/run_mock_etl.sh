@@ -235,11 +235,16 @@ HAS_PK_CONTR_TYPES=$("${psql_cmd[@]}" -tAc "SELECT EXISTS (SELECT 1 FROM informa
 if [[ "${HAS_PK_DU}" == "t" || "${HAS_PK_BADGES}" == "t" || "${HAS_PK_BADGE_USERS}" == "t" || "${HAS_PK_CONTR_TYPES}" == "t" ]]; then
  # Table exists: add new columns first, then execute script (which will skip CREATE TABLE)
  if [[ "${HAS_PK_DU}" == "t" ]]; then
+  # Ensure all basic columns exist before executing COMMENT statements
   "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS iso_week SMALLINT;" 2> /dev/null || true
   "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS quarter SMALLINT;" 2> /dev/null || true
   "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS month_name VARCHAR(16);" 2> /dev/null || true
   "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS hour_of_week SMALLINT;" 2> /dev/null || true
   "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS period_of_day VARCHAR(16);" 2> /dev/null || true
+  "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS latest_open_note_id INTEGER;" 2> /dev/null || true
+  "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS latest_commented_note_id INTEGER;" 2> /dev/null || true
+  "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS latest_closed_note_id INTEGER;" 2> /dev/null || true
+  "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartUsers ADD COLUMN IF NOT EXISTS latest_reopened_note_id INTEGER;" 2> /dev/null || true
  fi
  TMP_DU12_DDL="$(mktemp)"
  awk -v pk_du="${HAS_PK_DU}" -v pk_b="${HAS_PK_BADGES}" -v pk_bu="${HAS_PK_BADGE_USERS}" -v pk_ct="${HAS_PK_CONTR_TYPES}" '
