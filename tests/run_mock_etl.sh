@@ -204,9 +204,14 @@ echo "[MOCK-ETL] Creating datamart tables..."
 HAS_PK_DC=$("${psql_cmd[@]}" -tAc "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_schema='dwh' AND table_name='datamartcountries' AND constraint_type='PRIMARY KEY')" 2> /dev/null || echo "f")
 if [[ "${HAS_PK_DC}" == "t" ]]; then
  # Table exists: add new columns first, then execute script (which will skip CREATE TABLE)
+ # Ensure all basic columns exist before executing COMMENT statements
  "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS iso_alpha2 VARCHAR(2);" 2> /dev/null || true
  "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS iso_alpha3 VARCHAR(3);" 2> /dev/null || true
  "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS dimension_continent_id INTEGER;" 2> /dev/null || true
+ "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS latest_open_note_id INTEGER;" 2> /dev/null || true
+ "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS latest_commented_note_id INTEGER;" 2> /dev/null || true
+ "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS latest_closed_note_id INTEGER;" 2> /dev/null || true
+ "${psql_cmd[@]}" -c "ALTER TABLE dwh.datamartCountries ADD COLUMN IF NOT EXISTS latest_reopened_note_id INTEGER;" 2> /dev/null || true
  TMP_DC12_DDL="$(mktemp)"
  awk '
    BEGIN {skip=0}
