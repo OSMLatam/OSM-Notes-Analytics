@@ -331,7 +331,6 @@ flowchart TD
     style EXEC3 fill:#FFE4B5
     style EXEC4 fill:#FFB6C1
 ```
-```
 
 ## Expected Behavior in Each Iteration
 
