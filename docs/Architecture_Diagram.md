@@ -486,8 +486,6 @@ graph TD
     style DWH fill:#FFFFE0
     style Staging fill:#FFE4B5
 ```
-    └── ...
-```
 
 ### Partitioning Strategy
 
