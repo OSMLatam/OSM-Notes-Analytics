@@ -1,3 +1,18 @@
+---
+title: "Execution Guide - OSM Notes Analytics"
+description: "The OSM Notes Analytics system consists of several components:"
+version: "1.0.0"
+last_updated: "2026-01-25"
+author: "AngocA"
+tags:
+  - "guide"
+audience:
+  - "developers"
+project: "OSM-Notes-Analytics"
+status: "active"
+---
+
+
 # Execution Guide - OSM Notes Analytics
 
 Complete guide for executing all components of the OSM Notes Analytics system.

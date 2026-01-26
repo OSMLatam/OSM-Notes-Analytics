@@ -1,3 +1,18 @@
+---
+title: "LISTEN/NOTIFY Implementation in Pure Bash"
+description: "Alternative approach for real-time streaming analytics using PostgreSQL LISTEN/NOTIFY directly in Bash scripts"
+version: "1.0.0"
+last_updated: "2026-01-25"
+author: "AngocA"
+tags:
+  - "streaming"
+audience:
+  - "developers"
+project: "OSM-Notes-Analytics"
+status: "active"
+---
+
+
 # LISTEN/NOTIFY Implementation in Pure Bash
 
 **Note**: This is an alternative approach using LISTEN/NOTIFY directly in Bash. The event table

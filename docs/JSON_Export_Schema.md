@@ -1,3 +1,19 @@
+---
+title: "JSON Export Schema Documentation"
+description: "The OSM-Notes-Analytics system exports datamart data to JSON files for consumption by web viewers"
+version: "1.0.0"
+last_updated: "2026-01-25"
+author: "AngocA"
+tags:
+  - "database"
+  - "export"
+audience:
+  - "developers"
+project: "OSM-Notes-Analytics"
+status: "active"
+---
+
+
 # JSON Export Schema Documentation
 
 ## Overview

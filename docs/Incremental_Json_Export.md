@@ -1,3 +1,18 @@
+---
+title: "Incremental JSON Export"
+description: "The JSON export system has been optimized to use incremental processing, only exporting entities"
+version: "1.0.0"
+last_updated: "2026-01-25"
+author: "AngocA"
+tags:
+  - "export"
+audience:
+  - "developers"
+project: "OSM-Notes-Analytics"
+status: "active"
+---
+
+
 # Incremental JSON Export
 
 ## Overview

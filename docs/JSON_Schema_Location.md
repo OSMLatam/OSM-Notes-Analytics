@@ -1,3 +1,19 @@
+---
+title: "JSON Schema Location and Usage"
+description: "JSON Schema files define the structure of exported data files. These schemas are used by:"
+version: "1.0.0"
+last_updated: "2026-01-25"
+author: "AngocA"
+tags:
+  - "database"
+  - "export"
+audience:
+  - "developers"
+project: "OSM-Notes-Analytics"
+status: "active"
+---
+
+
 # JSON Schema Location and Usage
 
 ## Overview

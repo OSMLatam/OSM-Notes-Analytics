@@ -1,3 +1,18 @@
+---
+title: "OSM-Notes-Analytics - Project Rationale"
+description: "OpenStreetMap Notes have been an integral part of the OSM ecosystem since 2013. They represent"
+version: "1.0.0"
+last_updated: "2026-01-25"
+author: "AngocA"
+tags:
+  - "rationale"
+audience:
+  - "developers"
+project: "OSM-Notes-Analytics"
+status: "active"
+---
+
+
 # OSM-Notes-Analytics - Project Rationale
 
 ## Why This Project Exists

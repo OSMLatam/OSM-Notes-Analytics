@@ -1,3 +1,18 @@
+---
+title: "Data Flow Diagrams (DFD)"
+description: "Data Flow Diagrams are used to visualize:"
+version: "1.0.0"
+last_updated: "2026-01-25"
+author: "AngocA"
+tags:
+  - "architecture"
+audience:
+  - "developers"
+project: "OSM-Notes-Analytics"
+status: "active"
+---
+
+
 # Data Flow Diagrams (DFD)
 
 This document provides Data Flow Diagrams (DFD) for the OSM-Notes-Analytics system, following

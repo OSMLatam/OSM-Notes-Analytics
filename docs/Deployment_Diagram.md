@@ -1,3 +1,20 @@
+---
+title: "Deployment Diagram"
+description: "This document provides deployment architecture and operational diagrams for the OSM-Notes-Analytics"
+version: "1.0.0"
+last_updated: "2026-01-25"
+author: "AngocA"
+tags:
+  - "architecture"
+  - "installation"
+audience:
+  - "system-admins"
+  - "developers"
+project: "OSM-Notes-Analytics"
+status: "active"
+---
+
+
 # Deployment Diagram
 
 This document provides deployment architecture and operational diagrams for the OSM-Notes-Analytics

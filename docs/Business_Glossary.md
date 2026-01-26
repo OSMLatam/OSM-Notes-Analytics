@@ -1,3 +1,18 @@
+---
+title: "Business Glossary"
+description: "This glossary serves multiple purposes:"
+version: "1.0.0"
+last_updated: "2026-01-25"
+author: "AngocA"
+tags:
+  - "documentation"
+audience:
+  - "developers"
+project: "OSM-Notes-Analytics"
+status: "active"
+---
+
+
 # Business Glossary
 
 This document provides business definitions for terms, concepts, and metrics used in the

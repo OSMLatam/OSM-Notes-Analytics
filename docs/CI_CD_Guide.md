@@ -1,3 +1,18 @@
+---
+title: "CI/CD Guide - OSM-Notes-Analytics"
+description: "This project uses a comprehensive CI/CD system with GitHub Actions, pre-commit hooks, and automated"
+version: "1.0.0"
+last_updated: "2026-01-25"
+author: "AngocA"
+tags:
+  - "guide"
+audience:
+  - "developers"
+project: "OSM-Notes-Analytics"
+status: "active"
+---
+
+
 # CI/CD Guide - OSM-Notes-Analytics
 
 ## 🎯 Overview

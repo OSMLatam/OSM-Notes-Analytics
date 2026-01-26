@@ -1,3 +1,19 @@
+---
+title: "Testing Guide - OSM-Notes-Analytics"
+description: "Comprehensive guide covering all aspects of testing in the OSM-Notes-Analytics project, including 197+ tests organized into unit, integration, and quality validation tests"
+version: "1.0.0"
+last_updated: "2026-01-25"
+author: "AngocA"
+tags:
+  - "testing"
+  - "guide"
+audience:
+  - "developers"
+project: "OSM-Notes-Analytics"
+status: "active"
+---
+
+
 # Testing Guide - OSM-Notes-Analytics
 
 ## Overview

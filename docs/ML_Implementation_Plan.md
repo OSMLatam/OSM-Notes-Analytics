@@ -1,3 +1,18 @@
+---
+title: "Machine Learning Implementation Plan"
+description: "Future enhancement plan for machine learning features in OSM Notes Analytics, including implementation estimates and dependencies"
+version: "1.0.0"
+last_updated: "2026-01-25"
+author: "AngocA"
+tags:
+  - "machine-learning"
+audience:
+  - "developers"
+project: "OSM-Notes-Analytics"
+status: "active"
+---
+
+
 # Machine Learning Implementation Plan
 
 **Status**: Future Enhancement  

@@ -1,3 +1,18 @@
+---
+title: "Data Lineage Documentation"
+description: "Data lineage shows the complete path data takes through the system:"
+version: "1.0.0"
+last_updated: "2026-01-25"
+author: "AngocA"
+tags:
+  - "documentation"
+audience:
+  - "developers"
+project: "OSM-Notes-Analytics"
+status: "active"
+---
+
+
 # Data Lineage Documentation
 
 This document provides complete data lineage for the OSM-Notes-Analytics system, tracing data from

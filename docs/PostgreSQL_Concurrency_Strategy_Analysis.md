@@ -1,3 +1,19 @@
+---
+title: "PostgreSQL Concurrency Strategy Analysis"
+description: "Analysis of current implementation of PostgreSQL concurrency strategies in OSM Notes Analytics ETL processes"
+version: "1.0.0"
+last_updated: "2026-01-25"
+author: "AngocA"
+tags:
+  - "database"
+  - "performance"
+audience:
+  - "developers"
+project: "OSM-Notes-Analytics"
+status: "active"
+---
+
+
 # Análisis de Estrategia de Concurrencia PostgreSQL
 
 ## Resumen Ejecutivo

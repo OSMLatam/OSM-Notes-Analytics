@@ -1,3 +1,19 @@
+---
+title: "Dashboard Implementation Guide"
+description: "The OSM Notes Analytics system provides multiple data sources for building dashboards:"
+version: "1.0.0"
+last_updated: "2026-01-25"
+author: "AngocA"
+tags:
+  - "monitoring"
+  - "guide"
+audience:
+  - "developers"
+project: "OSM-Notes-Analytics"
+status: "active"
+---
+
+
 # Dashboard Implementation Guide
 
 This guide provides step-by-step instructions for building dashboards using the OSM Notes Analytics

@@ -1,3 +1,18 @@
+---
+title: "Note Categorization and Classification"
+description: "This document describes how the OSM Notes Analytics project helps categorize and classify"
+version: "1.0.0"
+last_updated: "2026-01-25"
+author: "AngocA"
+tags:
+  - "documentation"
+audience:
+  - "developers"
+project: "OSM-Notes-Analytics"
+status: "active"
+---
+
+
 # Note Categorization and Classification
 
 **Status**: Documentation  

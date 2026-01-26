@@ -1,3 +1,18 @@
+---
+title: "Architecture Diagram"
+description: "The architecture documentation uses the C4 model:"
+version: "1.0.0"
+last_updated: "2026-01-25"
+author: "AngocA"
+tags:
+  - "architecture"
+audience:
+  - "developers"
+project: "OSM-Notes-Analytics"
+status: "active"
+---
+
+
 # Architecture Diagram
 
 This document provides architecture diagrams for the OSM-Notes-Analytics system, following the C4

@@ -1,3 +1,18 @@
+---
+title: "Cron Setup Guide - OSM Notes Analytics"
+description: "Complete guide for setting up automated ETL execution using cron."
+version: "1.0.0"
+last_updated: "2026-01-25"
+author: "AngocA"
+tags:
+  - "installation"
+audience:
+  - "developers"
+project: "OSM-Notes-Analytics"
+status: "active"
+---
+
+
 # Cron Setup Guide - OSM Notes Analytics
 
 Complete guide for setting up automated ETL execution using cron.

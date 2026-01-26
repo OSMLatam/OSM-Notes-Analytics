@@ -1,3 +1,18 @@
+---
+title: "Note Activity Metrics Trigger Documentation"
+description: "This trigger calculates accumulated historical metrics for each note action BEFORE inserting a new row into `dwh.facts`. It populates three columns:"
+version: "1.0.0"
+last_updated: "2026-01-25"
+author: "AngocA"
+tags:
+  - "performance"
+audience:
+  - "developers"
+project: "OSM-Notes-Analytics"
+status: "active"
+---
+
+
 # Note Activity Metrics Trigger Documentation
 
 **File:** `sql/dwh/ETL_52_createNoteActivityMetrics.sql`

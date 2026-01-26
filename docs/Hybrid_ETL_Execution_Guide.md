@@ -1,3 +1,19 @@
+---
+title: "Hybrid ETL Execution Guide"
+description: "Complete end-to-end testing and execution pipeline combining OSM Notes ingestion with analytics ETL, using real database operations and mocked downloads"
+version: "1.0.0"
+last_updated: "2026-01-25"
+author: "AngocA"
+tags:
+  - "etl"
+  - "guide"
+audience:
+  - "developers"
+project: "OSM-Notes-Analytics"
+status: "active"
+---
+
+
 # Hybrid ETL Execution Guide
 
 ## Overview

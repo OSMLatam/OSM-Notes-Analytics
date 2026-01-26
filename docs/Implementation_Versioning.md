@@ -1,3 +1,18 @@
+---
+title: "Versioning System Implementation Summary"
+description: "A comprehensive semantic versioning system has been implemented for JSON exports to ensure compatibility between exported data and the web viewer."
+version: "1.0.0"
+last_updated: "2026-01-25"
+author: "AngocA"
+tags:
+  - "documentation"
+audience:
+  - "developers"
+project: "OSM-Notes-Analytics"
+status: "active"
+---
+
+
 # Versioning System Implementation Summary
 
 ## Overview

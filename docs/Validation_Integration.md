@@ -1,3 +1,18 @@
+---
+title: "Schema Validation Integration with Cron Jobs"
+description: "This document explains how to integrate JSON Schema validation into the automated cron job workflow that generates and exports OSM Notes data."
+version: "1.0.0"
+last_updated: "2026-01-25"
+author: "AngocA"
+tags:
+  - "validation"
+audience:
+  - "developers"
+project: "OSM-Notes-Analytics"
+status: "active"
+---
+
+
 # Schema Validation Integration with Cron Jobs
 
 ## Overview

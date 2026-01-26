@@ -1,3 +1,18 @@
+---
+title: "Version Compatibility System for JSON Exports"
+description: "The JSON export system uses semantic versioning to ensure compatibility between exported data and"
+version: "1.0.0"
+last_updated: "2026-01-25"
+author: "AngocA"
+tags:
+  - "documentation"
+audience:
+  - "developers"
+project: "OSM-Notes-Analytics"
+status: "active"
+---
+
+
 # Version Compatibility System for JSON Exports
 
 ## Overview

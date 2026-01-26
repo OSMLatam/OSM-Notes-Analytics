@@ -1,3 +1,18 @@
+---
+title: "Query Performance Baselines"
+description: "The data warehouse is optimized for analytics queries through:"
+version: "1.0.0"
+last_updated: "2026-01-25"
+author: "AngocA"
+tags:
+  - "performance"
+audience:
+  - "developers"
+project: "OSM-Notes-Analytics"
+status: "active"
+---
+
+
 # Query Performance Baselines
 
 This document provides performance baselines and expectations for common queries against the OSM

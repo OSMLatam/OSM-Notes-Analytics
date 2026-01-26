@@ -1,3 +1,18 @@
+---
+title: "GitHub Push Setup for Production"
+description: "This document explains how to configure automated git pushes to GitHub from production servers,"
+version: "1.0.0"
+last_updated: "2026-01-25"
+author: "AngocA"
+tags:
+  - "installation"
+audience:
+  - "developers"
+project: "OSM-Notes-Analytics"
+status: "active"
+---
+
+
 # GitHub Push Setup for Production
 
 This document explains how to configure automated git pushes to GitHub from production servers,

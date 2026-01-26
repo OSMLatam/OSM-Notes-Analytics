@@ -1,3 +1,18 @@
+---
+title: "DWH Star Schema Data Dictionary"
+description: "This document provides a tabular data dictionary for the star schema used in the data warehouse. It"
+version: "1.0.0"
+last_updated: "2026-01-25"
+author: "AngocA"
+tags:
+  - "database"
+audience:
+  - "developers"
+project: "OSM-Notes-Analytics"
+status: "active"
+---
+
+
 # DWH Star Schema Data Dictionary
 
 This document provides a tabular data dictionary for the star schema used in the data warehouse. It

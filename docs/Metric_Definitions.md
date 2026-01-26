@@ -1,3 +1,18 @@
+---
+title: "Metric Definitions - Complete Reference"
+description: "This document provides comprehensive business definitions for all metrics available in the"
+version: "1.0.0"
+last_updated: "2026-01-25"
+author: "AngocA"
+tags:
+  - "performance"
+audience:
+  - "developers"
+project: "OSM-Notes-Analytics"
+status: "active"
+---
+
+
 # Metric Definitions - Complete Reference
 
 This document provides comprehensive business definitions for all metrics available in the

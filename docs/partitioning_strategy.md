@@ -1,3 +1,18 @@
+---
+title: "Partitioning Strategy - dwh.facts"
+description: "The `dwh.facts` table is partitioned by year using the `action_at` column as the partitioning key."
+version: "1.0.0"
+last_updated: "2026-01-25"
+author: "AngocA"
+tags:
+  - "documentation"
+audience:
+  - "developers"
+project: "OSM-Notes-Analytics"
+status: "active"
+---
+
+
 # Partitioning Strategy - dwh.facts
 
 ## 📊 Overview

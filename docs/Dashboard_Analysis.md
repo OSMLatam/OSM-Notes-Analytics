@@ -1,3 +1,18 @@
+---
+title: "Dashboard Analysis: OSM Notes Analytics"
+description: "This document analyzes the data available in the OSM Notes Analytics data warehouse (star schema)"
+version: "1.0.0"
+last_updated: "2026-01-25"
+author: "AngocA"
+tags:
+  - "monitoring"
+audience:
+  - "developers"
+project: "OSM-Notes-Analytics"
+status: "active"
+---
+
+
 # Dashboard Analysis: OSM Notes Analytics
 
 ## Data Mapping Between Star Schema and Datamarts
