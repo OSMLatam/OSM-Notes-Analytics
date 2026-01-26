@@ -88,9 +88,13 @@ graph TB
         DWH_SCHEMA[dwh Schema<br/>data warehouse]
     end
 
-    subgraph External["External Systems"]
-        INGESTION[OSM-Notes-Ingestion<br/>Updates Base Tables]
-        VIEWER[OSM-Notes-Viewer<br/>Reads JSON Files]
+    subgraph External["External Systems (OSM Notes Ecosystem)"]
+        INGESTION[OSM-Notes-Ingestion<br/>Updates Base Tables<br/>Base Project]
+        DATA[OSM-Notes-Data<br/>JSON Files<br/>GitHub Pages]
+        VIEWER[OSM-Notes-Viewer<br/>Reads JSON Files<br/>from Data]
+        API[OSM-Notes-API<br/>Reads from DWH<br/>Optional Consumer]
+        WMS[OSM-Notes-WMS<br/>Uses Ingestion DB]
+        MONITORING[OSM-Notes-Monitoring<br/>Monitors All]
     end
 
     CRON_SERVICE -->|Triggers| CRON_ETL
@@ -114,7 +118,16 @@ graph TB
     EXPORT_PROC -->|Writes| OUTPUT
 
     INGESTION -->|Updates| BASE_SCHEMA
-    VIEWER -->|Reads| OUTPUT
+    EXPORT_PROC -->|Publishes| DATA
+    DATA -->|Serves JSON| VIEWER
+    POSTGRES -->|Reads| API
+    INGESTION -->|Same DB| WMS
+    MONITORING -.->|Monitors| ANALYTICS_SYSTEM
+    MONITORING -.->|Monitors| INGESTION
+    MONITORING -.->|Monitors| API
+    MONITORING -.->|Monitors| DATA
+    MONITORING -.->|Monitors| VIEWER
+    MONITORING -.->|Monitors| WMS
 
     POSTGRES -->|Stores| BASE_SCHEMA
     POSTGRES -->|Stores| DWH_SCHEMA
@@ -230,7 +243,7 @@ gantt
 
 ```mermaid
 graph TD
-    INGESTION[OSM-Notes-Ingestion<br/>Updates Base Tables]
+    INGESTION[OSM-Notes-Ingestion<br/>Updates Base Tables<br/>Base Project]
 
     ETL[ETL Process<br/>Auto-detect]
 
@@ -240,9 +253,14 @@ graph TD
 
     EXPORT[JSON Export]
 
-    VIEWER[OSM-Notes-Viewer<br/>Consumes JSON]
+    DATA[OSM-Notes-Data<br/>JSON Files<br/>GitHub Pages]
+    VIEWER[OSM-Notes-Viewer<br/>Consumes JSON<br/>from Data]
+    API[OSM-Notes-API<br/>Reads from DWH<br/>Optional]
+    WMS[OSM-Notes-WMS<br/>Uses Ingestion DB]
+    MONITORING[OSM-Notes-Monitoring<br/>Monitors All]
 
     INGESTION -->|Must Complete| ETL
+    INGESTION -->|Same Database| WMS
 
     ETL -->|Creates/Updates DWH| DATAMART_USERS
     ETL -->|Creates/Updates DWH| DATAMART_COUNTRIES
@@ -252,27 +270,41 @@ graph TD
     DATAMART_COUNTRIES -->|Required| EXPORT
     DATAMART_GLOBAL -->|Optional| EXPORT
 
-    EXPORT -->|Provides| VIEWER
+    EXPORT -->|Publishes| DATA
+    DATA -->|Provides| VIEWER
+    ETL -->|DWH| API
+
+    MONITORING -.->|Monitors| INGESTION
+    MONITORING -.->|Monitors| ETL
+    MONITORING -.->|Monitors| DATA
+    MONITORING -.->|Monitors| VIEWER
+    MONITORING -.->|Monitors| API
+    MONITORING -.->|Monitors| WMS
 ```
 
 ### Execution Order
 
 **Initial Deployment:**
 
-1. Deploy OSM-Notes-Ingestion (populate base tables)
+1. Deploy OSM-Notes-Ingestion (populate base tables) - Base project
 2. Wait for base tables to have data
-3. Run ETL (auto-detects first execution, creates DWH)
-4. Run datamart scripts (initial population)
-5. Run JSON export
-6. Deploy OSM-Notes-Viewer
+3. Deploy OSM-Notes-WMS (optional, uses same database as Ingestion)
+4. Run ETL (auto-detects first execution, creates DWH)
+5. Run datamart scripts (initial population)
+6. Run JSON export (creates OSM-Notes-Data)
+7. Deploy OSM-Notes-Viewer (consumes Data)
+8. Deploy OSM-Notes-API (optional, reads from Analytics DWH)
+9. Deploy OSM-Notes-Monitoring (monitors all components)
 
 **Regular Operations:**
 
 1. OSM-Notes-Ingestion runs (updates base tables)
 2. ETL runs (every 15 minutes, auto-detects incremental)
 3. Datamarts update (daily at 2 AM)
-4. JSON export runs (every 15 minutes)
-5. OSM-Notes-Viewer reads JSON files
+4. JSON export runs (every 15 minutes, updates OSM-Notes-Data)
+5. OSM-Notes-Viewer reads JSON files from Data
+6. OSM-Notes-API serves queries from Analytics DWH
+7. OSM-Notes-Monitoring monitors all components
 
 ---
 

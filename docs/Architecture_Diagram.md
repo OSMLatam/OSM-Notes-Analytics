@@ -24,10 +24,14 @@ graph TB
         OVERPASS[Overpass API<br/>overpass-api.de]
     end
 
-    subgraph Ecosystem["OSM Notes Ecosystem"]
-        INGESTION[OSM-Notes-Ingestion<br/>Data Ingestion System]
+    subgraph Ecosystem["OSM Notes Ecosystem (8 Projects)"]
+        INGESTION[OSM-Notes-Ingestion<br/>Data Ingestion System<br/>Base Project]
         ANALYTICS[OSM-Notes-Analytics<br/>data warehouse & ETL<br/>This System]
+        API[OSM-Notes-API<br/>REST API]
+        DATA[OSM-Notes-Data<br/>JSON Files<br/>GitHub Pages]
         VIEWER[OSM-Notes-Viewer<br/>Web Application]
+        WMS[OSM-Notes-WMS<br/>Web Map Service]
+        MONITORING[OSM-Notes-Monitoring<br/>Monitoring & Alerting]
         COMMON[OSM-Notes-Common<br/>Shared Libraries<br/>Git Submodule]
     end
 
@@ -43,12 +47,23 @@ graph TB
     OVERPASS -->|Boundary Data| INGESTION
 
     INGESTION -->|Base Tables| ANALYTICS
-    ANALYTICS -->|JSON Datamarts| VIEWER
+    INGESTION -->|Same Database| WMS
+    ANALYTICS -->|JSON Datamarts| DATA
+    ANALYTICS -->|Data Warehouse| API
+    DATA -->|JSON Files| VIEWER
     VIEWER -->|Visualizations| WEB_USERS
 
     COMMON -.->|Shared Libraries| INGESTION
     COMMON -.->|Shared Libraries| ANALYTICS
-    COMMON -.->|Shared Libraries| VIEWER
+    COMMON -.->|Shared Libraries| WMS
+    COMMON -.->|Shared Libraries| MONITORING
+
+    MONITORING -.->|Monitors| INGESTION
+    MONITORING -.->|Monitors| ANALYTICS
+    MONITORING -.->|Monitors| API
+    MONITORING -.->|Monitors| WMS
+    MONITORING -.->|Monitors| DATA
+    MONITORING -.->|Monitors| VIEWER
 
     DATA_ENG -->|Run ETL| ANALYTICS
     ANALYSTS -->|Query DWH| ANALYTICS
@@ -57,9 +72,14 @@ graph TB
 
 **System Relationships:**
 
-- **OSM-Notes-Ingestion**: Upstream system providing base data
-- **OSM-Notes-Viewer**: Downstream system consuming JSON exports
-- **OSM-Notes-Common**: Shared library used by all three systems
+- **OSM-Notes-Ingestion**: Upstream system providing base data (base project)
+- **OSM-Notes-Analytics**: This system (ETL and data warehouse)
+- **OSM-Notes-API**: Reads from Analytics data warehouse (optional consumer)
+- **OSM-Notes-Data**: JSON files exported from Analytics (served via GitHub Pages)
+- **OSM-Notes-Viewer**: Downstream system consuming JSON exports from Data
+- **OSM-Notes-WMS**: Uses same database as Ingestion (geographic visualization)
+- **OSM-Notes-Monitoring**: Monitors all ecosystem components
+- **OSM-Notes-Common**: Shared library used by multiple systems (Ingestion, Analytics, WMS, Monitoring)
 
 **User Types:**
 
