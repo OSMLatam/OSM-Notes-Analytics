@@ -684,7 +684,7 @@ SELECT pg_terminate_backend(pid);
 
 - **[DWH Maintenance Guide](../docs/DWH_Maintenance_Guide.md)** - Maintenance procedures
 - **[Troubleshooting Guide](../docs/Troubleshooting_Guide.md)** - Common SQL and database issues
-- **[partitioning_strategy.md](../docs/partitioning_strategy.md)** - Facts table partitioning
+- **[Partitioning_Strategy.md](../docs/Partitioning_Strategy.md)** - Facts table partitioning
 
 ### External References
 

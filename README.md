@@ -392,7 +392,7 @@ tail -40f $(ls -1rtd /tmp/ETL_* | tail -1)/ETL.log
 
 - Creates schema `dwh` with all tables (see [ERD](docs/DWH_Star_Schema_ERD.md))
 - Creates automatic partitions for facts table (2013-2025+) - see
-  [Partitioning Strategy](docs/partitioning_strategy.md)
+  [Partitioning Strategy](docs/Partitioning_Strategy.md)
 - Populates dimension tables
 - Loads facts from note_comments - see [ETL Process Flow](docs/DWH_Star_Schema_ERD.md#etl-data-flow)
 - Creates indexes and constraints
@@ -950,7 +950,7 @@ The `dwh.facts` table is **partitioned by year** using the `action_at` column:
   - Faster VACUUM and maintenance operations per partition
 - **Easy archival**: Old year partitions can be detached/archived independently
 
-See `docs/partitioning_strategy.md` for complete details.
+See `docs/Partitioning_Strategy.md` for complete details.
 
 ### Initial Load Times
 
@@ -1206,10 +1206,10 @@ For more information about OSM licensing, see:
 For shared documentation of the complete ecosystem, see:
 
 - **[OSM Notes Ecosystem](https://github.com/OSM-Notes/OSM-Notes)** - Ecosystem landing page
-- **[Global Glossary](https://github.com/OSM-Notes/OSM-Notes-Common/blob/main/docs/GLOSSARY.md)** - Terms and definitions
-- **[Complete Installation Guide](https://github.com/OSM-Notes/OSM-Notes-Common/blob/main/docs/INSTALLATION.md)** - Step-by-step installation of all projects
-- **[End-to-End Data Flow](https://github.com/OSM-Notes/OSM-Notes-Common/blob/main/docs/DATA_FLOW.md)** - Complete data flow
-- **[Decision Guide](https://github.com/OSM-Notes/OSM-Notes-Common/blob/main/docs/DECISION_GUIDE.md)** - Which project do I need?
+- **[Global Glossary](https://github.com/OSM-Notes/OSM-Notes-Common/blob/main/docs/Glossary.md)** - Terms and definitions
+- **[Complete Installation Guide](https://github.com/OSM-Notes/OSM-Notes-Common/blob/main/docs/Installation.md)** - Step-by-step installation of all projects
+- **[End-to-End Data Flow](https://github.com/OSM-Notes/OSM-Notes-Common/blob/main/docs/Data_Flow.md)** - Complete data flow
+- **[Decision Guide](https://github.com/OSM-Notes/OSM-Notes-Common/blob/main/docs/Decision_Guide.md)** - Which project do I need?
 
 ---
 

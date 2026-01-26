@@ -356,7 +356,7 @@ The analytics system supports note resolution campaigns by:
 
 - **[Metric Definitions](Metric_Definitions.md)**: Complete reference for all metrics
 - **[Dashboard Analysis](Dashboard_Analysis.md)**: Available metrics and dashboards
-- **[Use Cases and Personas](Use_Cases_and_Personas.md)**: User scenarios and queries
+- **[Use Cases and Personas](Use_Cases_And_Personas.md)**: User scenarios and queries
 - **[ML Implementation Plan](ML_Implementation_Plan.md)**: Automated note classification using ML
 
 ---

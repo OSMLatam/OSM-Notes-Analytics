@@ -494,7 +494,7 @@ graph TD
 - **Maintenance**: Can VACUUM/ANALYZE individual partitions
 - **Parallel Processing**: Process multiple years simultaneously
 
-See [Partitioning Strategy](partitioning_strategy.md) for details.
+See [Partitioning Strategy](Partitioning_Strategy.md) for details.
 
 ---
 

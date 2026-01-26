@@ -63,7 +63,7 @@ Before contributing, familiarize yourself with:
   Complete schema reference
 - **[docs/DWH_Maintenance_Guide.md](../docs/DWH_Maintenance_Guide.md)**: Maintenance and cleanup
   procedures
-- **[docs/partitioning_strategy.md](../docs/partitioning_strategy.md)**: Facts table partitioning
+- **[docs/Partitioning_Strategy.md](../docs/Partitioning_Strategy.md)**: Facts table partitioning
   strategy
 
 #### Script Reference

@@ -1060,7 +1060,7 @@ SELECT ... FROM information_schema... WHERE ...;
 
 - [Dashboard Implementation Guide](Dashboard_Implementation_Guide.md) - How to build dashboards
 - [Metric Definitions](Metric_Definitions.md) - What metrics mean
-- [Performance Baselines](PERFORMANCE_BASELINES.md) - Query performance expectations
+- [Performance Baselines](Performance_Baselines.md) - Query performance expectations
 - [JSON Export Schema](JSON_Export_Schema.md) - API for frontend developers
 
 ---

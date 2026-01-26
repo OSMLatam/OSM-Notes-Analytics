@@ -182,7 +182,7 @@ flowchart TD
    - **Dimension Tables**: Users, countries, dates, times, applications, hashtags, etc. - see
      [ERD](DWH_Star_Schema_ERD.md)
    - **Partitioning**: Facts table partitioned by year for optimal performance - see
-     [Partitioning Strategy](partitioning_strategy.md)
+     [Partitioning Strategy](Partitioning_Strategy.md)
 
 3. **Datamarts**: Pre-computed aggregations:
    - `dwh.datamartUsers` - One row per user with 78+ metrics

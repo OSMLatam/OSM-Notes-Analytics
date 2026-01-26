@@ -472,4 +472,4 @@ psql -d $DBNAME -c "SELECT pg_size_pretty(pg_database_size('osm_notes'))"
 - [DWH Data Dictionary](DWH_Star_Schema_Data_Dictionary.md)
 - [ETL Enhanced Features](ETL_Enhanced_Features.md)
 - [DWH Maintenance Guide](DWH_Maintenance_Guide.md)
-- [Partitioning Strategy](partitioning_strategy.md)
+- [Partitioning Strategy](Partitioning_Strategy.md)

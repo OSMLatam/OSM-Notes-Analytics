@@ -1186,7 +1186,7 @@ const hours = JSON.parse(profile.working_hours_of_week_opening);
 
 - [Dashboard Analysis](Dashboard_Analysis.md) - Data availability analysis
 - [Metric Definitions](Metric_Definitions.md) - Complete metric reference
-- [Performance Baselines](PERFORMANCE_BASELINES.md) - Query performance expectations
+- [Performance Baselines](Performance_Baselines.md) - Query performance expectations
 - [JSON Export Schema](JSON_Export_Schema.md) - JSON file structure
 - [DWH Star Schema Data Dictionary](DWH_Star_Schema_Data_Dictionary.md) - Database schema
 

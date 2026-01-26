@@ -650,4 +650,4 @@ These scripts are designed to be used in CI/CD pipelines:
 - [ETL Enhanced Features](ETL_Enhanced_Features.md) - ETL capabilities and features
 - [DWH Star Schema ERD](DWH_Star_Schema_ERD.md) - Data warehouse structure
 - [Troubleshooting Guide](Troubleshooting_Guide.md) - Common issues and solutions
-- [Execution Guide](execution_guide.md) - General execution documentation
+- [Execution Guide](Execution_Guide.md) - General execution documentation

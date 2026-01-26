@@ -219,7 +219,7 @@ testing strategies, and development workflows.
 
 ---
 
-#### [Use_Cases_and_Personas.md](Use_Cases_and_Personas.md)
+#### [Use_Cases_and_Personas.md](Use_Cases_And_Personas.md)
 
 **User Personas and Use Cases - User-Centered Design**
 
@@ -416,7 +416,7 @@ testing strategies, and development workflows.
 
 ---
 
-#### [PERFORMANCE_BASELINES.md](PERFORMANCE_BASELINES.md)
+#### [PERFORMANCE_BASELINES.md](Performance_Baselines.md)
 
 **Query Performance Baselines - Performance Expectations**
 
@@ -513,7 +513,7 @@ testing strategies, and development workflows.
 
 ---
 
-#### [cron_setup.md](cron_setup.md)
+#### [Cron_Setup.md](Cron_Setup.md)
 
 **Cron Setup Guide - Automated Execution**
 
@@ -821,7 +821,7 @@ For comprehensive testing documentation, see **[tests/README.md](../tests/README
 
 ### CI/CD Documentation
 
-#### [GitHub_Push_Setup.md](GitHub_Push_Setup.md)
+#### [GitHub_Push_Setup.md](Github_Push_Setup.md)
 
 **GitHub Push Setup for Production**
 
@@ -1012,7 +1012,7 @@ For detailed navigation paths by role, see
   - SQL query examples
   - Frontend integration
   - Performance optimization
-- **[Use_Cases_and_Personas.md](./Use_Cases_and_Personas.md)** (15 min) - User needs
+- **[Use_Cases_and_Personas.md](./Use_Cases_And_Personas.md)** (15 min) - User needs
   - User personas
   - Use cases
   - Query patterns
@@ -1043,7 +1043,7 @@ For detailed navigation paths by role, see
   - Common issues
   - Diagnostic commands
   - Recovery procedures
-- **[PERFORMANCE_BASELINES.md](./PERFORMANCE_BASELINES.md)** (15 min) - Query performance
+- **[PERFORMANCE_BASELINES.md](./Performance_Baselines.md)** (15 min) - Query performance
   expectations
   - Performance baselines
   - Optimization tips

@@ -224,7 +224,7 @@ The performance monitoring system is designed to:
 
 ## Related Documentation
 
-- [Performance Baselines](docs/PERFORMANCE_BASELINES.md) - Query performance expectations
+- [Performance Baselines](docs/Performance_Baselines.md) - Query performance expectations
 - [Troubleshooting Guide](docs/Troubleshooting_Guide.md) - Common issues and solutions
 - [Testing Guide](docs/Testing_Guide.md) - How to run all tests
 

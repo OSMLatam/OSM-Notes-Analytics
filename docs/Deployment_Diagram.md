@@ -446,7 +446,7 @@ crontab /tmp/osm-notes-cron
 crontab -l
 ```
 
-See [Cron Setup Guide](cron_setup.md) for detailed cron configuration.
+See [Cron Setup Guide](Cron_Setup.md) for detailed cron configuration.
 
 ### Step 7: Verify Deployment
 
@@ -783,7 +783,7 @@ MAX_MEMORY_USAGE=85
 
 ## Related Documentation
 
-- **[Cron Setup Guide](cron_setup.md)**: Detailed cron configuration
+- **[Cron Setup Guide](Cron_Setup.md)**: Detailed cron configuration
 - **[Architecture Diagram](Architecture_Diagram.md)**: System architecture
 - **[Troubleshooting Guide](Troubleshooting_Guide.md)**: Operational issues
 - **[DWH Maintenance Guide](DWH_Maintenance_Guide.md)**: Database maintenance
