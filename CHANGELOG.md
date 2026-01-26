@@ -115,79 +115,23 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- Standardize documentation links and add new guides for OSM-Notes-Analytics
-- Add CI testing script for local development
-- Add new columns for note tracking in datamartUsers
-- Add new columns to datamartCountries for note tracking
-- Update repository references to reflect new organizational structure
-- Enhance Git operations in exportAndPushJSONToGitHub.sh for conflict resolution and data integrity
-- Add Phase 2b to ETL process for updating closed_dimension_id_date
-- Enhance CSV export process with configurable note limits and README generation
-- Add CSV file size filtering and improved commit/push logic in exportAndPushCSVToGitHub.sh
-- Refactor CSV export and commit process in exportAndPushCSVToGitHub.sh
-- Enhance error handling and permissions management in exportAndPushCSVToGitHub.sh
-- Improve change detection and safety configuration in exportAndPushCSVToGitHub.sh
-- Add CSV target directory creation for incremental commits in exportAndPushCSVToGitHub.sh
-- Implement incremental CSV export and commit process in exportAndPushCSVToGitHub.sh
-- Optimize CSV export process with locking mechanism and performance tracking
-- Add logging functionality to CSV export script for cron execution
-- Enhance CSV export script with flexible data repository paths and safety checks
-- Add consolidated metrics functions for datamartCountries
-- Introduce consolidated year activity metrics function for datamartCountries
-- Add consolidated hashtags metrics function for datamartCountries
-- ... and 52 more additions
+- **CI/CD Testing Infrastructure**: Added local CI testing scripts and improved test workflows
+- **Datamart Enhancements**: Added new tracking columns and metrics to datamartUsers and datamartCountries
+- **Enhanced Export Functionality**: Improved CSV and JSON export processes with incremental updates and conflict resolution
 
 ### Changed
 
-- Clean up formatting and improve readability in run_ci_tests.sh
-- Enhance JSON file copying in user subdirectory structure
-- Update SQL scripts to use public schema for note_comments and related tables
-- Standardize alias usage in datamartCountries SQL scripts
-- Update hashtag selection to enforce VARCHAR type and streamline aggregated metrics retrieval
-- Optimize: Enhance global datamart population script for performance
-- Clean up whitespace in SQL procedure files for improved readability
-- Optimize SQL queries by removing unnecessary CAST operations
-- Clean up whitespace in CI workflow file for improved readability
-- Update BATS tests to source scripts with SKIP_MAIN for safer execution
-- Standardize variable substitution format in BATS tests
-- Improve variable substitution in BATS tests for FDW setup
-- Update test workflow and scripts for enhanced configuration
-- Clean up whitespace in ETL_60_setupFDW.sql
-- Update PostgreSQL statement timeout in properties example
-- ... and 31 more changes
+- **Documentation**: Comprehensive documentation updates including standardized links, metadata sections, and Mermaid diagrams
+- **ETL Process**: Enhanced ETL execution with improved phase handling and closed dimension date updates
+- **Database**: Updated SQL scripts to use public schema and improved query optimization
+- **Performance**: Optimized SQL queries, export processes, and added locking mechanisms
+- **Code Quality**: Standardized code formatting, improved error handling, and enhanced logging
 
 ### Fixed
 
-- Update timestamp handling in export scripts for consistency
-- Correct spelling of 'latest' in datamartCountries and datamartUsers SQL scripts
-- Refactor CONTINUE_DESPITE_FAILURE handling in ETL execution logic
-- Adjust execution logic for ETL process in run_processAPINotes_with_etl.sh
-- Improve error handling and processing logic in datamartCountries.sh
-- Update SQL script for closed_dimension_id_date to use subquery for next closed action
-- Clean up whitespace in exportAndPushCSVToGitHub.sh
-- Update note_comments table references to use public schema
-- Update ETL log handling and cleanup process
-- Handle anonymous user cases in notes processing procedure
-- Update subproject reference in osm-common
-- Update BATS test to verify initialization of original_statement_timeout
-- Update BATS test execution commands for improved output clarity
-- Improve error handling and execution isolation in ETL scripts
-- Enhance error handling and output management in DWH test execution script
-- ... and 39 more fixes
+- **Timestamp handling**: Fixed multiple issues related to timestamp handling
 
-### Removed
-
-- Remove cron and monitor scripts, update documentation accordingly
-
-### Documentation
-
-- Comprehensive documentation updates (23 commits)
-  - Standardized documentation links and file naming conventions
-  - Added metadata sections (frontmatter) to documentation files
-  - Enhanced README files with improved navigation and structure
-  - Converted ASCII diagrams to Mermaid format for better visualization
-  - Updated cross-references and internal links
-
+---
 
 ## [2025-12-26] - ETL Enhancements and Script Standardization
 
