@@ -12,7 +12,6 @@ project: "OSM-Notes-Analytics"
 status: "active"
 ---
 
-
 # Cron Setup Guide - OSM Notes Analytics
 
 Complete guide for setting up automated ETL execution using cron.

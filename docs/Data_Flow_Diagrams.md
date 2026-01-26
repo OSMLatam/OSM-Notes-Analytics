@@ -12,7 +12,6 @@ project: "OSM-Notes-Analytics"
 status: "active"
 ---
 
-
 # Data Flow Diagrams (DFD)
 
 This document provides Data Flow Diagrams (DFD) for the OSM-Notes-Analytics system, following

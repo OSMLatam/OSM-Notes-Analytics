@@ -1,6 +1,8 @@
 ---
 title: "PostgreSQL Concurrency Strategy Analysis"
-description: "Analysis of current implementation of PostgreSQL concurrency strategies in OSM Notes Analytics ETL processes"
+description:
+  "Analysis of current implementation of PostgreSQL concurrency strategies in OSM Notes Analytics
+  ETL processes"
 version: "1.0.0"
 last_updated: "2026-01-25"
 author: "AngocA"
@@ -12,7 +14,6 @@ audience:
 project: "OSM-Notes-Analytics"
 status: "active"
 ---
-
 
 # PostgreSQL Concurrency Strategy Analysis
 
@@ -42,8 +43,8 @@ OSM-Notes-Analytics project, specifically for queries that extract data from the
 - ETL.sh uses: `"ETL"`, `"ETL-year-{year}"`, etc.
 - Datamart scripts use: script name (e.g., `"datamartCountries"`)
 
-**Decision**: Current behavior is maintained as it is functional and allows clear identification
-of each process in `pg_stat_activity`.
+**Decision**: Current behavior is maintained as it is functional and allows clear identification of
+each process in `pg_stat_activity`.
 
 ---
 
@@ -87,16 +88,17 @@ of each process in `pg_stat_activity`.
      `staging.process_notes_actions_into_dwh`, `dwh.update_datamart_country`,
      `dwh.update_datamart_user`) also perform writes (INSERT/UPDATE), so they cannot use READ ONLY
      for the entire transaction
-   - Comments were added documenting that SELECT queries to ingestion tables should be READ ONLY when
-     possible
-   - SELECT queries within these procedures are documented to indicate they read from ingestion tables
+   - Comments were added documenting that SELECT queries to ingestion tables should be READ ONLY
+     when possible
+   - SELECT queries within these procedures are documented to indicate they read from ingestion
+     tables
 
 **Limitations**:
 
 - In PostgreSQL, READ ONLY is a property of the entire transaction, not individual subqueries
 - Procedures that perform both reads and writes cannot use READ ONLY for the entire transaction
-- Best practice is to document SELECT queries that read from ingestion tables and trust that the remote
-  server (if FDW) handles READ ONLY when possible
+- Best practice is to document SELECT queries that read from ingestion tables and trust that the
+  remote server (if FDW) handles READ ONLY when possible
 
 ---
 
@@ -276,8 +278,8 @@ Some procedures perform both reads and writes:
 - `staging.process_notes_at_date()`: Reads from ingestion, writes to DWH
 - `staging.process_notes_actions_into_dwh()`: Reads from ingestion, writes to DWH
 
-**Strategy**: Use READ ONLY sub-transactions only for SELECT queries to ingestion tables, not for the
-entire transaction.
+**Strategy**: Use READ ONLY sub-transactions only for SELECT queries to ingestion tables, not for
+the entire transaction.
 
 ### Compatibility with Same Database
 

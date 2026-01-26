@@ -1,6 +1,8 @@
 ---
 title: "Atomic Validation Strategy for JSON Export"
-description: "Implementation guide for atomic validation in the JSON export process, ensuring data integrity during file generation"
+description:
+  "Implementation guide for atomic validation in the JSON export process, ensuring data integrity
+  during file generation"
 version: "1.0.0"
 last_updated: "2026-01-25"
 author: "AngocA"
@@ -12,7 +14,6 @@ audience:
 project: "OSM-Notes-Analytics"
 status: "active"
 ---
-
 
 # Atomic Validation Strategy for JSON Export
 

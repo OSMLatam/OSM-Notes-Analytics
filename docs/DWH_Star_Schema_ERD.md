@@ -1,6 +1,8 @@
 ---
 title: "DWH Star Schema ERD"
-description: "This document shows the entity–relationship diagram (ERD) of the star schema. The central fact table"
+description:
+  "This document shows the entity–relationship diagram (ERD) of the star schema. The central fact
+  table"
 version: "1.0.0"
 last_updated: "2026-01-25"
 author: "AngocA"
@@ -11,7 +13,6 @@ audience:
 project: "OSM-Notes-Analytics"
 status: "active"
 ---
-
 
 # DWH Star Schema ERD
 

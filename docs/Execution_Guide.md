@@ -12,7 +12,6 @@ project: "OSM-Notes-Analytics"
 status: "active"
 ---
 
-
 # Execution Guide - OSM Notes Analytics
 
 Complete guide for executing all components of the OSM Notes Analytics system.

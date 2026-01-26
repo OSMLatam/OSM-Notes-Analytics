@@ -1,6 +1,8 @@
 ---
 title: "data warehouse Maintenance and Cleanup Guide"
-description: "This guide covers maintenance operations for the OSM-Notes-Analytics data warehouse, including when"
+description:
+  "This guide covers maintenance operations for the OSM-Notes-Analytics data warehouse, including
+  when"
 version: "1.0.0"
 last_updated: "2026-01-25"
 author: "AngocA"
@@ -12,7 +14,6 @@ audience:
 project: "OSM-Notes-Analytics"
 status: "active"
 ---
-
 
 # data warehouse Maintenance and Cleanup Guide
 

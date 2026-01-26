@@ -12,7 +12,6 @@ project: "OSM-Notes-Analytics"
 status: "active"
 ---
 
-
 # Architecture Diagram
 
 This document provides architecture diagrams for the OSM-Notes-Analytics system, following the C4
@@ -94,7 +93,8 @@ graph TB
 - **OSM-Notes-Viewer**: Downstream system consuming JSON exports from Data
 - **OSM-Notes-WMS**: Uses same database as Ingestion (geographic visualization)
 - **OSM-Notes-Monitoring**: Monitors all ecosystem components
-- **OSM-Notes-Common**: Shared library used by multiple systems (Ingestion, Analytics, WMS, Monitoring)
+- **OSM-Notes-Common**: Shared library used by multiple systems (Ingestion, Analytics, WMS,
+  Monitoring)
 
 **User Types:**
 
@@ -406,7 +406,7 @@ sequenceDiagram
 ```mermaid
 graph TD
     DB[PostgreSQL Database: osm_notes]
-    
+
     subgraph Public["Schema: public<br/>managed by OSM-Notes-Ingestion"]
         NOTES[notes]
         COMMENTS[note_comments]
@@ -414,7 +414,7 @@ graph TD
         USERS[users]
         COUNTRIES[countries]
     end
-    
+
     subgraph DWH["Schema: dwh<br/>managed by OSM-Notes-Analytics"]
         subgraph Facts["facts partitioned by year"]
             F2013[facts_2013]
@@ -422,7 +422,7 @@ graph TD
             FDOTS[...]
             F2025[facts_2025]
         end
-        
+
         DIM_USERS[dimension_users]
         DIM_COUNTRIES[dimension_countries]
         DIM_DAYS[dimension_days]
@@ -434,34 +434,34 @@ graph TD
         DIM_SEASONS[dimension_seasons]
         DIM_AUTO[dimension_automation_level]
         DIM_EXP[dimension_experience_levels]
-        
+
         DM_USERS[datamartusers]
         DM_COUNTRIES[datamartcountries]
         DM_GLOBAL[datamartglobal]
     end
-    
+
     subgraph Staging["Schema: staging<br/>temporary, managed by ETL"]
         STAGE_2013[facts_2013 per-year staging]
         STAGE_2014[facts_2014 per-year staging]
         STAGE_DOTS[...]
     end
-    
+
     DB --> Public
     DB --> DWH
     DB --> Staging
-    
+
     Public --> NOTES
     Public --> COMMENTS
     Public --> COMMENTS_TEXT
     Public --> USERS
     Public --> COUNTRIES
-    
+
     DWH --> Facts
     Facts --> F2013
     Facts --> F2014
     Facts --> FDOTS
     Facts --> F2025
-    
+
     DWH --> DIM_USERS
     DWH --> DIM_COUNTRIES
     DWH --> DIM_DAYS
@@ -476,11 +476,11 @@ graph TD
     DWH --> DM_USERS
     DWH --> DM_COUNTRIES
     DWH --> DM_GLOBAL
-    
+
     Staging --> STAGE_2013
     Staging --> STAGE_2014
     Staging --> STAGE_DOTS
-    
+
     style DB fill:#90EE90
     style Public fill:#E0F6FF
     style DWH fill:#FFFFE0

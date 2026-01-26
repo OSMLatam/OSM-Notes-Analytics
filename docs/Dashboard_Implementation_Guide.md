@@ -1,6 +1,7 @@
 ---
 title: "Dashboard Implementation Guide"
-description: "The OSM Notes Analytics system provides multiple data sources for building dashboards:"
+description:
+  "The OSM Notes Analytics system provides multiple data sources for building dashboards:"
 version: "1.0.0"
 last_updated: "2026-01-25"
 author: "AngocA"
@@ -12,7 +13,6 @@ audience:
 project: "OSM-Notes-Analytics"
 status: "active"
 ---
-
 
 # Dashboard Implementation Guide
 

@@ -116,13 +116,17 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - **CI/CD Testing Infrastructure**: Added local CI testing scripts and improved test workflows
-- **Datamart Enhancements**: Added new tracking columns and metrics to datamartUsers and datamartCountries
-- **Enhanced Export Functionality**: Improved CSV and JSON export processes with incremental updates and conflict resolution
+- **Datamart Enhancements**: Added new tracking columns and metrics to datamartUsers and
+  datamartCountries
+- **Enhanced Export Functionality**: Improved CSV and JSON export processes with incremental updates
+  and conflict resolution
 
 ### Changed
 
-- **Documentation**: Comprehensive documentation updates including standardized links, metadata sections, and Mermaid diagrams
-- **ETL Process**: Enhanced ETL execution with improved phase handling and closed dimension date updates
+- **Documentation**: Comprehensive documentation updates including standardized links, metadata
+  sections, and Mermaid diagrams
+- **ETL Process**: Enhanced ETL execution with improved phase handling and closed dimension date
+  updates
 - **Database**: Updated SQL scripts to use public schema and improved query optimization
 - **Performance**: Optimized SQL queries, export processes, and added locking mechanisms
 - **Code Quality**: Standardized code formatting, improved error handling, and enhanced logging

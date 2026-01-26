@@ -18,7 +18,8 @@ status: "active"
 
 # Installation and Dependencies Guide
 
-Complete guide to install all dependencies and set up OSM-Notes-Analytics for development and production.
+Complete guide to install all dependencies and set up OSM-Notes-Analytics for development and
+production.
 
 ## Table of Contents
 
@@ -102,6 +103,7 @@ curl --version
 **OSM-Notes-Analytics REQUIRES OSM-Notes-Ingestion to be installed first.**
 
 The Analytics project reads from the Ingestion database base tables:
+
 - `public.notes`
 - `public.note_comments`
 - `public.note_comments_text`
@@ -322,6 +324,7 @@ ls -la bin/dwh/*.sh
 **Error**: `relation "public.notes" does not exist`
 
 **Solution**:
+
 1. Ensure OSM-Notes-Ingestion is installed and configured
 2. Verify Ingestion database is populated with data
 3. Check database connection settings

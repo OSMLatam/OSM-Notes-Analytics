@@ -1,6 +1,7 @@
 ---
 title: "Troubleshooting Guide"
-description: "This comprehensive troubleshooting guide consolidates common problems and solutions for the"
+description:
+  "This comprehensive troubleshooting guide consolidates common problems and solutions for the"
 version: "1.0.0"
 last_updated: "2026-01-25"
 author: "AngocA"
@@ -13,7 +14,6 @@ audience:
 project: "OSM-Notes-Analytics"
 status: "active"
 ---
-
 
 # Troubleshooting Guide
 

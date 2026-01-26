@@ -12,7 +12,6 @@ project: "OSM-Notes-Analytics"
 status: "active"
 ---
 
-
 # Business Glossary
 
 This document provides business definitions for terms, concepts, and metrics used in the

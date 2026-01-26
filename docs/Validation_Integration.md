@@ -1,6 +1,8 @@
 ---
 title: "Schema Validation Integration with Cron Jobs"
-description: "This document explains how to integrate JSON Schema validation into the automated cron job workflow that generates and exports OSM Notes data."
+description:
+  "This document explains how to integrate JSON Schema validation into the automated cron job
+  workflow that generates and exports OSM Notes data."
 version: "1.0.0"
 last_updated: "2026-01-25"
 author: "AngocA"
@@ -11,7 +13,6 @@ audience:
 project: "OSM-Notes-Analytics"
 status: "active"
 ---
-
 
 # Schema Validation Integration with Cron Jobs
 
@@ -27,17 +28,17 @@ that generates and exports OSM Notes data.
 ```mermaid
 flowchart TD
     CRON[Cron Job<br/>every 15 minutes]
-    
+
     ANALYTICS[OSM-Notes-Analytics<br/>./bin/dwh/ETL.sh<br/>./bin/dwh/datamartUsers/datamartUsers.sh<br/>./bin/dwh/datamartCountries/datamart...<br/>./bin/dwh/exportDatamartsToJSON.sh]
-    
+
     SHARED[/var/www/osm-notes-data/<br/>shared directory]
-    
+
     VIEWER[OSM-Notes-Viewer<br/>Reads JSON files directly]
-    
+
     CRON --> ANALYTICS
     ANALYTICS --> SHARED
     SHARED --> VIEWER
-    
+
     style CRON fill:#FFE4B5
     style ANALYTICS fill:#FFFFE0
     style SHARED fill:#E0F6FF

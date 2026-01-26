@@ -1,6 +1,8 @@
 ---
 title: "Hybrid ETL Execution Guide"
-description: "Complete end-to-end testing and execution pipeline combining OSM Notes ingestion with analytics ETL, using real database operations and mocked downloads"
+description:
+  "Complete end-to-end testing and execution pipeline combining OSM Notes ingestion with analytics
+  ETL, using real database operations and mocked downloads"
 version: "1.0.0"
 last_updated: "2026-01-25"
 author: "AngocA"
@@ -12,7 +14,6 @@ audience:
 project: "OSM-Notes-Analytics"
 status: "active"
 ---
-
 
 # Hybrid ETL Execution Guide
 
@@ -101,21 +102,21 @@ flowchart TD
         PLANET[processPlanetNotes.sh]
         INGESTION_DESC[Populates base tables]
     end
-    
+
     DB[(Database<br/>Real DB<br/>- notes<br/>- note_comments)]
-    
+
     subgraph Analytics["OSM-Notes-Analytics"]
         ETL[ETL.sh]
         ETL_DESC[Transforms to star schema<br/>Updates DWH]
     end
-    
+
     API -->|writes to| DB
     PLANET -->|writes to| DB
     INGESTION_DESC --> DB
-    
+
     DB -->|reads from| ETL
     ETL --> ETL_DESC
-    
+
     style Ingestion fill:#90EE90
     style DB fill:#E0F6FF
     style Analytics fill:#FFFFE0
@@ -153,17 +154,17 @@ The scripts carefully configure the `PATH` environment variable to ensure:
 ```mermaid
 flowchart LR
     PATH[PATH Environment Variable]
-    
+
     MOCK[hybrid_mock_dir<br/>Mock commands first]
     PSQL[real_psql_dir<br/>Real PostgreSQL]
     SYSTEM[system_paths<br/>System commands]
     REST[rest_of_path<br/>Other paths]
-    
+
     PATH --> MOCK
     MOCK --> PSQL
     PSQL --> SYSTEM
     SYSTEM --> REST
-    
+
     style PATH fill:#90EE90
     style MOCK fill:#FFE4B5
     style PSQL fill:#E0F6FF
@@ -293,32 +294,32 @@ log_info "ETL will use database: ${DBNAME}"
 
 The automatic script executes 4 complete cycles:
 
-```
+````
 ```mermaid
 flowchart TD
     subgraph EXEC1["EXECUTION #1: Planet/Base Load"]
         E1_1[1. Drop base tables<br/>countries, notes, note_comments]
         E1_2[2. Run processAPINotes.sh<br/>→ Detects missing tables<br/>→ Calls processPlanetNotes.sh --base<br/>→ Loads base data from mocked planet download]
         E1_3[3. Run ETL.sh<br/>→ Auto-detects first execution<br/>→ Creates DWH schema if needed<br/>→ Loads facts and dimensions from base tables<br/>→ Updates datamarts]
-        
+
         E1_1 --> E1_2
         E1_2 --> E1_3
     end
-    
+
     subgraph EXEC2["EXECUTION #2: API Sequential 5 notes"]
         E2_1[1. Base tables exist no drop]
         E2_2[2. Set MOCK_NOTES_COUNT=5]
         E2_3[3. Run processAPINotes.sh<br/>→ Uses API mode not planet<br/>→ Processes 5 notes sequentially < 10 notes<br/>→ Updates base tables with new notes]
         E2_4[4. Run ETL.sh<br/>→ Auto-detects incremental execution<br/>→ Processes only new data since last run<br/>→ Updates facts and dimensions<br/>→ Updates datamarts]
-        
+
         E2_1 --> E2_2
         E2_2 --> E2_3
         E2_3 --> E2_4
     end
-    
+
     style EXEC1 fill:#90EE90
     style EXEC2 fill:#FFFFE0
-```
+````
 
 ```mermaid
 flowchart TD
@@ -327,23 +328,23 @@ flowchart TD
         E3_2[2. Set MOCK_NOTES_COUNT=20]
         E3_3[3. Run processAPINotes.sh<br/>→ Uses API mode not planet<br/>→ Processes 20 notes in parallel >= 10 notes<br/>→ Updates base tables with new notes]
         E3_4[4. Run ETL.sh<br/>→ Auto-detects incremental execution<br/>→ Processes only new data since last run<br/>→ Updates facts and dimensions<br/>→ Updates datamarts]
-        
+
         E3_1 --> E3_2
         E3_2 --> E3_3
         E3_3 --> E3_4
     end
-    
+
     subgraph EXEC4["EXECUTION #4: API Empty 0 notes"]
         E4_1[1. Base tables exist no drop]
         E4_2[2. Set MOCK_NOTES_COUNT=0]
         E4_3[3. Run processAPINotes.sh<br/>→ Uses API mode not planet<br/>→ Receives empty response no new notes<br/>→ Handles gracefully no errors]
         E4_4[4. Run ETL.sh<br/>→ Processes only new data since last run<br/>→ No new data to process<br/>→ Updates datamarts may have no changes]
-        
+
         E4_1 --> E4_2
         E4_2 --> E4_3
         E4_3 --> E4_4
     end
-    
+
     style EXEC3 fill:#FFE4B5
     style EXEC4 fill:#FFB6C1
 ```

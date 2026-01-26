@@ -1,6 +1,8 @@
 ---
 title: "Hybrid Strategy: Database Separation"
-description: "Strategy to copy base tables locally to avoid millions of cross-database queries, improving ETL performance"
+description:
+  "Strategy to copy base tables locally to avoid millions of cross-database queries, improving ETL
+  performance"
 version: "1.0.0"
 last_updated: "2026-01-25"
 author: "AngocA"
@@ -12,7 +14,6 @@ audience:
 project: "OSM-Notes-Analytics"
 status: "active"
 ---
-
 
 # Hybrid Strategy: Database Separation
 

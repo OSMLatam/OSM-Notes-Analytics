@@ -4,7 +4,8 @@ This directory contains Architecture Decision Records (ADRs) for OSM-Notes-Analy
 
 ## What are ADRs?
 
-Architecture Decision Records are documents that capture important architectural decisions made during the project. They help:
+Architecture Decision Records are documents that capture important architectural decisions made
+during the project. They help:
 
 - Track why decisions were made
 - Understand the context and alternatives considered
@@ -30,7 +31,8 @@ Each ADR follows this structure:
 
 ## Creating a New ADR
 
-1. Copy [Template.md](Template.md) from OSM-Notes-Common: `cp ../../OSM-Notes-Common/docs/adr/Template.md 000X-short-title.md`
+1. Copy [Template.md](Template.md) from OSM-Notes-Common:
+   `cp ../../OSM-Notes-Common/docs/adr/Template.md 000X-short-title.md`
 2. Fill in the template
 3. Update this README with the new ADR
 4. Commit with message: `docs(adr): add ADR-000X for [decision]`

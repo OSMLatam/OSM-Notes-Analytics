@@ -6,7 +6,9 @@ Accepted
 
 ## Context
 
-The facts table will contain millions of rows spanning many years (2013-2025+). Query performance will degrade as the table grows. We need a way to maintain query performance while handling large data volumes.
+The facts table will contain millions of rows spanning many years (2013-2025+). Query performance
+will degrade as the table grows. We need a way to maintain query performance while handling large
+data volumes.
 
 ## Decision
 

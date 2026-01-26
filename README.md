@@ -114,7 +114,9 @@ For complete navigation by role, see
 
 ## Architecture Decision Records
 
-Architecture Decision Records (ADRs) document important architectural decisions made in this project:
+Architecture Decision Records (ADRs) document important architectural decisions made in this
+project:
+
 - [View all ADRs](docs/adr/)
 - [Central ADR Index](https://github.com/OSM-Notes/OSM-Notes-Common/blob/main/docs/adr/README.md)
 
@@ -145,7 +147,8 @@ Architecture Decision Records (ADRs) document important architectural decisions 
 
 ## Requirements
 
-For complete installation instructions, see **[Installation and Dependencies Guide](docs/Installation_Dependencies.md)**.
+For complete installation instructions, see
+**[Installation and Dependencies Guide](docs/Installation_Dependencies.md)**.
 
 ### Application Requirements
 
@@ -1214,10 +1217,14 @@ For more information about OSM licensing, see:
 For shared documentation of the complete ecosystem, see:
 
 - **[OSM Notes Ecosystem](https://github.com/OSM-Notes/OSM-Notes)** - Ecosystem landing page
-- **[Global Glossary](https://github.com/OSM-Notes/OSM-Notes-Common/blob/main/docs/Glossary.md)** - Terms and definitions
-- **[Complete Installation Guide](https://github.com/OSM-Notes/OSM-Notes-Common/blob/main/docs/Installation.md)** - Step-by-step installation of all projects
-- **[End-to-End Data Flow](https://github.com/OSM-Notes/OSM-Notes-Common/blob/main/docs/Data_Flow.md)** - Complete data flow
-- **[Decision Guide](https://github.com/OSM-Notes/OSM-Notes-Common/blob/main/docs/Decision_Guide.md)** - Which project do I need?
+- **[Global Glossary](https://github.com/OSM-Notes/OSM-Notes-Common/blob/main/docs/Glossary.md)** -
+  Terms and definitions
+- **[Complete Installation Guide](https://github.com/OSM-Notes/OSM-Notes-Common/blob/main/docs/Installation.md)** -
+  Step-by-step installation of all projects
+- **[End-to-End Data Flow](https://github.com/OSM-Notes/OSM-Notes-Common/blob/main/docs/Data_Flow.md)** -
+  Complete data flow
+- **[Decision Guide](https://github.com/OSM-Notes/OSM-Notes-Common/blob/main/docs/Decision_Guide.md)** -
+  Which project do I need?
 
 ---
 
@@ -1241,7 +1248,8 @@ OSM-Notes/
 └── OSM-Notes-Data/          # JSON data files (GitHub Pages)
 ```
 
-**All 8 projects are independent repositories**, working together to provide a complete OSM Notes analysis solution.
+**All 8 projects are independent repositories**, working together to provide a complete OSM Notes
+analysis solution.
 
 ### How Projects Work Together
 
@@ -1250,27 +1258,27 @@ graph TB
     subgraph External["External Sources"]
         OSM[OSM Planet/API]
     end
-    
+
     subgraph Base["Base Project"]
         INGESTION[OSM-Notes-Ingestion<br/>Base project]
     end
-    
+
     subgraph Processing["Processing Layer"]
         ANALYTICS[OSM-Notes-Analytics<br/>ETL → Data Warehouse<br/>this repo]
         WMS[OSM-Notes-WMS<br/>WMS layers]
     end
-    
+
     subgraph Delivery["Delivery Layer"]
         DATA[OSM-Notes-Data<br/>JSON files<br/>GitHub Pages]
         API[OSM-Notes-API<br/>REST API<br/>reads from Analytics DWH]
         VIEWER[OSM-Notes-Viewer<br/>Consumes JSON from Data]
     end
-    
+
     subgraph Support["Support Layer"]
         MONITORING[OSM-Notes-Monitoring<br/>Monitors all projects]
         COMMON[OSM-Notes-Common<br/>Shared libraries<br/>submodule]
     end
-    
+
     OSM -->|Downloads| INGESTION
     INGESTION -->|Base Tables| ANALYTICS
     INGESTION -->|Same Database| WMS
@@ -1284,7 +1292,7 @@ graph TB
     COMMON -.->|Used by| ANALYTICS
     COMMON -.->|Used by| WMS
     COMMON -.->|Used by| MONITORING
-    
+
     style OSM fill:#ADD8E6
     style INGESTION fill:#90EE90
     style ANALYTICS fill:#FFFFE0
@@ -1355,7 +1363,8 @@ When setting up the complete ecosystem, install projects in this order:
 8. **[OSM-Notes-Data](https://github.com/OSM-Notes/OSM-Notes-Data)**
    - JSON data files exported from Analytics
    - Served via GitHub Pages
-   - **Requires**: OSM-Notes-Analytics (generates and publishes the data via `exportAndPushJSONToGitHub.sh`)
+   - **Requires**: OSM-Notes-Analytics (generates and publishes the data via
+     `exportAndPushJSONToGitHub.sh`)
    - **Consumed by**: Viewer (primary consumer), API (optional)
 
 ### External Resources

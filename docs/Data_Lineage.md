@@ -12,7 +12,6 @@ project: "OSM-Notes-Analytics"
 status: "active"
 ---
 
-
 # Data Lineage Documentation
 
 This document provides complete data lineage for the OSM-Notes-Analytics system, tracing data from

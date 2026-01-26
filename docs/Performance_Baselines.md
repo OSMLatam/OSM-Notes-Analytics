@@ -12,7 +12,6 @@ project: "OSM-Notes-Analytics"
 status: "active"
 ---
 
-
 # Query Performance Baselines
 
 This document provides performance baselines and expectations for common queries against the OSM

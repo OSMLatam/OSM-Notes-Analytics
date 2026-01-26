@@ -1,6 +1,8 @@
 ---
 title: "ETL Features Documentation"
-description: "The ETL script provides essential functionality for transforming data from base tables into a star"
+description:
+  "The ETL script provides essential functionality for transforming data from base tables into a
+  star"
 version: "1.0.0"
 last_updated: "2026-01-25"
 author: "AngocA"
@@ -11,7 +13,6 @@ audience:
 project: "OSM-Notes-Analytics"
 status: "active"
 ---
-
 
 # ETL Features Documentation
 

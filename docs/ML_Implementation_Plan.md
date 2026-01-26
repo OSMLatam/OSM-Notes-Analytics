@@ -1,6 +1,8 @@
 ---
 title: "Machine Learning Implementation Plan"
-description: "Future enhancement plan for machine learning features in OSM Notes Analytics, including implementation estimates and dependencies"
+description:
+  "Future enhancement plan for machine learning features in OSM Notes Analytics, including
+  implementation estimates and dependencies"
 version: "1.0.0"
 last_updated: "2026-01-25"
 author: "AngocA"
@@ -11,7 +13,6 @@ audience:
 project: "OSM-Notes-Analytics"
 status: "active"
 ---
-
 
 # Machine Learning Implementation Plan
 
@@ -1312,14 +1313,14 @@ hashtag_features = {
 ```mermaid
 flowchart TD
     DWH[PostgreSQL DWH<br/>via FDW<br/>Access note_comments_text.body]
-    
+
     ML[Python ML Service<br/>- Feature extraction<br/>- Model training<br/>- Inference]
-    
+
     PREDICTIONS[PostgreSQL DWH<br/>predictions]
-    
+
     DWH -->|Extract features| ML
     ML -->|Store predictions| PREDICTIONS
-    
+
     style DWH fill:#E0F6FF
     style ML fill:#FFFFE0
     style PREDICTIONS fill:#E0F6FF

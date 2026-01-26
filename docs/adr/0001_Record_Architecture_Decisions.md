@@ -6,11 +6,13 @@ Accepted
 
 ## Context
 
-We need to record the architectural decisions made on this project to maintain knowledge and provide context for future developers.
+We need to record the architectural decisions made on this project to maintain knowledge and provide
+context for future developers.
 
 ## Decision
 
-We will use Architecture Decision Records (ADRs), as described by Michael Nygard, to document important architectural decisions in the `docs/adr/` directory.
+We will use Architecture Decision Records (ADRs), as described by Michael Nygard, to document
+important architectural decisions in the `docs/adr/` directory.
 
 ## Consequences
 

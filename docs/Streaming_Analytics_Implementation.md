@@ -1,6 +1,8 @@
 ---
 title: "Real-Time Streaming Analytics Implementation Plan"
-description: "Future enhancement plan for real-time streaming analytics implementation in OSM Notes Analytics (LOW Priority)"
+description:
+  "Future enhancement plan for real-time streaming analytics implementation in OSM Notes Analytics
+  (LOW Priority)"
 version: "1.0.0"
 last_updated: "2026-01-25"
 author: "AngocA"
@@ -11,7 +13,6 @@ audience:
 project: "OSM-Notes-Analytics"
 status: "active"
 ---
-
 
 # Real-Time Streaming Analytics Implementation Plan
 

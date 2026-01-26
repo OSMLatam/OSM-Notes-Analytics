@@ -1,6 +1,7 @@
 ---
 title: "User Personas and Use Cases"
-description: "This document describes the typical users of the OSM Notes Analytics system, their goals,"
+description:
+  "This document describes the typical users of the OSM Notes Analytics system, their goals,"
 version: "1.0.0"
 last_updated: "2026-01-25"
 author: "AngocA"
@@ -11,7 +12,6 @@ audience:
 project: "OSM-Notes-Analytics"
 status: "active"
 ---
-
 
 # User Personas and Use Cases
 

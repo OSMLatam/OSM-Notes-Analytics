@@ -1,6 +1,8 @@
 ---
 title: "Testing Guide - OSM-Notes-Analytics"
-description: "Comprehensive guide covering all aspects of testing in the OSM-Notes-Analytics project, including 197+ tests organized into unit, integration, and quality validation tests"
+description:
+  "Comprehensive guide covering all aspects of testing in the OSM-Notes-Analytics project, including
+  197+ tests organized into unit, integration, and quality validation tests"
 version: "1.0.0"
 last_updated: "2026-01-25"
 author: "AngocA"
@@ -12,7 +14,6 @@ audience:
 project: "OSM-Notes-Analytics"
 status: "active"
 ---
-
 
 # Testing Guide - OSM-Notes-Analytics
 
@@ -88,7 +89,7 @@ bats tests/unit/bash/datamart_high_priority_metrics.test.bats
 ```mermaid
 graph TD
     ROOT[tests/]
-    
+
     subgraph Unit["unit/ Unit tests"]
         subgraph Bash["bash/ Bash script unit tests 15 files"]
             B1[ETL_enhanced.test.bats]
@@ -106,31 +107,31 @@ graph TD
             B13[datamart_high_priority_metrics.test.bats]
             B14[hybrid_strategy_copy_fdw.test.bats]
         end
-        
+
         subgraph SQL["sql/ SQL unit tests 3 files"]
             S1[dwh_cleanup.test.sql]
             S2[dwh_dimensions_enhanced.test.sql]
             S3[dwh_functions_enhanced.test.sql]
         end
     end
-    
+
     subgraph Integration["integration/ Integration tests 3 files"]
         I1[ETL_enhanced_integration.test.bats]
         I2[datamart_enhanced_integration.test.bats]
         I3[resolution_temporal_metrics.test.bats]
     end
-    
+
     subgraph Performance["performance/ Performance benchmarks"]
         P1[run_benchmark.sh]
         P2[README.md]
     end
-    
+
     subgraph SQLSetup["sql/ Test data setup"]
         SQL1[setup_base_tables_data.sql]
         SQL2[setup_test_data.sql]
         SQL3[validate_resolution_temporal_metrics.sql]
     end
-    
+
     ROOT --> Unit
     ROOT --> Integration
     ROOT --> Performance
@@ -141,10 +142,10 @@ graph TD
     ROOT --> QUALITY[run_quality_tests.sh<br/>Quality validation]
     ROOT --> DWH[run_dwh_tests.sh<br/>DWH/ETL tests]
     ROOT --> MOCK[run_mock_etl.sh<br/>Mock data setup]
-    
+
     Unit --> Bash
     Unit --> SQL
-    
+
     style ROOT fill:#90EE90
     style Unit fill:#E0F6FF
     style Integration fill:#FFFFE0
@@ -758,7 +759,8 @@ See [tests/performance/README.md](../tests/performance/README.md) for details.
 ### Configuration
 
 - **[tests/properties.sh](../tests/properties.sh)** - Test configuration
-- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/Environment_Variables.md)** - Environment variables
+- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/Environment_Variables.md)** - Environment
+  variables
 
 ### Troubleshooting
 

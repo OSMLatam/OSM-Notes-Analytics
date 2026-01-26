@@ -7,6 +7,7 @@ Accepted
 ## Context
 
 We need to store and query analytics data efficiently. The data model must support:
+
 - Time-based analysis (by date, month, year)
 - Geographic analysis (by country, continent)
 - User analysis (by user, experience level, automation level)
