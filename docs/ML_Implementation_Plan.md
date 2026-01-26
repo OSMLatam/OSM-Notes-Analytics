@@ -1294,29 +1294,20 @@ hashtag_features = {
 
 **Architecture**:
 
-```
-┌─────────────────┐
-│ PostgreSQL DWH   │
-│  (via FDW)      │ ← Access note_comments_text.body
-└────────┬────────┘
-         │ Extract features
-         ▼
-┌─────────────────┐
-│ Python ML       │
-│  Service        │
-│                 │
-│ - Feature       │
-│   extraction    │
-│ - Model         │
-│   training      │
-│ - Inference     │
-└────────┬────────┘
-         │ Store predictions
-         ▼
-┌─────────────────┐
-│ PostgreSQL DWH  │
-│ predictions     │
-└─────────────────┘
+```mermaid
+flowchart TD
+    DWH[PostgreSQL DWH<br/>via FDW<br/>Access note_comments_text.body]
+    
+    ML[Python ML Service<br/>- Feature extraction<br/>- Model training<br/>- Inference]
+    
+    PREDICTIONS[PostgreSQL DWH<br/>predictions]
+    
+    DWH -->|Extract features| ML
+    ML -->|Store predictions| PREDICTIONS
+    
+    style DWH fill:#E0F6FF
+    style ML fill:#FFFFE0
+    style PREDICTIONS fill:#E0F6FF
 ```
 
 ### Components

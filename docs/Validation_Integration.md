@@ -9,23 +9,24 @@ that generates and exports OSM Notes data.
 
 ### Data Flow with Cron
 
-```
-Cron Job (every 15 minutes)
-    ↓
-┌─────────────────────────────────────────┐
-│  OSM-Notes-Analytics                    │
-│  ./bin/dwh/ETL.sh                       │
-│  ./bin/dwh/datamartUsers/datamartUsers.sh│
-│  ./bin/dwh/datamartCountries/datamart... │
-│  ./bin/dwh/exportDatamartsToJSON.sh    │
-└─────────────────────────────────────────┘
-    ↓
-/var/www/osm-notes-data/ (shared directory)
-    ↓
-┌─────────────────────────────────────────┐
-│  OSM-Notes-Viewer                       │
-│  Reads JSON files directly               │
-└─────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    CRON[Cron Job<br/>every 15 minutes]
+    
+    ANALYTICS[OSM-Notes-Analytics<br/>./bin/dwh/ETL.sh<br/>./bin/dwh/datamartUsers/datamartUsers.sh<br/>./bin/dwh/datamartCountries/datamart...<br/>./bin/dwh/exportDatamartsToJSON.sh]
+    
+    SHARED[/var/www/osm-notes-data/<br/>shared directory]
+    
+    VIEWER[OSM-Notes-Viewer<br/>Reads JSON files directly]
+    
+    CRON --> ANALYTICS
+    ANALYTICS --> SHARED
+    SHARED --> VIEWER
+    
+    style CRON fill:#FFE4B5
+    style ANALYTICS fill:#FFFFE0
+    style SHARED fill:#E0F6FF
+    style VIEWER fill:#DDA0DD
 ```
 
 ## Where to Add Validation

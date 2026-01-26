@@ -69,45 +69,71 @@ bats tests/unit/bash/datamart_high_priority_metrics.test.bats
 
 ### Directory Structure
 
-```
-tests/
-├── unit/                          # Unit tests
-│   ├── bash/                      # Bash script unit tests (15 files)
-│   │   ├── ETL_enhanced.test.bats
-│   │   ├── ETL_integration.test.bats
-│   │   ├── ETL_internal_functions.test.bats
-│   │   ├── datamartCountries_integration.test.bats
-│   │   ├── datamartUsers_integration.test.bats
-│   │   ├── datamartGlobal_integration.test.bats
-│   │   ├── datamart_full_integration.test.bats
-│   │   ├── datamart_resolution_metrics.test.bats
-│   │   ├── datamartUsers_resolution_metrics.test.bats
-│   │   ├── datamart_application_statistics.test.bats
-│   │   ├── datamart_content_quality.test.bats
-│   │   ├── datamart_community_health.test.bats
-│   │   ├── datamart_high_priority_metrics.test.bats
-│   │   └── hybrid_strategy_copy_fdw.test.bats
-│   └── sql/                       # SQL unit tests (3 files)
-│       ├── dwh_cleanup.test.sql
-│       ├── dwh_dimensions_enhanced.test.sql
-│       └── dwh_functions_enhanced.test.sql
-├── integration/                   # Integration tests (3 files)
-│   ├── ETL_enhanced_integration.test.bats
-│   ├── datamart_enhanced_integration.test.bats
-│   └── resolution_temporal_metrics.test.bats
-├── performance/                   # Performance benchmarks
-│   ├── run_benchmark.sh
-│   └── README.md
-├── sql/                           # Test data setup
-│   ├── setup_base_tables_data.sql
-│   ├── setup_test_data.sql
-│   └── validate_resolution_temporal_metrics.sql
-├── properties.sh                  # Test configuration
-├── test_helper.bash              # Common test utilities
-├── run_all_tests.sh              # Master test runner
-├── run_quality_tests.sh          # Quality validation
-├── run_dwh_tests.sh              # DWH/ETL tests
-└── run_mock_etl.sh               # Mock data setup
+```mermaid
+graph TD
+    ROOT[tests/]
+    
+    subgraph Unit["unit/ Unit tests"]
+        subgraph Bash["bash/ Bash script unit tests 15 files"]
+            B1[ETL_enhanced.test.bats]
+            B2[ETL_integration.test.bats]
+            B3[ETL_internal_functions.test.bats]
+            B4[datamartCountries_integration.test.bats]
+            B5[datamartUsers_integration.test.bats]
+            B6[datamartGlobal_integration.test.bats]
+            B7[datamart_full_integration.test.bats]
+            B8[datamart_resolution_metrics.test.bats]
+            B9[datamartUsers_resolution_metrics.test.bats]
+            B10[datamart_application_statistics.test.bats]
+            B11[datamart_content_quality.test.bats]
+            B12[datamart_community_health.test.bats]
+            B13[datamart_high_priority_metrics.test.bats]
+            B14[hybrid_strategy_copy_fdw.test.bats]
+        end
+        
+        subgraph SQL["sql/ SQL unit tests 3 files"]
+            S1[dwh_cleanup.test.sql]
+            S2[dwh_dimensions_enhanced.test.sql]
+            S3[dwh_functions_enhanced.test.sql]
+        end
+    end
+    
+    subgraph Integration["integration/ Integration tests 3 files"]
+        I1[ETL_enhanced_integration.test.bats]
+        I2[datamart_enhanced_integration.test.bats]
+        I3[resolution_temporal_metrics.test.bats]
+    end
+    
+    subgraph Performance["performance/ Performance benchmarks"]
+        P1[run_benchmark.sh]
+        P2[README.md]
+    end
+    
+    subgraph SQLSetup["sql/ Test data setup"]
+        SQL1[setup_base_tables_data.sql]
+        SQL2[setup_test_data.sql]
+        SQL3[validate_resolution_temporal_metrics.sql]
+    end
+    
+    ROOT --> Unit
+    ROOT --> Integration
+    ROOT --> Performance
+    ROOT --> SQLSetup
+    ROOT --> PROP[properties.sh<br/>Test configuration]
+    ROOT --> HELPER[test_helper.bash<br/>Common test utilities]
+    ROOT --> RUN_ALL[run_all_tests.sh<br/>Master test runner]
+    ROOT --> QUALITY[run_quality_tests.sh<br/>Quality validation]
+    ROOT --> DWH[run_dwh_tests.sh<br/>DWH/ETL tests]
+    ROOT --> MOCK[run_mock_etl.sh<br/>Mock data setup]
+    
+    Unit --> Bash
+    Unit --> SQL
+    
+    style ROOT fill:#90EE90
+    style Unit fill:#E0F6FF
+    style Integration fill:#FFFFE0
+    style Performance fill:#FFE4B5
+    style SQLSetup fill:#DDA0DD
 ```
 
 ### Test Categories
