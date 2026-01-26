@@ -347,6 +347,6 @@ When upgrading to a new major version:
 
 ## Related Documentation
 
-- [JSON Export Documentation](bin/dwh/export_json_readme.md)
-- [Atomic Validation Export](docs/Atomic_Validation_Export.md)
-- [ETL Process Documentation](docs/ETL_Enhanced_Features.md)
+- [JSON Export Documentation](../bin/dwh/export_json_readme.md)
+- [Atomic Validation Export](Atomic_Validation_Export.md)
+- [ETL Process Documentation](ETL_Enhanced_Features.md)

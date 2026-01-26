@@ -402,5 +402,4 @@ For complete metric definitions, formulas, and use cases, see
   recommendations
 - **Data Flow**: [Data Flow Diagrams](Data_Flow_Diagrams.md) - How data flows from base tables to
   datamarts
-- **Improvements History**: [DWH Improvements History](DWH_Improvements_History.md) - Evolution of
-  the data warehouse
+- **Improvements History**: Evolution of the data warehouse (documentation pending)

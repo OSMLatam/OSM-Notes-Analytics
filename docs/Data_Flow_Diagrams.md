@@ -446,7 +446,7 @@ flowchart TD
 - **Time**: 5-15 minutes (normal) to 30-60 minutes (large updates)
 - **Trigger**: `ETL.sh` (auto-detects incremental execution)
 - **Note**: Large incrementals may require `PSQL_STATEMENT_TIMEOUT=2h` (see
-  [Environment Variables](bin/dwh/ENVIRONMENT_VARIABLES.md))
+  [Environment Variables](../bin/dwh/ENVIRONMENT_VARIABLES.md))
 
 ## Parallel Processing
 

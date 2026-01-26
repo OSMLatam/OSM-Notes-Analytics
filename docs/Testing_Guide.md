@@ -758,7 +758,7 @@ See [tests/performance/README.md](../tests/performance/README.md) for details.
 ### Configuration
 
 - **[tests/properties.sh](../tests/properties.sh)** - Test configuration
-- **[bin/dwh/ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md)** - Environment variables
+- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)** - Environment variables
 
 ### Troubleshooting
 

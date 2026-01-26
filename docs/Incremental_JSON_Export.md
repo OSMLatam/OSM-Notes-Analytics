@@ -277,6 +277,6 @@ If data appears stale despite exports:
 
 ## Related Documentation
 
-- [JSON Export System](bin/dwh/export_json_readme.md)
-- [Version Compatibility](docs/Version_Compatibility.md)
-- [ETL Process](bin/dwh/README.md)
+- [JSON Export System](../bin/dwh/export_json_readme.md)
+- [Version Compatibility](Version_Compatibility.md)
+- [ETL Process](../bin/dwh/README.md)

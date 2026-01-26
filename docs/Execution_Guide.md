@@ -118,7 +118,7 @@ This will:
 - **Normal**: Processes only new data since last run
 - **Large updates**: When significant backlog exists (> 100K facts)
 - **Timeout note**: Large incrementals may require `PSQL_STATEMENT_TIMEOUT=2h` (see
-  [Environment Variables](bin/dwh/ENVIRONMENT_VARIABLES.md))
+  [Environment Variables](../bin/dwh/ENVIRONMENT_VARIABLES.md))
 
 ### ETL Process Types
 
