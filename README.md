@@ -139,6 +139,8 @@ For complete navigation by role, see
 
 ## Requirements
 
+For complete installation instructions, see **[Installation and Dependencies Guide](docs/Installation_Dependencies.md)**.
+
 ### Application Requirements
 
 - **PostgreSQL** 12 or higher
