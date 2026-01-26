@@ -1,3 +1,22 @@
+---
+title: "OSM-Notes-Analytics Documentation"
+description: "Comprehensive documentation index for OSM-Notes-Analytics data warehouse and ETL"
+version: "1.0.0"
+last_updated: "2026-01-25"
+author: "AngocA"
+tags:
+  - "documentation"
+  - "analytics"
+  - "data-warehouse"
+  - "index"
+audience:
+  - "data-engineers"
+  - "developers"
+  - "data-analysts"
+project: "OSM-Notes-Analytics"
+status: "active"
+---
+
 # Documentation Directory
 
 This directory contains comprehensive documentation for the OSM-Notes-Analytics project, including
