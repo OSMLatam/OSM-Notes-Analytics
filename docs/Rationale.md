@@ -141,8 +141,7 @@ Datamarts (Pre-computed Analytics)
 JSON Export → OSM-Notes-Viewer (Web Application)
 ```
 
-**Note**: All three projects (Ingestion, Analytics, Viewer) are sister projects at the same
-organizational level, working together to provide a complete OSM Notes analysis ecosystem.
+**Note**: The OSM Notes ecosystem consists of 8 projects working together to provide a complete OSM Notes analysis solution. OSM-Notes-Ingestion is the base project, as it was the first created and provides the foundation for all others.
 
 ### Data Flow
 
@@ -275,17 +274,20 @@ web interface for visualizing these analytics.
 
 ## Relationship to Other Projects
 
-The OSM-Notes-Analytics project is part of a three-project ecosystem, all at the same organizational
-level:
+The OSM-Notes-Analytics project is part of an 8-project ecosystem:
 
 ### Project Ecosystem Structure
 
 ```
 OSM-Notes/
-├── OSM-Notes-Ingestion/     # Data ingestion from OSM API/Planet
+├── OSM-Notes-Ingestion/     # Data ingestion from OSM API/Planet (base project)
 ├── OSM-Notes-Analytics/     # data warehouse & ETL (this repository)
+├── OSM-Notes-API/           # REST API for programmatic access
 ├── OSM-Notes-Viewer/        # Web frontend visualization
-└── OSM-Notes-Common/        # Shared Bash libraries (Git submodule)
+├── OSM-Notes-WMS/           # Web Map Service for geographic visualization
+├── OSM-Notes-Monitoring/    # Centralized monitoring and alerting
+├── OSM-Notes-Common/        # Shared Bash libraries (Git submodule)
+└── OSM-Notes-Data/          # JSON data files (GitHub Pages)
 ```
 
 ### OSM-Notes-Ingestion (Sister Project - Upstream)
@@ -307,9 +309,9 @@ OSM-Notes/
 
 - **Purpose**: Shared Bash libraries and utilities
 - **Repository**: [OSM-Notes-Common](https://github.com/OSM-Notes/OSM-Notes-Common)
-- **Relationship**: All three projects use common libraries via Git submodule
+- **Relationship**: Multiple projects use common libraries via Git submodule
 - **Dependency**: Shared via Git submodule (located at `lib/osm-common/` in each project)
-- **Used by**: Ingestion, Analytics, and potentially Viewer (for any server-side scripts)
+- **Used by**: Ingestion, Analytics, WMS, Monitoring, and potentially other projects
 - **Components**: Common functions, validation, error handling, logging, schemas
 
 ## Success Metrics
