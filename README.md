@@ -119,12 +119,21 @@ For complete navigation by role, see
   - Community health: active notes, backlog, age distribution, recent activity
 - **Comprehensive Testing**: 197 automated tests (90%+ function coverage)
 
-## Prerequisites
+## Requirements
+
+### Application Requirements
 
 - **PostgreSQL** 12 or higher
 - **Bash** 4.0 or higher
-- **OSM Notes Ingestion Database**: This analytics system reads from the base notes tables populated
-  by the [OSM-Notes-Ingestion](https://github.com/OSM-Notes/OSM-Notes-Ingestion) ingestion system
+- **Standard UNIX utilities**: grep, awk, sed, curl, jq
+- **Parallel processing**: GNU parallel (for parallel ETL execution)
+
+### Internal Repository Requirements
+
+- **OSM-Notes-Ingestion** ⚠️ **REQUIRED**
+  - This analytics system reads from the base notes tables populated by OSM-Notes-Ingestion
+  - Required tables: `notes`, `note_comments`, `note_comments_text`, `users`, `countries`
+  - **Install Ingestion FIRST** before installing Analytics
 
 ## Database Architecture
 
