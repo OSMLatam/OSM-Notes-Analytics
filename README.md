@@ -145,6 +145,18 @@ project:
   - Community health: active notes, backlog, age distribution, recent activity
 - **Comprehensive Testing**: 197 automated tests (90%+ function coverage)
 
+## GDPR Compliance
+
+**Important:** This system processes personal data from OpenStreetMap, including usernames (which may contain real names) and geographic locations (which may reveal where users live or frequent). We are committed to GDPR compliance.
+
+GDPR compliance mechanisms are implemented in the base project **OSM-Notes-Ingestion**. For detailed information about GDPR compliance, data processing, retention, and data subject rights, please refer to:
+
+- **GDPR Privacy Policy:** [OSM-Notes-Ingestion/docs/GDPR_Privacy_Policy.md](https://github.com/OSM-Notes/OSM-Notes-Ingestion/blob/main/docs/GDPR_Privacy_Policy.md)
+- **GDPR Procedures:** [OSM-Notes-Ingestion/docs/GDPR_Procedures.md](https://github.com/OSM-Notes/OSM-Notes-Ingestion/blob/main/docs/GDPR_Procedures.md) - Procedures for handling data subject requests
+- **GDPR SQL Scripts:** [OSM-Notes-Ingestion/sql/gdpr/README.md](https://github.com/OSM-Notes/OSM-Notes-Ingestion/blob/main/sql/gdpr/README.md) - SQL scripts to handle GDPR requests
+
+This Analytics project processes data that originates from OSM-Notes-Ingestion and is subject to the same GDPR compliance measures.
+
 ## Requirements
 
 For complete installation instructions, see
