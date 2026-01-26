@@ -107,4 +107,4 @@ chmod +x .git-hooks/pre-push
 - **[Main README](../README.md)** - Project overview and setup
 - **[Contributing Guide](../CONTRIBUTING.md)** - Development workflow and standards
 - **[etc/README.md](../etc/README.md)** - Configuration files and setup
-- **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/ENTRY_POINTS.md)** - Script entry points
+- **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/Entry_Points.md)** - Script entry points

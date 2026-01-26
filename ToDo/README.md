@@ -61,22 +61,22 @@ OSM-Notes-Analytics project.
 ### Starting a New Sprint
 
 1. Review `TODO_LIST.md` for next priority items
-2. Update `ProgressTracker.md` with sprint goals
+2. Update `Progress_Tracker.md` with sprint goals
 3. Create GitHub issues for major tasks (optional)
 4. Mark items as [🔄] in progress
 
 ### During Development
 
 1. Work on tasks from current sprint
-2. Update `ProgressTracker.md` with daily progress
+2. Update `Progress_Tracker.md` with daily progress
 3. Mark completed items [✅] in `TODO_LIST.md`
-4. Document blockers in `ProgressTracker.md`
+4. Document blockers in `Progress_Tracker.md`
 
 ### Sprint Review
 
 1. Update statistics in both files
-2. Log completed items in `ProgressTracker.md`
-3. Plan next sprint in `ProgressTracker.md`
+2. Log completed items in `Progress_Tracker.md`
+3. Plan next sprint in `Progress_Tracker.md`
 4. Review and adjust priorities if needed
 
 ### Adding New Tasks

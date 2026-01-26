@@ -671,13 +671,13 @@ SELECT pg_terminate_backend(pid);
 ### Scripts and Execution
 
 - **[bin/dwh/ETL.sh](../bin/dwh/ETL.sh)** - Main ETL orchestration script
-- **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/ENTRY_POINTS.md)** - Script entry points
+- **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/Entry_Points.md)** - Script entry points
 - **[bin/README.md](../bin/README.md)** - Script usage guide
 
 ### Configuration
 
 - **[etc/README.md](../etc/README.md)** - Configuration files and ETL properties
-- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)** - Environment
+- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/Environment_Variables.md)** - Environment
   variables
 
 ### Maintenance and Troubleshooting

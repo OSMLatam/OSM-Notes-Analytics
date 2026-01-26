@@ -1002,7 +1002,7 @@ function isCompatible(metadata, minVersion) {
 - **[Metric Definitions](Metric_Definitions.md)**: Complete business definitions for all metrics
 - **[Dashboard Analysis](Dashboard_Analysis.md)**: Implementation status and recommendations
 - **[Testing Guide](Testing_Guide.md)**: How to test JSON exports
-- **[Export Script README](../bin/dwh/export_json_readme.md)**: Export script documentation
+- **[Export Script README](../bin/dwh/Export_JSON_README.md)**: Export script documentation
 
 ---
 

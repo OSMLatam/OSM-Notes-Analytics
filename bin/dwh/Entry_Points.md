@@ -309,7 +309,7 @@ If you need functionality from an internal script:
 ## See Also
 
 - [bin/README.md](./README.md) - Complete script documentation
-- [bin/dwh/ENVIRONMENT_VARIABLES.md](./ENVIRONMENT_VARIABLES.md) - Environment variables
+- [bin/dwh/ENVIRONMENT_VARIABLES.md](./Environment_Variables.md) - Environment variables
   documentation
 - [bin/dwh/README.md](./README.md) - DWH-specific documentation
 - [docs/ETL_Enhanced_Features.md](../../docs/ETL_Enhanced_Features.md) - ETL features documentation

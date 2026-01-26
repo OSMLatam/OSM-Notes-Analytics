@@ -938,7 +938,7 @@ For detailed navigation paths by role, see
 
 **Step 3: Getting Started** (25 min)
 
-- **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/ENTRY_POINTS.md)** (15 min) - Which scripts to use
+- **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/Entry_Points.md)** (15 min) - Which scripts to use
   - Entry points documentation
   - Usage examples
 - **[Troubleshooting_Guide.md](./Troubleshooting_Guide.md)** (10 min) - Common issues
@@ -959,8 +959,8 @@ For detailed navigation paths by role, see
   - Parallel processing
   - Recovery mechanisms
   - Performance optimization
-- **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/ENTRY_POINTS.md)** (15 min) - Script entry points
-- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)** (15 min) -
+- **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/Entry_Points.md)** (15 min) - Script entry points
+- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/Environment_Variables.md)** (15 min) -
   Configuration
 
 **Step 3: Development Workflow** (45 min)
@@ -1022,8 +1022,8 @@ For detailed navigation paths by role, see
 **Step 1: Deployment** (45 min)
 
 - **[Main README](../README.md)** (20 min) - Setup and deployment
-- **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/ENTRY_POINTS.md)** (15 min) - Script entry points
-- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)** (10 min) -
+- **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/Entry_Points.md)** (15 min) - Script entry points
+- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/Environment_Variables.md)** (10 min) -
   Configuration
 
 **Step 2: Operations** (60 min)
@@ -1068,7 +1068,7 @@ For detailed navigation paths by role, see
 
 **Step 3: Configuration** (15 min)
 
-- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)** - Environment
+- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/Environment_Variables.md)** - Environment
   variables
 - **[etc/README.md](../etc/README.md)** - Configuration files
 
@@ -1083,8 +1083,8 @@ For detailed navigation paths by role, see
 
 ### Script Documentation
 
-- **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/ENTRY_POINTS.md)** - Which scripts can be called directly
-- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)** - Configuration
+- **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/Entry_Points.md)** - Which scripts can be called directly
+- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/Environment_Variables.md)** - Configuration
   variables
 - **[bin/README.md](../bin/README.md)** - Complete script documentation
 

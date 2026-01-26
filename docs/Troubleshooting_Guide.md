@@ -307,7 +307,7 @@ psql -d "${DBNAME_DWH:-notes_dwh}" -c "SELECT MAX(action_at) FROM dwh.facts;"
    - If processing > 1M facts, consider doing initial load
    - Initial load has longer timeouts and better parallelization
 
-**See also:** [Environment Variables](../bin/dwh/ENVIRONMENT_VARIABLES.md) for timeout configuration
+**See also:** [Environment Variables](../bin/dwh/Environment_Variables.md) for timeout configuration
 details.
 
 ### Problem: ETL Fails Mid-Execution
@@ -915,8 +915,8 @@ psql -d "${DBNAME:-osm_notes}" -c "SELECT COUNT(*) FROM notes;"
 3. **Review documentation:**
    - [README.md](../README.md)
    - [bin/README.md](../bin/README.md)
-   - [Entry Points](../bin/dwh/ENTRY_POINTS.md)
-   - [Environment Variables](../bin/dwh/ENVIRONMENT_VARIABLES.md)
+   - [Entry Points](../bin/dwh/Entry_Points.md)
+   - [Environment Variables](../bin/dwh/Environment_Variables.md)
 
 ### Creating an Issue
 
@@ -955,7 +955,7 @@ tail -50 $(ls -1rtd /tmp/ETL_* | tail -1)/ETL.log
 
 - [README.md](../README.md) - Project overview
 - [bin/README.md](../bin/README.md) - Script documentation
-- [Entry Points](../bin/dwh/ENTRY_POINTS.md) - Script entry points
-- [Environment Variables](../bin/dwh/ENVIRONMENT_VARIABLES.md) - Configuration
+- [Entry Points](../bin/dwh/Entry_Points.md) - Script entry points
+- [Environment Variables](../bin/dwh/Environment_Variables.md) - Configuration
 - [ETL Enhanced Features](ETL_Enhanced_Features.md) - ETL capabilities
 - [DWH Maintenance Guide](DWH_Maintenance_Guide.md) - Maintenance procedures

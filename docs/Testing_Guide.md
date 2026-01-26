@@ -751,14 +751,14 @@ See [tests/performance/README.md](../tests/performance/README.md) for details.
 ### Essential Reading
 
 - **[tests/README.md](../tests/README.md)** - Test directory overview
-- **[tests/SCRIPTS.md](../tests/SCRIPTS.md)** - Test scripts documentation
+- **[tests/SCRIPTS.md](../tests/Scripts.md)** - Test scripts documentation
 - **[Main README](../README.md)** - Project overview
 - **[Contributing Guide](../CONTRIBUTING.md)** - Development standards
 
 ### Configuration
 
 - **[tests/properties.sh](../tests/properties.sh)** - Test configuration
-- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)** - Environment variables
+- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/Environment_Variables.md)** - Environment variables
 
 ### Troubleshooting
 

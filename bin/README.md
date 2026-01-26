@@ -12,8 +12,8 @@ comprehensive data warehouse with pre-computed analytics datamarts.
 
 **New to the project?** Start here:
 
-- **[Entry Points Documentation](dwh/ENTRY_POINTS.md)** - Which scripts can be called directly
-- **[Environment Variables](dwh/ENVIRONMENT_VARIABLES.md)** - Configuration via environment
+- **[Entry Points Documentation](dwh/Entry_Points.md)** - Which scripts can be called directly
+- **[Environment Variables](dwh/Environment_Variables.md)** - Configuration via environment
   variables
 - **[DWH README](dwh/README.md)** - Detailed DWH documentation
 
@@ -26,7 +26,7 @@ comprehensive data warehouse with pre-computed analytics datamarts.
 5. `bin/dwh/exportDatamartsToJSON.sh` - Export to JSON
 6. `bin/dwh/cleanupDWH.sh` - Cleanup script
 
-See [Entry Points Documentation](dwh/ENTRY_POINTS.md) for complete details.
+See [Entry Points Documentation](dwh/Entry_Points.md) for complete details.
 
 ## Directory Structure
 
@@ -348,7 +348,7 @@ ls -lh ./output/json/users/ | head -10
 ls -lh ./output/json/countries/ | head -10
 ```
 
-**See also:** [JSON Export Documentation](dwh/export_json_readme.md)
+**See also:** [JSON Export Documentation](dwh/Export_JSON_README.md)
 
 ### 8. exportAndPushJSONToGitHub.sh - Export and Deploy
 
@@ -533,7 +533,7 @@ export ETL_MAX_PARALLEL_JOBS=8
 ./bin/dwh/ETL.sh
 ```
 
-**See also:** [Environment Variables Documentation](dwh/ENVIRONMENT_VARIABLES.md) for complete
+**See also:** [Environment Variables Documentation](dwh/Environment_Variables.md) for complete
 variable reference.
 
 ## Logging and Monitoring
@@ -853,8 +853,8 @@ psql -d osm_notes -c "SELECT country_name_en FROM dwh.datamartcountries WHERE co
 
 ### Essential Reading
 
-- **[Entry Points](dwh/ENTRY_POINTS.md)** - Which scripts can be called directly
-- **[Environment Variables](dwh/ENVIRONMENT_VARIABLES.md)** - Complete environment variable
+- **[Entry Points](dwh/Entry_Points.md)** - Which scripts can be called directly
+- **[Environment Variables](dwh/Environment_Variables.md)** - Complete environment variable
   reference
 - **[DWH README](dwh/README.md)** - Detailed DWH documentation
 - **[Main README](../README.md)** - Project overview and quick start
@@ -894,8 +894,8 @@ psql -d osm_notes -c "SELECT country_name_en FROM dwh.datamartcountries WHERE co
 
 ### Documentation
 
-- **[Entry Points](dwh/ENTRY_POINTS.md)** - Which scripts can be called directly
-- **[Environment Variables](dwh/ENVIRONMENT_VARIABLES.md)** - Complete environment variable
+- **[Entry Points](dwh/Entry_Points.md)** - Which scripts can be called directly
+- **[Environment Variables](dwh/Environment_Variables.md)** - Complete environment variable
   reference
 - **[DWH README](dwh/README.md)** - Detailed DWH documentation
 - **[ETL Enhanced Features](../docs/ETL_Enhanced_Features.md)** - Advanced ETL capabilities

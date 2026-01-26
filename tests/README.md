@@ -322,13 +322,13 @@ When adding new features:
 
 ### Scripts and Entry Points
 
-- **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/ENTRY_POINTS.md)** - Script entry points (what to test)
+- **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/Entry_Points.md)** - Script entry points (what to test)
 - **[bin/README.md](../bin/README.md)** - Script usage and examples
 
 ### Configuration
 
 - **[etc/README.md](../etc/README.md)** - Configuration files for test environment
-- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)** - Environment
+- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/Environment_Variables.md)** - Environment
   variables
 
 ### Troubleshooting

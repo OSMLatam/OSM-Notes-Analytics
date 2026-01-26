@@ -69,8 +69,8 @@ Before contributing, familiarize yourself with:
 #### Script Reference
 
 - **[bin/README.md](../bin/README.md)**: Script usage examples and workflows
-- **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/ENTRY_POINTS.md)**: Which scripts can be called directly
-- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)**: Environment variable
+- **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/Entry_Points.md)**: Which scripts can be called directly
+- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/Environment_Variables.md)**: Environment variable
   documentation
 
 #### Testing Documentation

@@ -617,9 +617,9 @@ unset ETL_BATCH_SIZE
 ### Essential Reading
 
 - **[Main README](../README.md)** - Project overview and quick start guide
-- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/ENVIRONMENT_VARIABLES.md)** - Complete environment
+- **[bin/dwh/ENVIRONMENT_VARIABLES.md](../bin/dwh/Environment_Variables.md)** - Complete environment
   variable reference
-- **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/ENTRY_POINTS.md)** - Script entry points and usage
+- **[bin/dwh/ENTRY_POINTS.md](../bin/dwh/Entry_Points.md)** - Script entry points and usage
 
 ### Technical Documentation
 

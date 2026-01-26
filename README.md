@@ -52,8 +52,8 @@ data.
    - Understand star schema design and table relationships
 
 4. **Getting Started** (30 min)
-   - Read [bin/dwh/ENTRY_POINTS.md](bin/dwh/ENTRY_POINTS.md) - Which scripts to use
-   - Review [bin/dwh/ENVIRONMENT_VARIABLES.md](bin/dwh/ENVIRONMENT_VARIABLES.md) - Configuration
+   - Read [bin/dwh/ENTRY_POINTS.md](bin/dwh/Entry_Points.md) - Which scripts to use
+   - Review [bin/dwh/ENVIRONMENT_VARIABLES.md](bin/dwh/Environment_Variables.md) - Configuration
    - Follow the Quick Start guide in this README
 
 5. **Troubleshooting** (10 min)
@@ -70,8 +70,8 @@ data.
 
 2. **Implementation** (1 hour)
    - [docs/ETL_Enhanced_Features.md](docs/ETL_Enhanced_Features.md) - ETL capabilities (30 min)
-   - [bin/dwh/ENTRY_POINTS.md](bin/dwh/ENTRY_POINTS.md) - Script entry points (15 min)
-   - [bin/dwh/ENVIRONMENT_VARIABLES.md](bin/dwh/ENVIRONMENT_VARIABLES.md) - Configuration (15 min)
+   - [bin/dwh/ENTRY_POINTS.md](bin/dwh/Entry_Points.md) - Script entry points (15 min)
+   - [bin/dwh/ENVIRONMENT_VARIABLES.md](bin/dwh/Environment_Variables.md) - Configuration (15 min)
 
 3. **Development Workflow** (45 min)
    - [tests/README.md](tests/README.md) - Testing guide (20 min)
@@ -98,8 +98,8 @@ data.
 
 1. **Deployment** (45 min)
    - This README - Setup and deployment (20 min)
-   - [bin/dwh/ENTRY_POINTS.md](bin/dwh/ENTRY_POINTS.md) - Script entry points (15 min)
-   - [bin/dwh/ENVIRONMENT_VARIABLES.md](bin/dwh/ENVIRONMENT_VARIABLES.md) - Configuration (10 min)
+   - [bin/dwh/ENTRY_POINTS.md](bin/dwh/Entry_Points.md) - Script entry points (15 min)
+   - [bin/dwh/ENVIRONMENT_VARIABLES.md](bin/dwh/Environment_Variables.md) - Configuration (10 min)
 
 2. **Operations** (1 hour)
    - [docs/ETL_Enhanced_Features.md](docs/ETL_Enhanced_Features.md) - ETL operations (30 min)
@@ -379,7 +379,7 @@ has data.
 - **Incremental update**: 5-15 minutes (normal) to 30-60 minutes (large updates)
   - Depends on volume of new data since last run
   - Large updates (> 100K facts) may require `PSQL_STATEMENT_TIMEOUT=2h` (see
-    [Environment Variables](bin/dwh/ENVIRONMENT_VARIABLES.md))
+    [Environment Variables](bin/dwh/Environment_Variables.md))
 
 **Monitor progress:**
 
@@ -700,7 +700,7 @@ output/json/
 - **Permission errors**: Check `./output/json/` directory is writable
 - **See [Troubleshooting Guide](docs/Troubleshooting_Guide.md#export-issues) for more solutions**
 
-See [JSON Export Documentation](bin/dwh/export_json_readme.md) and
+See [JSON Export Documentation](bin/dwh/Export_JSON_README.md) and
 [Atomic Validation Export](docs/Atomic_Validation_Export.md) for complete details.
 
 ## Quick Troubleshooting

@@ -218,5 +218,5 @@ To complete the implementation, you may want to:
 ## Related Documentation
 
 - [Version Compatibility Guide](Version_Compatibility.md)
-- [JSON Export Documentation](../bin/dwh/export_json_readme.md)
+- [JSON Export Documentation](../bin/dwh/Export_JSON_README.md)
 - [Atomic Validation Export](Atomic_Validation_Export.md)
