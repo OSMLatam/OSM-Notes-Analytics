@@ -112,6 +112,12 @@ data.
 For complete navigation by role, see
 [docs/README.md](docs/README.md#recommended-reading-paths-by-role).
 
+## Architecture Decision Records
+
+Architecture Decision Records (ADRs) document important architectural decisions made in this project:
+- [View all ADRs](docs/adr/)
+- [Central ADR Index](https://github.com/OSM-Notes/OSM-Notes-Common/blob/main/docs/adr/README.md)
+
 ## Features
 
 - **Star Schema Data Warehouse**: Comprehensive dimensional model for notes analysis (see
