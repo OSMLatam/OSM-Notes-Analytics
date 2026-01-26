@@ -14,123 +14,116 @@ status: "active"
 ---
 
 
-# Análisis de Estrategia de Concurrencia PostgreSQL
+# PostgreSQL Concurrency Strategy Analysis
 
-## Resumen Ejecutivo
+## Executive Summary
 
-Este documento analiza la implementación actual de estrategias de concurrencia PostgreSQL en el
-proyecto OSM-Notes-Analytics, específicamente para las consultas que extraen datos de las tablas del
-proyecto hermano (ingestion): `notes`, `note_comments`, `note_comments_text`, `users`, y
-`countries`.
+This document analyzes the current implementation of PostgreSQL concurrency strategies in the
+OSM-Notes-Analytics project, specifically for queries that extract data from the sibling project
+(ingestion) tables: `notes`, `note_comments`, `note_comments_text`, `users`, and `countries`.
 
-## Estado Actual de Implementación
+## Current Implementation Status
 
-### ✅ 1. PGAPPNAME - Implementado
+### ✅ 1. PGAPPNAME - Implemented
 
-**Estado**: ✅ Implementado y funcionando correctamente
+**Status**: ✅ Implemented and working correctly
 
-**Ubicación actual**:
+**Current location**:
 
-- `bin/dwh/ETL.sh`: Función `__psql_with_appname` que configura `PGAPPNAME` automáticamente
-- `bin/dwh/datamartCountries/datamartCountries.sh`: Usa la función `__psql_with_appname`
-- `bin/dwh/datamartGlobal/datamartGlobal.sh`: Usa la función `__psql_with_appname`
-- `bin/dwh/datamartUsers/datamartUsers.sh`: Usa la función `__psql_with_appname`
+- `bin/dwh/ETL.sh`: Function `__psql_with_appname` that automatically configures `PGAPPNAME`
+- `bin/dwh/datamartCountries/datamartCountries.sh`: Uses the `__psql_with_appname` function
+- `bin/dwh/datamartGlobal/datamartGlobal.sh`: Uses the `__psql_with_appname` function
+- `bin/dwh/datamartUsers/datamartUsers.sh`: Uses the `__psql_with_appname` function
 
-**Función utilizada**: `__psql_with_appname` en `ETL.sh` (líneas 273-350)
+**Function used**: `__psql_with_appname` in `ETL.sh` (lines 273-350)
 
-**Valores actuales**:
+**Current values**:
 
-- ETL.sh usa: `"ETL"`, `"ETL-year-{year}"`, etc.
-- Datamart scripts usan: nombre del script (ej: `"datamartCountries"`)
+- ETL.sh uses: `"ETL"`, `"ETL-year-{year}"`, etc.
+- Datamart scripts use: script name (e.g., `"datamartCountries"`)
 
-**Decisión**: Se mantiene el comportamiento actual ya que es funcional y permite identificar
-claramente cada proceso en `pg_stat_activity`.
+**Decision**: Current behavior is maintained as it is functional and allows clear identification
+of each process in `pg_stat_activity`.
 
 ---
 
-### ✅ 2. Transacciones READ ONLY - Parcialmente Implementado
+### ✅ 2. READ ONLY Transactions - Partially Implemented
 
-**Estado**: ✅ Implementado donde es posible
+**Status**: ✅ Implemented where possible
 
-**Análisis**:
+**Analysis**:
 
-- Las consultas a las tablas del proyecto ingestion se realizan principalmente a través de:
-  1. **Foreign Data Wrappers (FDW)**: Cuando `DBNAME_INGESTION != DBNAME_DWH`
-  2. **Acceso directo**: Cuando ambas bases de datos son la misma
+- Queries to ingestion project tables are performed mainly through:
+  1. **Foreign Data Wrappers (FDW)**: When `DBNAME_INGESTION != DBNAME_DWH`
+  2. **Direct access**: When both databases are the same
 
-**Archivos que consultan tablas ingestion**:
+**Files that query ingestion tables**:
 
-- `sql/dwh/Staging_32_createStagingObjects.sql`: Consulta `note_comments`, `notes`,
+- `sql/dwh/Staging_32_createStagingObjects.sql`: Queries `note_comments`, `notes`,
   `note_comments_text`, `countries`, `users`
-- `sql/dwh/Staging_34_initialFactsLoadCreate.sql`: Consulta las mismas tablas
-- `sql/dwh/Staging_35_initialFactsLoadExecute_Simple.sql`: Consulta las mismas tablas
-- `sql/dwh/Staging_61_loadNotes.sql`: Consulta `note_comments`
-- `sql/dwh/datamartCountries/datamartCountries_13_createProcedure.sql`: Consulta `note_comments`,
+- `sql/dwh/Staging_34_initialFactsLoadCreate.sql`: Queries the same tables
+- `sql/dwh/Staging_35_initialFactsLoadExecute_Simple.sql`: Queries the same tables
+- `sql/dwh/Staging_61_loadNotes.sql`: Queries `note_comments`
+- `sql/dwh/datamartCountries/datamartCountries_13_createProcedure.sql`: Queries `note_comments`,
   `note_comments_text`
-- `sql/dwh/datamartUsers/datamartUsers_13_createProcedure.sql`: Consulta `note_comments`,
+- `sql/dwh/datamartUsers/datamartUsers_13_createProcedure.sql`: Queries `note_comments`,
   `note_comments_text`
 
-**Procedimientos almacenados que consultan**:
+**Stored procedures that query**:
 
-- `staging.process_notes_at_date()`: Consulta `note_comments`, `notes`, `note_comments_text`
-- `staging.process_notes_actions_into_dwh()`: Consulta `note_comments`
-- `dwh.update_datamart_country()`: Consulta `note_comments`, `note_comments_text`
-- `dwh.update_datamart_user()`: Consulta `note_comments`, `note_comments_text`
+- `staging.process_notes_at_date()`: Queries `note_comments`, `notes`, `note_comments_text`
+- `staging.process_notes_actions_into_dwh()`: Queries `note_comments`
+- `dwh.update_datamart_country()`: Queries `note_comments`, `note_comments_text`
+- `dwh.update_datamart_user()`: Queries `note_comments`, `note_comments_text`
 
-**Implementación realizada**:
+**Implementation completed**:
 
-1. **Scripts SQL directos**: ✅ Implementado
-   - `sql/dwh/Staging_61_loadNotes.sql`: Las consultas SELECT a `note_comments` ahora están
-     envueltas en bloques `BEGIN READ ONLY; ... COMMIT;`
+1. **Direct SQL scripts**: ✅ Implemented
+   - `sql/dwh/Staging_61_loadNotes.sql`: SELECT queries to `note_comments` are now wrapped in
+     `BEGIN READ ONLY; ... COMMIT;` blocks
 
-2. **Procedimientos almacenados**: ⚠️ Limitado por diseño
-   - Los procedimientos que consultan tablas ingestion (`staging.process_notes_at_date`,
+2. **Stored procedures**: ⚠️ Limited by design
+   - Procedures that query ingestion tables (`staging.process_notes_at_date`,
      `staging.process_notes_actions_into_dwh`, `dwh.update_datamart_country`,
-     `dwh.update_datamart_user`) también realizan escrituras (INSERT/UPDATE), por lo que no pueden
-     usar READ ONLY en toda la transacción
-   - Se agregaron comentarios documentando que las consultas SELECT a tablas ingestion deberían ser
-     READ ONLY cuando sea posible
-   - Las consultas SELECT dentro de estos procedimientos están documentadas para indicar que leen de
-     tablas ingestion
+     `dwh.update_datamart_user`) also perform writes (INSERT/UPDATE), so they cannot use READ ONLY
+     for the entire transaction
+   - Comments were added documenting that SELECT queries to ingestion tables should be READ ONLY when
+     possible
+   - SELECT queries within these procedures are documented to indicate they read from ingestion tables
 
-**Limitaciones**:
+**Limitations**:
 
-- En PostgreSQL, READ ONLY es una propiedad de la transacción completa, no de subconsultas
-  individuales
-- Los procedimientos que hacen tanto lectura como escritura no pueden usar READ ONLY para toda la
-  transacción
-- La mejor práctica es documentar las consultas SELECT que leen de ingestion tables y confiar en que
-  el servidor remoto (si es FDW) maneje READ ONLY cuando sea posible
+- In PostgreSQL, READ ONLY is a property of the entire transaction, not individual subqueries
+- Procedures that perform both reads and writes cannot use READ ONLY for the entire transaction
+- Best practice is to document SELECT queries that read from ingestion tables and trust that the remote
+  server (if FDW) handles READ ONLY when possible
 
 ---
 
-### ✅ 3. Timeouts - Implementado
+### ✅ 3. Timeouts - Implemented
 
-**Estado**: ✅ Implementado
+**Status**: ✅ Implemented
 
-**Timeouts configurados**:
+**Configured timeouts**:
 
-- `statement_timeout`: Limita el tiempo de ejecución de una sentencia individual (default: `30min`)
-- `lock_timeout`: Limita el tiempo de espera para adquirir un lock (default: `10s`)
-- `idle_in_transaction_session_timeout`: Limita el tiempo que una transacción puede estar idle
-  (default: `10min`)
+- `statement_timeout`: Limits execution time of an individual statement (default: `30min`)
+- `lock_timeout`: Limits wait time to acquire a lock (default: `10s`)
+- `idle_in_transaction_session_timeout`: Limits time a transaction can be idle (default: `10min`)
 
-**Implementación realizada**:
+**Implementation completed**:
 
-1. **Variables de configuración**: ✅ Agregadas en `etc/properties.sh`
+1. **Configuration variables**: ✅ Added in `etc/properties.sh`
    - `PSQL_STATEMENT_TIMEOUT`: `30min` (configurable)
    - `PSQL_LOCK_TIMEOUT`: `10s` (configurable)
    - `PSQL_IDLE_IN_TRANSACTION_TIMEOUT`: `10min` (configurable)
 
-2. **Función `__psql_with_appname`**: ✅ Modificada para aplicar timeouts automáticamente
-   - Los timeouts se aplican automáticamente a todas las consultas ejecutadas a través de
-     `__psql_with_appname`
-   - Para archivos SQL (`-f`): Se crea un archivo temporal con los SET statements de timeout al
-     inicio
-   - Para comandos SQL (`-c`): Se prependen los SET statements de timeout al comando
-   - Los archivos temporales se limpian automáticamente después de la ejecución
+2. **Function `__psql_with_appname`**: ✅ Modified to automatically apply timeouts
+   - Timeouts are automatically applied to all queries executed through `__psql_with_appname`
+   - For SQL files (`-f`): A temporary file is created with timeout SET statements at the beginning
+   - For SQL commands (`-c`): Timeout SET statements are prepended to the command
+   - Temporary files are automatically cleaned up after execution
 
-**Valores por defecto** (configurables en `etc/properties.sh`):
+**Default values** (configurable in `etc/properties.sh`):
 
 - `statement_timeout`: `30min`
 - `lock_timeout`: `10s`
@@ -138,13 +131,13 @@ claramente cada proceso en `pg_stat_activity`.
 
 ---
 
-## Puntos Específicos de Implementación
+## Specific Implementation Points
 
-### A. Función `__psql_with_appname` en `ETL.sh`
+### A. Function `__psql_with_appname` in `ETL.sh`
 
-**Ubicación**: `bin/dwh/ETL.sh`, líneas 273-288
+**Location**: `bin/dwh/ETL.sh`, lines 273-288
 
-**Cambios propuestos**:
+**Proposed changes**:
 
 ```bash
 function __psql_with_appname {
@@ -180,49 +173,48 @@ function __psql_with_appname {
 }
 ```
 
-### B. Procedimientos Almacenados que Consultan Tablas Ingestion
+### B. Stored Procedures that Query Ingestion Tables
 
-**Archivos a modificar**:
+**Files to modify**:
 
 1. **`sql/dwh/Staging_32_createStagingObjects.sql`**
-   - Procedimiento: `staging.process_notes_at_date()`
-   - Líneas: 50-350 (aproximadamente)
-   - Agregar al inicio: `SET TRANSACTION READ ONLY;` (dentro del procedimiento)
+   - Procedure: `staging.process_notes_at_date()`
+   - Lines: 50-350 (approximately)
+   - Add at the beginning: `SET TRANSACTION READ ONLY;` (within the procedure)
 
 2. **`sql/dwh/Staging_32_createStagingObjects.sql`**
-   - Procedimiento: `staging.process_notes_actions_into_dwh()`
-   - Líneas: 356-477 (aproximadamente)
-   - Agregar: `SET TRANSACTION READ ONLY;` para consultas de lectura
+   - Procedure: `staging.process_notes_actions_into_dwh()`
+   - Lines: 356-477 (approximately)
+   - Add: `SET TRANSACTION READ ONLY;` for read queries
 
 3. **`sql/dwh/datamartCountries/datamartCountries_13_createProcedure.sql`**
-   - Procedimiento: `dwh.update_datamart_country()`
-   - Agregar: `SET TRANSACTION READ ONLY;` para las consultas SELECT
+   - Procedure: `dwh.update_datamart_country()`
+   - Add: `SET TRANSACTION READ ONLY;` for SELECT queries
 
 4. **`sql/dwh/datamartUsers/datamartUsers_13_createProcedure.sql`**
-   - Procedimiento: `dwh.update_datamart_user()`
-   - Agregar: `SET TRANSACTION READ ONLY;` para las consultas SELECT
+   - Procedure: `dwh.update_datamart_user()`
+   - Add: `SET TRANSACTION READ ONLY;` for SELECT queries
 
-**Nota importante**: Los procedimientos que hacen INSERT/UPDATE no pueden usar READ ONLY para toda
-la transacción, pero las consultas SELECT dentro de ellos pueden ejecutarse en sub-transacciones
-READ ONLY.
+**Important note**: Procedures that perform INSERT/UPDATE cannot use READ ONLY for the entire
+transaction, but SELECT queries within them can be executed in READ ONLY sub-transactions.
 
-### C. Scripts SQL Ejecutados Directamente
+### C. Directly Executed SQL Scripts
 
-**Archivos a modificar**:
+**Files to modify**:
 
 1. **`sql/dwh/Staging_61_loadNotes.sql`**
-   - Líneas 8-12 y 22-26: Consultas SELECT a `note_comments`
-   - Envolver en: `BEGIN READ ONLY; ... COMMIT;`
+   - Lines 8-12 and 22-26: SELECT queries to `note_comments`
+   - Wrap in: `BEGIN READ ONLY; ... COMMIT;`
 
 2. **`sql/dwh/ETL_60_setupFDW.sql`**
-   - Líneas 130-134: Comandos ANALYZE en foreign tables
-   - Estos son comandos de mantenimiento, no necesitan READ ONLY
+   - Lines 130-134: ANALYZE commands on foreign tables
+   - These are maintenance commands, don't need READ ONLY
 
-### D. Configuración de Timeouts en Propiedades
+### D. Timeout Configuration in Properties
 
-**Archivo a modificar**: `etc/properties.sh` o crear `etc/etl.properties`
+**File to modify**: `etc/properties.sh` or create `etc/etl.properties`
 
-**Agregar variables**:
+**Add variables**:
 
 ```bash
 # PostgreSQL timeouts for ETL queries
@@ -239,92 +231,92 @@ PSQL_APPNAME="${PSQL_APPNAME:-osm_notes_etl}"
 
 ---
 
-## Estrategia de Implementación Recomendada
+## Recommended Implementation Strategy
 
-### Fase 1: Configuración Base
+### Phase 1: Base Configuration
 
-1. ✅ Actualizar `__psql_with_appname` para usar `PGAPPNAME="osm_notes_etl"` por defecto
-2. ✅ Agregar variables de configuración en `etc/properties.sh`
-3. ✅ Implementar soporte para timeouts en `__psql_with_appname`
+1. ✅ Update `__psql_with_appname` to use `PGAPPNAME="osm_notes_etl"` by default
+2. ✅ Add configuration variables in `etc/properties.sh`
+3. ✅ Implement timeout support in `__psql_with_appname`
 
-### Fase 2: Transacciones READ ONLY
+### Phase 2: READ ONLY Transactions
 
-1. ✅ Modificar procedimientos almacenados que solo leen datos
-2. ✅ Envolver consultas SELECT directas en bloques READ ONLY
-3. ✅ Agregar READ ONLY a subconsultas dentro de procedimientos que también escriben
+1. ✅ Modify stored procedures that only read data
+2. ✅ Wrap direct SELECT queries in READ ONLY blocks
+3. ✅ Add READ ONLY to subqueries within procedures that also write
 
-### Fase 3: Timeouts
+### Phase 3: Timeouts
 
-1. ✅ Configurar timeouts por defecto en `__psql_with_appname`
-2. ✅ Agregar timeouts a procedimientos almacenados críticos
-3. ✅ Documentar valores recomendados según el tamaño de datos
+1. ✅ Configure default timeouts in `__psql_with_appname`
+2. ✅ Add timeouts to critical stored procedures
+3. ✅ Document recommended values based on data size
 
-### Fase 4: Testing y Validación
+### Phase 4: Testing and Validation
 
-1. ✅ Verificar que las consultas funcionan correctamente con READ ONLY
-2. ✅ Validar que los timeouts no interrumpen operaciones normales
-3. ✅ Monitorear `pg_stat_activity` para verificar `application_name`
+1. ✅ Verify queries work correctly with READ ONLY
+2. ✅ Validate that timeouts don't interrupt normal operations
+3. ✅ Monitor `pg_stat_activity` to verify `application_name`
 
 ---
 
-## Consideraciones Especiales
+## Special Considerations
 
 ### Foreign Data Wrappers (FDW)
 
-Cuando se usan FDW para acceder a las tablas ingestion:
+When using FDW to access ingestion tables:
 
-- Las consultas READ ONLY en el lado del DWH no garantizan READ ONLY en el servidor remoto
-- El servidor remoto (ingestion) debe configurar sus propios timeouts y READ ONLY
-- La configuración de `FDW_INGESTION_USER` ya usa `analytics_readonly` (buena práctica)
+- READ ONLY queries on the DWH side do not guarantee READ ONLY on the remote server
+- The remote server (ingestion) must configure its own timeouts and READ ONLY
+- The `FDW_INGESTION_USER` configuration already uses `analytics_readonly` (good practice)
 
-### Consultas en Procedimientos que Escriben
+### Queries in Procedures that Write
 
-Algunos procedimientos hacen tanto lectura como escritura:
+Some procedures perform both reads and writes:
 
-- `staging.process_notes_at_date()`: Lee de ingestion, escribe en DWH
-- `staging.process_notes_actions_into_dwh()`: Lee de ingestion, escribe en DWH
+- `staging.process_notes_at_date()`: Reads from ingestion, writes to DWH
+- `staging.process_notes_actions_into_dwh()`: Reads from ingestion, writes to DWH
 
-**Estrategia**: Usar sub-transacciones READ ONLY solo para las consultas SELECT a tablas ingestion,
-no para toda la transacción.
+**Strategy**: Use READ ONLY sub-transactions only for SELECT queries to ingestion tables, not for the
+entire transaction.
 
-### Compatibilidad con Misma Base de Datos
+### Compatibility with Same Database
 
-Cuando `DBNAME_INGESTION == DBNAME_DWH`:
+When `DBNAME_INGESTION == DBNAME_DWH`:
 
-- Las tablas son locales, no foreign tables
-- READ ONLY sigue siendo beneficioso para evitar locks innecesarios
-- Los timeouts aplican igualmente
+- Tables are local, not foreign tables
+- READ ONLY is still beneficial to avoid unnecessary locks
+- Timeouts apply equally
 
 ---
 
-## Archivos que Requieren Modificaciones
+## Files Requiring Modifications
 
-### Scripts Bash
+### Bash Scripts
 
-- `bin/dwh/ETL.sh`: Función `__psql_with_appname`
-- `bin/dwh/datamartCountries/datamartCountries.sh`: Usar función actualizada
-- `bin/dwh/datamartGlobal/datamartGlobal.sh`: Usar función actualizada
-- `bin/dwh/datamartUsers/datamartUsers.sh`: Usar función actualizada
+- `bin/dwh/ETL.sh`: Function `__psql_with_appname`
+- `bin/dwh/datamartCountries/datamartCountries.sh`: Use updated function
+- `bin/dwh/datamartGlobal/datamartGlobal.sh`: Use updated function
+- `bin/dwh/datamartUsers/datamartUsers.sh`: Use updated function
 
-### Archivos SQL
+### SQL Files
 
-- `sql/dwh/Staging_32_createStagingObjects.sql`: Procedimientos `process_notes_at_date` y
+- `sql/dwh/Staging_32_createStagingObjects.sql`: Procedures `process_notes_at_date` and
   `process_notes_actions_into_dwh`
-- `sql/dwh/Staging_61_loadNotes.sql`: Consultas SELECT
-- `sql/dwh/datamartCountries/datamartCountries_13_createProcedure.sql`: Procedimiento
+- `sql/dwh/Staging_61_loadNotes.sql`: SELECT queries
+- `sql/dwh/datamartCountries/datamartCountries_13_createProcedure.sql`: Procedure
   `update_datamart_country`
-- `sql/dwh/datamartUsers/datamartUsers_13_createProcedure.sql`: Procedimiento `update_datamart_user`
+- `sql/dwh/datamartUsers/datamartUsers_13_createProcedure.sql`: Procedure `update_datamart_user`
 
-### Archivos de Configuración
+### Configuration Files
 
-- `etc/properties.sh`: Agregar variables de timeout y READ ONLY
-- `etc/properties.sh.example`: Documentar nuevas variables
+- `etc/properties.sh`: Add timeout and READ ONLY variables
+- `etc/properties.sh.example`: Document new variables
 
 ---
 
-## Referencias
+## References
 
-- Documento de estrategia del proyecto ingestion: `PostgreSQL_Concurrency_Strategy.md`
+- Ingestion project strategy document: `PostgreSQL_Concurrency_Strategy.md`
 - PostgreSQL Documentation:
   [Transaction Isolation](https://www.postgresql.org/docs/current/transaction-iso.html)
 - PostgreSQL Documentation:
@@ -332,37 +324,37 @@ Cuando `DBNAME_INGESTION == DBNAME_DWH`:
 
 ---
 
-## Conclusión
+## Conclusion
 
-El proyecto ahora implementa las estrategias de concurrencia PostgreSQL:
+The project now implements PostgreSQL concurrency strategies:
 
-1. ✅ **PGAPPNAME**: Ya estaba implementado y se mantiene el comportamiento actual (funcional y
-   permite identificar procesos)
+1. ✅ **PGAPPNAME**: Already implemented and current behavior is maintained (functional and allows
+   process identification)
 
-2. ✅ **Transacciones READ ONLY**: Implementado donde es posible
-   - Scripts SQL directos que solo leen: Implementado completamente
-   - Procedimientos que también escriben: Documentado (limitación de PostgreSQL)
+2. ✅ **READ ONLY Transactions**: Implemented where possible
+   - Direct SQL scripts that only read: Fully implemented
+   - Procedures that also write: Documented (PostgreSQL limitation)
 
-3. ✅ **Timeouts**: Implementado completamente
-   - Variables de configuración en `etc/properties.sh`
-   - Aplicación automática a través de `__psql_with_appname`
-   - Valores por defecto sensatos para operaciones ETL
+3. ✅ **Timeouts**: Fully implemented
+   - Configuration variables in `etc/properties.sh`
+   - Automatic application through `__psql_with_appname`
+   - Sensible default values for ETL operations
 
-**Archivos modificados**:
+**Modified files**:
 
-- `etc/properties.sh`: Agregadas variables de configuración de timeouts
-- `bin/dwh/ETL.sh`: Modificada función `__psql_with_appname` para soportar timeouts
-- `sql/dwh/Staging_61_loadNotes.sql`: Agregadas transacciones READ ONLY para consultas SELECT
-- `sql/dwh/Staging_32_createStagingObjects.sql`: Agregados comentarios documentando consultas a
-  ingestion tables
-- `sql/dwh/datamartCountries/datamartCountries_13_createProcedure.sql`: Agregados comentarios
-  documentando consultas a ingestion tables
-- `sql/dwh/datamartUsers/datamartUsers_13_createProcedure.sql`: Agregados comentarios documentando
-  consultas a ingestion tables
+- `etc/properties.sh`: Added timeout configuration variables
+- `bin/dwh/ETL.sh`: Modified `__psql_with_appname` function to support timeouts
+- `sql/dwh/Staging_61_loadNotes.sql`: Added READ ONLY transactions for SELECT queries
+- `sql/dwh/Staging_32_createStagingObjects.sql`: Added comments documenting queries to ingestion
+  tables
+- `sql/dwh/datamartCountries/datamartCountries_13_createProcedure.sql`: Added comments documenting
+  queries to ingestion tables
+- `sql/dwh/datamartUsers/datamartUsers_13_createProcedure.sql`: Added comments documenting queries
+  to ingestion tables
 
-**Beneficios esperados**:
+**Expected benefits**:
 
-- Mejor identificación de procesos en `pg_stat_activity` (ya existente)
-- Reducción de bloqueos mediante timeouts configurados
-- Mejor concurrencia en consultas de solo lectura mediante READ ONLY donde es posible
-- Protección contra consultas que se ejecutan indefinidamente
+- Better process identification in `pg_stat_activity` (already existing)
+- Reduced blocking through configured timeouts
+- Better concurrency in read-only queries through READ ONLY where possible
+- Protection against queries that run indefinitely
