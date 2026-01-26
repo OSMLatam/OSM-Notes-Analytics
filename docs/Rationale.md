@@ -133,12 +133,24 @@ The analytics system builds on top of the ingestion system and provides data to 
 
 ```
 OSM-Notes-Ingestion (Base Data)
-    ↓
-OSM-Notes-Analytics (ETL & DWH)
-    ↓
-Datamarts (Pre-computed Analytics)
-    ↓
-JSON Export → OSM-Notes-Viewer (Web Application)
+```mermaid
+flowchart TD
+    INGESTION[OSM-Notes-Ingestion<br/>Base Project]
+    ANALYTICS[OSM-Notes-Analytics<br/>ETL & DWH]
+    DATAMARTS[Datamarts<br/>Pre-computed Analytics]
+    JSON[JSON Export]
+    VIEWER[OSM-Notes-Viewer<br/>Web Application]
+    
+    INGESTION -->|Base Tables| ANALYTICS
+    ANALYTICS -->|ETL| DATAMARTS
+    DATAMARTS -->|Export| JSON
+    JSON -->|Consumes| VIEWER
+    
+    style INGESTION fill:#90EE90
+    style ANALYTICS fill:#FFFFE0
+    style DATAMARTS fill:#FFE4B5
+    style JSON fill:#E0F6FF
+    style VIEWER fill:#DDA0DD
 ```
 
 **Note**: The OSM Notes ecosystem consists of 8 projects working together to provide a complete OSM Notes analysis solution. OSM-Notes-Ingestion is the base project, as it was the first created and provides the foundation for all others.
@@ -236,27 +248,55 @@ documentation)
 
 ### Data Warehouse Structure
 
-```
-dwh schema
-├── facts (partitioned by year)
-│   ├── facts_2013
-│   ├── facts_2014
-│   ├── ...
-│   └── facts_2025
-├── dimension_users (SCD2 for username changes)
-├── dimension_countries
-├── dimension_days (date dimension)
-├── dimension_time_of_week
-├── dimension_applications
-├── dimension_application_versions
-├── dimension_hashtags
-├── dimension_timezones
-├── dimension_seasons
-├── dimension_automation_level
-├── dimension_experience_levels
-├── datamartusers (pre-computed user analytics)
-├── datamartcountries (pre-computed country analytics)
-└── datamartglobal (global statistics)
+```mermaid
+graph TD
+    DWH[dwh schema]
+    
+    subgraph Facts["facts partitioned by year"]
+        F2013[facts_2013]
+        F2014[facts_2014]
+        F2015[facts_2015]
+        FDOTS[...]
+        F2025[facts_2025]
+    end
+    
+    DIM_USERS[dimension_users<br/>SCD2 for username changes]
+    DIM_COUNTRIES[dimension_countries]
+    DIM_DAYS[dimension_days<br/>date dimension]
+    DIM_TIME_WEEK[dimension_time_of_week]
+    DIM_APPS[dimension_applications]
+    DIM_APP_VERS[dimension_application_versions]
+    DIM_HASHTAGS[dimension_hashtags]
+    DIM_TZ[dimension_timezones]
+    DIM_SEASONS[dimension_seasons]
+    DIM_AUTO[dimension_automation_level]
+    DIM_EXP[dimension_experience_levels]
+    
+    DM_USERS[datamartusers<br/>pre-computed user analytics]
+    DM_COUNTRIES[datamartcountries<br/>pre-computed country analytics]
+    DM_GLOBAL[datamartglobal<br/>global statistics]
+    
+    DWH --> Facts
+    DWH --> DIM_USERS
+    DWH --> DIM_COUNTRIES
+    DWH --> DIM_DAYS
+    DWH --> DIM_TIME_WEEK
+    DWH --> DIM_APPS
+    DWH --> DIM_APP_VERS
+    DWH --> DIM_HASHTAGS
+    DWH --> DIM_TZ
+    DWH --> DIM_SEASONS
+    DWH --> DIM_AUTO
+    DWH --> DIM_EXP
+    DWH --> DM_USERS
+    DWH --> DM_COUNTRIES
+    DWH --> DM_GLOBAL
+    
+    style DWH fill:#90EE90
+    style Facts fill:#FFFFE0
+    style DM_USERS fill:#FFE4B5
+    style DM_COUNTRIES fill:#FFE4B5
+    style DM_GLOBAL fill:#FFE4B5
 ```
 
 ## Services Provided
@@ -278,16 +318,37 @@ The OSM-Notes-Analytics project is part of an 8-project ecosystem:
 
 ### Project Ecosystem Structure
 
-```
-OSM-Notes/
-├── OSM-Notes-Ingestion/     # Data ingestion from OSM API/Planet (base project)
-├── OSM-Notes-Analytics/     # data warehouse & ETL (this repository)
-├── OSM-Notes-API/           # REST API for programmatic access
-├── OSM-Notes-Viewer/        # Web frontend visualization
-├── OSM-Notes-WMS/           # Web Map Service for geographic visualization
-├── OSM-Notes-Monitoring/    # Centralized monitoring and alerting
-├── OSM-Notes-Common/        # Shared Bash libraries (Git submodule)
-└── OSM-Notes-Data/          # JSON data files (GitHub Pages)
+```mermaid
+graph TD
+    ROOT[OSM-Notes/]
+    
+    INGESTION[OSM-Notes-Ingestion<br/>Data ingestion from OSM API/Planet<br/>base project]
+    ANALYTICS[OSM-Notes-Analytics<br/>data warehouse & ETL<br/>this repository]
+    API[OSM-Notes-API<br/>REST API for programmatic access]
+    VIEWER[OSM-Notes-Viewer<br/>Web frontend visualization]
+    WMS[OSM-Notes-WMS<br/>Web Map Service for geographic visualization]
+    MONITORING[OSM-Notes-Monitoring<br/>Centralized monitoring and alerting]
+    COMMON[OSM-Notes-Common<br/>Shared Bash libraries<br/>Git submodule]
+    DATA[OSM-Notes-Data<br/>JSON data files<br/>GitHub Pages]
+    
+    ROOT --> INGESTION
+    ROOT --> ANALYTICS
+    ROOT --> API
+    ROOT --> VIEWER
+    ROOT --> WMS
+    ROOT --> MONITORING
+    ROOT --> COMMON
+    ROOT --> DATA
+    
+    style ROOT fill:#90EE90
+    style INGESTION fill:#90EE90
+    style ANALYTICS fill:#FFFFE0
+    style API fill:#FFB6C1
+    style VIEWER fill:#DDA0DD
+    style WMS fill:#FFE4B5
+    style MONITORING fill:#F0E68C
+    style COMMON fill:#D3D3D3
+    style DATA fill:#E0F6FF
 ```
 
 ### OSM-Notes-Ingestion (Base Project - Upstream)

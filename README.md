@@ -1,3 +1,21 @@
+---
+title: "OSM-Notes-Analytics"
+description: "Data Warehouse, ETL, and Analytics for OpenStreetMap Notes"
+version: "latest"
+last_updated: "2026-01-25"
+author: "AngocA"
+tags:
+  - "analytics"
+  - "data-warehouse"
+  - "etl"
+audience:
+  - "data-engineers"
+  - "developers"
+  - "data-analysts"
+project: "OSM-Notes-Analytics"
+status: "active"
+---
+
 # OSM-Notes-Analytics
 
 ![Tests](https://github.com/OSM-Notes/OSM-Notes-Analytics/workflows/Tests/badge.svg)
@@ -1183,6 +1201,18 @@ For more information about OSM licensing, see:
 - **OpenStreetMap contributors**: For the valuable notes data and their contributions to the OSM
   project
 
+## 📚 Ecosystem Documentation
+
+For shared documentation of the complete ecosystem, see:
+
+- **[OSM Notes Ecosystem](https://github.com/OSM-Notes/OSM-Notes)** - Ecosystem landing page
+- **[Global Glossary](https://github.com/OSM-Notes/OSM-Notes-Common/blob/main/docs/GLOSSARY.md)** - Terms and definitions
+- **[Complete Installation Guide](https://github.com/OSM-Notes/OSM-Notes-Common/blob/main/docs/INSTALLATION.md)** - Step-by-step installation of all projects
+- **[End-to-End Data Flow](https://github.com/OSM-Notes/OSM-Notes-Common/blob/main/docs/DATA_FLOW.md)** - Complete data flow
+- **[Decision Guide](https://github.com/OSM-Notes/OSM-Notes-Common/blob/main/docs/DECISION_GUIDE.md)** - Which project do I need?
+
+---
+
 ## Project Ecosystem
 
 This analytics project is part of a larger ecosystem for OSM Notes analysis:
@@ -1207,18 +1237,55 @@ OSM-Notes/
 
 ### How Projects Work Together
 
-```
-OSM Planet/API
-    ↓
-[OSM-Notes-Ingestion] ← Base project
-    ├─→ [OSM-Notes-Analytics] → ETL → Data Warehouse (this repo)
-    │       ├─→ [OSM-Notes-Data] → JSON files (GitHub Pages)
-    │       │       └─→ [OSM-Notes-Viewer] → Consumes JSON from Data
-    │       └─→ [OSM-Notes-API] → REST API (reads from Analytics DWH)
-    └─→ [OSM-Notes-WMS] → WMS layers
+```mermaid
+graph TB
+    subgraph External["External Sources"]
+        OSM[OSM Planet/API]
+    end
     
-[OSM-Notes-Monitoring] → Monitors all projects
-[OSM-Notes-Common] → Shared libraries (submodule)
+    subgraph Base["Base Project"]
+        INGESTION[OSM-Notes-Ingestion<br/>Base project]
+    end
+    
+    subgraph Processing["Processing Layer"]
+        ANALYTICS[OSM-Notes-Analytics<br/>ETL → Data Warehouse<br/>this repo]
+        WMS[OSM-Notes-WMS<br/>WMS layers]
+    end
+    
+    subgraph Delivery["Delivery Layer"]
+        DATA[OSM-Notes-Data<br/>JSON files<br/>GitHub Pages]
+        API[OSM-Notes-API<br/>REST API<br/>reads from Analytics DWH]
+        VIEWER[OSM-Notes-Viewer<br/>Consumes JSON from Data]
+    end
+    
+    subgraph Support["Support Layer"]
+        MONITORING[OSM-Notes-Monitoring<br/>Monitors all projects]
+        COMMON[OSM-Notes-Common<br/>Shared libraries<br/>submodule]
+    end
+    
+    OSM -->|Downloads| INGESTION
+    INGESTION -->|Base Tables| ANALYTICS
+    INGESTION -->|Same Database| WMS
+    ANALYTICS -->|JSON Export| DATA
+    ANALYTICS -->|Data Warehouse| API
+    DATA -->|JSON Files| VIEWER
+    MONITORING -.->|Monitors| INGESTION
+    MONITORING -.->|Monitors| ANALYTICS
+    MONITORING -.->|Monitors| API
+    COMMON -.->|Used by| INGESTION
+    COMMON -.->|Used by| ANALYTICS
+    COMMON -.->|Used by| WMS
+    COMMON -.->|Used by| MONITORING
+    
+    style OSM fill:#ADD8E6
+    style INGESTION fill:#90EE90
+    style ANALYTICS fill:#FFFFE0
+    style WMS fill:#FFE4B5
+    style DATA fill:#E0F6FF
+    style API fill:#FFB6C1
+    style VIEWER fill:#DDA0DD
+    style MONITORING fill:#F0E68C
+    style COMMON fill:#D3D3D3
 ```
 
 ### Installation Order

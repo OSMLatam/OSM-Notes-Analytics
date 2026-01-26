@@ -388,40 +388,89 @@ sequenceDiagram
 
 ### Schema Organization
 
-```text
-PostgreSQL Database: osm_notes
-│
-├── Schema: public (managed by OSM-Notes-Ingestion)
-│   ├── notes
-│   ├── note_comments
-│   ├── note_comments_text
-│   ├── users
-│   └── countries
-│
-├── Schema: dwh (managed by OSM-Notes-Analytics)
-│   ├── facts (partitioned by year)
-│   │   ├── facts_2013
-│   │   ├── facts_2014
-│   │   ├── ...
-│   │   └── facts_2025
-│   ├── dimension_users
-│   ├── dimension_countries
-│   ├── dimension_days
-│   ├── dimension_time_of_week
-│   ├── dimension_applications
-│   ├── dimension_application_versions
-│   ├── dimension_hashtags
-│   ├── dimension_timezones
-│   ├── dimension_seasons
-│   ├── dimension_automation_level
-│   ├── dimension_experience_levels
-│   ├── datamartusers
-│   ├── datamartcountries
-│   └── datamartglobal
-│
-└── Schema: staging (temporary, managed by ETL)
-    ├── facts_2013 (per-year staging)
-    ├── facts_2014
+```mermaid
+graph TD
+    DB[PostgreSQL Database: osm_notes]
+    
+    subgraph Public["Schema: public<br/>managed by OSM-Notes-Ingestion"]
+        NOTES[notes]
+        COMMENTS[note_comments]
+        COMMENTS_TEXT[note_comments_text]
+        USERS[users]
+        COUNTRIES[countries]
+    end
+    
+    subgraph DWH["Schema: dwh<br/>managed by OSM-Notes-Analytics"]
+        subgraph Facts["facts partitioned by year"]
+            F2013[facts_2013]
+            F2014[facts_2014]
+            FDOTS[...]
+            F2025[facts_2025]
+        end
+        
+        DIM_USERS[dimension_users]
+        DIM_COUNTRIES[dimension_countries]
+        DIM_DAYS[dimension_days]
+        DIM_TIME_WEEK[dimension_time_of_week]
+        DIM_APPS[dimension_applications]
+        DIM_APP_VERS[dimension_application_versions]
+        DIM_HASHTAGS[dimension_hashtags]
+        DIM_TZ[dimension_timezones]
+        DIM_SEASONS[dimension_seasons]
+        DIM_AUTO[dimension_automation_level]
+        DIM_EXP[dimension_experience_levels]
+        
+        DM_USERS[datamartusers]
+        DM_COUNTRIES[datamartcountries]
+        DM_GLOBAL[datamartglobal]
+    end
+    
+    subgraph Staging["Schema: staging<br/>temporary, managed by ETL"]
+        STAGE_2013[facts_2013 per-year staging]
+        STAGE_2014[facts_2014 per-year staging]
+        STAGE_DOTS[...]
+    end
+    
+    DB --> Public
+    DB --> DWH
+    DB --> Staging
+    
+    Public --> NOTES
+    Public --> COMMENTS
+    Public --> COMMENTS_TEXT
+    Public --> USERS
+    Public --> COUNTRIES
+    
+    DWH --> Facts
+    Facts --> F2013
+    Facts --> F2014
+    Facts --> FDOTS
+    Facts --> F2025
+    
+    DWH --> DIM_USERS
+    DWH --> DIM_COUNTRIES
+    DWH --> DIM_DAYS
+    DWH --> DIM_TIME_WEEK
+    DWH --> DIM_APPS
+    DWH --> DIM_APP_VERS
+    DWH --> DIM_HASHTAGS
+    DWH --> DIM_TZ
+    DWH --> DIM_SEASONS
+    DWH --> DIM_AUTO
+    DWH --> DIM_EXP
+    DWH --> DM_USERS
+    DWH --> DM_COUNTRIES
+    DWH --> DM_GLOBAL
+    
+    Staging --> STAGE_2013
+    Staging --> STAGE_2014
+    Staging --> STAGE_DOTS
+    
+    style DB fill:#90EE90
+    style Public fill:#E0F6FF
+    style DWH fill:#FFFFE0
+    style Staging fill:#FFE4B5
+```
     └── ...
 ```
 
