@@ -1,6 +1,9 @@
 #!/bin/bash
 
 # Pre-commit hook for OSM-Notes-Analytics
+# Unified Git hook for Bash/SQL projects
+# Author: Andres Gomez (AngocA)
+# Version: 2026-01-27
 # Runs quality checks before allowing commit
 #
 # To install: ln -sf ../../.git-hooks/pre-commit .git/hooks/pre-commit
@@ -26,112 +29,115 @@ if [ -z "$STAGED_SH_FILES" ] && [ -z "$STAGED_SQL_FILES" ] && [ -z "$STAGED_FORM
     exit 0
 fi
 
-echo "📝 Found staged shell scripts:"
-echo "$STAGED_SH_FILES"
-echo ""
+# Check 1: Shellcheck (bash scripts)
+if [ -n "$STAGED_SH_FILES" ]; then
+    if command -v shellcheck &> /dev/null; then
+        echo "🔍 Running shellcheck..."
+        SHELLCHECK_FAILED=0
+        
+        for file in $STAGED_SH_FILES; do
+            if [ -f "$file" ]; then
+                # Run shellcheck and capture output, limit to first 5 errors for speed
+                SC_OUTPUT=$(shellcheck -x "$file" 2>&1 || true)
+                if echo "$SC_OUTPUT" | grep -q "error\|warning"; then
+                    SHELLCHECK_FAILED=1
+                    echo -e "${RED}❌ Shellcheck failed for: $file${NC}"
+                    echo "$SC_OUTPUT" | head -5
+                fi
+            fi
+        done
+        
+        if [ $SHELLCHECK_FAILED -eq 1 ]; then
+            echo -e "${RED}❌ Shellcheck found issues. Please fix them before committing.${NC}"
+            exit 1
+        fi
+        echo -e "${GREEN}✅ Shellcheck passed${NC}"
+    else
+        echo -e "${YELLOW}⚠️  Shellcheck not installed, skipping...${NC}"
+    fi
+    echo ""
+fi
 
-# Check 1: Shellcheck
-if command -v shellcheck &> /dev/null; then
-    echo "🔍 Running shellcheck..."
-    SHELLCHECK_FAILED=0
+# Check 2: Shfmt (bash formatting)
+if [ -n "$STAGED_SH_FILES" ]; then
+    if command -v shfmt &> /dev/null; then
+        echo "🔍 Checking bash code formatting..."
+        SHFMT_FAILED=0
+        
+        for file in $STAGED_SH_FILES; do
+            if [ -f "$file" ]; then
+                if ! shfmt -d -i 1 -sr -bn "$file" > /dev/null 2>&1; then
+                    SHFMT_FAILED=1
+                    echo -e "${RED}❌ Format check failed for: $file${NC}"
+                    echo "   Run: shfmt -w -i 1 -sr -bn $file"
+                fi
+            fi
+        done
+        
+        if [ $SHFMT_FAILED -eq 1 ]; then
+            echo -e "${RED}❌ Format check failed. Run shfmt to fix formatting.${NC}"
+            exit 1
+        fi
+        echo -e "${GREEN}✅ Format check passed${NC}"
+    else
+        echo -e "${YELLOW}⚠️  Shfmt not installed, skipping...${NC}"
+    fi
+    echo ""
+fi
 
+# Check 3: Trailing whitespace (bash scripts)
+if [ -n "$STAGED_SH_FILES" ]; then
+    echo "🔍 Checking for trailing whitespace..."
+    TRAILING_WS_FAILED=0
+    
     for file in $STAGED_SH_FILES; do
         if [ -f "$file" ]; then
-            if ! shellcheck -x "$file"; then
-                SHELLCHECK_FAILED=1
-                echo -e "${RED}❌ Shellcheck failed for: $file${NC}"
+            if grep -n ' $' "$file" > /dev/null 2>&1; then
+                TRAILING_WS_FAILED=1
+                echo -e "${RED}❌ Trailing whitespace found in: $file${NC}"
+                echo "   Run: sed -i 's/[[:space:]]*$//' $file"
             fi
         fi
     done
-
-    if [ $SHELLCHECK_FAILED -eq 1 ]; then
-        echo -e "${RED}❌ Shellcheck found issues. Please fix them before committing.${NC}"
+    
+    if [ $TRAILING_WS_FAILED -eq 1 ]; then
+        echo -e "${RED}❌ Trailing whitespace found. Please remove it.${NC}"
         exit 1
     fi
-    echo -e "${GREEN}✅ Shellcheck passed${NC}"
-else
-    echo -e "${YELLOW}⚠️  Shellcheck not installed, skipping...${NC}"
+    echo -e "${GREEN}✅ No trailing whitespace${NC}"
+    echo ""
 fi
 
-echo ""
-
-# Check 2: Shfmt (formatting)
-if command -v shfmt &> /dev/null; then
-    echo "🔍 Checking code formatting..."
-    SHFMT_FAILED=0
-
+# Check 4: Shebang validation (bash scripts)
+if [ -n "$STAGED_SH_FILES" ]; then
+    echo "🔍 Checking shebangs..."
+    SHEBANG_FAILED=0
+    
     for file in $STAGED_SH_FILES; do
         if [ -f "$file" ]; then
-            if ! shfmt -d -i 1 -sr -bn "$file" > /dev/null 2>&1; then
-                SHFMT_FAILED=1
-                echo -e "${RED}❌ Format check failed for: $file${NC}"
-                echo "   Run: shfmt -w -i 1 -sr -bn $file"
+            FIRST_LINE=$(head -1 "$file")
+            if [[ "$FIRST_LINE" != "#!/bin/bash"* ]] && [[ "$FIRST_LINE" != "#!/usr/bin/env bash"* ]]; then
+                SHEBANG_FAILED=1
+                echo -e "${RED}❌ Invalid or missing shebang in: $file${NC}"
+                echo "   First line: $FIRST_LINE"
             fi
         fi
     done
-
-    if [ $SHFMT_FAILED -eq 1 ]; then
-        echo -e "${RED}❌ Format check failed. Run shfmt to fix formatting.${NC}"
+    
+    if [ $SHEBANG_FAILED -eq 1 ]; then
+        echo -e "${RED}❌ Shebang check failed.${NC}"
         exit 1
     fi
-    echo -e "${GREEN}✅ Format check passed${NC}"
-else
-    echo -e "${YELLOW}⚠️  Shfmt not installed, skipping...${NC}"
+    echo -e "${GREEN}✅ Shebangs OK${NC}"
+    echo ""
 fi
-
-echo ""
-
-# Check 3: Trailing whitespace
-echo "🔍 Checking for trailing whitespace..."
-TRAILING_WS_FAILED=0
-
-for file in $STAGED_SH_FILES; do
-    if [ -f "$file" ]; then
-        if grep -n ' $' "$file" > /dev/null 2>&1; then
-            TRAILING_WS_FAILED=1
-            echo -e "${RED}❌ Trailing whitespace found in: $file${NC}"
-            echo "   Run: sed -i 's/[[:space:]]*$//' $file"
-        fi
-    fi
-done
-
-if [ $TRAILING_WS_FAILED -eq 1 ]; then
-    echo -e "${RED}❌ Trailing whitespace found. Please remove it.${NC}"
-    exit 1
-fi
-echo -e "${GREEN}✅ No trailing whitespace${NC}"
-
-echo ""
-
-# Check 4: Shebang
-echo "🔍 Checking shebangs..."
-SHEBANG_FAILED=0
-
-for file in $STAGED_SH_FILES; do
-    if [ -f "$file" ]; then
-        FIRST_LINE=$(head -1 "$file")
-        if [[ "$FIRST_LINE" != "#!/bin/bash"* ]] && [[ "$FIRST_LINE" != "#!/usr/bin/env bash"* ]]; then
-            SHEBANG_FAILED=1
-            echo -e "${RED}❌ Invalid or missing shebang in: $file${NC}"
-            echo "   First line: $FIRST_LINE"
-        fi
-    fi
-done
-
-if [ $SHEBANG_FAILED -eq 1 ]; then
-    echo -e "${RED}❌ Shebang check failed.${NC}"
-    exit 1
-fi
-echo -e "${GREEN}✅ Shebangs OK${NC}"
-
-echo ""
 
 # Check 5: SQL formatting (SQLFluff)
 if [ -n "$STAGED_SQL_FILES" ]; then
     if command -v sqlfluff &> /dev/null; then
         echo "🔍 Checking SQL formatting..."
         SQLFLUFF_FAILED=0
-
+        
         for file in $STAGED_SQL_FILES; do
             if [ -f "$file" ]; then
                 if ! sqlfluff lint "$file" > /dev/null 2>&1; then
@@ -141,7 +147,7 @@ if [ -n "$STAGED_SQL_FILES" ]; then
                 fi
             fi
         done
-
+        
         if [ $SQLFLUFF_FAILED -eq 1 ]; then
             echo -e "${RED}❌ SQL format check failed. Run sqlfluff fix to fix formatting.${NC}"
             exit 1
@@ -158,13 +164,13 @@ if [ -n "$STAGED_FORMAT_FILES" ]; then
     if command -v prettier &> /dev/null; then
         echo "🔍 Checking formatting with Prettier..."
         PRETTIER_FAILED=0
-
+        
         for file in $STAGED_FORMAT_FILES; do
-            # Skip XML test fixtures if they exist (real OSM dumps, should not be formatted)
+            # Skip XML test fixtures (real OSM dumps, should not be formatted)
             if [[ "$file" == *"tests/fixtures"*".xml" ]]; then
                 continue
             fi
-
+            
             if [ -f "$file" ]; then
                 if ! prettier --check "$file" > /dev/null 2>&1; then
                     PRETTIER_FAILED=1
@@ -173,7 +179,7 @@ if [ -n "$STAGED_FORMAT_FILES" ]; then
                 fi
             fi
         done
-
+        
         if [ $PRETTIER_FAILED -eq 1 ]; then
             echo -e "${RED}❌ Prettier format check failed. Run prettier --write to fix formatting.${NC}"
             exit 1
@@ -190,5 +196,3 @@ echo -e "${GREEN}✅ All pre-commit checks passed!${NC}"
 echo ""
 
 exit 0
-
-
