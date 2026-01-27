@@ -4,7 +4,8 @@ Unified Git hooks for Bash/SQL projects in the OSM-Notes ecosystem.
 
 ## Overview
 
-This project uses unified Git hooks that ensure code quality before commits and pushes. The hooks are designed to be consistent across all Bash/SQL projects in the OSM-Notes ecosystem.
+This project uses unified Git hooks that ensure code quality before commits and pushes. The hooks
+are designed to be consistent across all Bash/SQL projects in the OSM-Notes ecosystem.
 
 ## Available Hooks
 
