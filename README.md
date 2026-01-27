@@ -1012,7 +1012,8 @@ See `docs/Partitioning_Strategy.md` for complete details.
 ./tests/run_dwh_tests.sh
 ```
 
-**Master Test Runner**: `tests/run_all_tests.sh` - Executes all test suites (quality tests + DWH tests)
+**Master Test Runner**: `tests/run_all_tests.sh` - Executes all test suites (quality tests + DWH
+tests)
 
 ### CI/CD Integration
 
