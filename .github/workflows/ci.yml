@@ -1,4 +1,9 @@
-name: CI
+# CI/CD Pipeline - OSM-Notes-Analytics
+# Unified workflow structure for Bash/SQL projects
+# Author: Andres Gomez (AngocA)
+# Version: 2026-01-27
+
+name: CI/CD Pipeline
 
 on:
   push:
@@ -11,6 +16,9 @@ on:
     # Dependency checks run monthly on the 1st at 3am UTC
     - cron: "0 3 1 * *"
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   # Tests job - requires PostgreSQL service
@@ -55,7 +63,7 @@ jobs:
           # Verify database is accessible
           psql -c "SELECT current_database(), current_user;"
 
-      - name: Run DWH Tests
+      - name: Run all tests (master test runner)
         env:
           TEST_DBNAME: dwh
           TEST_DBHOST: localhost
@@ -70,7 +78,8 @@ jobs:
         run: |
           # Verify database connection before running tests
           psql -c "SELECT current_database(), current_user;" || exit 1
-          ./tests/run_dwh_tests.sh
+          echo "Running master test runner: tests/run_all_tests.sh"
+          ./tests/run_all_tests.sh
 
       - name: Run Hybrid ETL Integration Test
         env:
@@ -347,9 +356,11 @@ jobs:
           echo "- shellcheck" >> $GITHUB_STEP_SUMMARY
           echo "- shfmt" >> $GITHUB_STEP_SUMMARY
 
-  # Summary job - runs after all other jobs complete
-  all-checks-summary:
-    name: All Checks Summary
+  # ============================================================================
+  # STAGE 3: Summary
+  # ============================================================================
+  summary:
+    name: CI Summary
     needs: [unit-tests, shellcheck, shfmt, prettier, sqlfluff, code-quality, check-dependencies]
     runs-on: ubuntu-latest
     if: always()
@@ -357,7 +368,7 @@ jobs:
     steps:
       - name: Check all results
         run: |
-          echo "## CI Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## CI Results Summary - OSM-Notes-Analytics" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           if [ "${{ needs.unit-tests.result }}" == "success" ]; then
