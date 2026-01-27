@@ -999,18 +999,20 @@ See `docs/Partitioning_Strategy.md` for complete details.
 
 ## Testing
 
-### Quick Start testing
+### Quick Start
 
 ```bash
+# Run all tests (master test runner - recommended)
+./tests/run_all_tests.sh
+
 # Quality tests (fast, no database required)
 ./tests/run_quality_tests.sh
 
 # DWH tests (requires database 'dwh')
 ./tests/run_dwh_tests.sh
-
-# All tests
-./tests/run_all_tests.sh
 ```
+
+**Master Test Runner**: `tests/run_all_tests.sh` - Executes all test suites (quality tests + DWH tests)
 
 ### CI/CD Integration
 
