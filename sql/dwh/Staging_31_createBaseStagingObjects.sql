@@ -45,7 +45,6 @@ CREATE OR REPLACE FUNCTION staging.get_hashtag_id (
   m_id_dimension_hashtag INTEGER;
   r RECORD;
  BEGIN
-  --RAISE NOTICE 'Requesting id for hashtag: %.', m_hashtag_name;
   IF (m_hashtag_name IS NULL) THEN
    m_id_dimension_hashtag := 1;
   ELSE
@@ -85,15 +84,10 @@ CREATE OR REPLACE PROCEDURE staging.get_hashtag (
  BEGIN
   pos := STRPOS(m_text_comment, '#');
   IF (pos <> 0) THEN
-   --RAISE NOTICE 'Position number sign: %.', pos;
    substr_after := SUBSTR(m_text_comment, pos+1);
-   --RAISE NOTICE 'Substring after number sign: %.', substr_after;
    m_hashtag_name := ARRAY_TO_STRING(REGEXP_MATCHES(substr_after, '^\w+'), ';');
-   --RAISE NOTICE 'Hashtag name: %.', m_hashtag_name;
    length := LENGTH(m_hashtag_name);
-   --RAISE NOTICE 'Length hashtag name: %.', length;
    m_text_comment := SUBSTR(substr_after, length+2);
-   --RAISE NOTICE 'New substring: %.', m_text_comment;
   ELSE
    m_text_comment := NULL;
   END IF;

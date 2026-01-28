@@ -54,9 +54,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
   SELECT COALESCE(MAX(note_id), 0)
     INTO max_note_id_snapshot
   FROM public.notes;
---  RAISE NOTICE 'Day % started.', max_processed_timestamp;
 
---RAISE NOTICE 'Flag 1: %', CLOCK_TIMESTAMP();
   -- Note: For partitioned tables, ON CONFLICT doesn't work with indexes on the main table
   -- We need indexes on each partition. Since this is complex and the unique index
   -- will prevent duplicates at the database level, we'll insert without ON CONFLICT
@@ -68,7 +66,6 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
   -- and should ideally be executed in READ ONLY mode for better concurrency, but this procedure also
   -- performs writes, so READ ONLY cannot be applied to the entire transaction.
   IF (m_equals) THEN
---RAISE NOTICE 'Processing equals';
    OPEN notes_on_day FOR EXECUTE('
     SELECT /* Notes-staging */
      c.note_id id_note, c.sequence_action sequence_action,
@@ -94,7 +91,6 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
     ORDER BY c.note_id, c.sequence_action
     ');
   ELSE
---RAISE NOTICE 'Processing greater than';
    OPEN notes_on_day FOR EXECUTE('
     SELECT /* Notes-staging */
      c.note_id id_note, c.sequence_action sequence_action,
@@ -121,14 +117,10 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
     ');
   END IF;
   LOOP
---RAISE NOTICE 'Flag 2: %', CLOCK_TIMESTAMP();
-  --RAISE NOTICE 'before fetch % - %.', CLOCK_TIMESTAMP(), m_count;
    FETCH notes_on_day INTO rec_note_action;
-  --RAISE NOTICE 'after fetch % - %.', CLOCK_TIMESTAMP(), m_count;
    -- Exit when no more rows to fetch.
    EXIT WHEN NOT FOUND;
 
---RAISE NOTICE 'note_id %, sequence %', rec_note_action.id_note,
 --    rec_note_action.sequence_action;
 
    -- Gets the country of the comment.
@@ -175,7 +167,6 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
      END IF;
     END IF;
    END IF;
---RAISE NOTICE 'Flag 3: %', CLOCK_TIMESTAMP();
 
    -- Gets the user who created the note.
    -- Handle anonymous notes (NULL user_id) by using Anonymous user (user_id = -1)
@@ -183,7 +174,6 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
     INTO m_dimension_user_open
    FROM dwh.dimension_users
     WHERE user_id = COALESCE(rec_note_action.created_id_user, -1) AND is_current;
---RAISE NOTICE 'Flag 4: %', CLOCK_TIMESTAMP();
 
    -- Gets the user who performed the action (if action is opened, then it
    -- is the same).
@@ -192,7 +182,6 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
     INTO m_dimension_user_action
    FROM dwh.dimension_users
     WHERE user_id = COALESCE(rec_note_action.action_id_user, -1) AND is_current;
---RAISE NOTICE 'Flag 5: %', CLOCK_TIMESTAMP();
 
    -- Gets the days of the actions
    m_opened_id_date := dwh.get_date_id(rec_note_action.created_at);
@@ -201,7 +190,6 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
    m_action_id_date := dwh.get_date_id(rec_note_action.action_at);
    m_action_id_hour_of_week :=
      dwh.get_hour_of_week_id(rec_note_action.action_at);
---RAISE NOTICE 'Flag 6: %', CLOCK_TIMESTAMP();
 
    -- When the action is 'closed' it copies the data from the 'action'.
    IF (rec_note_action.action_comment = 'closed') THEN
@@ -209,13 +197,11 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
     m_closed_id_hour_of_week := m_action_id_hour_of_week;
     m_dimension_user_close := m_dimension_user_action;
    END IF;
---RAISE NOTICE 'Flag 7: %', CLOCK_TIMESTAMP();
 
    -- Gets the id of the app, if the action is opening.
    IF (rec_note_action.action_comment = 'opened') THEN
     -- Use body from cursor (already loaded via LEFT JOIN in query)
     m_text_comment := rec_note_action.body;
---RAISE NOTICE 'Flag 8: %', CLOCK_TIMESTAMP();
      m_application := staging.get_application(m_text_comment);
      -- Try to parse version simple pattern N.N or N.N.N
      IF (m_text_comment ~* '\\d+\\.\\d+(\\.\\d+)?') THEN
@@ -224,7 +210,6 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
          (SELECT regexp_match(m_text_comment, '(\\d+\\.\\d+(?:\\.\\d+)?)')::text)
        );
      END IF;
---RAISE NOTICE 'Flag 9: %', CLOCK_TIMESTAMP();
    ELSE
      m_application := NULL;
      m_application_version := NULL;
@@ -236,7 +221,6 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
    ELSIF (rec_note_action.action_comment = 'reopened') THEN
     m_recent_opened_dimension_id_date := m_action_id_date;
    ELSE
---RAISE NOTICE 'Flag 10: %', CLOCK_TIMESTAMP();
     SELECT /* Notes-staging */ recent_opened_dimension_id_date
      INTO m_recent_opened_dimension_id_date
     FROM dwh.facts f
@@ -246,7 +230,6 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
      WHERE f.id_note = rec_note_action.id_note
     );
    END IF;
---RAISE NOTICE 'Flag 11: %', CLOCK_TIMESTAMP();
    -- Handle case where we can't find opening date (fallback to opened_dimension_id_date)
    -- This can happen when processing a note for the first time in incremental mode
    IF (m_recent_opened_dimension_id_date IS NULL) THEN
@@ -256,7 +239,6 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
     -- Use opened_dimension_id_date as fallback (always available for any note)
     m_recent_opened_dimension_id_date := m_opened_id_date;
    END IF;
---RAISE NOTICE 'Flag 12: %', CLOCK_TIMESTAMP();
 
    -- Gets hashtags (UNLIMITED)
    m_hashtag_number := 0;
@@ -279,7 +261,6 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
      END;
     END LOOP;
    END IF;
---RAISE NOTICE 'Flag 22: %', CLOCK_TIMESTAMP();
 
    -- Prepare local/timezone/season using note position
    -- Note: This SELECT reads from ingestion table (notes) and should ideally
@@ -334,7 +315,6 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
      -- This can happen if the same comment is processed multiple times
      m_fact_id := NULL;
    END;
---RAISE NOTICE 'Flag 23: %', CLOCK_TIMESTAMP();
 
    -- Populate bridge table for hashtags (ALL hashtags - unlimited)
    -- Only insert hashtags if fact_id is not NULL (fact was successfully inserted)
@@ -357,12 +337,10 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
    UPDATE /* Notes-ETL */ dwh.dimension_users
     SET modified = TRUE
     WHERE dimension_user_id = m_dimension_user_action;
---RAISE NOTICE 'Flag 24: %', CLOCK_TIMESTAMP();
 
    UPDATE /* Notes-ETL */ dwh.dimension_countries
     SET modified = TRUE
     WHERE dimension_country_id = m_dimension_country_id;
---RAISE NOTICE 'Flag 25: %', CLOCK_TIMESTAMP();
 
    -- Resets the variables.
    m_dimension_country_id := null;
@@ -383,17 +361,14 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_at_date (
    m_hashtag_name := null;
    m_hashtag_number := 0;
    m_all_hashtag_ids := ARRAY[]::INTEGER[]; -- Reset array
---RAISE NOTICE 'Flag 26: %', CLOCK_TIMESTAMP();
 
    m_count := m_count + 1;
---RAISE NOTICE 'Flag 27: %', CLOCK_TIMESTAMP();
    IF (MOD(m_count, 10000) = 0) THEN
     RAISE NOTICE '%: % processed facts until %.', CLOCK_TIMESTAMP(), m_count,
      max_processed_timestamp;
    END IF;
 
   END LOOP;
---RAISE NOTICE 'Flag 28: %', CLOCK_TIMESTAMP();
 
   CLOSE notes_on_day;
  END
@@ -434,7 +409,6 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
   -- All note_comments processed will have their corresponding notes
   -- Base case, when at least the first day of notes is processed.
   -- There are 231 note actions this day: 2013-04-24 (Epoch's OSM notes).
---RAISE NOTICE '1Flag 1: %', CLOCK_TIMESTAMP();
   -- Check if initial load flag exists in properties FIRST
   -- This is more reliable than counting facts, as the flag indicates the state
   -- The flag can be 'true' (set during table creation) or 'completed' (set after initial load)
@@ -536,15 +510,12 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
 
    RETURN; -- Exit procedure after initial load
   END IF;
---RAISE NOTICE '1Flag 2: %', CLOCK_TIMESTAMP();
 
   -- Incremental case: process only NEW comments since last ETL execution
   -- Get the most recent timestamp processed in DWH (not just the date)
   SELECT /* Notes-staging */ MAX(action_at)
    INTO max_note_on_dwh_timestamp
   FROM dwh.facts;
---RAISE NOTICE 'Max timestamp processed in DWH: %', max_note_on_dwh_timestamp;
---RAISE NOTICE '1Flag 3: %', CLOCK_TIMESTAMP();
 
   -- If no facts exist, this should have been caught by initial load check above
   -- But handle it gracefully just in case
@@ -558,8 +529,6 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
    INTO max_note_action_date
   FROM public.note_comments
   WHERE note_id <= max_note_id_snapshot;
---RAISE NOTICE 'Max date with comments in base tables: %', max_note_action_date;
---RAISE NOTICE '1Flag 4: %', CLOCK_TIMESTAMP();
 
   -- Get the date of the most recent note processed on the DWH
   SELECT /* Notes-staging */ MAX(date_id)
@@ -567,8 +536,6 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
   FROM dwh.facts f
    JOIN dwh.dimension_days d
    ON (f.action_dimension_id_date = d.dimension_day_id);
---RAISE NOTICE 'Max date processed in DWH: %', max_processed_date;
---RAISE NOTICE '1Flag 5: %', CLOCK_TIMESTAMP();
 
   -- Validation: DWH should not have more recent data than base tables
   IF (max_note_action_date < max_processed_date) THEN
@@ -584,8 +551,6 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
   -- Process comments incrementally: only process dates that have NEW comments
   -- Start from the date after the last processed date, or the last processed date if it has new comments
   WHILE (max_processed_date <= max_note_action_date) LOOP
---RAISE NOTICE '1Flag 5: %', CLOCK_TIMESTAMP();
---RAISE NOTICE 'test % < %.', max_processed_date, max_note_action_date;
    -- Timestamp of the max processed note on DWH.
    -- It is on the same DATE of max_processed_date.
    -- OPTIMIZATION: Use timestamp range instead of DATE() to allow index usage
@@ -594,12 +559,9 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
    FROM dwh.facts
    WHERE action_at >= max_processed_date::TIMESTAMP
     AND action_at < (max_processed_date + INTERVAL '1 day')::TIMESTAMP;
---RAISE NOTICE '1Flag 6: %', CLOCK_TIMESTAMP();
---RAISE NOTICE 'max timestamp dwh %.', max_note_on_dwh_timestamp;
    IF (max_note_on_dwh_timestamp IS NULL) THEN
     max_note_on_dwh_timestamp := max_processed_date::TIMESTAMP;
    END IF;
---RAISE NOTICE 'max note on dwh %', max_note_on_dwh_timestamp;
 
    -- Gets the number of notes that have not being processed on the date being
    -- processed.
@@ -612,9 +574,7 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
      AND created_at < (max_processed_date + INTERVAL '1 day')::TIMESTAMP
      AND created_at > max_note_on_dwh_timestamp
      AND note_id <= max_note_id_snapshot;
---RAISE NOTICE 'count notes to process on date %: %.', max_processed_date,
 --qty_notes_on_date;
---RAISE NOTICE '1Flag 7: %', CLOCK_TIMESTAMP();
 
    -- If there are 0 notes to process, then skip to next date that has comments
    -- OPTIMIZATION: Instead of incrementing day by day, jump directly to next date with comments
@@ -663,7 +623,6 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
      use_equals := FALSE;
     END IF;
 
---RAISE NOTICE 'Skipped to next date with comments: %.', max_processed_date;
 
    -- Gets the number of notes that have not being processed on the new date
    -- being processed.
@@ -676,29 +635,21 @@ CREATE OR REPLACE PROCEDURE staging.process_notes_actions_into_dwh (
      AND created_at < (max_processed_date + INTERVAL '1 day')::TIMESTAMP
      AND created_at > max_note_on_dwh_timestamp
      AND note_id <= max_note_id_snapshot;
---RAISE NOTICE 'Notes to process for %: %.', max_processed_date,
 --qty_notes_on_date;
---RAISE NOTICE '1Flag 8: %', CLOCK_TIMESTAMP();
 
     -- Process notes for the new date with appropriate m_equals value
     CALL staging.process_notes_at_date(max_note_on_dwh_timestamp,
       qty_dwh_notes, use_equals);
---RAISE NOTICE '1Flag 9: %', CLOCK_TIMESTAMP();
    ELSE
     -- There are comments not processed on the DHW for the currently processing
     -- day.
---RAISE NOTICE 'Processing facts for %: %.', max_processed_date,
 --qty_notes_on_date;
---RAISE NOTICE '1Flag 10: % - %', CLOCK_TIMESTAMP(), max_note_on_dwh_timestamp;
 
     CALL staging.process_notes_at_date(max_note_on_dwh_timestamp,
       qty_dwh_notes, TRUE);
---RAISE NOTICE '1Flag 11: %', CLOCK_TIMESTAMP();
    END IF;
---RAISE NOTICE 'loop % - % - %.', max_processed_date,
 --max_note_on_dwh_timestamp, qty_notes_on_date;
   END LOOP;
---RAISE NOTICE 'No facts to process (% !> %).', max_processed_date,
 --max_note_action_date;
 
   -- Restore original statement_timeout

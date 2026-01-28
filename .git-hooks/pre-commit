@@ -140,6 +140,12 @@ if [ -n "$STAGED_SQL_FILES" ]; then
         
         for file in $STAGED_SQL_FILES; do
             if [ -f "$file" ]; then
+                # Skip files with template variables (e.g., ${YEAR}) as they cannot be parsed
+                if grep -q '\${' "$file" 2>/dev/null; then
+                    echo -e "${YELLOW}⚠️  Skipping template file: $file${NC}"
+                    continue
+                fi
+                
                 if ! sqlfluff lint "$file" > /dev/null 2>&1; then
                     SQLFLUFF_FAILED=1
                     echo -e "${RED}❌ SQL format check failed for: $file${NC}"
