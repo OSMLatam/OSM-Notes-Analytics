@@ -47,17 +47,9 @@ GROUP BY c.user_id, c.username
 -- The SCD2 process above (lines 24-44) already handles username changes correctly:
 -- 1. Closes old rows when username changes
 -- 2. Inserts new current rows with updated username
--- The following UPDATE was processing ALL rows (including historical ones), breaking SCD2 integrity
+-- The previous UPDATE was processing ALL rows (including historical ones), breaking SCD2 integrity
 -- and causing severe performance degradation with large datasets.
 -- Removed: 2025-10-21
-
--- Old problematic code (kept for reference):
--- UPDATE dwh.dimension_users AS d
---  SET username = c.username
---  FROM users AS c
---  WHERE d.user_id = c.user_id
---   AND c.username IS DISTINCT FROM d.username
--- ;
 
 SELECT /* Notes-ETL */ clock_timestamp() AS Processing,
  'Updating dimension countries' AS Task;
@@ -96,7 +88,7 @@ COPY (
   OR c.country_name_es <> d.country_name_es
   OR c.country_name_en <> d.country_name_en
 )
-TO '/tmp/countries_changed.csv' WITH DELIMITER ',' CSV HEADER
+TO '/tmp/countries_changed.csv' WITH DELIMITER ',' CSV HEADER -- noqa: PRS
 ;
 
 SELECT /* Notes-ETL */ clock_timestamp() AS Processing,
