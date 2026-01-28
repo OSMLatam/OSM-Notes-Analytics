@@ -34,7 +34,7 @@ if [ -n "$STAGED_SH_FILES" ]; then
     if command -v shellcheck &> /dev/null; then
         echo "🔍 Running shellcheck..."
         SHELLCHECK_FAILED=0
-        
+
         for file in $STAGED_SH_FILES; do
             if [ -f "$file" ]; then
                 # Run shellcheck and capture output, limit to first 5 errors for speed
@@ -46,7 +46,7 @@ if [ -n "$STAGED_SH_FILES" ]; then
                 fi
             fi
         done
-        
+
         if [ $SHELLCHECK_FAILED -eq 1 ]; then
             echo -e "${RED}❌ Shellcheck found issues. Please fix them before committing.${NC}"
             exit 1
@@ -63,7 +63,7 @@ if [ -n "$STAGED_SH_FILES" ]; then
     if command -v shfmt &> /dev/null; then
         echo "🔍 Checking bash code formatting..."
         SHFMT_FAILED=0
-        
+
         for file in $STAGED_SH_FILES; do
             if [ -f "$file" ]; then
                 if ! shfmt -d -i 1 -sr -bn "$file" > /dev/null 2>&1; then
@@ -73,7 +73,7 @@ if [ -n "$STAGED_SH_FILES" ]; then
                 fi
             fi
         done
-        
+
         if [ $SHFMT_FAILED -eq 1 ]; then
             echo -e "${RED}❌ Format check failed. Run shfmt to fix formatting.${NC}"
             exit 1
@@ -89,7 +89,7 @@ fi
 if [ -n "$STAGED_SH_FILES" ]; then
     echo "🔍 Checking for trailing whitespace..."
     TRAILING_WS_FAILED=0
-    
+
     for file in $STAGED_SH_FILES; do
         if [ -f "$file" ]; then
             if grep -n ' $' "$file" > /dev/null 2>&1; then
@@ -99,7 +99,7 @@ if [ -n "$STAGED_SH_FILES" ]; then
             fi
         fi
     done
-    
+
     if [ $TRAILING_WS_FAILED -eq 1 ]; then
         echo -e "${RED}❌ Trailing whitespace found. Please remove it.${NC}"
         exit 1
@@ -112,7 +112,7 @@ fi
 if [ -n "$STAGED_SH_FILES" ]; then
     echo "🔍 Checking shebangs..."
     SHEBANG_FAILED=0
-    
+
     for file in $STAGED_SH_FILES; do
         if [ -f "$file" ]; then
             FIRST_LINE=$(head -1 "$file")
@@ -123,7 +123,7 @@ if [ -n "$STAGED_SH_FILES" ]; then
             fi
         fi
     done
-    
+
     if [ $SHEBANG_FAILED -eq 1 ]; then
         echo -e "${RED}❌ Shebang check failed.${NC}"
         exit 1
@@ -137,7 +137,7 @@ if [ -n "$STAGED_SQL_FILES" ]; then
     if command -v sqlfluff &> /dev/null; then
         echo "🔍 Checking SQL formatting..."
         SQLFLUFF_FAILED=0
-        
+
         for file in $STAGED_SQL_FILES; do
             if [ -f "$file" ]; then
                 # Skip files with template variables (e.g., ${YEAR}) as they cannot be parsed
@@ -145,7 +145,7 @@ if [ -n "$STAGED_SQL_FILES" ]; then
                     echo -e "${YELLOW}⚠️  Skipping template file: $file${NC}"
                     continue
                 fi
-                
+
                 if ! sqlfluff lint "$file" > /dev/null 2>&1; then
                     SQLFLUFF_FAILED=1
                     echo -e "${RED}❌ SQL format check failed for: $file${NC}"
@@ -153,7 +153,7 @@ if [ -n "$STAGED_SQL_FILES" ]; then
                 fi
             fi
         done
-        
+
         if [ $SQLFLUFF_FAILED -eq 1 ]; then
             echo -e "${RED}❌ SQL format check failed. Run sqlfluff fix to fix formatting.${NC}"
             exit 1
@@ -170,13 +170,13 @@ if [ -n "$STAGED_FORMAT_FILES" ]; then
     if command -v prettier &> /dev/null; then
         echo "🔍 Checking formatting with Prettier..."
         PRETTIER_FAILED=0
-        
+
         for file in $STAGED_FORMAT_FILES; do
             # Skip XML test fixtures (real OSM dumps, should not be formatted)
             if [[ "$file" == *"tests/fixtures"*".xml" ]]; then
                 continue
             fi
-            
+
             if [ -f "$file" ]; then
                 if ! prettier --check "$file" > /dev/null 2>&1; then
                     PRETTIER_FAILED=1
@@ -185,7 +185,7 @@ if [ -n "$STAGED_FORMAT_FILES" ]; then
                 fi
             fi
         done
-        
+
         if [ $PRETTIER_FAILED -eq 1 ]; then
             echo -e "${RED}❌ Prettier format check failed. Run prettier --write to fix formatting.${NC}"
             exit 1
