@@ -60,6 +60,8 @@ fi
 # SQL script path
 SQL_SCRIPT="${ANALYTICS_DIR}/sql/dwh/export/exportClosedNotesByCountry.sql"
 readonly SQL_SCRIPT
+SQL_SCRIPT_INTL_SEGMENTS="${ANALYTICS_DIR}/sql/dwh/export/listInternationalWatersExportSegments.sql"
+readonly SQL_SCRIPT_INTL_SEGMENTS
 
 # Temporary directory for CSV export
 TEMP_CSV_DIR=$(mktemp -d "/tmp/csv_export_XXXXXX")
@@ -110,14 +112,115 @@ function __sanitize_filename() {
  echo "${name}" | sed 's/ /_/g' | sed 's/[^a-zA-Z0-9_-]//g' | tr '[:upper:]' '[:lower:]'
 }
 
+# Predicate for notes inside one public.international_waters polygon (aligned with OSM-Notes-Ingestion get_country)
+# iw.id is INTEGER; only allow a plain positive decimal literal in the snippet (no shell→SQL injection).
+function __intl_waters_predicate_sql() {
+ local iw_id="${1}"
+ if [[ -z "${iw_id}" ]] || ! [[ "${iw_id}" =~ ^[1-9][0-9]*$ ]]; then
+  printf '%s' 'FALSE'
+  return 1
+ fi
+ local compact
+ compact=$(
+  cat << EOSQL | tr -s '\n\t' ' ' | sed 's/^ *//;s/ *$//'
+EXISTS (
+ SELECT 1
+ FROM public.international_waters iw
+ WHERE iw.id = ${iw_id}
+ AND (
+ (
+ iw.geom IS NOT NULL
+ AND (
+ ST_Contains(
+ ST_SetSRID(iw.geom, 4326),
+ ST_SetSRID(
+ ST_MakePoint(
+ note_loc.longitude::double precision,
+ note_loc.latitude::double precision
+ ),
+ 4326
+ )
+ )
+ OR ST_Intersects(
+ ST_SetSRID(iw.geom, 4326),
+ ST_SetSRID(
+ ST_MakePoint(
+ note_loc.longitude::double precision,
+ note_loc.latitude::double precision
+ ),
+ 4326
+ )
+ )
+ )
+ )
+ OR (
+ COALESCE(iw.is_special_point, FALSE)
+ AND iw.point_coords IS NOT NULL
+ AND ST_DWithin(
+ iw.point_coords,
+ ST_SetSRID(
+ ST_MakePoint(
+ note_loc.longitude::double precision,
+ note_loc.latitude::double precision
+ ),
+ 4326
+ ),
+ 0.001
+ )
+ )
+ )
+)
+EOSQL
+ )
+ printf '%s' "${compact}"
+}
+
+function __intl_waters_table_exists() {
+ local reg
+ reg=$(__psql_with_appname "${BASENAME}-check-intlw" -d "${DBNAME_DWH}" -Atq \
+  -c "SELECT COALESCE(to_regclass('public.international_waters')::TEXT, '')" 2> /dev/null || echo "")
+ [[ -n "${reg}" ]]
+}
+
+# Export notes for country_id -1 restricted to international_waters.id = iw_id (Ingestion ocean regions)
+function __export_intl_waters_segment() {
+ local iw_id="${1}"
+ local iw_name="${2}"
+ local country_id="-1"
+ if [[ -z "${iw_id}" ]] || ! [[ "${iw_id}" =~ ^[1-9][0-9]*$ ]]; then
+  print_warn "Skipping international waters export: invalid iw.id (expected positive integer): ${iw_id}"
+  return 1
+ fi
+ local slug
+ slug=$(__sanitize_filename "${iw_name}")
+ if [[ -z "${slug}" ]]; then
+  slug="segment_${iw_id}"
+ fi
+ local output_leaf="${country_id}_iw${iw_id}_${slug}.csv"
+ local pred
+ pred=$(__intl_waters_predicate_sql "${iw_id}")
+ __export_country_notes "${country_id}" "${iw_name} (international waters, iw.id=${iw_id})" "${pred}" "${output_leaf}"
+}
+
 # Function to export notes for a specific country
+# Args: country_id, country_name [, intl_waters_match_predicate [, output_filename_leaf ]]
+# intl_waters_match_predicate defaults to TRUE (see exportClosedNotesByCountry.sql)
+# output_filename_leaf: basename only (e.g. -1_iw42_atlantic.csv); default {country_id}_{sanitized_country_name}.csv
 function __export_country_notes() {
  local country_id="${1}"
  local country_name="${2}"
- local sanitized_name
- sanitized_name=$(__sanitize_filename "${country_name}")
+ local intl_predicate="${3:-TRUE}"
+ local output_leaf="${4:-}"
 
- local output_file="${TEMP_CSV_DIR}/${country_id}_${sanitized_name}.csv"
+ local sanitized_name=""
+ local output_file
+ if [[ -n "${output_leaf}" ]]; then
+  output_file="${TEMP_CSV_DIR}/${output_leaf}"
+ else
+  sanitized_name=$(__sanitize_filename "${country_name}")
+  output_file="${TEMP_CSV_DIR}/${country_id}_${sanitized_name}.csv"
+ fi
+
  local start_time
  local end_time
  local duration
@@ -130,8 +233,11 @@ function __export_country_notes() {
   # Header row (optimized order for AI context)
   echo "note_id,country_name,latitude,longitude,opened_at,closed_at,days_to_resolution,opened_by_username,opening_comment,total_comments,was_reopened,closed_by_username,closing_comment"
 
-  # Data rows - replace :country_id and :max_notes_per_country variables in SQL and execute
-  sed -e "s/:country_id/${country_id}/g" -e "s/:max_notes_per_country/${MAX_NOTES_PER_COUNTRY}/g" "${SQL_SCRIPT}" \
+  # Data rows - replace variables and optional international_waters predicate
+  sed \
+   -e "s/:country_id/${country_id}/g" \
+   -e "s/:max_notes_per_country/${MAX_NOTES_PER_COUNTRY}/g" \
+   -e "s|INTL_WATERS_MATCH_PREDICATE|${intl_predicate}|g" "${SQL_SCRIPT}" \
    | __psql_with_appname "${BASENAME}-country-${country_id}" -d "${DBNAME_DWH}" \
     --csv \
     -t \
@@ -324,6 +430,7 @@ FROM dwh.facts f
   JOIN dwh.dimension_countries dc
     ON f.dimension_id_country = dc.dimension_country_id
 WHERE f.action_comment = 'closed'
+  AND dc.country_id IS DISTINCT FROM -1
 GROUP BY dc.country_id, dc.country_name, dc.country_name_en
 ORDER BY COALESCE(dc.country_name_en, dc.country_name, 'Unknown');
 EOF
@@ -396,8 +503,24 @@ EOF
  country_info_file=$(mktemp)
 
  # Get country information from database for all countries that have CSV files
- local country_ids
- country_ids=$(echo "${csv_files}" | sed -n 's/^\([0-9]\+\).*\.csv$/\1/p' | sort -u | tr '\n' ',' | sed 's/,$//')
+ local country_ids_positive
+ country_ids_positive=$(echo "${csv_files}" | sed -n 's/^\([0-9][0-9]*\)_.*\.csv$/\1/p' | sort -u)
+ local has_minus_one=0
+ if echo "${csv_files}" | grep -qE '^-1_'; then
+  has_minus_one=1
+ fi
+
+ local country_ids=""
+ if [[ -n "${country_ids_positive}" ]]; then
+  country_ids=$(echo "${country_ids_positive}" | paste -sd,)
+ fi
+ if [[ "${has_minus_one}" -eq 1 ]]; then
+  if [[ -n "${country_ids}" ]]; then
+   country_ids="${country_ids},-1"
+  else
+   country_ids="-1"
+  fi
+ fi
 
  if [[ -n "${country_ids}" ]]; then
   # Query database for country names in English and save to temp file
@@ -416,12 +539,13 @@ EOF
   # Process database results
   while IFS='|' read -r country_id country_name_en country_name_local; do
    if [[ -n "${country_id}" ]]; then
-    # Find the CSV file for this country (may have different name formats)
+    if [[ "${country_id}" == "-1" ]]; then
+     continue
+    fi
     local csv_file
     csv_file=$(echo "${csv_files}" | grep "^${country_id}_" | head -1)
 
     if [[ -n "${csv_file}" ]]; then
-     # Store country info: country_name_en|country_id|csv_file|country_name_local
      echo "${country_name_en}|${country_id}|${csv_file}|${country_name_local}" >> "${country_info_file}"
     fi
    fi
@@ -433,7 +557,6 @@ EOF
  if [[ -f "${country_info_file}" ]]; then
   sort -t'|' -k1,1 "${country_info_file}" | while IFS='|' read -r country_name_en country_id csv_file country_name_local; do
    if [[ -n "${country_name_en}" && -n "${csv_file}" ]]; then
-    # Format: - [English Name (Local Name)](./filename.csv) (ID: country_id)
     if [[ "${country_name_en}" != "${country_name_local}" && "${country_name_local}" != "Unknown" ]]; then
      echo "- [${country_name_en} (${country_name_local})](./${csv_file}) (ID: ${country_id})" >> "${temp_readme}"
     else
@@ -443,14 +566,31 @@ EOF
   done
   rm -f "${country_info_file}"
  else
-  # Fallback: if database query failed, list files by filename
   echo "${csv_files}" | while read -r csv_file; do
    local country_id
-   country_id=$(echo "${csv_file}" | sed -n 's/^\([0-9]\+\).*\.csv$/\1/p')
+   country_id=$(echo "${csv_file}" | sed -n 's/^\(-\{0,1\}[0-9][0-9]*\)_.*\.csv$/\1/p')
    if [[ -n "${country_id}" ]]; then
     echo "- [Country ID: ${country_id}](./${csv_file})" >> "${temp_readme}"
    fi
   done
+ fi
+
+ local intl_segments_list
+ intl_segments_list="$(echo "${csv_files}" | grep -E '^-1_iw[0-9]+_' | sort || true)"
+ if [[ -n "${intl_segments_list}" ]]; then
+  cat >> "${temp_readme}" << 'EOMD'
+
+## International waters (country id -1)
+
+CSV files prefixed with `-1_iw{numeric_id}_` map to **public.international_waters.id** populated by OSM-Notes-Ingestion
+(`processPlanetNotes_28_addInternationalWatersExamples.sql`: ocean regions such as atlantic / pacific_*, indian, arctic,
+southern, plus named marginal seas).
+
+EOMD
+  while IFS= read -r segf; do
+   [[ -z "${segf}" ]] && continue
+   echo "- [${segf%.csv}](./${segf}) (country id -1)" >> "${temp_readme}"
+  done <<< "${intl_segments_list}"
  fi
 
  # Footer
@@ -806,13 +946,19 @@ function __csv_needs_update() {
  local country_id="${1}"
  local country_name="${2}"
  local last_close_date="${3}"
- local sanitized_name
- sanitized_name=$(__sanitize_filename "${country_name}")
+ local intl_waters_id="${4:-}"
+
+ local csv_file_pattern
+ if [[ -n "${intl_waters_id}" ]]; then
+  csv_file_pattern="-1_iw${intl_waters_id}_*.csv"
+ elif [[ "${country_id}" == "-1" ]]; then
+  csv_file_pattern="-1_*.csv"
+ else
+  csv_file_pattern="${country_id}_*.csv"
+ fi
 
  # Check for CSV file in git (more reliable than filesystem)
- # Search for any CSV file that starts with country_id_ (handles both formats)
  local csv_file_in_git=""
- local csv_file_pattern="${country_id}_*.csv"
 
  # Find CSV file in git for this country ID
  # Use git ls-files to find files matching the pattern
@@ -924,6 +1070,52 @@ while IFS='|' read -r country_id country_name country_name_en last_close_date; d
   fi
  fi
 done < "${COUNTRY_LIST}"
+
+if __intl_waters_table_exists && [[ -f "${SQL_SCRIPT_INTL_SEGMENTS}" ]]; then
+ INTL_SEGMENTS_LIST=$(mktemp)
+ __psql_with_appname "${BASENAME}-intl-segments" -d "${DBNAME_DWH}" -Atq -f "${SQL_SCRIPT_INTL_SEGMENTS}" > "${INTL_SEGMENTS_LIST}" 2> /dev/null || true
+ if [[ -s "${INTL_SEGMENTS_LIST}" ]]; then
+  print_info "International waters (-1): one CSV per OSM-Notes-Ingestion international_waters polygon..."
+ fi
+ while IFS=$'\t' read -r iw_id iw_name last_close_date; do
+  if [[ -z "${iw_id}" || -z "${iw_name}" ]]; then
+   continue
+  fi
+  TOTAL_COUNTRIES=$((TOTAL_COUNTRIES + 1))
+  # shellcheck disable=SC2310  # Function invocation in condition is intentional for error handling
+  if __csv_needs_update "-1" "${iw_name}" "${last_close_date}" "${iw_id}"; then
+   # shellcheck disable=SC2310
+   if __export_intl_waters_segment "${iw_id}" "${iw_name}"; then
+    EXPORTED_COUNTRIES=$((EXPORTED_COUNTRIES + 1))
+    BATCH_COUNT=$((BATCH_COUNT + 1))
+
+    slug=$(__sanitize_filename "${iw_name}")
+    if [[ -z "${slug}" ]]; then
+     slug="segment_${iw_id}"
+    fi
+    intl_csv="-1_iw${iw_id}_${slug}.csv"
+    file_notes=$(wc -l < "${TEMP_CSV_DIR}/${intl_csv}" | tr -d ' ')
+    file_notes=$((file_notes - 1))
+    TOTAL_NOTES=$((TOTAL_NOTES + file_notes))
+
+    if [[ ${BATCH_COUNT} -ge ${COUNTRIES_PER_COMMIT} ]]; then
+     BATCH_END=${EXPORTED_COUNTRIES}
+     if __commit_and_push_batch "${BATCH_START}" "${BATCH_END}" "${BATCH_COUNT}"; then
+      BATCH_START=$((BATCH_END + 1))
+      BATCH_COUNT=0
+     else
+      print_warn "Continuing despite commit failure. Will retry at end."
+     fi
+    fi
+   fi
+  else
+   print_info "Skipping international waters (${iw_name}, iw.id=${iw_id}) - CSV up to date"
+  fi
+ done < "${INTL_SEGMENTS_LIST}"
+ rm -f "${INTL_SEGMENTS_LIST}"
+elif __intl_waters_table_exists && [[ ! -f "${SQL_SCRIPT_INTL_SEGMENTS}" ]]; then
+ print_warn "Missing ${SQL_SCRIPT_INTL_SEGMENTS}; international waters split export skipped."
+fi
 
 # Commit and push remaining countries if any
 if [[ ${BATCH_COUNT} -gt 0 ]]; then

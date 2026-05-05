@@ -35,13 +35,14 @@
 --
 -- Usage:
 --   This SQL is used by bin/dwh/exportAndPushCSVToGitHub.sh
---   The script replaces :country_id and :max_notes_per_country with actual
---   values before execution
+--   The script replaces :country_id, :max_notes_per_country and
+--   INTL_WATERS_MATCH_PREDICATE before execution
 --   :country_id - Country ID to export
 --   :max_notes_per_country - Maximum number of notes to export
---                            (default: 400000)
---                            This limits export to most recent notes to keep
---                            files under 100MB
+--     (default in script: 400000) to keep files under GitHub size limits
+--   INTL_WATERS_MATCH_PREDICATE - For normal countries: SQL token TRUE.
+--     For country_id -1 split by public.international_waters: predicate
+--     referencing note_loc (join alias below), e.g. EXISTS (... iw.id = N ...).
 
 \set ON_ERROR_STOP on
 
@@ -98,8 +99,13 @@ latest_closes AS (
         f.closed_dimension_id_user
     FROM dwh.facts f
         CROSS JOIN country_dimension cd
+        INNER JOIN public.notes note_loc
+            ON f.id_note = note_loc.note_id
     WHERE f.action_comment = 'closed'
         AND f.dimension_id_country = cd.dimension_country_id
+        AND (
+            INTL_WATERS_MATCH_PREDICATE -- noqa: L027
+        )
     ORDER BY f.id_note ASC, f.fact_id DESC
 ),
 

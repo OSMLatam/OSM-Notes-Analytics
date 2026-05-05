@@ -7,8 +7,16 @@
 #
 # Environment variables:
 #   MAX_AGE_DAYS: Country JSON older than this (or missing) forces re-export (default: 30)
-#   JSON_EXPORT_BATCH_SIZE: Max users/countries per run in exportDatamartsToJSON (default: 10000).
-#                          Set to 0 for no limit (full pending export in one run).
+#   JSON_EXPORT_BATCH_SIZE: Max users and max countries per run in exportDatamartsToJSON
+#                          (default: 10000). Set to 0 for no LIMIT (export all pending in one run).
+#                          Performance: large backlogs are faster per record with 0 than many small runs,
+#                          at the cost of longer single invocation and higher peak memory in PostgreSQL.
+#   JSON_EXPORT_MAX_ROUNDS: Run exportDatamartsToJSON up to this many times in a row while there
+#                          are still rows with json_exported = FALSE (users or countries). Default: 1.
+#                          Use with a positive JSON_EXPORT_BATCH_SIZE to drain a backlog without
+#                          setting batch size to 0 (e.g. MAX_ROUNDS=10 and BATCH_SIZE=10000).
+#   JSON_EXPORT_JOBS: Parallel worker processes for per-user/per-country JSON in exportDatamartsToJSON
+#                    (default 4, max 32). Tune vs PostgreSQL max_connections.
 #   SKIP_DATAMART_JSON_EXPORT: If "true", skip running exportDatamartsToJSON (not recommended).
 #   DBNAME_DWH: DWH database name (default: from etc/properties.sh)
 #   OSM_NOTES_DATA_SQUASH_AFTER_EXPORT: If "true", after a successful pipeline run squash
@@ -19,13 +27,13 @@
 # Behavior:
 #   - Syncs OSM-Notes-Data clone, copies JSON schemas
 #   - Removes obsolete country files, marks stale country JSON for re-export when needed
-#   - Runs exportDatamartsToJSON.sh with output directly under data/ in the Data repo
+#   - Runs exportDatamartsToJSON.sh (optionally several rounds; see JSON_EXPORT_MAX_ROUNDS)
 #   - Commits and pushes data/, schemas/, and countries README when there are changes
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-05-03
+# Version: 2026-05-04
 
-set -eu pipefail
+set -euo pipefail
 
 # Script basename for lock file
 BASENAME=$(basename -s .sh "${0}")
@@ -53,6 +61,12 @@ MAX_AGE_DAYS="${MAX_AGE_DAYS:-30}"
 readonly MAX_AGE_DAYS
 JSON_EXPORT_BATCH_SIZE="${JSON_EXPORT_BATCH_SIZE:-10000}"
 readonly JSON_EXPORT_BATCH_SIZE
+JSON_EXPORT_MAX_ROUNDS="${JSON_EXPORT_MAX_ROUNDS:-1}"
+if ! [[ "${JSON_EXPORT_MAX_ROUNDS}" =~ ^[1-9][0-9]*$ ]]; then
+ echo "${BASENAME}: invalid JSON_EXPORT_MAX_ROUNDS=${JSON_EXPORT_MAX_ROUNDS:-unset}; using 1 (integer >= 1 required)." >&2
+ JSON_EXPORT_MAX_ROUNDS=1
+fi
+readonly JSON_EXPORT_MAX_ROUNDS
 SKIP_DATAMART_JSON_EXPORT="${SKIP_DATAMART_JSON_EXPORT:-false}"
 readonly SKIP_DATAMART_JSON_EXPORT
 
@@ -230,8 +244,61 @@ run_datamart_json_export() {
  # Pass overrides via env only: properties.sh sets DBNAME_DWH / JSON_OUTPUT_DIR as readonly; subshell inherits that.
  (
   cd "${ANALYTICS_DIR}" || exit 1
-  exec env DBNAME_DWH="${DBNAME}" JSON_OUTPUT_DIR="${DATA_REPO_DIR}/data" JSON_EXPORT_BATCH_SIZE="${JSON_EXPORT_BATCH_SIZE}" "${EXPORT_DATAMARTS_SCRIPT}"
+  exec env DBNAME_DWH="${DBNAME}" JSON_OUTPUT_DIR="${DATA_REPO_DIR}/data" JSON_EXPORT_BATCH_SIZE="${JSON_EXPORT_BATCH_SIZE}" JSON_EXPORT_JOBS="${JSON_EXPORT_JOBS:-}" "${EXPORT_DATAMARTS_SCRIPT}"
  )
+}
+
+# Count pending user or country JSON rows (datamart tables). Used for optional multi-round export.
+__json_export_pending_count() {
+ local out u c
+ out=$(psql -d "${DBNAME}" -Atq -c "
+  SELECT
+   (SELECT COUNT(*)::bigint FROM dwh.datamartusers
+    WHERE user_id IS NOT NULL AND user_id >= 1 AND json_exported = FALSE)
+   || '|' ||
+   (SELECT COUNT(*)::bigint FROM dwh.datamartcountries
+    WHERE country_id IS NOT NULL AND country_id >= 1 AND json_exported = FALSE);
+ " 2> /dev/null || echo "0|0")
+ u=$(echo "${out}" | cut -d'|' -f1 | tr -d '[:space:]')
+ c=$(echo "${out}" | cut -d'|' -f2 | tr -d '[:space:]')
+ if ! [[ "${u}" =~ ^[0-9]+$ ]]; then
+  u=0
+ fi
+ if ! [[ "${c}" =~ ^[0-9]+$ ]]; then
+  c=0
+ fi
+ echo "$((u + c))"
+}
+
+run_datamart_json_export_with_rounds() {
+ local round pending
+ round=1
+ while [[ ${round} -le ${JSON_EXPORT_MAX_ROUNDS} ]]; do
+  if [[ ${JSON_EXPORT_MAX_ROUNDS} -gt 1 ]]; then
+   print_info "JSON export round ${round}/${JSON_EXPORT_MAX_ROUNDS} (batch size ${JSON_EXPORT_BATCH_SIZE})..."
+  fi
+  if ! run_datamart_json_export; then
+   return 1
+  fi
+  if [[ ${JSON_EXPORT_MAX_ROUNDS} -le 1 ]]; then
+   return 0
+  fi
+  if [[ "${JSON_EXPORT_BATCH_SIZE}" -eq 0 ]]; then
+   print_info "JSON_EXPORT_BATCH_SIZE=0 — single round only (full pending export in one child process)."
+   return 0
+  fi
+  pending=$(__json_export_pending_count)
+  if [[ "${pending}" -eq 0 ]]; then
+   print_info "No pending datamart JSON rows after round ${round}; stopping multi-round export."
+   return 0
+  fi
+  print_info "Pending JSON export rows after round ${round}: ${pending} (users+countries). Continuing..."
+  round=$((round + 1))
+ done
+ if [[ "$(__json_export_pending_count)" -gt 0 ]]; then
+  print_warn "Still pending rows after ${JSON_EXPORT_MAX_ROUNDS} round(s). Increase JSON_EXPORT_MAX_ROUNDS or set JSON_EXPORT_BATCH_SIZE=0."
+ fi
+ return 0
 }
 
 # Commit and push JSON tree + schemas when the working tree differs from HEAD.
@@ -450,6 +517,10 @@ fi
 
 print_info "Full datamart JSON export → ${DATA_REPO_DIR}"
 print_info "JSON export batch size: ${JSON_EXPORT_BATCH_SIZE} (0 = unlimited per exportDatamartsToJSON)"
+print_info "Parallel per-file export: JSON_EXPORT_JOBS (default 4, max 32 in exportDatamartsToJSON.sh)"
+if [[ "${JSON_EXPORT_MAX_ROUNDS}" -gt 1 ]]; then
+ print_info "JSON export max rounds: ${JSON_EXPORT_MAX_ROUNDS} (drains backlog when batch size is limited)"
+fi
 
 cd "${DATA_REPO_DIR}"
 git checkout main 2> /dev/null || true
@@ -488,7 +559,7 @@ mark_stale_countries_for_reexport
 if [[ "${SKIP_DATAMART_JSON_EXPORT}" == "true" ]]; then
  print_warn "SKIP_DATAMART_JSON_EXPORT=true — skipping exportDatamartsToJSON.sh"
 else
- if ! run_datamart_json_export; then
+ if ! run_datamart_json_export_with_rounds; then
   print_error "exportDatamartsToJSON.sh failed"
   exit 1
  fi

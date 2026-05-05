@@ -4,7 +4,10 @@
 # This allows the web viewer to read precalculated data without direct database access.
 #
 # Author: Andres Gomez (AngocA)
-# Version: 2026-05-03
+# Version: 2026-05-04
+#
+# Environment:
+#   JSON_EXPORT_JOBS — parallel worker count for user/country JSON export (default 4, max 32).
 # Cross-filesystem: publish scoped trees with rsync (users/countries/indexes + root *.json).
 # Broad rsync --delete on all of OUTPUT_DIR would remove unrelated assets under data/.
 # Note: This script now uses SELECT * to dynamically export all columns,
@@ -35,6 +38,15 @@ declare LOG_LEVEL="${LOG_LEVEL:-ERROR}"
 # Set JSON_EXPORT_BATCH_SIZE=0 to export all pending files (default behavior)
 declare JSON_EXPORT_BATCH_SIZE="${JSON_EXPORT_BATCH_SIZE:-10000}"
 readonly JSON_EXPORT_BATCH_SIZE
+# Parallel jobs for per-user / per-country JSON export (xargs -P). Tune to CPU and max_connections.
+declare JSON_EXPORT_JOBS="${JSON_EXPORT_JOBS:-4}"
+if [[ ! "${JSON_EXPORT_JOBS}" =~ ^[0-9]+$ ]] || [[ "${JSON_EXPORT_JOBS}" -lt 1 ]]; then
+ JSON_EXPORT_JOBS=4
+fi
+if [[ "${JSON_EXPORT_JOBS}" -gt 32 ]]; then
+ JSON_EXPORT_JOBS=32
+fi
+readonly JSON_EXPORT_JOBS
 
 # Base directory for the project.
 declare SCRIPT_BASE_DIRECTORY
@@ -295,37 +307,31 @@ else
  echo "  Processing all pending users (no batch limit)..."
 fi
 
-MODIFIED_USER_COUNT=0
-psql -d "${DBNAME_DWH}" -Atq << SQL_USERS | while IFS='|' read -r user_id username; do
-SELECT
-  user_id,
-  username
-FROM dwh.datamartusers
-WHERE user_id IS NOT NULL
-  AND user_id >= 1
-  AND json_exported = FALSE
-ORDER BY user_id
-${USER_EXPORT_LIMIT_LINE};
-SQL_USERS
+USE_DATAMARTUSERS_EXPORT=0
+if psql -d "${DBNAME_DWH}" -Atq -c "SELECT 1 FROM information_schema.views WHERE table_schema = 'dwh' AND table_name = 'datamartusers_export'" 2> /dev/null | grep -q 1; then
+ USE_DATAMARTUSERS_EXPORT=1
+ echo "  Using view dwh.datamartusers_export for user JSON (internal columns excluded)."
+else
+ echo "  Using table dwh.datamartusers for user JSON (fallback; consider creating datamartusers_export)."
+fi
 
- if [[ -n "${user_id}" ]]; then
-  # Validate user_id is >= 1 (OSM semantics; aligns with user-profile / user-index JSON Schema minimum)
-  if ! [[ "${user_id}" =~ ^[1-9][0-9]*$ ]]; then
-   echo "  ERROR: Invalid or non-publishable user_id (must be integer >= 1): ${user_id} (skipping)" >&2
-   continue
-  fi
+USER_FLAG_DIR="${TMP_DIR}/user_parallel_flags"
+mkdir -p "${USER_FLAG_DIR}"
 
-  # Calculate subdirectory for this user_id (hexadecimal hash of 3 levels)
-  USER_SUBDIR=$(get_user_subdir "${user_id}")
-  mkdir -p "${ATOMIC_TEMP_DIR}/users/${USER_SUBDIR}"
-
-  # Export each modified user to a separate JSON file in subdirectory
-  # Use export view if available (excludes internal _partial_* columns), otherwise use table directly
-  # The view excludes internal columns prefixed with _partial_ or _last_processed_
-  # SECURITY: user_id is validated above to contain only digits, so direct interpolation is safe
-  if psql -d "${DBNAME_DWH}" -Atq -c "SELECT 1 FROM information_schema.views WHERE table_schema = 'dwh' AND table_name = 'datamartusers_export'" | grep -q 1; then
-   # Use export view (excludes internal columns)
-   psql -d "${DBNAME_DWH}" -Atq -c "
+# One user per parallel job; requires bash for export -f workers.
+# shellcheck disable=SC2329
+__export_one_user_parallel() {
+ local user_id="$1"
+ local USER_SUBDIR
+ [[ -z "${user_id//[[:space:]]/}" ]] && return 0
+ if ! [[ "${user_id}" =~ ^[1-9][0-9]*$ ]]; then
+  echo "  ERROR: Invalid user_id (must be integer >= 1): ${user_id} (skipping)" >&2
+  return 0
+ fi
+ USER_SUBDIR=$(get_user_subdir "${user_id}")
+ mkdir -p "${ATOMIC_TEMP_DIR}/users/${USER_SUBDIR}"
+ if [[ "${USE_DATAMARTUSERS_EXPORT}" -eq 1 ]]; then
+  if ! psql -d "${DBNAME_DWH}" -Atq -c "
       SELECT row_to_json(t)
       FROM (
         SELECT
@@ -337,11 +343,12 @@ SQL_USERS
           ON du.id_contributor_type = ct.contributor_type_id
         WHERE du.user_id = $(printf '%d' "${user_id}")
       ) t
-	" > "${ATOMIC_TEMP_DIR}/users/${USER_SUBDIR}/${user_id}.json"
-  else
-   # Fallback: Use table directly (for backward compatibility)
-   # Exclude internal columns manually if they exist
-   psql -d "${DBNAME_DWH}" -Atq -c "
+	" > "${ATOMIC_TEMP_DIR}/users/${USER_SUBDIR}/${user_id}.json"; then
+   echo "  ERROR: psql export failed for user_id ${user_id}" >&2
+   return 0
+  fi
+ else
+  if ! psql -d "${DBNAME_DWH}" -Atq -c "
       SELECT row_to_json(t)
       FROM (
         SELECT
@@ -353,30 +360,53 @@ SQL_USERS
           ON du.id_contributor_type = ct.contributor_type_id
         WHERE du.user_id = $(printf '%d' "${user_id}")
       ) t
-	" > "${ATOMIC_TEMP_DIR}/users/${USER_SUBDIR}/${user_id}.json"
+	" > "${ATOMIC_TEMP_DIR}/users/${USER_SUBDIR}/${user_id}.json"; then
+   echo "  ERROR: psql export failed for user_id ${user_id}" >&2
+   return 0
   fi
-
-  echo "  Exported modified user: ${user_id} (${username})"
-  MODIFIED_USER_COUNT=$((MODIFIED_USER_COUNT + 1))
-
-  # Mark as exported in database
-  # SECURITY: user_id is validated above to contain only digits, so direct interpolation is safe
-  psql -d "${DBNAME_DWH}" -Atq -c "
+ fi
+ psql -d "${DBNAME_DWH}" -Atq -c "
       UPDATE dwh.datamartusers
       SET json_exported = TRUE
       WHERE user_id = $(printf '%d' "${user_id}")
 	" > /dev/null 2>&1 || true
-
-  # Validate only modified user files
-  # shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
-  if ! __validate_json_with_schema \
-   "${ATOMIC_TEMP_DIR}/users/${USER_SUBDIR}/${user_id}.json" \
-   "${SCHEMA_DIR}/user-profile.schema.json" \
-   "user ${user_id}"; then
-   VALIDATION_ERROR_COUNT=$((VALIDATION_ERROR_COUNT + 1))
-  fi
+ touch "${USER_FLAG_DIR}/ok.${user_id}"
+ if ! __validate_json_with_schema \
+  "${ATOMIC_TEMP_DIR}/users/${USER_SUBDIR}/${user_id}.json" \
+  "${SCHEMA_DIR}/user-profile.schema.json" \
+  "user ${user_id}"; then
+  touch "${USER_FLAG_DIR}/valbad.${user_id}"
  fi
-done
+ if [[ "${JSON_EXPORT_JOBS}" -le 1 ]]; then
+  echo "  Exported modified user: ${user_id}"
+ fi
+ return 0
+}
+export -f get_user_subdir __validate_json_with_schema __export_one_user_parallel
+export DBNAME_DWH ATOMIC_TEMP_DIR SCHEMA_DIR USE_DATAMARTUSERS_EXPORT USER_FLAG_DIR JSON_EXPORT_JOBS
+
+USER_LIST_FILE="${TMP_DIR}/pending_user_ids.txt"
+psql -d "${DBNAME_DWH}" -Atq << SQL_UID > "${USER_LIST_FILE}"
+SELECT user_id
+FROM dwh.datamartusers
+WHERE user_id IS NOT NULL
+  AND user_id >= 1
+  AND json_exported = FALSE
+ORDER BY user_id
+${USER_EXPORT_LIMIT_LINE};
+SQL_UID
+
+MODIFIED_USER_COUNT=0
+if [[ -s "${USER_LIST_FILE}" ]]; then
+ echo "  Parallel jobs: ${JSON_EXPORT_JOBS} (set JSON_EXPORT_JOBS to tune)"
+ # shellcheck disable=SC2016
+ xargs -n 1 -P "${JSON_EXPORT_JOBS}" bash -c '__export_one_user_parallel "$1"' _ < "${USER_LIST_FILE}" || true
+ MODIFIED_USER_COUNT=$(find "${USER_FLAG_DIR}" -maxdepth 1 -name 'ok.*' 2> /dev/null | wc -l)
+ MODIFIED_USER_COUNT=$(echo "${MODIFIED_USER_COUNT}" | tr -d '[:space:]')
+ _ubad=$(find "${USER_FLAG_DIR}" -maxdepth 1 -name 'valbad.*' 2> /dev/null | wc -l)
+ _ubad=$(echo "${_ubad}" | tr -d '[:space:]')
+ VALIDATION_ERROR_COUNT=$((VALIDATION_ERROR_COUNT + _ubad))
+fi
 
 if [[ ${MODIFIED_USER_COUNT} -gt 0 ]]; then
  echo "  Total modified users exported: ${MODIFIED_USER_COUNT}"
@@ -433,52 +463,67 @@ else
  echo "  Processing all pending countries (no batch limit)..."
 fi
 
-MODIFIED_COUNTRY_COUNT=0
-psql -d "${DBNAME_DWH}" -Atq << SQL_COUNTRIES | while IFS='|' read -r country_id country_name; do
-SELECT country_id, country_name_en
+COUNTRY_FLAG_DIR="${TMP_DIR}/country_parallel_flags"
+mkdir -p "${COUNTRY_FLAG_DIR}"
+
+# shellcheck disable=SC2329
+__export_one_country_parallel() {
+ local country_id="$1"
+ [[ -z "${country_id//[[:space:]]/}" ]] && return 0
+ if ! [[ "${country_id}" =~ ^[1-9][0-9]*$ ]]; then
+  echo "  ERROR: Invalid country_id (must be integer >= 1): ${country_id} (skipping)" >&2
+  return 0
+ fi
+ if ! psql -d "${DBNAME_DWH}" -Atq -c "
+      SELECT row_to_json(t)
+      FROM dwh.datamartcountries t
+      WHERE t.country_id = ${country_id}
+	" > "${ATOMIC_TEMP_DIR}/countries/${country_id}.json"; then
+  echo "  ERROR: psql export failed for country_id ${country_id}" >&2
+  return 0
+ fi
+ psql -d "${DBNAME_DWH}" -Atq -c "
+      UPDATE dwh.datamartcountries
+      SET json_exported = TRUE
+      WHERE country_id = ${country_id}
+	" > /dev/null 2>&1 || true
+ touch "${COUNTRY_FLAG_DIR}/ok.${country_id}"
+ if ! __validate_json_with_schema \
+  "${ATOMIC_TEMP_DIR}/countries/${country_id}.json" \
+  "${SCHEMA_DIR}/country-profile.schema.json" \
+  "country ${country_id}"; then
+  touch "${COUNTRY_FLAG_DIR}/valbad.${country_id}"
+ fi
+ if [[ "${JSON_EXPORT_JOBS}" -le 1 ]]; then
+  echo "  Exported modified country: ${country_id}"
+ fi
+ return 0
+}
+export -f __export_one_country_parallel
+export COUNTRY_FLAG_DIR
+
+COUNTRY_LIST_FILE="${TMP_DIR}/pending_country_ids.txt"
+psql -d "${DBNAME_DWH}" -Atq << SQL_CID > "${COUNTRY_LIST_FILE}"
+SELECT country_id
 FROM dwh.datamartcountries
 WHERE country_id IS NOT NULL
   AND country_id >= 1
   AND json_exported = FALSE
 ORDER BY country_id
 ${COUNTRY_EXPORT_LIMIT_LINE};
-SQL_COUNTRIES
+SQL_CID
 
- if [[ -n "${country_id}" ]]; then
-  # Only publish IDs that satisfy country-index JSON Schema (minimum 1).
-  if ! [[ "${country_id}" =~ ^[1-9][0-9]*$ ]]; then
-   echo "  ERROR: Invalid or non-publishable country_id (must be integer >= 1): ${country_id} (skipping)" >&2
-   continue
-  fi
-
-  # Export each modified country to a separate JSON file
-  # Use SELECT * to dynamically include all columns
-  psql -d "${DBNAME_DWH}" -Atq -c "
-      SELECT row_to_json(t)
-      FROM dwh.datamartcountries t
-      WHERE t.country_id = ${country_id}
-	" > "${ATOMIC_TEMP_DIR}/countries/${country_id}.json"
-
-  echo "  Exported modified country: ${country_id} (${country_name})"
-  MODIFIED_COUNTRY_COUNT=$((MODIFIED_COUNTRY_COUNT + 1))
-
-  # Mark as exported in database
-  psql -d "${DBNAME_DWH}" -Atq -c "
-      UPDATE dwh.datamartcountries
-      SET json_exported = TRUE
-      WHERE country_id = ${country_id}
-	" > /dev/null 2>&1 || true
-
-  # Validate only modified country files
-  # shellcheck disable=SC2310  # Function invocation in ! condition is intentional for error handling
-  if ! __validate_json_with_schema \
-   "${ATOMIC_TEMP_DIR}/countries/${country_id}.json" \
-   "${SCHEMA_DIR}/country-profile.schema.json" \
-   "country ${country_id}"; then
-   VALIDATION_ERROR_COUNT=$((VALIDATION_ERROR_COUNT + 1))
-  fi
- fi
-done
+MODIFIED_COUNTRY_COUNT=0
+if [[ -s "${COUNTRY_LIST_FILE}" ]]; then
+ echo "  Country parallel jobs: ${JSON_EXPORT_JOBS}"
+ # shellcheck disable=SC2016
+ xargs -n 1 -P "${JSON_EXPORT_JOBS}" bash -c '__export_one_country_parallel "$1"' _ < "${COUNTRY_LIST_FILE}" || true
+ MODIFIED_COUNTRY_COUNT=$(find "${COUNTRY_FLAG_DIR}" -maxdepth 1 -name 'ok.*' 2> /dev/null | wc -l)
+ MODIFIED_COUNTRY_COUNT=$(echo "${MODIFIED_COUNTRY_COUNT}" | tr -d '[:space:]')
+ _cbad=$(find "${COUNTRY_FLAG_DIR}" -maxdepth 1 -name 'valbad.*' 2> /dev/null | wc -l)
+ _cbad=$(echo "${_cbad}" | tr -d '[:space:]')
+ VALIDATION_ERROR_COUNT=$((VALIDATION_ERROR_COUNT + _cbad))
+fi
 
 if [[ ${MODIFIED_COUNTRY_COUNT} -gt 0 ]]; then
  echo "  Total modified countries exported: ${MODIFIED_COUNTRY_COUNT}"
