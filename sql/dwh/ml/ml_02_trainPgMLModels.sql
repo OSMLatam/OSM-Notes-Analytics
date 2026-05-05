@@ -34,7 +34,8 @@ SELECT * FROM pgml.train(
     "verbosity": -1
   }'::jsonb,
   test_size => 0.2,  -- 20% for testing
-  test_sampling => 'random'
+  -- stratified: same as ml_05; avoids PostgresML ORDER BY RANDOM() on full snapshot / pgsql_tmp blowup.
+  test_sampling => 'stratified'
 );
 
 -- Check training results (pgml.deployed_models in 2.x has no metrics; use models + projects)

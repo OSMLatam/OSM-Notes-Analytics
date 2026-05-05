@@ -58,7 +58,9 @@ SELECT * FROM pgml.train(
     "verbosity": -1
   }'::JSONB,
   test_size => 0.2,
-  test_sampling => 'random'
+  -- stratified avoids full-relation ORDER BY RANDOM(); that spills huge sorts to pgsql_tmp
+  -- ("No space left on device") on multi-million-row snapshots.
+  test_sampling => 'stratified'
 );
 
 -- ============================================================================
