@@ -79,7 +79,8 @@ SELECT * FROM pgml.train(
     "class_weight": "balanced"
   }'::JSONB,
   test_size => 0.2,
-  test_sampling => 'random'
+  -- Keeps minority classes in both splits; complements INTEGER y labels (see ml_01 narrow views).
+  test_sampling => 'stratified'
 );
 
 -- ============================================================================
@@ -99,7 +100,7 @@ SELECT * FROM pgml.train(
     "verbosity": -1
   }'::JSONB,
   test_size => 0.2,
-  test_sampling => 'random'
+  test_sampling => 'stratified'
 );
 
 -- ============================================================================

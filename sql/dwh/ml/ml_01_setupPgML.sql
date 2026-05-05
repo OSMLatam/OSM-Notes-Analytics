@@ -354,71 +354,90 @@ WHERE pf.main_category IS NOT NULL;
 COMMENT ON VIEW dwh.v_note_ml_train_main_category IS
   'pgml.train: finite DOUBLE PRECISION features (coerced/clamped); main_category INTEGER 0/1.';
 
-CREATE OR REPLACE VIEW dwh.v_note_ml_train_specific_type AS
+-- Integer labels avoid PostgresML categorical map with __NULL__ (categories.len()==6 vs 5 observed
+-- class values -> ERROR: Can't compute metrics ... 6 != 5 in pgml.metrics::ConfusionMatrix).
+DROP VIEW IF EXISTS dwh.v_note_ml_train_specific_type CASCADE;
+
+CREATE VIEW dwh.v_note_ml_train_specific_type AS
 SELECT
-  comment_length,
-  has_url_int,
-  has_mention_int,
-  hashtag_number,
-  total_comments_on_note,
-  hashtag_count,
-  has_fire_keyword,
-  has_air_keyword,
-  has_access_keyword,
-  has_campaign_keyword,
-  has_fix_keyword,
-  is_assisted_app,
-  is_mobile_app,
-  country_resolution_rate,
-  country_avg_resolution_days,
-  country_notes_health_score,
-  user_response_time,
-  user_total_notes,
-  user_experience_level,
-  user_contributor_type_id,
-  day_of_week,
-  hour_of_day,
-  month,
-  days_open,
-  specific_type
-FROM dwh.v_note_ml_training_features
-WHERE specific_type IS NOT NULL;
+  pf.comment_length,
+  pf.has_url_int,
+  pf.has_mention_int,
+  pf.hashtag_number,
+  pf.total_comments_on_note,
+  pf.hashtag_count,
+  pf.has_fire_keyword,
+  pf.has_air_keyword,
+  pf.has_access_keyword,
+  pf.has_campaign_keyword,
+  pf.has_fix_keyword,
+  pf.is_assisted_app,
+  pf.is_mobile_app,
+  pf.country_resolution_rate,
+  pf.country_avg_resolution_days,
+  pf.country_notes_health_score,
+  pf.user_response_time,
+  pf.user_total_notes,
+  pf.user_experience_level,
+  pf.user_contributor_type_id,
+  pf.day_of_week,
+  pf.hour_of_day,
+  pf.month,
+  pf.days_open,
+  CASE pf.specific_type
+    WHEN 'adds_to_map' THEN 0
+    WHEN 'other' THEN 1
+    WHEN 'empty' THEN 2
+    WHEN 'lack_of_precision' THEN 3
+    WHEN 'advertising' THEN 4
+  END::INTEGER AS specific_type
+FROM dwh.v_note_ml_training_features pf
+WHERE pf.specific_type IS NOT NULL;
 
 COMMENT ON VIEW dwh.v_note_ml_train_specific_type IS
-  'pgml.train relation for specific_type label; features match inference ARRAY order.';
+  'pgml.train: label specific_type INTEGER 0–4 '
+  '(0 adds_to_map, 1 other, 2 empty, 3 lack_of_precision, 4 advertising). '
+  'Decode in dwh.predict_note_classification_pgml (ml_03_predictWithPgML.sql).';
 
-CREATE OR REPLACE VIEW dwh.v_note_ml_train_action AS
+DROP VIEW IF EXISTS dwh.v_note_ml_train_action CASCADE;
+
+CREATE VIEW dwh.v_note_ml_train_action AS
 SELECT
-  comment_length,
-  has_url_int,
-  has_mention_int,
-  hashtag_number,
-  total_comments_on_note,
-  hashtag_count,
-  has_fire_keyword,
-  has_air_keyword,
-  has_access_keyword,
-  has_campaign_keyword,
-  has_fix_keyword,
-  is_assisted_app,
-  is_mobile_app,
-  country_resolution_rate,
-  country_avg_resolution_days,
-  country_notes_health_score,
-  user_response_time,
-  user_total_notes,
-  user_experience_level,
-  user_contributor_type_id,
-  day_of_week,
-  hour_of_day,
-  month,
-  days_open,
-  recommended_action
-FROM dwh.v_note_ml_training_features
-WHERE recommended_action IS NOT NULL;
+  pf.comment_length,
+  pf.has_url_int,
+  pf.has_mention_int,
+  pf.hashtag_number,
+  pf.total_comments_on_note,
+  pf.hashtag_count,
+  pf.has_fire_keyword,
+  pf.has_air_keyword,
+  pf.has_access_keyword,
+  pf.has_campaign_keyword,
+  pf.has_fix_keyword,
+  pf.is_assisted_app,
+  pf.is_mobile_app,
+  pf.country_resolution_rate,
+  pf.country_avg_resolution_days,
+  pf.country_notes_health_score,
+  pf.user_response_time,
+  pf.user_total_notes,
+  pf.user_experience_level,
+  pf.user_contributor_type_id,
+  pf.day_of_week,
+  pf.hour_of_day,
+  pf.month,
+  pf.days_open,
+  CASE pf.recommended_action
+    WHEN 'process' THEN 0
+    WHEN 'close' THEN 1
+    WHEN 'needs_more_data' THEN 2
+  END::INTEGER AS recommended_action
+FROM dwh.v_note_ml_training_features pf
+WHERE pf.recommended_action IS NOT NULL;
 
 COMMENT ON VIEW dwh.v_note_ml_train_action IS
-  'pgml.train relation for recommended_action label; features match inference ARRAY order.';
+  'pgml.train: label recommended_action INTEGER 0–2 (0 process, 1 close, 2 needs_more_data). '
+  'Decode in dwh.predict_note_classification_pgml.';
 
 -- ============================================================================
 -- Usage Examples

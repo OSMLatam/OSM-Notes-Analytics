@@ -70,7 +70,7 @@ SELECT * FROM pgml.train(
     "class_weight": "balanced"
   }'::jsonb,
   test_size => 0.2,
-  test_sampling => 'random'
+  test_sampling => 'stratified'
 );
 
 -- Check training results
@@ -104,7 +104,7 @@ SELECT * FROM pgml.train(
     "verbosity": -1
   }'::jsonb,
   test_size => 0.2,
-  test_sampling => 'random'
+  test_sampling => 'stratified'
 );
 
 -- Check training results

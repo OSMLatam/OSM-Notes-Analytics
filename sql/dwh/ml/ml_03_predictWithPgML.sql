@@ -118,7 +118,7 @@ BEGIN
       END AS main_category,
       0.8 AS category_confidence,
       'ml_based' AS category_method,
-      pgml.predict(
+      CASE ROUND(pgml.predict(
         'note_classification_specific_type'::TEXT,
         dwh.note_ml_feature_vector(
           pf.comment_length,
@@ -146,10 +146,17 @@ BEGIN
           pf.month,
           pf.days_open
         )
-      )::VARCHAR AS specific_type,
+      )::NUMERIC)::INTEGER
+        WHEN 0 THEN 'adds_to_map'::VARCHAR
+        WHEN 1 THEN 'other'::VARCHAR
+        WHEN 2 THEN 'empty'::VARCHAR
+        WHEN 3 THEN 'lack_of_precision'::VARCHAR
+        WHEN 4 THEN 'advertising'::VARCHAR
+        ELSE 'other'::VARCHAR
+      END AS specific_type,
       0.75 AS type_confidence,
       'ml_based' AS type_method,
-      pgml.predict(
+      CASE ROUND(pgml.predict(
         'note_classification_action'::TEXT,
         dwh.note_ml_feature_vector(
           pf.comment_length,
@@ -177,7 +184,12 @@ BEGIN
           pf.month,
           pf.days_open
         )
-      )::VARCHAR AS recommended_action,
+      )::NUMERIC)::INTEGER
+        WHEN 0 THEN 'process'::VARCHAR
+        WHEN 1 THEN 'close'::VARCHAR
+        WHEN 2 THEN 'needs_more_data'::VARCHAR
+        ELSE 'close'::VARCHAR
+      END AS recommended_action,
       0.8 AS action_confidence,
       'ml_based' AS action_method,
       'pgml_v1.0' AS classification_version,
@@ -198,6 +210,7 @@ $$;
 
 COMMENT ON FUNCTION dwh.predict_note_classification_pgml IS
   'Batch-classify notes with pgml (same 24-feature order as dwh.note_ml_feature_vector / train '
-  'narrow views). Returns (notes_processed, notes_with_high_confidence). Second column reserved '
+  'narrow views). specific_type and recommended_action pgml.train use INTEGER targets; decoded '
+  'to VARCHAR labels here. Returns (notes_processed, notes_with_high_confidence). Second column reserved '
   'for future pgml.predict_proba threshold counts. Interactive examples: '
   'sql/dwh/ml/ml_03_predict_demo_queries.sql.';
